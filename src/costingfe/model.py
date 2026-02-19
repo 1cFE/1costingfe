@@ -188,6 +188,7 @@ class CostModel:
         interest_rate: float = 0.07,
         inflation_rate: float = 0.0245,
         noak: bool = True,
+        cost_overrides: dict[str, float] | None = None,
         **overrides,
     ) -> ForwardResult:
         """Forward costing: customer requirements -> LCOE."""
@@ -228,8 +229,19 @@ class CostModel:
 
         # Layer 4: Cost accounts
         cc = self.cc
-        c10 = cas10_preconstruction(cc, pt.p_net, n_mod, self.fuel, noak)
-        c21 = cas21_buildings(cc, pt.p_et, self.fuel, noak)
+        co = cost_overrides or {}
+        overridden = []
+
+        # Compute defaults, apply CAS-level overrides
+        c10 = co.get("CAS10", cas10_preconstruction(cc, pt.p_net, n_mod, self.fuel, noak))
+        if "CAS10" in co:
+            overridden.append("CAS10")
+
+        c21 = co.get("CAS21", cas21_buildings(cc, pt.p_et, self.fuel, noak))
+        if "CAS21" in co:
+            overridden.append("CAS21")
+
+        # CAS22: compute detail, apply sub-account overrides, recompute totals
         c22_detail = cas22_reactor_plant_equipment(
             cc, pt.p_net, pt.p_th, pt.p_et, pt.p_fus,
             params["p_cryo"], n_mod, self.fuel, noak,
@@ -238,13 +250,51 @@ class CostModel:
             structure_vol=structure_vol,
             vessel_vol=vessel_vol,
         )
-        c22 = c22_detail["C220000"]
-        c23 = cas23_turbine(cc, pt.p_et, n_mod)
-        c24 = cas24_electrical(cc, pt.p_et, n_mod)
-        c25 = cas25_misc(cc, pt.p_et, n_mod)
-        c26 = cas26_heat_rejection(cc, pt.p_et, n_mod)
-        c27 = 0.0  # TODO: special materials (needs blanket details)
-        c28 = cas28_digital_twin(cc)
+        _PER_MODULE_KEYS = {
+            "C220101", "C220102", "C220103", "C220104", "C220105",
+            "C220106", "C220107", "C220108", "C220109", "C220111",
+            "C220112", "C220119",
+        }
+        _PLANT_WIDE_KEYS = {
+            "C220200", "C220300", "C220400", "C220500", "C220600", "C220700",
+        }
+        for key in co:
+            if key in c22_detail and key != "C220000":
+                c22_detail[key] = co[key]
+                overridden.append(key)
+        if any(k in co for k in (_PER_MODULE_KEYS | _PLANT_WIDE_KEYS)):
+            per_module = sum(c22_detail[k] for k in _PER_MODULE_KEYS)
+            plant_wide = sum(c22_detail[k] for k in _PLANT_WIDE_KEYS)
+            c22_detail["C220000"] = per_module * n_mod + plant_wide
+
+        c22 = co.get("CAS22", c22_detail["C220000"])
+        if "CAS22" in co:
+            overridden.append("CAS22")
+
+        c23 = co.get("CAS23", cas23_turbine(cc, pt.p_et, n_mod))
+        if "CAS23" in co:
+            overridden.append("CAS23")
+
+        c24 = co.get("CAS24", cas24_electrical(cc, pt.p_et, n_mod))
+        if "CAS24" in co:
+            overridden.append("CAS24")
+
+        c25 = co.get("CAS25", cas25_misc(cc, pt.p_et, n_mod))
+        if "CAS25" in co:
+            overridden.append("CAS25")
+
+        c26 = co.get("CAS26", cas26_heat_rejection(cc, pt.p_et, n_mod))
+        if "CAS26" in co:
+            overridden.append("CAS26")
+
+        c27 = co.get("CAS27", 0.0)  # TODO: special materials
+        if "CAS27" in co:
+            overridden.append("CAS27")
+
+        c28 = co.get("CAS28", cas28_digital_twin(cc))
+        if "CAS28" in co:
+            overridden.append("CAS28")
+
         cas2x_pre_contingency = c21 + c22 + c23 + c24 + c25 + c26 + c27 + c28
         c29 = cas29_contingency(cc, cas2x_pre_contingency, noak)
         c20 = cas2x_pre_contingency + c29
@@ -295,7 +345,11 @@ class CostModel:
             lcoe=lcoe,
             overnight_cost=overnight,
         )
-        return ForwardResult(power_table=pt, costs=costs, params=params)
+        return ForwardResult(
+            power_table=pt, costs=costs, params=params,
+            overridden=overridden,
+            cas22_detail=c22_detail,
+        )
 
     # Financial parameters — given by cost of capital, not engineering levers
     _FINANCIAL_KEYS = ["interest_rate", "inflation_rate"]
@@ -330,13 +384,16 @@ class CostModel:
         """All differentiable continuous parameter names (engineering + financial)."""
         return self._engineering_keys() + self._FINANCIAL_KEYS
 
-    def _build_lcoe_fn(self, params: dict):
+    def _build_lcoe_fn(self, params: dict, cost_overrides: dict[str, float] | None = None):
         """Build a JAX-differentiable function: param_vector -> LCOE.
 
         Fuel, concept, CostingConstants, and discrete params are closed
         over. Only continuous engineering/financial params are traced.
         Returns (lcoe_fn, keys, base_values) where lcoe_fn takes a 1D
         JAX array and returns a scalar LCOE.
+
+        cost_overrides are closed over as constants — gradients through
+        overridden accounts are naturally zero.
         """
         keys = [k for k in self._continuous_keys() if k in params and params[k] != 0]
         base_vals = jnp.array([float(params[k]) for k in keys])
@@ -379,13 +436,16 @@ class CostModel:
                 interest_rate=ir,
                 inflation_rate=inf,
                 noak=noak,
+                cost_overrides=cost_overrides,
                 **eng,
             )
             return result.costs.lcoe
 
         return lcoe_fn, keys, base_vals
 
-    def sensitivity(self, params: dict) -> dict[str, dict[str, float]]:
+    def sensitivity(
+        self, params: dict, cost_overrides: dict[str, float] | None = None,
+    ) -> dict[str, dict[str, float]]:
         """Compute elasticity of LCOE w.r.t. each continuous parameter.
 
         Elasticity = (dLCOE/dp) * (p / LCOE) = %ΔLCOE / %Δparam.
@@ -396,8 +456,10 @@ class CostModel:
         financial givens (cost of capital).
 
         Uses jax.grad for exact autodiff gradients.
+        cost_overrides are closed over as constants — overridden accounts
+        have zero gradient automatically.
         """
-        lcoe_fn, keys, base_vals = self._build_lcoe_fn(params)
+        lcoe_fn, keys, base_vals = self._build_lcoe_fn(params, cost_overrides)
         base_lcoe = float(lcoe_fn(base_vals))
 
         grad_fn = jax.grad(lcoe_fn)
@@ -416,18 +478,22 @@ class CostModel:
 
         return {"engineering": engineering, "financial": financial}
 
-    def batch_lcoe(self, param_sets: dict[str, list[float]], params: dict) -> list[float]:
+    def batch_lcoe(
+        self, param_sets: dict[str, list[float]], params: dict,
+        cost_overrides: dict[str, float] | None = None,
+    ) -> list[float]:
         """Evaluate LCOE for many parameter sets using jax.vmap.
 
         Args:
             param_sets: Dict of param_name -> list of values (all same length).
                 Only the listed params vary; others held at base values.
             params: Base parameter dict (from a forward() result).
+            cost_overrides: CAS account overrides (closed over as constants).
 
         Returns:
             List of LCOE values, one per parameter set.
         """
-        lcoe_fn, keys, base_vals = self._build_lcoe_fn(params)
+        lcoe_fn, keys, base_vals = self._build_lcoe_fn(params, cost_overrides)
 
         n = len(next(iter(param_sets.values())))
         # Build matrix: each row is a param vector

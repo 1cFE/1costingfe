@@ -117,3 +117,72 @@ def test_compare_all_returns_ranking():
     # Should be sorted by LCOE ascending
     lcoes = [r.lcoe for r in results]
     assert lcoes == sorted(lcoes)
+
+
+# ---- Cost override tests ----
+
+
+def test_cost_override_cas21_propagates():
+    """Overriding CAS21 should propagate to CAS20, total_capital, and LCOE."""
+    model = CostModel(concept=ConfinementConcept.TOKAMAK, fuel=Fuel.DT)
+    base = model.forward(net_electric_mw=1000.0, availability=0.85, lifetime_yr=30)
+    overridden = model.forward(
+        net_electric_mw=1000.0, availability=0.85, lifetime_yr=30,
+        cost_overrides={"CAS21": 50.0},
+    )
+    assert overridden.costs.cas21 == 50.0
+    # CAS20 should differ from base (uses overridden CAS21)
+    assert overridden.costs.cas20 != base.costs.cas20
+    # total_capital and LCOE should also change
+    assert overridden.costs.total_capital != base.costs.total_capital
+    assert overridden.costs.lcoe != base.costs.lcoe
+    # Overridden list tracks it
+    assert "CAS21" in overridden.overridden
+
+
+def test_cost_override_cas22_subaccount():
+    """Overriding a CAS22 sub-account should recompute CAS22 total."""
+    model = CostModel(concept=ConfinementConcept.TOKAMAK, fuel=Fuel.DT)
+    base = model.forward(net_electric_mw=1000.0, availability=0.85, lifetime_yr=30)
+    overridden = model.forward(
+        net_electric_mw=1000.0, availability=0.85, lifetime_yr=30,
+        cost_overrides={"C220103": 300.0},
+    )
+    # CAS22 total should change
+    assert overridden.costs.cas22 != base.costs.cas22
+    # The sub-account should be the overridden value
+    assert overridden.cas22_detail["C220103"] == 300.0
+    # Tracked in overridden list
+    assert "C220103" in overridden.overridden
+
+
+def test_cost_override_no_overrides_unchanged():
+    """No cost_overrides should produce identical results to default."""
+    model = CostModel(concept=ConfinementConcept.TOKAMAK, fuel=Fuel.DT)
+    base = model.forward(net_electric_mw=1000.0, availability=0.85, lifetime_yr=30)
+    with_empty = model.forward(
+        net_electric_mw=1000.0, availability=0.85, lifetime_yr=30,
+        cost_overrides={},
+    )
+    assert base.costs.lcoe == with_empty.costs.lcoe
+    assert with_empty.overridden == []
+
+
+def test_cost_override_overridden_list():
+    """Overridden list should contain exactly the applied keys."""
+    model = CostModel(concept=ConfinementConcept.TOKAMAK, fuel=Fuel.DT)
+    result = model.forward(
+        net_electric_mw=1000.0, availability=0.85, lifetime_yr=30,
+        cost_overrides={"CAS10": 5.0, "CAS21": 50.0, "C220103": 300.0},
+    )
+    assert set(result.overridden) == {"CAS10", "CAS21", "C220103"}
+
+
+def test_cas22_detail_in_result():
+    """ForwardResult should include CAS22 sub-account detail."""
+    model = CostModel(concept=ConfinementConcept.TOKAMAK, fuel=Fuel.DT)
+    result = model.forward(net_electric_mw=1000.0, availability=0.85, lifetime_yr=30)
+    assert "C220101" in result.cas22_detail
+    assert "C220103" in result.cas22_detail
+    assert "C220000" in result.cas22_detail
+    assert result.cas22_detail["C220000"] == result.costs.cas22

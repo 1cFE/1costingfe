@@ -1,5 +1,5 @@
 from enum import Enum
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 
 class ConfinementFamily(Enum):
@@ -100,3 +100,5 @@ class ForwardResult:
     power_table: PowerTable
     costs: CostResult
     params: dict  # All input params (for sensitivity analysis)
+    overridden: list[str] = field(default_factory=list)  # Keys that were overridden
+    cas22_detail: dict[str, float] = field(default_factory=dict)  # CAS22 sub-accounts

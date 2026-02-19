@@ -80,6 +80,43 @@ avail = backcast_single(
 )
 ```
 
+## Cost Overrides
+
+Override any CAS account or CAS22 sub-account with a known value (M$). Downstream totals (CAS20, total capital, LCOE) recompute automatically.
+
+```python
+# Override an entire CAS account
+result = model.forward(
+    net_electric_mw=1000.0,
+    availability=0.85,
+    lifetime_yr=30,
+    cost_overrides={"CAS21": 50.0},  # "I know my building cost"
+)
+assert result.costs.cas21 == 50.0
+print(result.overridden)  # ["CAS21"]
+
+# Override a CAS22 sub-account (coils)
+result = model.forward(
+    net_electric_mw=1000.0,
+    availability=0.85,
+    lifetime_yr=30,
+    cost_overrides={"C220103": 300.0},  # "Use this coil cost"
+)
+# CAS22 total is recomputed from patched sub-accounts
+print(result.cas22_detail["C220103"])  # 300.0
+print(result.cas22_detail["C220000"])  # Recomputed total
+```
+
+Available CAS-level keys: `CAS10`, `CAS21`-`CAS28`.
+
+Available CAS22 sub-account keys: `C220101` (blanket), `C220102` (shield), `C220103` (coils), `C220104` (heating), `C220105` (structure), `C220106` (vacuum), `C220107` (power supplies), `C220108` (divertor), `C220109` (DEC), `C220111` (installation), `C220112` (isotope sep), `C220119` (replacement), `C220200` (coolant), `C220300` (aux cooling), `C220400` (rad waste), `C220500` (fuel handling), `C220600` (other equipment), `C220700` (I&C).
+
+Sensitivity analysis works with overrides -- overridden accounts become constants with zero gradient:
+
+```python
+sens = model.sensitivity(result.params, cost_overrides={"CAS21": 50.0})
+```
+
 ## Fusion-Tea Adapter
 
 ```python
@@ -95,6 +132,29 @@ inp = FusionTeaInput(
 out = run_costing(inp)
 # out.lcoe, out.costs (CAS-keyed dict), out.power_table, out.sensitivity
 ```
+
+The adapter supports two additional override mechanisms for the fusion-tea pipeline:
+
+```python
+inp = FusionTeaInput(
+    concept="tokamak",
+    fuel="dt",
+    net_electric_mw=1000.0,
+    availability=0.85,
+    lifetime_yr=30,
+    # Inject known CAS account values (M$)
+    cost_overrides={"CAS21": 50.0, "C220103": 300.0},
+    # Override costing constants (unit costs, fractions, etc.)
+    costing_overrides={"blanket_unit_cost_dt": 1.0},
+)
+out = run_costing(inp)
+print(out.overridden)           # ["CAS21", "C220103"]
+print(out.costs["C220103"])     # 300.0 (CAS22 sub-accounts included in costs dict)
+```
+
+- `cost_overrides` -- replace computed CAS account values with known costs. Passed through to `CostModel.forward()`.
+- `costing_overrides` -- override fields on `CostingConstants` (unit costs, scaling coefficients). Applied via `cc.replace()` before model construction.
+- `out.overridden` -- list of keys that were injected rather than computed.
 
 ## Supported Concepts
 

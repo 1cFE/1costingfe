@@ -8,6 +8,7 @@ Provides:
 
 from dataclasses import dataclass, field
 
+from costingfe.defaults import load_costing_constants
 from costingfe.model import CostModel
 from costingfe.types import ConfinementConcept, Fuel
 
@@ -27,6 +28,8 @@ class FusionTeaInput:
     inflation_rate: float = 0.0245
     noak: bool = True
     overrides: dict = field(default_factory=dict)
+    cost_overrides: dict[str, float] = field(default_factory=dict)      # CAS account → M$
+    costing_overrides: dict[str, float] = field(default_factory=dict)   # CostingConstants field → value
 
 
 @dataclass
@@ -39,6 +42,7 @@ class FusionTeaOutput:
     costs: dict[str, float]      # CAS code -> M$ (e.g. "CAS10" -> 16.0)
     power_table: dict[str, float]  # Power flow values (e.g. "p_fus" -> 2300.0)
     sensitivity: dict[str, dict[str, float]]  # {"engineering": {...}, "financial": {...}}
+    overridden: list[str] = field(default_factory=list)  # Keys that were overridden
 
 
 def run_costing(inp: FusionTeaInput) -> FusionTeaOutput:
@@ -50,7 +54,11 @@ def run_costing(inp: FusionTeaInput) -> FusionTeaOutput:
     concept = ConfinementConcept(inp.concept)
     fuel = Fuel(inp.fuel)
 
-    model = CostModel(concept=concept, fuel=fuel)
+    cc = load_costing_constants()
+    if inp.costing_overrides:
+        cc = cc.replace(**inp.costing_overrides)
+
+    model = CostModel(concept=concept, fuel=fuel, costing_constants=cc)
     result = model.forward(
         net_electric_mw=inp.net_electric_mw,
         availability=inp.availability,
@@ -60,6 +68,7 @@ def run_costing(inp: FusionTeaInput) -> FusionTeaOutput:
         interest_rate=inp.interest_rate,
         inflation_rate=inp.inflation_rate,
         noak=inp.noak,
+        cost_overrides=inp.cost_overrides or None,
         **inp.overrides,
     )
 
@@ -84,6 +93,9 @@ def run_costing(inp: FusionTeaInput) -> FusionTeaOutput:
         "CAS80": float(c.cas80),
         "CAS90": float(c.cas90),
     }
+    # Include CAS22 sub-account detail
+    for key, val in result.cas22_detail.items():
+        costs[key] = float(val)
 
     pt = result.power_table
     power_table = {
@@ -96,7 +108,7 @@ def run_costing(inp: FusionTeaInput) -> FusionTeaOutput:
         "rec_frac": float(pt.rec_frac),
     }
 
-    sens = model.sensitivity(result.params)
+    sens = model.sensitivity(result.params, cost_overrides=inp.cost_overrides or None)
 
     return FusionTeaOutput(
         lcoe=float(c.lcoe),
@@ -105,4 +117,5 @@ def run_costing(inp: FusionTeaInput) -> FusionTeaOutput:
         costs=costs,
         power_table=power_table,
         sensitivity=sens,
+        overridden=result.overridden,
     )

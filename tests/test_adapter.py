@@ -61,7 +61,7 @@ def test_adapter_with_overrides():
 
 
 def test_adapter_cas_codes_complete():
-    """Output should contain all CAS codes."""
+    """Output should contain all CAS codes and CAS22 sub-accounts."""
     inp = FusionTeaInput(
         concept="tokamak",
         fuel="dt",
@@ -70,10 +70,87 @@ def test_adapter_cas_codes_complete():
         lifetime_yr=30,
     )
     out = run_costing(inp)
-    expected = [
+    expected_cas = [
         "CAS10", "CAS20", "CAS21", "CAS22", "CAS23", "CAS24",
         "CAS25", "CAS26", "CAS27", "CAS28", "CAS29", "CAS30",
         "CAS40", "CAS50", "CAS60", "CAS70", "CAS80", "CAS90",
     ]
-    for code in expected:
+    for code in expected_cas:
         assert code in out.costs, f"Missing {code}"
+    # CAS22 sub-accounts should also be present
+    assert "C220101" in out.costs
+    assert "C220103" in out.costs
+    assert "C220000" in out.costs
+
+
+# ---- Cost override tests (adapter level) ----
+
+
+def test_adapter_cost_override_cas21():
+    """Cost override for CAS21 should flow through adapter."""
+    inp = FusionTeaInput(
+        concept="tokamak",
+        fuel="dt",
+        net_electric_mw=1000.0,
+        availability=0.85,
+        lifetime_yr=30,
+        cost_overrides={"CAS21": 50.0},
+    )
+    out = run_costing(inp)
+    assert out.costs["CAS21"] == 50.0
+    assert "CAS21" in out.overridden
+
+
+def test_adapter_cost_override_cas22_subaccount():
+    """CAS22 sub-account override should change CAS22 total."""
+    base_inp = FusionTeaInput(
+        concept="tokamak", fuel="dt",
+        net_electric_mw=1000.0, availability=0.85, lifetime_yr=30,
+    )
+    base_out = run_costing(base_inp)
+
+    inp = FusionTeaInput(
+        concept="tokamak", fuel="dt",
+        net_electric_mw=1000.0, availability=0.85, lifetime_yr=30,
+        cost_overrides={"C220103": 300.0},
+    )
+    out = run_costing(inp)
+    assert out.costs["C220103"] == 300.0
+    assert out.costs["CAS22"] != base_out.costs["CAS22"]
+    assert "C220103" in out.overridden
+
+
+def test_adapter_costing_overrides():
+    """Costing constant override should change CAS22 via blanket_unit_cost_dt."""
+    base_inp = FusionTeaInput(
+        concept="tokamak", fuel="dt",
+        net_electric_mw=1000.0, availability=0.85, lifetime_yr=30,
+    )
+    base_out = run_costing(base_inp)
+
+    inp = FusionTeaInput(
+        concept="tokamak", fuel="dt",
+        net_electric_mw=1000.0, availability=0.85, lifetime_yr=30,
+        costing_overrides={"blanket_unit_cost_dt": 1.0},
+    )
+    out = run_costing(inp)
+    # Higher blanket unit cost -> higher CAS22
+    assert out.costs["CAS22"] > base_out.costs["CAS22"]
+
+
+def test_adapter_no_overrides_unchanged():
+    """Empty overrides should not change results."""
+    inp = FusionTeaInput(
+        concept="tokamak", fuel="dt",
+        net_electric_mw=1000.0, availability=0.85, lifetime_yr=30,
+    )
+    out1 = run_costing(inp)
+
+    inp2 = FusionTeaInput(
+        concept="tokamak", fuel="dt",
+        net_electric_mw=1000.0, availability=0.85, lifetime_yr=30,
+        cost_overrides={}, costing_overrides={},
+    )
+    out2 = run_costing(inp2)
+    assert out1.lcoe == out2.lcoe
+    assert out2.overridden == []
