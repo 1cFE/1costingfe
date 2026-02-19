@@ -1,11 +1,14 @@
 """CAS22: Reactor Plant Equipment sub-accounts.
 
-Volume-based costing for geometry-dependent items (220101 blanket,
-220102 shield, 220105 structure, 220106 vacuum vessel). Power-scaled
-for remaining items (coils, heating, power supplies, divertor).
+Hybrid volume + thermal-intensity costing for geometry-dependent items:
+  cost = unit_cost * volume * (p_th / p_th_ref)^alpha
 
-Fuel-dependent config for 220101 (blanket), 220112 (isotope sep),
-220500 (fuel handling).
+Volume captures reactor size (geometry dimensions). Thermal intensity
+captures the fact that components handling more power need better
+cooling, thicker walls, and higher-grade materials per unit volume.
+
+Power-scaled for remaining items (coils, heating, power supplies, divertor).
+Fuel-dependent config for blanket, isotope sep, fuel handling.
 
 All costs in M$. Source: pyFECONs costing/calculations/cas22/
 """
@@ -31,10 +34,13 @@ def cas22_reactor_plant_equipment(
 ) -> dict[str, float]:
     """Compute all CAS22 sub-accounts. Returns dict of account_code -> M$.
 
-    When volume parameters are provided (> 0), uses volume-based costing
-    for blanket, shield, structure, and vessel. Otherwise falls back to
-    power-scaled approximations for backwards compatibility.
+    Volume-based accounts use hybrid formula:
+      cost = unit_cost * volume * (power / power_ref)^alpha
+    This captures both reactor size (volume) and thermal intensity (power).
     """
+    # Reference power levels at calibration geometry (1 GWe DT tokamak)
+    P_TH_REF = 2500.0  # MW thermal
+    P_ET_REF = 1100.0  # MW gross electric
 
     # -----------------------------------------------------------------------
     # 220101: First Wall + Blanket + Neutron Multiplier
@@ -49,7 +55,7 @@ def cas22_reactor_plant_equipment(
         Fuel.DHE3: cc.blanket_unit_cost_dhe3,
         Fuel.PB11: cc.blanket_unit_cost_pb11,
     }
-    c220101 = blanket_unit[fuel] * blanket_vol
+    c220101 = blanket_unit[fuel] * blanket_vol * (p_th / P_TH_REF) ** 0.6
 
     # -----------------------------------------------------------------------
     # 220102: Shield (HT + LT + Bioshield)
@@ -61,7 +67,7 @@ def cas22_reactor_plant_equipment(
         Fuel.DHE3: 0.3,     # Light (~5% neutron fraction)
         Fuel.PB11: 0.1,     # Minimal (aneutronic)
     }
-    c220102 = cc.shield_unit_cost * shield_vol * shield_scale[fuel]
+    c220102 = cc.shield_unit_cost * shield_vol * shield_scale[fuel] * (p_th / P_TH_REF) ** 0.6
 
     # -----------------------------------------------------------------------
     # 220103: Coils (MFE tokamak: TF + CS + PF + shim + structure + cooling)
@@ -80,13 +86,13 @@ def cas22_reactor_plant_equipment(
     # 220105: Primary Structure
     # Source: pyFECONs cas220105_primary_structure.py
     # -----------------------------------------------------------------------
-    c220105 = cc.structure_unit_cost * structure_vol
+    c220105 = cc.structure_unit_cost * structure_vol * (p_et / P_ET_REF) ** 0.5
 
     # -----------------------------------------------------------------------
     # 220106: Vacuum System (vessel + cryo cooling + pumps)
     # Source: pyFECONs cas220106_vacuum_system.py
     # -----------------------------------------------------------------------
-    c220106 = cc.vessel_unit_cost * vessel_vol
+    c220106 = cc.vessel_unit_cost * vessel_vol * (p_et / P_ET_REF) ** 0.6
 
     # -----------------------------------------------------------------------
     # 220107: Power Supplies
