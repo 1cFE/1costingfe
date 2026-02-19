@@ -207,3 +207,82 @@ def mfe_forward_power_balance(
         q_eng=q_eng,
         rec_frac=rec_frac,
     )
+
+
+def mfe_inverse_power_balance(
+    p_net_target: float,
+    fuel: Fuel,
+    p_input: float,
+    mn: float,
+    eta_th: float,
+    eta_p: float,
+    eta_pin: float,
+    eta_de: float,
+    f_sub: float,
+    f_dec: float,
+    p_coils: float,
+    p_cool: float,
+    p_pump: float,
+    p_trit: float,
+    p_house: float,
+    p_cryo: float,
+    # Radiation: calculated from plasma params, or override
+    n_e: float = 1.0e20,
+    T_e: float = 15.0,
+    Z_eff: float = 1.5,
+    plasma_volume: float = 500.0,
+    B: float = 5.0,
+    p_rad_override: Optional[float] = None,
+    dd_f_T: float = 0.969,
+    dd_f_He3: float = 0.689,
+    dhe3_dd_frac: float = 0.07,
+    dhe3_f_T: float = 0.97,
+) -> float:
+    """Inverse MFE power balance: target net electric -> required fusion power.
+
+    Closed-form linear inversion (no iteration needed).
+    p_rad is constant w.r.t. p_fus (depends on plasma params, not fusion power),
+    so it enters as a constant term in the linear inversion.
+    Source: fusion-tea Inverse MFE Power Balance Calc
+    """
+    # Step 1: Radiation power (constant w.r.t. p_fus)
+    if p_rad_override is not None:
+        p_rad = p_rad_override
+    else:
+        p_rad = compute_p_rad(n_e, T_e, Z_eff, plasma_volume, B)
+
+    # Step 2: Ash fraction from fuel type (use p_fus=1.0 to get the fraction)
+    p_ash_unit, _ = ash_neutron_split(
+        1.0, fuel, dd_f_T, dd_f_He3, dhe3_dd_frac, dhe3_f_T
+    )
+    ash_frac = p_ash_unit
+    neutron_frac = 1.0 - ash_frac
+
+    # Step 3: Linearize forward chain coefficients
+    # Thermal power per unit p_fus
+    c_th = mn * neutron_frac + (1.0 - f_dec) * ash_frac
+
+    # Constant thermal power (radiation + heating + pumping)
+    # p_rad - (1-f_dec)*p_rad simplifies to f_dec*p_rad
+    c_th0 = f_dec * p_rad + p_input + eta_p * p_pump
+
+    # DEC electric per unit p_fus
+    c_dee = f_dec * eta_de * ash_frac
+    c_dee0 = -f_dec * eta_de * p_rad
+
+    # Gross electric: p_et = c_et * p_fus + c_et0
+    c_et = c_dee + eta_th * c_th
+    c_et0 = c_dee0 + eta_th * c_th0
+
+    # Recirculating (p_fus-dependent): p_sub = f_sub * p_et
+    c_den = f_sub * c_et
+
+    # Recirculating (constant loads)
+    p_aux = p_trit + p_house
+    c_den0 = (
+        p_coils + p_pump + f_sub * c_et0 + p_aux + p_cool + p_cryo + p_input / eta_pin
+    )
+
+    # Step 4: Solve p_net = (c_et - c_den) * p_fus + (c_et0 - c_den0)
+    p_fus = (p_net_target - c_et0 + c_den0) / (c_et - c_den)
+    return p_fus
