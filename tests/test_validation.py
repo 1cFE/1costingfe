@@ -314,3 +314,34 @@ class TestForwardIntegration:
             net_electric_mw=1000, availability=0.85, lifetime_yr=40,
         )
         assert result.costs.lcoe > 0
+
+
+from costingfe.adapter import FusionTeaInput, run_costing
+
+
+class TestAdapterIntegration:
+    """Validation fires when calling run_costing()."""
+
+    def test_adapter_rejects_negative_net_electric(self):
+        inp = FusionTeaInput(
+            concept="tokamak", fuel="dt",
+            net_electric_mw=-100, availability=0.85, lifetime_yr=40,
+        )
+        with pytest.raises(ValidationError, match="net_electric_mw"):
+            run_costing(inp)
+
+    def test_adapter_rejects_invalid_availability(self):
+        inp = FusionTeaInput(
+            concept="tokamak", fuel="dt",
+            net_electric_mw=1000, availability=2.0, lifetime_yr=40,
+        )
+        with pytest.raises(ValidationError, match="availability"):
+            run_costing(inp)
+
+    def test_adapter_still_works_with_valid_input(self):
+        inp = FusionTeaInput(
+            concept="tokamak", fuel="dt",
+            net_electric_mw=1000, availability=0.85, lifetime_yr=40,
+        )
+        output = run_costing(inp)
+        assert output.lcoe > 0

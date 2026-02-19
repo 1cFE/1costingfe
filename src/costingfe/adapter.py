@@ -11,6 +11,7 @@ from dataclasses import dataclass, field
 from costingfe.defaults import load_costing_constants
 from costingfe.model import CostModel
 from costingfe.types import ConfinementConcept, Fuel
+from costingfe.validation import CostingInput
 
 
 @dataclass
@@ -53,6 +54,25 @@ def run_costing(inp: FusionTeaInput) -> FusionTeaOutput:
     """
     concept = ConfinementConcept(inp.concept)
     fuel = Fuel(inp.fuel)
+
+    # Validate customer-level inputs before costing.
+    # Engineering overrides (inp.overrides) are intentionally excluded here
+    # because they are partial — the YAML template fills the rest inside
+    # CostModel.forward(), which runs its own full validation after merge.
+    CostingInput(
+        concept=concept,
+        fuel=fuel,
+        net_electric_mw=inp.net_electric_mw,
+        availability=inp.availability,
+        lifetime_yr=inp.lifetime_yr,
+        n_mod=inp.n_mod,
+        construction_time_yr=inp.construction_time_yr,
+        interest_rate=inp.interest_rate,
+        inflation_rate=inp.inflation_rate,
+        noak=inp.noak,
+        cost_overrides=inp.cost_overrides or {},
+        costing_overrides=inp.costing_overrides or {},
+    )
 
     cc = load_costing_constants()
     if inp.costing_overrides:
