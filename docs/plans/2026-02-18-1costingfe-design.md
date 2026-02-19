@@ -90,7 +90,7 @@ Optional targets (for backcasting):
 - pB11: fully aneutronic
 
 **Power balance** per architecture family:
-- MFE: recirculating includes coils, cryo, divertor cooling
+- MFE: recirculating includes coils, cryo, divertor cooling, plasma heating (NBI/ICRF/LHCD)
 - IFE: recirculating includes laser drivers, target injection
 - MIF: recirculating includes pulsed power charging
 
