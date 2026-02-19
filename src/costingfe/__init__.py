@@ -1,15 +1,16 @@
+from dataclasses import dataclass
+
+from costingfe.model import CostModel
 from costingfe.types import (
-    ConfinementFamily,
-    ConfinementConcept,
-    Fuel,
     CONCEPT_TO_FAMILY,
-    PowerTable,
+    ConfinementConcept,
+    ConfinementFamily,
     CostResult,
     ForwardResult,
+    Fuel,
+    PowerTable,
 )
-from costingfe.model import CostModel
-
-from dataclasses import dataclass
+from costingfe.validation import CostingInput as CostingInput
 
 
 @dataclass

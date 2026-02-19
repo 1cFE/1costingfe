@@ -7,7 +7,6 @@ Pydantic-based CostingInput with three validation tiers:
 """
 
 import warnings
-from typing import Optional
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -45,49 +44,49 @@ class CostingInput(BaseModel):
 
     # --- Engineering parameters (None = use YAML template) ---
     # Common (all families)
-    mn: Optional[float] = None
-    eta_th: Optional[float] = None
-    eta_p: Optional[float] = None
-    f_sub: Optional[float] = None
-    p_pump: Optional[float] = None
-    p_trit: Optional[float] = None
-    p_house: Optional[float] = None
-    p_cryo: Optional[float] = None
-    blanket_t: Optional[float] = None
-    ht_shield_t: Optional[float] = None
-    structure_t: Optional[float] = None
-    vessel_t: Optional[float] = None
-    plasma_t: Optional[float] = None
+    mn: float | None = None
+    eta_th: float | None = None
+    eta_p: float | None = None
+    f_sub: float | None = None
+    p_pump: float | None = None
+    p_trit: float | None = None
+    p_house: float | None = None
+    p_cryo: float | None = None
+    blanket_t: float | None = None
+    ht_shield_t: float | None = None
+    structure_t: float | None = None
+    vessel_t: float | None = None
+    plasma_t: float | None = None
 
     # MFE only
-    p_input: Optional[float] = None
-    eta_pin: Optional[float] = None
-    eta_de: Optional[float] = None
-    f_dec: Optional[float] = None
-    p_coils: Optional[float] = None
-    p_cool: Optional[float] = None
-    axis_t: Optional[float] = None
-    elon: Optional[float] = None
+    p_input: float | None = None
+    eta_pin: float | None = None
+    eta_de: float | None = None
+    f_dec: float | None = None
+    p_coils: float | None = None
+    p_cool: float | None = None
+    axis_t: float | None = None
+    elon: float | None = None
 
     # IFE only
-    p_implosion: Optional[float] = None
-    p_ignition: Optional[float] = None
-    eta_pin1: Optional[float] = None
-    eta_pin2: Optional[float] = None
-    p_target: Optional[float] = None  # shared with MIF
+    p_implosion: float | None = None
+    p_ignition: float | None = None
+    eta_pin1: float | None = None
+    eta_pin2: float | None = None
+    p_target: float | None = None  # shared with MIF
 
     # MIF only
-    p_driver: Optional[float] = None
+    p_driver: float | None = None
     # eta_pin: already declared above (shared MFE/MIF)
     # p_target: already declared above (shared IFE/MIF)
     # p_coils: already declared above (shared MFE/MIF)
 
     # Plasma parameters (MFE radiation calculation)
-    n_e: Optional[float] = None
-    T_e: Optional[float] = None
-    Z_eff: Optional[float] = None
-    plasma_volume: Optional[float] = None
-    B: Optional[float] = None
+    n_e: float | None = None
+    T_e: float | None = None
+    Z_eff: float | None = None
+    plasma_volume: float | None = None
+    B: float | None = None
 
     # --- Tier 2: family-required parameter lists ---
     _COMMON_REQUIRED = [
@@ -108,7 +107,7 @@ class CostingInput(BaseModel):
 
     @model_validator(mode="after")
     def check_family_required_params(self):
-        """Tier 2: If any engineering param is set, all family-required params must be present."""
+        """Tier 2: If any eng param is set, all family-required must be present."""
         family = CONCEPT_TO_FAMILY[self.concept]
 
         all_eng = (
@@ -179,8 +178,8 @@ class CostingInput(BaseModel):
 
     def _check_mfe_physics(self):
         from costingfe.layers.physics import (
-            mfe_inverse_power_balance,
             mfe_forward_power_balance,
+            mfe_inverse_power_balance,
         )
 
         mfe_params = [self.p_input, self.eta_pin, self.eta_de, self.f_dec,
@@ -209,8 +208,8 @@ class CostingInput(BaseModel):
 
     def _check_ife_physics(self):
         from costingfe.layers.physics import (
-            ife_inverse_power_balance,
             ife_forward_power_balance,
+            ife_inverse_power_balance,
         )
 
         ife_params = [self.p_implosion, self.p_ignition,
@@ -239,8 +238,8 @@ class CostingInput(BaseModel):
 
     def _check_mif_physics(self):
         from costingfe.layers.physics import (
-            mif_inverse_power_balance,
             mif_forward_power_balance,
+            mif_inverse_power_balance,
         )
 
         mif_params = [self.p_driver, self.eta_pin, self.p_target]
