@@ -44,6 +44,7 @@ from costingfe.types import (
     ForwardResult,
     Fuel,
 )
+from costingfe.validation import CostingInput
 
 
 class CostModel:
@@ -209,6 +210,31 @@ class CostModel:
                 concept=self.concept,
             )
         )
+
+        # Validate merged parameters (skip under JAX tracing)
+        _tracing = any(isinstance(v, jax.core.Tracer) for v in params.values())
+        if not _tracing:
+            CostingInput(
+                concept=self.concept,
+                fuel=self.fuel,
+                net_electric_mw=net_electric_mw,
+                availability=availability,
+                lifetime_yr=lifetime_yr,
+                n_mod=n_mod,
+                construction_time_yr=construction_time_yr,
+                interest_rate=interest_rate,
+                inflation_rate=inflation_rate,
+                noak=noak,
+                cost_overrides=cost_overrides or {},
+                **{k: v for k, v in params.items()
+                   if k in CostingInput.model_fields
+                   and k not in {
+                       "concept", "fuel", "net_electric_mw", "availability",
+                       "lifetime_yr", "n_mod", "construction_time_yr",
+                       "interest_rate", "inflation_rate", "noak",
+                       "cost_overrides",
+                   }},
+            )
 
         # Layer 2: Power balance (dispatched by family)
         pt = self._power_balance(params, n_mod)

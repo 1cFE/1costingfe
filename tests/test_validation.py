@@ -284,3 +284,33 @@ class TestTier3PhysicsChecks:
             warnings.simplefilter("always")
             self._make_mfe_input(eta_pin=0.05)
             assert any("rec" in str(warning.message).lower() for warning in w)
+
+
+from costingfe.model import CostModel
+
+
+class TestForwardIntegration:
+    """Validation fires when calling CostModel.forward()."""
+
+    def test_forward_rejects_negative_net_electric(self):
+        model = CostModel(
+            concept=ConfinementConcept.TOKAMAK, fuel=Fuel.DT,
+        )
+        with pytest.raises(ValidationError, match="net_electric_mw"):
+            model.forward(net_electric_mw=-100, availability=0.85, lifetime_yr=40)
+
+    def test_forward_rejects_invalid_availability(self):
+        model = CostModel(
+            concept=ConfinementConcept.TOKAMAK, fuel=Fuel.DT,
+        )
+        with pytest.raises(ValidationError, match="availability"):
+            model.forward(net_electric_mw=1000, availability=2.0, lifetime_yr=40)
+
+    def test_forward_still_works_with_valid_input(self):
+        model = CostModel(
+            concept=ConfinementConcept.TOKAMAK, fuel=Fuel.DT,
+        )
+        result = model.forward(
+            net_electric_mw=1000, availability=0.85, lifetime_yr=40,
+        )
+        assert result.costs.lcoe > 0
