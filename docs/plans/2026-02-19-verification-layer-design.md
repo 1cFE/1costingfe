@@ -27,7 +27,7 @@ Pydantic `CostingInput` model with built-in validators. Preserves the current `f
 | n_mod | int | 1 | >= 1, integer enforced |
 | construction_time_yr | float | 6.0 | > 0 |
 | interest_rate | float | 0.07 | > 0 |
-| inflation_rate | float | 0.0245 | >= 0 |
+| inflation_rate | float | 0.02 | (no constraint) |
 | noak | bool | True | |
 | cost_overrides | dict[str, float] | {} | |
 | costing_overrides | dict[str, float] | {} | |
