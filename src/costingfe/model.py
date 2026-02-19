@@ -276,7 +276,10 @@ class CostModel:
         return ForwardResult(power_table=pt, costs=costs, params=params)
 
     def sensitivity(self, params: dict) -> dict[str, float]:
-        """Compute d(LCOE)/d(param) for all continuous parameters.
+        """Compute elasticity of LCOE w.r.t. each continuous parameter.
+
+        Elasticity = (dLCOE/dp) * (p / LCOE) = %ΔLCOE / %Δparam.
+        Dimensionless, allowing fair comparison across parameters.
 
         Uses finite-difference for MVP. Will be replaced with jax.grad
         when the pipeline is fully JAX-traced (Task 14).
@@ -333,17 +336,18 @@ class CostModel:
                 **eng,
             )
 
-        base_lcoe = _run().costs.lcoe
-        sensitivities = {}
+        base_lcoe = float(_run().costs.lcoe)
+        elasticities = {}
 
         for key in continuous_keys:
             if key not in params:
                 continue
-            base_val = params[key]
+            base_val = float(params[key])
             if base_val == 0:
                 continue
             delta = abs(base_val) * 0.01
-            result_plus = _run(key, base_val + delta)
-            sensitivities[key] = (result_plus.costs.lcoe - base_lcoe) / delta
+            lcoe_plus = float(_run(key, base_val + delta).costs.lcoe)
+            dLCOE_dp = (lcoe_plus - base_lcoe) / delta
+            elasticities[key] = dLCOE_dp * base_val / base_lcoe
 
-        return sensitivities
+        return elasticities
