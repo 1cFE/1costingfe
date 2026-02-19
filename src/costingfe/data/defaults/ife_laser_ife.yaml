@@ -14,3 +14,14 @@ p_trit: 10.0         # Tritium processing power [MW]
 p_house: 4.0         # Housekeeping power [MW]
 p_cryo: 0.5          # Cryogenic power [MW]
 p_target: 1.0        # Target factory power [MW]
+
+# Radial build geometry [m] (spherical chamber)
+axis_t: 0.0          # Not used for sphere
+plasma_t: 4.0        # Chamber radius
+blanket_t: 0.80      # Blanket thickness
+ht_shield_t: 0.25    # High-temperature shield
+structure_t: 0.15    # Primary structure
+vessel_t: 0.10       # Vacuum vessel
+
+# Construction
+construction_time_yr: 5.0  # Years (no magnets, simpler)

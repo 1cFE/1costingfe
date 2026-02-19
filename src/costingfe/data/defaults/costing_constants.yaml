@@ -18,24 +18,25 @@ licensing_time_dd: 3.0
 licensing_time_dhe3: 2.0
 licensing_time_pb11: 1.0
 
-# CAS22 — Reactor Plant Equipment (power-scaled approximations)
-# Source: pyFECONs costing/calculations/cas22/ sub-modules
-# 220101: First Wall + Blanket (M$ at 1 GWth reference)
-blanket_dt_base: 350.0       # Full breeding blanket (TBR>1.05)
-blanket_dd_base: 180.0       # Energy capture, no breeding
-blanket_dhe3_base: 50.0      # Minimal X-ray + ~5% neutron
-blanket_pb11_base: 30.0      # Minimal X-ray only
+# CAS22 — Reactor Plant Equipment
+# Source: pyFECONs costing/calculations/cas22/, calibrated to volume-based
+# 220101: First Wall + Blanket — volume-based unit costs (M$/m³)
+# Calibrated against reference tokamak (R=6.2m, a=2.0m, κ=1.7)
+blanket_unit_cost_dt: 0.60   # Full breeding blanket (TBR>1.05)
+blanket_unit_cost_dd: 0.30   # Energy capture, no breeding
+blanket_unit_cost_dhe3: 0.08 # Minimal X-ray + ~5% neutron
+blanket_unit_cost_pb11: 0.05 # Minimal X-ray only
 
-# 220102: Shield (M$ at 1 GWth, DT reference)
-shield_base: 220.0
+# 220102: Shield — volume-based unit cost (M$/m³)
+shield_unit_cost: 0.74       # DT reference, apply fuel scale factor
 
-# 220103-220108: Reactor components (M$ at 1 GWe reference)
-coils_base: 500.0            # TF + CS + PF + structure + cooling
-heating_base: 150.0          # NBI + ICRF + ECRH + LHCD
-primary_structure_base: 30.0
-vacuum_base: 100.0           # Vessel + cryo cooling + pumps
-power_supplies_base: 80.0
-divertor_base: 60.0
+# 220103-220108: Reactor components
+coils_base: 500.0            # M$ at 1 GWe (power-scaled)
+heating_base: 150.0          # M$ at 1 GWe (power-scaled)
+structure_unit_cost: 0.15    # M$/m³ (volume-based)
+vessel_unit_cost: 0.72       # M$/m³ (volume-based)
+power_supplies_base: 80.0    # M$ at 1 GWe (power-scaled)
+divertor_base: 60.0          # M$ at 1 GWth (power-scaled)
 
 # 220111: Installation labor
 installation_frac: 0.14      # Fraction of reactor subtotal

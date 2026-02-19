@@ -16,6 +16,18 @@ p_trit: 10.0        # Tritium processing power [MW]
 p_house: 4.0        # Housekeeping power [MW]
 p_cryo: 1.0         # Cryogenic power [MW]
 
+# Radial build geometry [m]
+axis_t: 0.0          # Not used for cylinder
+plasma_t: 1.5        # Plasma radius
+chamber_length: 20.0 # Chamber length
+blanket_t: 0.60      # Blanket thickness
+ht_shield_t: 0.20    # High-temperature shield
+structure_t: 0.15    # Primary structure
+vessel_t: 0.10       # Vacuum vessel
+
+# Construction
+construction_time_yr: 5.0  # Years (simpler geometry)
+
 # Plasma parameters for radiation calculation
 n_e: 5.0e19         # Electron density [m^-3]
 T_e: 20.0           # Electron temperature [keV]

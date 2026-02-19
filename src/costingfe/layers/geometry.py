@@ -20,9 +20,9 @@ class RadialBuild:
     """Input radial build thicknesses (meters), from center outward."""
 
     # Core geometry
-    axis_t: float       # Major radius R0 (tokamak) or chamber radius (mirror/IFE)
-    plasma_t: float     # Minor radius a (tokamak) or plasma thickness
-    elon: float = 1.0   # Elongation kappa (tokamak only, 1.0 = circular)
+    axis_t: float = 6.2   # Major radius R0 (tokamak) or chamber radius (mirror/IFE)
+    plasma_t: float = 2.0  # Minor radius a (tokamak) or plasma thickness
+    elon: float = 1.0      # Elongation kappa (tokamak only, 1.0 = circular)
     chamber_length: float = 0.0  # Chamber length (mirror only)
 
     # Radial build layers (center → outboard)

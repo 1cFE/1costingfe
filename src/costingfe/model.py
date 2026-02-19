@@ -9,6 +9,7 @@ from costingfe.defaults import (
     load_engineering_defaults,
 )
 from costingfe.layers.cas22 import cas22_reactor_plant_equipment
+from costingfe.layers.geometry import RadialBuild, compute_geometry
 from costingfe.layers.costs import (
     cas10_preconstruction,
     cas21_buildings,
@@ -211,6 +212,20 @@ class CostModel:
         # Layer 2: Power balance (dispatched by family)
         pt = self._power_balance(params, n_mod)
 
+        # Layer 3: Geometry (radial build -> component volumes)
+        from dataclasses import fields as dc_fields
+
+        rb_field_names = {f.name for f in dc_fields(RadialBuild)}
+        rb_params = {k: params[k] for k in rb_field_names if k in params}
+        rb = RadialBuild(**rb_params)
+        geo = compute_geometry(rb, self.concept)
+
+        # Combined volumes for CAS22 accounts
+        blanket_vol = geo.firstwall_vol + geo.blanket_vol + geo.reflector_vol
+        shield_vol = geo.ht_shield_vol + geo.lt_shield_vol
+        structure_vol = geo.structure_vol
+        vessel_vol = geo.vessel_vol
+
         # Layer 4: Cost accounts
         cc = self.cc
         c10 = cas10_preconstruction(cc, pt.p_net, n_mod, self.fuel, noak)
@@ -218,6 +233,10 @@ class CostModel:
         c22_detail = cas22_reactor_plant_equipment(
             cc, pt.p_net, pt.p_th, pt.p_et, pt.p_fus,
             params["p_cryo"], n_mod, self.fuel, noak,
+            blanket_vol=blanket_vol,
+            shield_vol=shield_vol,
+            structure_vol=structure_vol,
+            vessel_vol=vessel_vol,
         )
         c22 = c22_detail["C220000"]
         c23 = cas23_turbine(cc, pt.p_et, n_mod)
@@ -287,11 +306,15 @@ class CostModel:
             "availability", "construction_time_yr",
             "mn", "eta_th", "eta_p", "f_sub",
             "p_pump", "p_trit", "p_house", "p_cryo",
+            # Geometry — radial build dimensions
+            "blanket_t", "ht_shield_t", "structure_t", "vessel_t",
+            "plasma_t",
         ]
         family_specific = {
             ConfinementFamily.MFE: [
                 "p_input", "eta_pin", "eta_de", "f_dec",
                 "p_coils", "p_cool",
+                "axis_t", "elon",  # torus geometry
             ],
             ConfinementFamily.IFE: [
                 "p_implosion", "p_ignition", "eta_pin1", "eta_pin2",

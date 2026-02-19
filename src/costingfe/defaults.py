@@ -30,21 +30,26 @@ class CostingConstants:
     licensing_time_dhe3: float = 2.0
     licensing_time_pb11: float = 1.0
 
-    # CAS22 — Reactor Plant Equipment (power-scaled approximations)
-    # 220101: First Wall + Blanket (fuel-dependent base cost, M$)
-    blanket_dt_base: float = 350.0       # Full breeding blanket (TBR>1.05)
-    blanket_dd_base: float = 180.0       # Energy capture, no breeding
-    blanket_dhe3_base: float = 50.0      # Minimal X-ray + ~5% neutron
-    blanket_pb11_base: float = 30.0      # Minimal X-ray only
+    # CAS22 — Reactor Plant Equipment
+    # 220101: First Wall + Blanket — volume-based unit costs (M$/m³)
+    # Calibrated against pyFECONs at reference tokamak geometry
+    # (R=6.2m, a=2.0m, κ=1.7, blanket_t=0.7m → ~1018 m³ assembly)
+    blanket_unit_cost_dt: float = 0.60   # Full breeding blanket (TBR>1.05)
+    blanket_unit_cost_dd: float = 0.30   # Energy capture, no breeding
+    blanket_unit_cost_dhe3: float = 0.08 # Minimal X-ray + ~5% neutron
+    blanket_unit_cost_pb11: float = 0.05 # Minimal X-ray only
 
-    # 220102: Shield
-    shield_base: float = 220.0           # M$ at 1 GWth, DT reference
+    # 220102: Shield — volume-based unit cost (M$/m³)
+    # Calibrated at reference shield volume ~516 m³
+    shield_unit_cost: float = 0.74       # M$/m³, DT reference
 
-    # 220103-220108: Reactor components (M$ at 1 GWe reference)
+    # 220103-220108: Reactor components (M$ at 1 GWe reference, power-scaled)
     coils_base: float = 500.0            # TF + CS + PF + structure
     heating_base: float = 150.0          # NBI + ICRF + ECRH
-    primary_structure_base: float = 30.0
-    vacuum_base: float = 100.0           # Vessel + cryo + pumps
+    # 220105: Primary Structure — volume-based (M$/m³)
+    structure_unit_cost: float = 0.15    # Calibrated at ~208 m³
+    # 220106: Vacuum System — volume-based (M$/m³)
+    vessel_unit_cost: float = 0.72       # Calibrated at ~148 m³
     power_supplies_base: float = 80.0
     divertor_base: float = 60.0
 

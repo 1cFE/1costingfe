@@ -15,6 +15,18 @@ p_trit: 10.0        # Tritium processing power [MW]
 p_house: 4.0        # Housekeeping power [MW]
 p_cryo: 0.5         # Cryogenic power [MW]
 
+# Radial build geometry [m]
+axis_t: 6.2          # Major radius R0
+plasma_t: 2.0        # Minor radius a
+elon: 1.7            # Elongation kappa
+blanket_t: 0.70      # Blanket thickness
+ht_shield_t: 0.20    # High-temperature shield
+structure_t: 0.15    # Primary structure
+vessel_t: 0.10       # Vacuum vessel
+
+# Construction
+construction_time_yr: 7.0  # Years (large, complex magnet assembly)
+
 # Plasma parameters for radiation calculation
 n_e: 1.0e20         # Electron density [m^-3]
 T_e: 15.0           # Electron temperature [keV]

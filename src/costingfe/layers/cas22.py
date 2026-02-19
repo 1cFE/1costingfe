@@ -1,17 +1,14 @@
 """CAS22: Reactor Plant Equipment sub-accounts.
 
-Simplified power-scaled formulas for geometry-dependent items (220101,
-220102, 220103, 220106) until the geometry module is built. Proper
-fuel-dependent config for 220101 (blanket), 220112 (isotope sep),
+Volume-based costing for geometry-dependent items (220101 blanket,
+220102 shield, 220105 structure, 220106 vacuum vessel). Power-scaled
+for remaining items (coils, heating, power supplies, divertor).
+
+Fuel-dependent config for 220101 (blanket), 220112 (isotope sep),
 220500 (fuel handling).
 
 All costs in M$. Source: pyFECONs costing/calculations/cas22/
-
-TODO: Replace power-scaled approximations with geometry-based
-calculations once the geometry module (Task 11) is implemented.
 """
-
-import math
 
 from costingfe.defaults import CostingConstants
 from costingfe.types import Fuel
@@ -27,28 +24,35 @@ def cas22_reactor_plant_equipment(
     n_mod: int,
     fuel: Fuel,
     noak: bool,
+    blanket_vol: float = 0.0,
+    shield_vol: float = 0.0,
+    structure_vol: float = 0.0,
+    vessel_vol: float = 0.0,
 ) -> dict[str, float]:
-    """Compute all CAS22 sub-accounts. Returns dict of account_code -> M$."""
+    """Compute all CAS22 sub-accounts. Returns dict of account_code -> M$.
+
+    When volume parameters are provided (> 0), uses volume-based costing
+    for blanket, shield, structure, and vessel. Otherwise falls back to
+    power-scaled approximations for backwards compatibility.
+    """
 
     # -----------------------------------------------------------------------
     # 220101: First Wall + Blanket + Neutron Multiplier
     # DT: breeding blanket (TBR>1.05) + neutron multiplier
     # DD: energy-capture blanket (no breeding)
     # DHe3/pB11: minimal (X-ray shielding only)
-    # Simplified: base cost scaled by thermal power
     # Source: pyFECONs cas220101_reactor_equipment.py
     # -----------------------------------------------------------------------
-    blanket_base = {
-        Fuel.DT: cc.blanket_dt_base,       # Full breeding blanket
-        Fuel.DD: cc.blanket_dd_base,        # Energy capture, no breeding
-        Fuel.DHE3: cc.blanket_dhe3_base,    # Minimal, X-ray + ~5% neutron
-        Fuel.PB11: cc.blanket_pb11_base,    # Minimal, X-ray only
+    blanket_unit = {
+        Fuel.DT: cc.blanket_unit_cost_dt,
+        Fuel.DD: cc.blanket_unit_cost_dd,
+        Fuel.DHE3: cc.blanket_unit_cost_dhe3,
+        Fuel.PB11: cc.blanket_unit_cost_pb11,
     }
-    c220101 = blanket_base[fuel] * (p_th / 1000.0) ** 0.6
+    c220101 = blanket_unit[fuel] * blanket_vol
 
     # -----------------------------------------------------------------------
     # 220102: Shield (HT + LT + Bioshield)
-    # Power-scaled until geometry module provides volumes
     # Source: pyFECONs cas220102_shield.py
     # -----------------------------------------------------------------------
     shield_scale = {
@@ -57,11 +61,11 @@ def cas22_reactor_plant_equipment(
         Fuel.DHE3: 0.3,     # Light (~5% neutron fraction)
         Fuel.PB11: 0.1,     # Minimal (aneutronic)
     }
-    c220102 = cc.shield_base * (p_th / 1000.0) ** 0.6 * shield_scale[fuel]
+    c220102 = cc.shield_unit_cost * shield_vol * shield_scale[fuel]
 
     # -----------------------------------------------------------------------
     # 220103: Coils (MFE tokamak: TF + CS + PF + shim + structure + cooling)
-    # Power-scaled approximation until coil geometry available
+    # Power-scaled (coil cost depends on B-field and current, not simple volume)
     # Source: pyFECONs cas220103_coils.py
     # -----------------------------------------------------------------------
     c220103 = cc.coils_base * (p_et / 1000.0) ** 0.7
@@ -76,14 +80,13 @@ def cas22_reactor_plant_equipment(
     # 220105: Primary Structure
     # Source: pyFECONs cas220105_primary_structure.py
     # -----------------------------------------------------------------------
-    c220105 = cc.primary_structure_base * (p_et / 1000.0) ** 0.5
+    c220105 = cc.structure_unit_cost * structure_vol
 
     # -----------------------------------------------------------------------
     # 220106: Vacuum System (vessel + cryo cooling + pumps)
-    # Power-scaled until geometry module provides vessel volumes
     # Source: pyFECONs cas220106_vacuum_system.py
     # -----------------------------------------------------------------------
-    c220106 = cc.vacuum_base * (p_et / 1000.0) ** 0.6
+    c220106 = cc.vessel_unit_cost * vessel_vol
 
     # -----------------------------------------------------------------------
     # 220107: Power Supplies
@@ -122,16 +125,12 @@ def cas22_reactor_plant_equipment(
     scale_06 = p_gwe ** 0.6
 
     if fuel == Fuel.DT:
-        # Deuterium extraction + Li-6 enrichment
         c220112 = (cc.deuterium_extraction_base + cc.li6_enrichment_base) * scale_06
     elif fuel == Fuel.DD:
-        # Deuterium extraction only
         c220112 = cc.deuterium_extraction_base * scale_06
     elif fuel == Fuel.DHE3:
-        # Deuterium extraction + He-3 (currently zero — lunar mining not viable)
         c220112 = (cc.deuterium_extraction_base + cc.he3_extraction_base) * scale_06
     elif fuel == Fuel.PB11:
-        # Protium purification + B-11 enrichment
         c220112 = (cc.protium_purification_base + cc.b11_enrichment_base) * scale_06
     else:
         c220112 = 0.0
