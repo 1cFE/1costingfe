@@ -30,8 +30,11 @@ def compare_all(
 ) -> list[ComparisonResult]:
     """Run all concept x fuel combinations, rank by LCOE."""
     if concepts is None:
-        # MVP: only MFE concepts (power balance implemented)
-        concepts = [ConfinementConcept.TOKAMAK]
+        concepts = [
+            ConfinementConcept.TOKAMAK,
+            ConfinementConcept.LASER_IFE,
+            ConfinementConcept.MAG_TARGET,
+        ]
     if fuels is None:
         fuels = list(Fuel)
 

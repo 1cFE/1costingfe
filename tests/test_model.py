@@ -39,6 +39,34 @@ def test_sensitivity_returns_gradients():
     assert sens["eta_th"] != 0  # thermal efficiency should affect LCOE
 
 
+def test_forward_ife_laser():
+    """IFE laser fusion should produce a valid LCOE."""
+    model = CostModel(concept=ConfinementConcept.LASER_IFE, fuel=Fuel.DT)
+    result = model.forward(net_electric_mw=1000.0, availability=0.85, lifetime_yr=30)
+    assert result.costs.lcoe > 0
+    assert result.power_table.p_net > 0
+    assert result.power_table.p_coils == 0.0  # No magnets in IFE
+    assert result.power_table.p_target > 0    # Has target factory
+
+
+def test_forward_mif_mag_target():
+    """MIF magnetized target fusion should produce a valid LCOE."""
+    model = CostModel(concept=ConfinementConcept.MAG_TARGET, fuel=Fuel.DT)
+    result = model.forward(net_electric_mw=1000.0, availability=0.85, lifetime_yr=30)
+    assert result.costs.lcoe > 0
+    assert result.power_table.p_net > 0
+    assert result.power_table.p_target > 0  # Has liner/target factory
+
+
+def test_sensitivity_ife():
+    """IFE sensitivity should include driver-specific parameters."""
+    model = CostModel(concept=ConfinementConcept.LASER_IFE, fuel=Fuel.DT)
+    result = model.forward(net_electric_mw=1000.0, availability=0.85, lifetime_yr=30)
+    sens = model.sensitivity(result.params)
+    assert "eta_pin1" in sens  # IFE-specific param
+    assert "p_input" not in sens  # MFE-specific param
+
+
 def test_compare_all_returns_ranking():
     """Cross-concept comparison should return sorted results."""
     from costingfe import compare_all

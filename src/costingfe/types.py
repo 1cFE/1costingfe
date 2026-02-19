@@ -59,6 +59,8 @@ class PowerTable:
     p_aux: float  # Auxiliary power [MW]
     p_coils: float  # Coil power [MW] (MFE)
     p_cool: float  # Cooling power [MW] (MFE)
+    p_cryo: float  # Cryogenic system power [MW]
+    p_target: float  # Target factory power [MW] (IFE/MIF)
     q_sci: float  # Scientific Q
     q_eng: float  # Engineering Q
     rec_frac: float  # Recirculating power fraction

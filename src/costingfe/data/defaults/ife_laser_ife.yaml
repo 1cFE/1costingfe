@@ -1,0 +1,16 @@
+# Default engineering parameters for IFE laser fusion
+# Source: pyFECONs CATF IFE configuration
+
+p_implosion: 10.0    # Implosion laser output power [MW]
+p_ignition: 0.1      # Ignition laser output power [MW]
+mn: 1.1              # Neutron energy multiplier
+eta_th: 0.46         # Thermal conversion efficiency
+eta_p: 0.5           # Pumping efficiency
+eta_pin1: 0.10       # Implosion laser wall-plug efficiency
+eta_pin2: 0.10       # Ignition laser wall-plug efficiency
+f_sub: 0.03          # Subsystem power fraction
+p_pump: 1.0          # Pumping power [MW]
+p_trit: 10.0         # Tritium processing power [MW]
+p_house: 4.0         # Housekeeping power [MW]
+p_cryo: 0.5          # Cryogenic power [MW]
+p_target: 1.0        # Target factory power [MW]

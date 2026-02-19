@@ -25,12 +25,17 @@ from costingfe.layers.costs import (
 )
 from costingfe.layers.economics import compute_lcoe
 from costingfe.layers.physics import (
+    ife_forward_power_balance,
+    ife_inverse_power_balance,
     mfe_forward_power_balance,
     mfe_inverse_power_balance,
+    mif_forward_power_balance,
+    mif_inverse_power_balance,
 )
 from costingfe.types import (
     CONCEPT_TO_FAMILY,
     ConfinementConcept,
+    ConfinementFamily,
     CostResult,
     ForwardResult,
     Fuel,
@@ -51,6 +56,123 @@ class CostModel:
         self._eng_defaults = load_engineering_defaults(
             f"{self.family.value}_{concept.value}"
         )
+
+    def _power_balance(self, params, n_mod):
+        """Dispatch power balance based on confinement family."""
+        p_net_per_mod = params["net_electric_mw"] / n_mod
+
+        if self.family == ConfinementFamily.MFE:
+            p_fus = mfe_inverse_power_balance(
+                p_net_target=p_net_per_mod,
+                fuel=self.fuel,
+                p_input=params["p_input"],
+                mn=params["mn"],
+                eta_th=params["eta_th"],
+                eta_p=params["eta_p"],
+                eta_pin=params["eta_pin"],
+                eta_de=params["eta_de"],
+                f_sub=params["f_sub"],
+                f_dec=params["f_dec"],
+                p_coils=params["p_coils"],
+                p_cool=params["p_cool"],
+                p_pump=params["p_pump"],
+                p_trit=params["p_trit"],
+                p_house=params["p_house"],
+                p_cryo=params["p_cryo"],
+            )
+            pt = mfe_forward_power_balance(
+                p_fus=p_fus,
+                fuel=self.fuel,
+                p_input=params["p_input"],
+                mn=params["mn"],
+                eta_th=params["eta_th"],
+                eta_p=params["eta_p"],
+                eta_pin=params["eta_pin"],
+                eta_de=params["eta_de"],
+                f_sub=params["f_sub"],
+                f_dec=params["f_dec"],
+                p_coils=params["p_coils"],
+                p_cool=params["p_cool"],
+                p_pump=params["p_pump"],
+                p_trit=params["p_trit"],
+                p_house=params["p_house"],
+                p_cryo=params["p_cryo"],
+            )
+
+        elif self.family == ConfinementFamily.IFE:
+            p_fus = ife_inverse_power_balance(
+                p_net_target=p_net_per_mod,
+                fuel=self.fuel,
+                p_implosion=params["p_implosion"],
+                p_ignition=params["p_ignition"],
+                mn=params["mn"],
+                eta_th=params["eta_th"],
+                eta_p=params["eta_p"],
+                eta_pin1=params["eta_pin1"],
+                eta_pin2=params["eta_pin2"],
+                f_sub=params["f_sub"],
+                p_pump=params["p_pump"],
+                p_trit=params["p_trit"],
+                p_house=params["p_house"],
+                p_cryo=params["p_cryo"],
+                p_target=params["p_target"],
+            )
+            pt = ife_forward_power_balance(
+                p_fus=p_fus,
+                fuel=self.fuel,
+                p_implosion=params["p_implosion"],
+                p_ignition=params["p_ignition"],
+                mn=params["mn"],
+                eta_th=params["eta_th"],
+                eta_p=params["eta_p"],
+                eta_pin1=params["eta_pin1"],
+                eta_pin2=params["eta_pin2"],
+                f_sub=params["f_sub"],
+                p_pump=params["p_pump"],
+                p_trit=params["p_trit"],
+                p_house=params["p_house"],
+                p_cryo=params["p_cryo"],
+                p_target=params["p_target"],
+            )
+
+        elif self.family == ConfinementFamily.MIF:
+            p_fus = mif_inverse_power_balance(
+                p_net_target=p_net_per_mod,
+                fuel=self.fuel,
+                p_driver=params["p_driver"],
+                mn=params["mn"],
+                eta_th=params["eta_th"],
+                eta_p=params["eta_p"],
+                eta_pin=params["eta_pin"],
+                f_sub=params["f_sub"],
+                p_pump=params["p_pump"],
+                p_trit=params["p_trit"],
+                p_house=params["p_house"],
+                p_cryo=params["p_cryo"],
+                p_target=params["p_target"],
+                p_coils=params.get("p_coils", 0.0),
+            )
+            pt = mif_forward_power_balance(
+                p_fus=p_fus,
+                fuel=self.fuel,
+                p_driver=params["p_driver"],
+                mn=params["mn"],
+                eta_th=params["eta_th"],
+                eta_p=params["eta_p"],
+                eta_pin=params["eta_pin"],
+                f_sub=params["f_sub"],
+                p_pump=params["p_pump"],
+                p_trit=params["p_trit"],
+                p_house=params["p_house"],
+                p_cryo=params["p_cryo"],
+                p_target=params["p_target"],
+                p_coils=params.get("p_coils", 0.0),
+            )
+
+        else:
+            raise ValueError(f"Unknown confinement family: {self.family}")
+
+        return pt
 
     def forward(
         self,
@@ -83,45 +205,8 @@ class CostModel:
             )
         )
 
-        # Layer 2: Inverse power balance (net electric per module -> fusion power)
-        p_fus = mfe_inverse_power_balance(
-            p_net_target=net_electric_mw / n_mod,
-            fuel=self.fuel,
-            p_input=params["p_input"],
-            mn=params["mn"],
-            eta_th=params["eta_th"],
-            eta_p=params["eta_p"],
-            eta_pin=params["eta_pin"],
-            eta_de=params["eta_de"],
-            f_sub=params["f_sub"],
-            f_dec=params["f_dec"],
-            p_coils=params["p_coils"],
-            p_cool=params["p_cool"],
-            p_pump=params["p_pump"],
-            p_trit=params["p_trit"],
-            p_house=params["p_house"],
-            p_cryo=params["p_cryo"],
-        )
-
-        # Layer 2: Forward power balance (for full PowerTable)
-        pt = mfe_forward_power_balance(
-            p_fus=p_fus,
-            fuel=self.fuel,
-            p_input=params["p_input"],
-            mn=params["mn"],
-            eta_th=params["eta_th"],
-            eta_p=params["eta_p"],
-            eta_pin=params["eta_pin"],
-            eta_de=params["eta_de"],
-            f_sub=params["f_sub"],
-            f_dec=params["f_dec"],
-            p_coils=params["p_coils"],
-            p_cool=params["p_cool"],
-            p_pump=params["p_pump"],
-            p_trit=params["p_trit"],
-            p_house=params["p_house"],
-            p_cryo=params["p_cryo"],
-        )
+        # Layer 2: Power balance (dispatched by family)
+        pt = self._power_balance(params, n_mod)
 
         # Layer 4: Cost accounts
         cc = self.cc
@@ -196,11 +281,26 @@ class CostModel:
         Uses finite-difference for MVP. Will be replaced with jax.grad
         when the pipeline is fully JAX-traced (Task 14).
         """
-        continuous_keys = [
-            "p_input", "mn", "eta_th", "eta_p", "eta_pin", "f_sub",
-            "p_coils", "p_cool", "p_pump", "p_trit", "p_house", "p_cryo",
+        # Family-specific continuous keys
+        common_keys = [
+            "mn", "eta_th", "eta_p", "f_sub",
+            "p_pump", "p_trit", "p_house", "p_cryo",
             "interest_rate", "inflation_rate",
         ]
+        family_keys = {
+            ConfinementFamily.MFE: [
+                "p_input", "eta_pin", "eta_de", "f_dec",
+                "p_coils", "p_cool",
+            ],
+            ConfinementFamily.IFE: [
+                "p_implosion", "p_ignition", "eta_pin1", "eta_pin2",
+                "p_target",
+            ],
+            ConfinementFamily.MIF: [
+                "p_driver", "eta_pin", "p_target", "p_coils",
+            ],
+        }
+        continuous_keys = common_keys + family_keys.get(self.family, [])
 
         # Params that are passed as named forward() args, not **overrides
         named_args = {

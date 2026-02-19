@@ -1,0 +1,14 @@
+# Default engineering parameters for MIF magnetized target fusion
+
+p_driver: 30.0       # Pulsed power driver output [MW]
+mn: 1.1              # Neutron energy multiplier
+eta_th: 0.40         # Thermal conversion efficiency
+eta_p: 0.5           # Pumping efficiency
+eta_pin: 0.30        # Pulsed power wall-plug efficiency
+f_sub: 0.03          # Subsystem power fraction
+p_pump: 1.0          # Pumping power [MW]
+p_trit: 10.0         # Tritium processing power [MW]
+p_house: 4.0         # Housekeeping power [MW]
+p_cryo: 0.2          # Cryogenic power [MW]
+p_target: 2.0        # Liner/target factory power [MW]
+p_coils: 0.5         # Guide field coils [MW]
