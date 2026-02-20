@@ -100,10 +100,8 @@ class CostingConstants:
     contingency_rate_noak: float = 0.0
 
     # CAS30
-    field_indirect_coeff: float = 0.4
-    construction_supervision_coeff: float = 0.4
-    design_services_coeff: float = 0.4
-    indirect_ref_power: float = 1000.0
+    indirect_fraction: float = 0.20
+    reference_construction_time: float = 6.0
 
     # CAS50
     shipping: float = 1.0

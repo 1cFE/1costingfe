@@ -118,20 +118,20 @@ def cas29_contingency(cc, cas2x_total, noak):
     return cc.contingency_rate(noak) * cas2x_total
 
 
-# REQUIRES CHECKING
-def cas30_indirect(cc, cas20, p_net, construction_time):
-    """CAS30: Indirect service costs. Returns M$."""
-    power_scale = (p_net / cc.indirect_ref_power) ** -0.5
-    field = power_scale * p_net * cc.field_indirect_coeff * construction_time / 1e3
-    supervision = (
-        power_scale
-        * p_net
-        * cc.construction_supervision_coeff
-        * construction_time
-        / 1e3
+def cas30_indirect(cc, cas20, construction_time):
+    """CAS30: Indirect service costs. Returns M$.
+
+    Computed as a fraction of total direct cost (CAS20), scaled by
+    construction time relative to a reference duration.
+
+    See docs/account_justification/CAS30_indirect_service_costs.md
+    for derivation and source analysis.
+    """
+    return (
+        cc.indirect_fraction
+        * cas20
+        * (construction_time / cc.reference_construction_time)
     )
-    design = power_scale * p_net * cc.design_services_coeff * construction_time / 1e3
-    return field + supervision + design
 
 
 # REQUIRES CHECKING

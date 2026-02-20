@@ -106,10 +106,8 @@ contingency_rate_foak: 0.10
 contingency_rate_noak: 0.0
 
 # CAS30
-field_indirect_coeff: 0.4
-construction_supervision_coeff: 0.4
-design_services_coeff: 0.4
-indirect_ref_power: 1000.0   # MW
+indirect_fraction: 0.20           # fraction of CAS20 (total direct cost)
+reference_construction_time: 6.0  # years (scaling baseline)
 
 # CAS50
 shipping: 1.0                # M$

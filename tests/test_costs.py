@@ -6,6 +6,7 @@ from costingfe.layers.costs import (
     cas24_electrical,
     cas25_misc,
     cas26_heat_rejection,
+    cas30_indirect,
     cas70_om,
     cas80_fuel,
     cas90_financial,
@@ -13,6 +14,59 @@ from costingfe.layers.costs import (
 from costingfe.types import Fuel
 
 CC = load_costing_constants()
+
+
+# ---- CAS30 indirect service cost tests ----
+
+
+def test_cas30_is_fraction_of_direct_cost():
+    """CAS30 = indirect_fraction * CAS20 * (t_con / t_ref)."""
+    cas20 = 4000.0
+    t_con = 6.0
+    result = cas30_indirect(CC, cas20, t_con)
+    # Default: 0.20 * 4000 * (6/6) = 800
+    assert abs(result - 800.0) < 0.01
+
+
+def test_cas30_scales_with_construction_time():
+    """Longer construction should increase indirect costs."""
+    cas20 = 4000.0
+    c30_6yr = cas30_indirect(CC, cas20, 6.0)
+    c30_9yr = cas30_indirect(CC, cas20, 9.0)
+    # 9/6 = 1.5x
+    assert abs(c30_9yr / c30_6yr - 1.5) < 0.01
+
+
+def test_cas30_scales_with_direct_cost():
+    """Higher direct cost should increase indirect costs."""
+    c30_low = cas30_indirect(CC, 2000.0, 6.0)
+    c30_high = cas30_indirect(CC, 4000.0, 6.0)
+    assert abs(c30_high / c30_low - 2.0) < 0.01
+
+
+def test_cas30_custom_fraction():
+    """indirect_fraction override via costing constants."""
+    cc_custom = CC.replace(indirect_fraction=0.30)
+    result = cas30_indirect(cc_custom, 4000.0, 6.0)
+    # 0.30 * 4000 * (6/6) = 1200
+    assert abs(result - 1200.0) < 0.01
+
+
+def test_cas30_custom_reference_time():
+    """reference_construction_time override changes scaling."""
+    cc_custom = CC.replace(reference_construction_time=8.0)
+    result = cas30_indirect(cc_custom, 4000.0, 8.0)
+    # 0.20 * 4000 * (8/8) = 800
+    assert abs(result - 800.0) < 0.01
+    result_short = cas30_indirect(cc_custom, 4000.0, 4.0)
+    # 0.20 * 4000 * (4/8) = 400
+    assert abs(result_short - 400.0) < 0.01
+
+
+def test_cas30_1gwe_reference_case():
+    """At 1 GWe with ~$4B direct cost, CAS30 should be ~$800M (20% of TDC)."""
+    result = cas30_indirect(CC, 4000.0, 6.0)
+    assert 700 < result < 900
 
 
 def test_cas10_dt_licensing():

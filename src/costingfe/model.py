@@ -358,7 +358,7 @@ class CostModel:
         cas2x_pre_contingency = c21 + c22 + c23 + c24 + c25 + c26 + c27 + c28
         c29 = cas29_contingency(cc, cas2x_pre_contingency, noak)
         c20 = cas2x_pre_contingency + c29
-        c30 = cas30_indirect(cc, c20, pt.p_net, construction_time_yr)
+        c30 = cas30_indirect(cc, c20, construction_time_yr)
         c40 = cas40_owner(c20)
         c50 = cas50_supplementary(cc, c23 + c24 + c25 + c26 + c27 + c28, pt.p_net, noak)
         c60 = cas60_idc(cc, c20, pt.p_net, construction_time_yr, self.fuel, noak)
