@@ -21,11 +21,6 @@ not worth detailed parametric modeling.
 
 ## C110000 — Land and Land Rights
 
-### Prior value
-
-`land_intensity = 0.001` acres/MWe — produced $0.01M at 1 GWe.
-This was 250x lower than pyfecons (0.25 acres/MWe).
-
 ### Source: DI-018 / DI-019
 
 Research document: `fusion-tea/knowledge/research/approved/20260206-land-and-land-rights-fusion-cost.md`
@@ -40,26 +35,21 @@ Key findings:
 
 ### Updated values
 
-| Parameter | Old | New | Source |
-|-----------|-----|-----|--------|
-| `land_intensity` | 0.001 | **0.25** acres/MWe | CFS ARC (100 acres / 400 MWe) |
-| `land_cost` | 10,000 | **10,000** $/acre (unchanged) | Industrial-zoned US average |
+| Parameter | New | Source |
+|-----------|-----|--------|
+| `land_intensity` | **0.25** acres/MWe | CFS ARC (100 acres / 400 MWe) |
+| `land_cost` | **10,000** $/acre (unchanged) | Industrial-zoned US average |
 
-At 1 GWe: 0.25 * 1000 * $10,000 / 1e6 = **$2.5M** (was $0.01M).
+At 1 GWe: 0.25 * 1000 * $10,000 / 1e6 = **$2.5M**.
 
 ## C130000 — Plant Licensing (times)
 
-### Prior values
-
-Licensing times were 2x pyfecons values and far above research-supported
-ranges:
-
-| Fuel | Old value | pyfecons | Research range |
-|------|-----------|----------|---------------|
-| DT | 5.0 yr | 2.5 yr | 1-2 yr |
-| DD | 3.0 yr | 1.5 yr | 6-18 mo |
-| DHe3 | 2.0 yr | 0.75 yr | 6-12 mo |
-| PB11 | 1.0 yr | 0.0 yr | ~0 yr |
+| Fuel | pyfecons | Research range |
+|------|----------|---------------|
+| DT | 2.5 yr | 1-2 yr |
+| DD | 1.5 yr | 6-18 mo |
+| DHe3 | 0.75 yr | 6-12 mo |
+| PB11 | 0.0 yr | ~0 yr |
 
 ### Source: DI-015 / DI-016 / DI-017
 
@@ -78,12 +68,12 @@ Key findings:
 
 ### Updated values
 
-| Parameter | Old | New | Rationale |
-|-----------|-----|-----|-----------|
-| `licensing_time_dt` | 5.0 | **2.0** yr | Part 30, upper end of 1-2yr range |
-| `licensing_time_dd` | 3.0 | **1.5** yr | Reduced tritium, upper end of 6-18mo |
-| `licensing_time_dhe3` | 2.0 | **0.75** yr | Minimal radioactivity, midpoint of 6-12mo |
-| `licensing_time_pb11` | 1.0 | **0.0** yr | No NRC jurisdiction |
+| Parameter | New | Rationale |
+|-----------|-----|-----------|
+| `licensing_time_dt` | **2.0** yr | Part 30, upper end of 1-2yr range |
+| `licensing_time_dd` | **1.5** yr | Reduced tritium, upper end of 6-18mo |
+| `licensing_time_dhe3` | **0.75** yr | Minimal radioactivity, midpoint of 6-12mo |
+| `licensing_time_pb11` | **0.0** yr | No NRC jurisdiction |
 
 ### Impact
 
