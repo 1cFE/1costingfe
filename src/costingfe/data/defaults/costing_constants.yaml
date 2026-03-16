@@ -78,6 +78,9 @@ fuel_handling_dhe3_base: 40.0  # He-3 handling
 fuel_handling_pb11_base: 15.0  # Boron powder injection
 
 # CAS21 building costs ($/kW of gross electric)
+# Source: ARIES (Waganer, UCSD-CER-13-01, 2013) / NETL Case B12A
+# See docs/account_justification/CAS21_buildings.md
+# Total: ~760 $/kW (DT), ~511 $/kW (non-DT, 0.5x on 4 tritium buildings)
 building_costs_per_kw:
   site_improvements: 268
   fusion_heat_island: 126
@@ -99,17 +102,34 @@ building_costs_per_kw:
   assembly_hall: 20
   direct_energy_building: 5
 
-# CAS23-26 BOP costs ($/MW of gross electric, 2024$)
+# CAS27 — Special materials: initial reactor material inventory (M$ at 1 GWe)
+# Default assumes PbLi blanket concept for DT. For HCPB concepts with
+# beryllium neutron multiplier, override CAS27 to ~$200M.
+# See docs/account_justification/CAS27_special_materials.md
+special_materials_dt: 15.0    # PbLi fill (~4,500t @ $3/kg) + enriched Li
+special_materials_dd: 2.0     # Conventional coolant fills only
+special_materials_dhe3: 1.0   # Minimal special materials
+special_materials_pb11: 0.0   # No special materials
+
+# CAS23-26 BOP costs (M$/MW of gross electric, 2024$)
+# Source: ARIES/NETL calibration, inflation-adjusted from 2019$ via CPI factor 1.22
+# See docs/account_justification/CAS23_26_balance_of_plant.md
+# Cross-checked against NREL ATB 2024 nuclear, NETL fossil energy baselines,
+# and industry equipment pricing (Siemens, GE, Marley/SPX).
 inflation_2019_2024: 1.22
-turbine_per_mw: 0.19764     # 0.162 * 1.22
-electric_per_mw: 0.08418    # 0.069 * 1.22
-misc_per_mw: 0.05124        # 0.042 * 1.22
-heat_rej_per_mw: 0.03416    # 0.028 * 1.22
+turbine_per_mw: 0.19764     # 0.162 * 1.22 — steam TG set, condenser, feedwater
+electric_per_mw: 0.08418    # 0.069 * 1.22 — switchyard, transformers, cabling
+misc_per_mw: 0.05124        # 0.042 * 1.22 — fire protection, compressed air, HVAC
+heat_rej_per_mw: 0.03416    # 0.028 * 1.22 — cooling towers, circ water
 
-# CAS28
-digital_twin: 5.0           # M$
+# CAS28 — Digital twin (M$, fixed)
+# Source: NtTau Digital LTD in-house estimate (pyFECONS)
+# See docs/account_justification/CAS28_digital_twin.md
+digital_twin: 5.0
 
-# CAS29
+# CAS29 — Contingency on direct costs
+# Source: Gen-IV EMWG convention, pyFECONS
+# See docs/account_justification/CAS29_contingency.md
 contingency_rate_foak: 0.10
 contingency_rate_noak: 0.0
 
@@ -125,12 +145,23 @@ owner_cost_dd: 31.0        # 94 staff, reduced tritium scope
 owner_cost_dhe3: 23.0      # 69 staff, light HP program
 owner_cost_pb11: 20.0      # 59 staff, near-industrial, RSO-only
 
-# CAS50
-shipping: 1.0                # M$
-spare_parts_frac: 0.01
-taxes: 0.5                   # M$
-insurance_cost: 0.5          # M$
-decommissioning: 5.0         # M$
+# CAS50 — Capitalized supplementary costs
+# Source: CAS50_supplementary_costs.md — sub-account model
+shipping_frac: 0.015              # fraction of CAS20
+spare_parts_frac_dt: 0.03         # fraction of CAS22-28, activated component spares
+spare_parts_frac_dd: 0.025
+spare_parts_frac_dhe3: 0.015
+spare_parts_frac_pb11: 0.01       # conventional industrial spares only
+tax_frac: 0.01                    # fraction of CAS20, after exemptions
+construction_insurance_frac: 0.015  # fraction of (CAS20+CAS30), builder's risk
+startup_fuel_dt: 40.0             # M$ at 1 GWe — tritium startup inventory
+startup_fuel_dd: 0.1              # M$ at 1 GWe — deuterium
+startup_fuel_dhe3: 10.0           # M$ at 1 GWe — He3
+startup_fuel_pb11: 0.1            # M$ at 1 GWe — H + B11
+decom_provision_dt: 127.0         # M$ at 1 GWe — PV of $410M over 40yr at 3%
+decom_provision_dd: 93.0          # M$ at 1 GWe — PV of $300M
+decom_provision_dhe3: 65.0        # M$ at 1 GWe — PV of $210M
+decom_provision_pb11: 53.0        # M$ at 1 GWe — PV of $170M
 
 # CAS70 — Annual O&M cost (M$/yr at 1 GWe reference, 2023$)
 # Source: CAS70_staffing_and_om_costs.md — staffing-based build-up by fuel type

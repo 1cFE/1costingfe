@@ -94,16 +94,28 @@ class CostingConstants:
     # CAS21
     building_costs_per_kw: dict[str, float] = None  # loaded from YAML
 
-    # CAS23-26
-    turbine_per_mw: float = 0.19764
-    electric_per_mw: float = 0.08418
-    misc_per_mw: float = 0.05124
-    heat_rej_per_mw: float = 0.03416
+    # CAS27 — Special materials: initial reactor material inventory (M$ at 1 GWe)
+    # Default assumes PbLi blanket concept for DT (~4,500 tonnes PbLi @ $3/kg
+    # + enriched Li top-up). HCPB concepts with Be multiplier override to ~$200M.
+    # See docs/account_justification/CAS27_special_materials.md
+    special_materials_dt: float = 15.0  # PbLi fill + enriched Li for breeding
+    special_materials_dd: float = 2.0  # Conventional coolant fills only
+    special_materials_dhe3: float = 1.0  # Minimal special materials
+    special_materials_pb11: float = 0.0  # No special materials (conventional)
 
-    # CAS28
+    # CAS23-26 — BOP equipment (M$/MW gross electric, 2024$)
+    # Source: ARIES/NETL calibration (2019$ × 1.22 CPI inflation)
+    # See docs/account_justification/CAS23_26_balance_of_plant.md
+    turbine_per_mw: float = 0.19764  # Steam TG, condenser, feedwater
+    electric_per_mw: float = 0.08418  # Switchyard, transformers, cabling
+    misc_per_mw: float = 0.05124  # Fire protection, compressed air, HVAC
+    heat_rej_per_mw: float = 0.03416  # Cooling towers, circ water
+
+    # CAS28 — Digital twin (M$, fixed)
+    # Source: NtTau Digital LTD estimate (pyFECONS)
     digital_twin: float = 5.0
 
-    # CAS29
+    # CAS29 — Contingency on direct costs (Gen-IV EMWG convention)
     contingency_rate_foak: float = 0.10
     contingency_rate_noak: float = 0.0
 
@@ -118,12 +130,27 @@ class CostingConstants:
     owner_cost_dhe3: float = 23.0  # 69 staff, light HP program
     owner_cost_pb11: float = 20.0  # 59 staff, near-industrial, RSO-only
 
-    # CAS50
-    shipping: float = 1.0
-    spare_parts_frac: float = 0.01
-    taxes: float = 0.5
-    insurance_cost: float = 0.5
-    decommissioning: float = 5.0
+    # CAS50 — Capitalized supplementary costs
+    # Source: CAS50_supplementary_costs.md — sub-account model
+    shipping_frac: float = 0.015  # fraction of CAS20 (WNA ~2%, discounted for fusion)
+    spare_parts_frac_dt: float = (
+        0.03  # fraction of CAS22-28, activated component spares
+    )
+    spare_parts_frac_dd: float = 0.025
+    spare_parts_frac_dhe3: float = 0.015
+    spare_parts_frac_pb11: float = 0.01  # conventional industrial spares only
+    tax_frac: float = 0.01  # fraction of CAS20, after typical energy project exemptions
+    construction_insurance_frac: float = (
+        0.015  # fraction of (CAS20+CAS30), builder's risk
+    )
+    startup_fuel_dt: float = 40.0  # M$ at 1 GWe — ~1.3 kg tritium at $30k/g
+    startup_fuel_dd: float = 0.1  # M$ at 1 GWe — deuterium, commodity
+    startup_fuel_dhe3: float = 10.0  # M$ at 1 GWe — He3, supply-constrained
+    startup_fuel_pb11: float = 0.1  # M$ at 1 GWe — H + B11, industrial commodities
+    decom_provision_dt: float = 127.0  # M$ at 1 GWe — PV of $410M over 40yr at 3%
+    decom_provision_dd: float = 93.0  # M$ at 1 GWe — PV of $300M
+    decom_provision_dhe3: float = 65.0  # M$ at 1 GWe — PV of $210M
+    decom_provision_pb11: float = 53.0  # M$ at 1 GWe — PV of $170M
 
     # CAS70 — Annual O&M cost (M$/yr at 1 GWe reference, 2023$)
     # Source: CAS70_staffing_and_om_costs.md — staffing-based build-up by fuel type
@@ -205,6 +232,39 @@ class CostingConstants:
             Fuel.DHE3: self.core_lifetime_dhe3,
             Fuel.PB11: self.core_lifetime_pb11,
         }.get(fuel, self.core_lifetime_dt)
+
+    def spare_parts_frac(self, fuel):
+        """Initial spare parts fraction of CAS22-28 for a given fuel type."""
+        from costingfe.types import Fuel
+
+        return {
+            Fuel.DT: self.spare_parts_frac_dt,
+            Fuel.DD: self.spare_parts_frac_dd,
+            Fuel.DHE3: self.spare_parts_frac_dhe3,
+            Fuel.PB11: self.spare_parts_frac_pb11,
+        }.get(fuel, self.spare_parts_frac_dt)
+
+    def startup_fuel(self, fuel):
+        """Startup fuel/inventory cost (M$ at 1 GWe ref) for a given fuel type."""
+        from costingfe.types import Fuel
+
+        return {
+            Fuel.DT: self.startup_fuel_dt,
+            Fuel.DD: self.startup_fuel_dd,
+            Fuel.DHE3: self.startup_fuel_dhe3,
+            Fuel.PB11: self.startup_fuel_pb11,
+        }.get(fuel, self.startup_fuel_dt)
+
+    def decom_provision(self, fuel):
+        """Decommissioning provision (M$ at 1 GWe ref) for a given fuel type."""
+        from costingfe.types import Fuel
+
+        return {
+            Fuel.DT: self.decom_provision_dt,
+            Fuel.DD: self.decom_provision_dd,
+            Fuel.DHE3: self.decom_provision_dhe3,
+            Fuel.PB11: self.decom_provision_pb11,
+        }.get(fuel, self.decom_provision_dt)
 
     def contingency_rate(self, noak):
         return self.contingency_rate_noak if noak else self.contingency_rate_foak

@@ -62,9 +62,14 @@ def cas10_preconstruction(cc, p_net, n_mod, fuel, noak):
     return subtotal + contingency
 
 
-# REQUIRES CHECKING
 def cas21_buildings(cc, p_et, fuel, noak):
-    """CAS21: Buildings. Scales with gross electric. Returns M$."""
+    """CAS21: Buildings. Scales with gross electric. Returns M$.
+
+    19 building types, each with per-kW cost ($/kW gross electric).
+    Fuel-dependent: 4 tritium-related buildings get 0.5x for non-DT.
+    Source: ARIES (Waganer 2013) / NETL Case B12A calibration.
+    See docs/account_justification/CAS21_buildings.md
+    """
     fuel_scale = 1.0 if fuel == Fuel.DT else 0.5
     tritium_buildings = (
         "site_improvements",
@@ -80,39 +85,77 @@ def cas21_buildings(cc, p_et, fuel, noak):
     return total + contingency
 
 
-# REQUIRES CHECKING
 def cas23_turbine(cc, p_et, n_mod):
-    """CAS23: Turbine plant equipment. Returns M$."""
+    """CAS23: Turbine plant equipment. Returns M$.
+
+    Linear scaling with gross electric power. Coefficient from
+    ARIES/NETL calibration, inflation-adjusted to 2024$.
+    See docs/account_justification/CAS23_26_balance_of_plant.md
+    """
     return n_mod * p_et * cc.turbine_per_mw
 
 
-# REQUIRES CHECKING
 def cas24_electrical(cc, p_et, n_mod):
-    """CAS24: Electric plant equipment. Returns M$."""
+    """CAS24: Electric plant equipment. Returns M$.
+
+    See docs/account_justification/CAS23_26_balance_of_plant.md
+    """
     return n_mod * p_et * cc.electric_per_mw
 
 
-# REQUIRES CHECKING
 def cas25_misc(cc, p_et, n_mod):
-    """CAS25: Miscellaneous plant equipment. Returns M$."""
+    """CAS25: Miscellaneous plant equipment. Returns M$.
+
+    See docs/account_justification/CAS23_26_balance_of_plant.md
+    """
     return n_mod * p_et * cc.misc_per_mw
 
 
-# REQUIRES CHECKING
 def cas26_heat_rejection(cc, p_et, n_mod):
-    """CAS26: Heat rejection. Returns M$."""
+    """CAS26: Heat rejection. Returns M$.
+
+    See docs/account_justification/CAS23_26_balance_of_plant.md
+    """
     return n_mod * p_et * cc.heat_rej_per_mw
 
 
-# REQUIRES CHECKING
+def cas27_special_materials(cc, p_net, fuel):
+    """CAS27: Special materials — initial reactor material inventory. Returns M$.
+
+    Covers non-fuel reactor materials: breeding blanket fill (PbLi, Li, FLiBe),
+    neutron multiplier (Be if HCPB concept), and other special inventory.
+    CAS220101 covers the blanket *structure*; CAS27 covers the *material fill*.
+
+    Default assumes PbLi blanket concept for DT. For HCPB concepts with
+    beryllium pebbles (~300 tonnes × $600/kg = $180M), override via
+    cost_overrides["CAS27"].
+
+    See docs/account_justification/CAS27_special_materials.md
+    """
+    base = {
+        Fuel.DT: cc.special_materials_dt,
+        Fuel.DD: cc.special_materials_dd,
+        Fuel.DHE3: cc.special_materials_dhe3,
+        Fuel.PB11: cc.special_materials_pb11,
+    }
+    return base[fuel] * (p_net / 1000.0)
+
+
 def cas28_digital_twin(cc):
-    """CAS28: Digital twin. Returns M$."""
+    """CAS28: Digital twin. Returns M$.
+
+    Fixed cost, plant-size independent.
+    See docs/account_justification/CAS28_digital_twin.md
+    """
     return cc.digital_twin
 
 
-# REQUIRES CHECKING
 def cas29_contingency(cc, cas2x_total, noak):
-    """CAS29: Contingency on direct costs. Returns M$."""
+    """CAS29: Contingency on direct costs. Returns M$.
+
+    10% FOAK / 0% NOAK per Gen-IV EMWG convention.
+    See docs/account_justification/CAS29_contingency.md
+    """
     return cc.contingency_rate(noak) * cas2x_total
 
 
@@ -151,21 +194,26 @@ def cas40_owner(cc, fuel, p_net):
     return cc.owner_cost(fuel) * (p_net / 1000.0) ** 0.5
 
 
-# REQUIRES CHECKING
-def cas50_supplementary(cc, cas23_to_28_total, p_net, noak):
-    """CAS50: Supplementary costs. Returns M$."""
-    spare_parts = cc.spare_parts_frac * cas23_to_28_total
-    fuel_load = (p_net / 1000.0) * 10.0  # rough scaling
+def cas50_supplementary(cc, fuel, cas20, cas22_to_28, cas30, p_net, noak):
+    """CAS50: Capitalized supplementary costs. Returns M$.
+
+    Sub-account model with fuel-dependent spare parts, startup
+    inventory, and decommissioning provisions.  Shipping, taxes,
+    and insurance scale with plant cost (fuel-independent).
+
+    See docs/account_justification/CAS50_supplementary_costs.md
+    """
+    c51_shipping = cc.shipping_frac * cas20
+    c52_spares = cc.spare_parts_frac(fuel) * cas22_to_28
+    c53_taxes = cc.tax_frac * cas20
+    c54_insurance = cc.construction_insurance_frac * (cas20 + cas30)
+    c55_fuel = cc.startup_fuel(fuel) * (p_net / 1000.0)
+    c56_decom = cc.decom_provision(fuel) * (p_net / 1000.0)
     subtotal = (
-        cc.shipping
-        + spare_parts
-        + cc.taxes
-        + cc.insurance_cost
-        + fuel_load
-        + cc.decommissioning
+        c51_shipping + c52_spares + c53_taxes + c54_insurance + c55_fuel + c56_decom
     )
-    contingency = cc.contingency_rate(noak) * subtotal
-    return subtotal + contingency
+    c59_contingency = cc.contingency_rate(noak) * subtotal
+    return subtotal + c59_contingency
 
 
 def cas60_idc(interest_rate, overnight_cost, construction_time):

@@ -18,6 +18,7 @@ from costingfe.layers.costs import (
     cas24_electrical,
     cas25_misc,
     cas26_heat_rejection,
+    cas27_special_materials,
     cas28_digital_twin,
     cas29_contingency,
     cas30_indirect,
@@ -531,7 +532,7 @@ class CostModel:
         if "CAS26" in co:
             overridden.append("CAS26")
 
-        c27 = co.get("CAS27", 0.0)  # TODO: special materials
+        c27 = co.get("CAS27", cas27_special_materials(cc, pt.p_net, self.fuel))
         if "CAS27" in co:
             overridden.append("CAS27")
 
@@ -544,7 +545,9 @@ class CostModel:
         c20 = cas2x_pre_contingency + c29
         c30 = cas30_indirect(cc, c20, construction_time_yr)
         c40 = cas40_owner(cc, self.fuel, pt.p_net)
-        c50 = cas50_supplementary(cc, c23 + c24 + c25 + c26 + c27 + c28, pt.p_net, noak)
+        c50 = cas50_supplementary(
+            cc, self.fuel, c20, c23 + c24 + c25 + c26 + c27 + c28, c30, pt.p_net, noak
+        )
         overnight_cost = c10 + c20 + c30 + c40 + c50
         c60 = cas60_idc(interest_rate, overnight_cost, construction_time_yr)
         total_capital = overnight_cost + c60

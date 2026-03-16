@@ -1095,20 +1095,38 @@ CAS & Description & Method \\
 \midrule
 10$^\dagger$ & Pre-construction & Land intensity scaling, fuel-dependent licensing \\
 20 & Total direct costs & Sum of CAS21--29 \\
-21 & Buildings \& structures & Power scaling on gross electric \\
-22 & Reactor plant equipment & Component-level parametric (18 sub-accounts) \\
+21$^\dagger$ & Buildings \& structures & Per-kW scaling, fuel-dependent (19 building types) \\
+22$^\dagger$ & Reactor plant equipment & Component-level parametric (18 sub-accounts) \\
+\multicolumn{3}{l}{\textit{Per-module accounts (×\,$n_{\text{mod}}$):}} \\
+\hspace{1em}22.01.01 & First wall + blanket & Volume $\times$ thermal intensity, fuel-dependent \\
+\hspace{1em}22.01.02 & Shield & Volume $\times$ fuel-dependent neutron scale \\
+\hspace{1em}22.01.03 & Coils (magnets) & Conductor kAm $\times$ \$/kAm $\times$ markup \\
+\hspace{1em}22.01.04 & Supplementary heating & Per-MW linear (NBI, ICRF, ECRH, LHCD) \\
+\hspace{1em}22.01.05 & Primary structure & Volume $\times$ power scale \\
+\hspace{1em}22.01.06 & Vacuum system & Volume $\times$ power scale \\
+\hspace{1em}22.01.07 & Power supplies & Power-scaled (0.7) \\
+\hspace{1em}22.01.08 & Divertor / target factory & Thermal-scaled (MFE) or power-scaled (IFE) \\
+\hspace{1em}22.01.09 & Direct energy converter & Excluded (override for mirror/FRC) \\
 \hspace{1em}22.01.10$^\dagger$ & Remote handling \& maintenance & Fuel- and concept-dependent \\
+\hspace{1em}22.01.11 & Installation labor & 14\% of reactor subtotal \\
 \hspace{1em}22.01.12$^\dagger$ & Isotope separation plant & Zeroed; market purchase in CAS80 \\
-23 & Turbine plant equipment & Power scaling on gross electric \\
-24 & Electric plant equipment & Power scaling on gross electric \\
-25 & Miscellaneous plant equip.\ & Power scaling \\
-26 & Heat rejection systems & Thermal power scaling \\
-27 & Special materials & Placeholder \\
-28 & Digital twin & Fixed cost \\
-29 & Contingency on direct costs & 10\% FOAK, 0\% NOAK \\
+\multicolumn{3}{l}{\textit{Plant-wide accounts:}} \\
+\hspace{1em}22.02 & Main \& secondary coolant & Power-scaled \\
+\hspace{1em}22.03 & Auxiliary cooling + cryoplant & Power-scaled + cryo load basis \\
+\hspace{1em}22.04 & Radioactive waste management & Thermal-scaled \\
+\hspace{1em}22.05 & Fuel handling \& storage & Fuel-dependent, power-scaled (0.7) \\
+\hspace{1em}22.06 & Other reactor plant equip.\ & Power-scaled (0.8) \\
+\hspace{1em}22.07 & Instrumentation \& control & Thermal-scaled (0.65) \\
+23$^\dagger$ & Turbine plant equipment & Linear scaling on gross electric (NETL-calibrated) \\
+24$^\dagger$ & Electric plant equipment & Linear scaling on gross electric (NETL-calibrated) \\
+25$^\dagger$ & Miscellaneous plant equip.\ & Linear scaling on gross electric (NETL-calibrated) \\
+26$^\dagger$ & Heat rejection systems & Linear scaling on gross electric (NETL-calibrated) \\
+27$^\dagger$ & Special materials & Fuel-dependent blanket fill inventory \\
+28$^\dagger$ & Digital twin & Fixed cost (\$5M) \\
+29$^\dagger$ & Contingency on direct costs & 10\% FOAK, 0\% NOAK (Gen-IV EMWG) \\
 30$^\dagger$ & Indirect service costs & Fraction of CAS20, construction-time scaled \\
 40$^\dagger$ & Owner's costs & Fuel-dependent, staffing-based, power-law scaled \\
-50 & Supplementary costs & Spares, shipping, taxes, decommissioning \\
+50$^\dagger$ & Supplementary costs & Fuel-dependent sub-account model (6 components) \\
 60$^\dagger$ & Interest during construction & Uniform-spending IDC formula \\
 70$^\dagger$ & Annualized O\&M + replacement & Growing-annuity levelization \\
 80$^\dagger$ & Annualized fuel cost & Fuel-specific consumables, burn-fraction corrected, levelized \\
@@ -1118,9 +1136,7 @@ CAS & Description & Method \\
 \end{table}
 
 The following subsections detail the methodology for each account
-that has undergone independent review and justification. Accounts
-without a dedicated subsection use parametric scaling relations from
-the ARIES/PyFECONS tradition; their documentation is ongoing.
+that has undergone independent review and justification.
 
 
 %% ------------------------------------------------------------
@@ -1172,6 +1188,35 @@ p-${}^{11}$B & 0.0 & No NRC jurisdiction \\
 \bottomrule
 \end{tabular}
 \end{table}
+
+
+%% ------------------------------------------------------------
+\subsection{CAS21: Buildings and Structures}
+\label{sec:cas21}
+
+CAS21 covers all buildings and structures on the fusion plant site.
+The cost model sums per-kW costs (\$/kW of gross electric) across
+19~building types, with fuel-dependent scaling on four tritium-related
+buildings.
+
+The total building cost is ${\sim}$760~\$/kW for D-T
+(${\sim}$511~\$/kW for non-D-T), yielding ${\sim}$\$886M at 1~GWe net.
+This represents ${\sim}$14\% of overnight capital cost---consistent with
+the NREL ATB 2024 nuclear cost structure (16.1\% for structures), after
+discounting for non-nuclear-grade construction under Part~30.
+
+\subsubsection{Fuel-dependent scaling.}
+Four buildings associated with tritium handling receive a 0.5$\times$
+scaling factor for non-D-T fuels: site improvements (tritium monitoring
+perimeter), fusion heat island (tritium barrier systems), hot cell
+(activated component handling), and fuel storage.  These four buildings
+account for 65\% of D-T building cost; the 0.5$\times$ factor yields a
+33\% reduction for aneutronic fuels.  The scaling is binary (D-T vs.\
+non-D-T) rather than fuel-specific, as building cost uncertainty
+(${\sim}\pm$30\%) dominates the fuel-scaling uncertainty.
+
+Source: ARIES cost-account tradition \citep{waganer2013}, calibrated
+against the NETL baseline \citep{netl2022}.
 
 
 %% ------------------------------------------------------------
@@ -1271,6 +1316,116 @@ B-11 (enriched) & 10{,}000 & FOAK estimate (B-10 tails) \\
 \bottomrule
 \end{tabular}
 \end{table}
+
+
+%% ------------------------------------------------------------
+\subsection{CAS23--26: Balance of Plant Equipment}
+\label{sec:cas23-26}
+
+CAS23--26 cover conventional power-conversion and electrical infrastructure
+that is essentially identical to any large steam-Rankine thermal
+plant.  These accounts are \textbf{fuel-independent}: the choice of fuel
+affects the reactor island (CAS22) but not the turbine hall, switchyard,
+or cooling towers.
+
+Each account scales linearly with gross electric power:
+\begin{equation}
+\label{eq:bop}
+C_{2x} = n_{\text{mod}} \times P_{\text{et}} \times c_{2x}
+\end{equation}
+\noindent where $P_{\text{et}}$ is gross electric output (MW) and $c_{2x}$
+is a per-MW coefficient (M\$/MW, 2024\$).  \Cref{tab:bop} lists the adopted
+values.
+
+\begin{table}[htbp]
+\caption{Balance of plant per-MW coefficients (2024\$).}
+\label{tab:bop}
+\centering
+\begin{tabular}{llr}
+\toprule
+CAS & Scope & $c_{2x}$ (M\$/MW) \\
+\midrule
+23 & Steam TG, condenser, feedwater & 0.198 \\
+24 & Switchyard, transformers, cabling & 0.084 \\
+25 & Fire protection, compressed air, HVAC & 0.051 \\
+26 & Cooling towers, circulating water & 0.034 \\
+\midrule
+\multicolumn{2}{l}{\textit{Total BOP}} & \textit{0.367} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The coefficients derive from the ARIES cost-account tradition
+\citep{waganer2013}, calibrated against the NETL \textit{Cost and
+Performance Baseline for Fossil Energy Plants} \citep{netl2022}.  Pre-inflation
+(2019\$) values are escalated by a CPI factor of 1.22.  At 1~GWe net
+(${\sim}$1.3~GW gross), total BOP cost is ${\sim}$\$477M
+(${\sim}$\$367/kW~gross), consistent with industry benchmarks for steam
+turbine-generator sets (Siemens, GE), switchyard equipment, and mechanical-draft
+cooling towers.
+
+Cross-checks against the NREL ATB 2024 nuclear cost breakdown (3.9\% of
+total capital for energy conversion, 6.3\% for electrical equipment) confirm
+that the adopted values are conservative---appropriate for NOAK fusion plants
+using conventional, non-nuclear-grade BOP equipment.
+
+
+%% ------------------------------------------------------------
+\subsection{CAS27: Special Materials}
+\label{sec:cas27}
+
+CAS27 covers the initial inventory of non-fuel reactor materials:
+breeding blanket fill (PbLi, Li, FLiBe), neutron multiplier (Be), and
+other special inventory.  CAS22.01.01 covers the blanket \textit{structure};
+CAS27 covers the \textit{material that fills it}.
+
+\begin{equation}
+\label{eq:cas27}
+C_{27} = C_{\text{mat,base}}(f) \times \frac{P_{\text{net}}}{1000}
+\end{equation}
+
+The default assumes a PbLi blanket concept for D-T: ${\sim}$4{,}000 tonnes
+of Pb-17Li eutectic at ${\sim}$\$3/kg plus enriched lithium premium,
+totaling \$15M at 1~GWe.  This is small relative to CAS22
+(${\sim}$\$2.7B) because PbLi is an inexpensive commodity (mostly lead).
+
+\textbf{Design-dependent override:} The Helium-Cooled Pebble Bed (HCPB)
+blanket concept requires ${\sim}$300--490 tonnes of beryllium pebbles
+(\$500--800/kg), costing \$180--300M.  FLiBe molten-salt blankets
+cost \$25--300M depending on isotopic requirements.  These cases should
+override CAS27 directly.
+
+Non-D-T fuels have minimal or zero special materials: no breeding
+blanket fill, no neutron multiplier, conventional coolants.
+
+
+%% ------------------------------------------------------------
+\subsection{CAS28: Digital Twin}
+\label{sec:cas28}
+
+CAS28 covers a plant-wide digital twin for operator training, predictive
+maintenance, and operational optimization.  A fixed cost of \$5M is adopted,
+independent of plant size, fuel type, or number of modules.  The estimate
+is sourced from NtTau Digital LTD (in-house assessment for the pyFECONs
+framework \citep{woodruff2026}), consistent with industrial digital twin
+deployments for large thermal plants (\$2--10M).
+
+
+%% ------------------------------------------------------------
+\subsection{CAS29: Contingency on Direct Costs}
+\label{sec:cas29}
+
+CAS29 is a percentage-based contingency allowance on the sum of CAS21--28:
+\begin{equation}
+\label{eq:cas29}
+C_{29} = f_{\text{cont}} \times \sum_{i=21}^{28} C_i
+\end{equation}
+\noindent where $f_{\text{cont}} = 10\%$ for FOAK and $0\%$ for NOAK,
+following the Gen-IV EMWG convention \citep{emwg2007}.  The 10\% FOAK
+contingency is conservative relative to the EMWG recommendation of 15--20\%
+for advanced reactors; individual CAS22 sub-accounts already include
+conservative fabrication markups.  The 0\% NOAK contingency reflects the
+assumption of a mature, standardised design with resolved construction risk.
 
 
 %% ------------------------------------------------------------
@@ -1419,6 +1574,105 @@ produces CAS40 $\approx$ 11--15\% of TDC, implicitly assuming
 fission-level staffing ($\sim$500 per GWe). Our staffing-based
 approach yields 1--2\% of TDC for fusion, correctly reflecting the
 4--8$\times$ reduction in headcount under Part~30 regulation.
+
+
+%% ------------------------------------------------------------
+\subsection{CAS50: Capitalized Supplementary Costs}
+\label{sec:cas50}
+
+CAS50 covers capitalized items beyond direct construction, indirect
+services, and owner's costs that must be incurred before commercial
+operation. We decompose CAS50 into six sub-accounts, three of which
+are fuel-dependent:
+
+\begin{equation}
+\label{eq:cas50}
+\text{CAS50} = \underbrace{C_{51} + C_{53} + C_{54}}_{\text{fuel-independent}}
+             + \underbrace{C_{52} + C_{55} + C_{56}}_{\text{fuel-dependent}}
+             + C_{59}
+\end{equation}
+
+\subsubsection{Fuel-independent sub-accounts.}
+\begin{itemize}
+\item \textbf{C51 (Shipping/transportation):} 1.5\% of CAS20. World
+  Nuclear Association reports transportation at $\sim$2\% of overnight
+  cost for fission \citep{wna2025}; fusion avoids the extreme mass of
+  reactor pressure vessels and containment structures.
+\item \textbf{C53 (Taxes):} 1\% of CAS20. Sales and use tax on
+  construction materials, net of exemptions typical for large energy
+  projects (e.g.\ NY RPTL \S485, state manufacturing equipment exemptions).
+\item \textbf{C54 (Construction insurance):} 1.5\% of (CAS20 + CAS30).
+  Builder's risk premiums for large projects are typically 1--3\% of
+  insured value. Fusion under Part~30 avoids Price-Anderson nuclear
+  liability insurance required for Part~50 reactors.
+\end{itemize}
+
+\subsubsection{Fuel-dependent sub-accounts.}
+\begin{itemize}
+\item \textbf{C52 (Spare parts):} Initial on-site inventory at COD.
+  D-T plants require spare blanket modules, first-wall tiles, and
+  divertor cassettes due to neutron damage; p-${}^{11}$B plants need
+  only conventional industrial spares. Expressed as a fraction of
+  CAS22--28 (reactor plant equipment plus BOP).
+\item \textbf{C55 (Startup fuel/inventory):} The fusion analogue of
+  the fission ``first core'' ($\sim$3\% of overnight cost,
+  $\sim$\$120M for a 1~GWe PWR). D-T requires 1--2~kg of tritium at
+  $\sim$\$30{,}000/g ($\sim$\$40M); p-${}^{11}$B requires only
+  commodity hydrogen and boron ($<$\$0.1M).
+\item \textbf{C56 (Decommissioning provision):} The present value of
+  the future decommissioning obligation, discounted over the plant
+  lifetime. See below.
+\end{itemize}
+
+\noindent C59 (contingency) is applied at the same rate as other
+accounts.
+
+\subsubsection{Decommissioning cost analysis.}
+Fission decommissioning costs \$750--1{,}250/kWe (OECD-NEA median
+\$1{,}000/kWe) \citep{oecd_nea_decom2016}, driven by spent fuel
+management, long-lived actinide disposal, and Part~50 regulatory
+overhead. Fusion eliminates all three: no spent fuel exists, activated
+materials decay to clearance levels within 50--100~years
+\citep{iaea_fusion_decom2020}, and Part~30 decommissioning requirements
+are far lighter.
+
+We estimate total decommissioning cost by starting from the fission
+reference and removing inapplicable cost drivers (spent fuel
+$\sim$\$300/kWe, actinide waste $\sim$\$200/kWe, Part~50 overhead
+$\sim$\$100/kWe, armed security $\sim$\$100/kWe), then adding
+fusion-specific costs (tritium decontamination for D-T). The
+capitalized provision is the present value at a 3\% real discount
+rate over a 40-year plant life (PV factor $\approx 0.31$).
+
+\Cref{tab:cas50-fuel} summarizes the adopted values.
+
+\begin{table}[htbp]
+\caption{CAS50 fuel-dependent parameters (1~GWe reference, 2023~USD).}
+\label{tab:cas50-fuel}
+\centering
+\begin{tabular}{lrrrr}
+\toprule
+Sub-account & D-T & D-D & D-${}^3$He & p-${}^{11}$B \\
+\midrule
+C52 spare parts (\% of CAS22--28) & 3\% & 2.5\% & 1.5\% & 1\% \\
+C55 startup fuel (M\$) & 40 & 0.1 & 10 & 0.1 \\
+C56 decom.\ provision (M\$) & 127 & 93 & 65 & 53 \\
+\midrule
+\textit{CAS50 total at 1~GWe (M\$)} & \textit{493} & \textit{391} & \textit{336} & \textit{293} \\
+\textit{\% of CAS20} & \textit{12.3} & \textit{9.8} & \textit{8.4} & \textit{7.3} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsubsection{Comparison with prior methods.}
+The previous implementation used flat placeholder values
+(\$1M shipping, \$0.5M insurance, \$5M decommissioning) with no
+source documentation, producing CAS50 $\approx$ \$18M---roughly
+20$\times$ too low. The Woodruff MIF example reports CAS50 at 10\% of
+total capital \citep{woodruff2026}; our D-T estimate of $\sim$8\% is
+consistent with this, while our p-${}^{11}$B estimate of $\sim$5\%
+correctly reflects reduced spare parts, negligible fuel cost, and
+lighter decommissioning obligations.
 
 
 %% ------------------------------------------------------------

@@ -86,10 +86,11 @@ def cas22_reactor_plant_equipment(
 
     # -----------------------------------------------------------------------
     # 220101: First Wall + Blanket + Neutron Multiplier
-    # DT: breeding blanket (TBR>1.05) + neutron multiplier
-    # DD: energy-capture blanket (no breeding)
+    # DT: breeding blanket (TBR>1.05) + neutron multiplier (RAFM steel +
+    #   PbLi/Li breeder + Be multiplier + W FW armor). Complex assembly.
+    # DD: energy-capture blanket (no breeding). Simpler RAFM steel + coolant.
     # DHe3/pB11: minimal (X-ray shielding only)
-    # Source: pyFECONs cas220101_reactor_equipment.py
+    # See docs/account_justification/CAS22_reactor_components.md
     # -----------------------------------------------------------------------
     blanket_unit = {
         Fuel.DT: cc.blanket_unit_cost_dt,
@@ -104,7 +105,8 @@ def cas22_reactor_plant_equipment(
 
     # -----------------------------------------------------------------------
     # 220102: Shield (HT + LT + Bioshield)
-    # Source: pyFECONs cas220102_shield.py
+    # Full shield for DT (14.1 MeV), reduced for lower-neutron fuels.
+    # See docs/account_justification/CAS22_reactor_components.md
     # -----------------------------------------------------------------------
     shield_scale = {
         Fuel.DT: 1.0,  # Heavy shield (14.1 MeV neutrons)
@@ -117,11 +119,11 @@ def cas22_reactor_plant_equipment(
     )
 
     # -----------------------------------------------------------------------
-    # 220103: Coils — conductor scaling law (simplified model)
+    # 220103: Coils — conductor scaling law
     # cost = total_kAm * $/kAm * markup / 1e6
-    # total_kAm = G * B_max * R_coil^2 / (mu_0 * 1000)
-    # G depends on confinement concept (tokamak/stellarator/mirror)
-    # Source: pyFECONs cas220103_coils.py (cas_220103_coils_simplified)
+    # REBCO HTS default: $50/kAm (NOAK target; current market $150-300/kAm)
+    # Markup captures winding, insulation, quench protection, cryostat, testing
+    # See docs/account_justification/CAS22_reactor_components.md
     # -----------------------------------------------------------------------
     defaults = _COIL_DEFAULTS.get(concept, _COIL_DEFAULTS[ConfinementConcept.TOKAMAK])
     coil_markup = defaults["markup"]
@@ -132,9 +134,9 @@ def cas22_reactor_plant_equipment(
     c220103 = conductor_cost * coil_markup
 
     # -----------------------------------------------------------------------
-    # 220104: Supplementary Heating — per-MW linear costs
-    # cost = cost_per_MW * power_MW for each type (NBI, ICRF, ECRH, LHCD)
-    # Source: pyFECONs cas220104_supplementary_heating.py
+    # 220104: Supplementary Heating — vendor-purchased turnkey systems
+    # Per-MW linear costs calibrated to ITER procurement (FOAK-to-NOAK adjusted)
+    # See docs/account_justification/CAS22_reactor_components.md
     # -----------------------------------------------------------------------
     c220104 = (
         cc.heating_nbi_per_mw * p_nbi
@@ -144,26 +146,31 @@ def cas22_reactor_plant_equipment(
     )
 
     # -----------------------------------------------------------------------
-    # 220105: Primary Structure
-    # Source: pyFECONs cas220105_primary_structure.py
+    # 220105: Primary Structure — gravity supports, thermal shields,
+    # inter-coil structure, machine base.
+    # See docs/account_justification/CAS22_reactor_components.md
     # -----------------------------------------------------------------------
     c220105 = cc.structure_unit_cost * structure_vol * (p_et / P_ET_REF) ** 0.5
 
     # -----------------------------------------------------------------------
-    # 220106: Vacuum System (vessel + cryo cooling + pumps)
-    # Source: pyFECONs cas220106_vacuum_system.py
+    # 220106: Vacuum System — vessel (double-walled SS), port extensions,
+    # cryopumps, vacuum gauges, leak detection.
+    # See docs/account_justification/CAS22_reactor_components.md
     # -----------------------------------------------------------------------
     c220106 = cc.vessel_unit_cost * vessel_vol * (p_et / P_ET_REF) ** 0.6
 
     # -----------------------------------------------------------------------
-    # 220107: Power Supplies
-    # Source: pyFECONs cas220107_power_supplies.py
+    # 220107: Power Supplies — vendor-purchased (ABB, GE, Siemens)
+    # High-current DC for magnets, pulsed power, switchgear.
+    # See docs/account_justification/CAS22_plant_systems.md
     # -----------------------------------------------------------------------
     c220107 = cc.power_supplies_base * (p_et / 1000.0) ** 0.7
 
     # -----------------------------------------------------------------------
     # 220108: Divertor (MFE) or Target Factory (IFE/MIF)
-    # Source: pyFECONs cas220108_divertor.py
+    # MFE: W monoblock cassettes on CuCrZr heat sinks
+    # IFE/MIF: high-rep-rate target manufacturing infrastructure
+    # See docs/account_justification/CAS22_plant_systems.md
     # -----------------------------------------------------------------------
     if family == ConfinementFamily.MFE:
         c220108 = cc.divertor_base * (p_th / 1000.0) ** 0.5
@@ -171,10 +178,12 @@ def cas22_reactor_plant_equipment(
         c220108 = cc.target_factory_base * (p_et / 1000.0) ** 0.7
 
     # -----------------------------------------------------------------------
-    # 220109: Direct Energy Converter (optional, zero by default)
-    # Source: pyFECONs cas220109_direct_energy_converter.py
+    # 220109: Direct Energy Converter — excluded for tokamak/stellarator.
+    # Relevant only for mirror/FRC concepts with charged-particle exhaust.
+    # Override via cost_overrides["C220109"] for custom configurations.
+    # See docs/account_justification/CAS22_plant_systems.md
     # -----------------------------------------------------------------------
-    c220109 = 0.0  # DEC placeholder (f_dec=0 for default tokamak)
+    c220109 = 0.0
 
     # -----------------------------------------------------------------------
     # 220110: Remote Handling & Maintenance Equipment
@@ -199,8 +208,9 @@ def cas22_reactor_plant_equipment(
     c220110 = rh_base[fuel] * concept_scale * (p_et / 1000.0) ** 0.5
 
     # -----------------------------------------------------------------------
-    # 220111: Installation Labor
-    # Source: pyFECONs cas220111_installation.py
+    # 220111: Installation Labor — 14% of reactor subtotal
+    # Industry norm: 10-20% (nuclear 15-25%, conventional 10-15%)
+    # See docs/account_justification/CAS22_plant_systems.md
     # -----------------------------------------------------------------------
     reactor_subtotal = (
         c220101
@@ -227,7 +237,8 @@ def cas22_reactor_plant_equipment(
 
     # -----------------------------------------------------------------------
     # 220200: Main & Secondary Coolant
-    # Source: pyFECONs cas220200_coolant.py
+    # Primary loops + intermediate HX + secondary to steam generators
+    # See docs/account_justification/CAS22_plant_systems.md
     # -----------------------------------------------------------------------
     # Plant-wide accounts use total plant power (n_mod * per-module)
     p_th_total = n_mod * p_th
@@ -239,7 +250,8 @@ def cas22_reactor_plant_equipment(
 
     # -----------------------------------------------------------------------
     # 220300: Auxiliary Cooling + Cryoplant
-    # Source: pyFECONs cas220300_auxilary_cooling.py
+    # Cryoplant calibrated to ITER: EUR 148M for 75kW @ 4.5K (Air Liquide)
+    # See docs/account_justification/CAS22_plant_systems.md
     # -----------------------------------------------------------------------
     c220301 = 1.10e-3 * p_th_total  # Aux coolant
     c220302 = 200.0 * (p_cryo / 30.0) ** 0.7  # Cryoplant (ref: $200M @ 30MW)
@@ -247,17 +259,18 @@ def cas22_reactor_plant_equipment(
 
     # -----------------------------------------------------------------------
     # 220400: Radioactive Waste Management
-    # Source: pyFECONs cas220400_rad_waste.py
+    # Low-level activated waste (no fission products)
+    # See docs/account_justification/CAS22_plant_systems.md
     # -----------------------------------------------------------------------
     c220400 = 1.96 * (p_th_total / 1000.0)
 
     # -----------------------------------------------------------------------
-    # 220500: Fuel Handling & Storage
-    # DT: full tritium processing + containment
-    # DD: small-scale tritium + deuterium handling
-    # DHe3: He-3 handling
-    # pB11: boron powder injection (cheapest)
-    # Source: pyFECONs cas220500_fuel_handling_and_storage.py
+    # 220500: Fuel Handling & Storage — fuel-dependent
+    # DT: full tritium processing + containment ($120M @ 1 GWe)
+    # DD: small-scale tritium + deuterium ($60M)
+    # DHe3: He-3 recovery/recycling ($40M)
+    # pB11: boron powder injection ($15M)
+    # See docs/account_justification/CAS22_plant_systems.md
     # -----------------------------------------------------------------------
     fuel_handling_base = {
         Fuel.DT: cc.fuel_handling_dt_base,
@@ -268,14 +281,15 @@ def cas22_reactor_plant_equipment(
     c220500 = fuel_handling_base[fuel] * (p_net_total / 1000.0) ** 0.7
 
     # -----------------------------------------------------------------------
-    # 220600: Other Reactor Plant Equipment
-    # Source: pyFECONs cas220600_other_plant_equipment.py
+    # 220600: Other Reactor Plant Equipment — catch-all
+    # See docs/account_justification/CAS22_plant_systems.md
     # -----------------------------------------------------------------------
     c220600 = 11.5 * (p_net_total / 1000.0) ** 0.8
 
     # -----------------------------------------------------------------------
-    # 220700: Instrumentation & Control
-    # Source: pyFECONs cas220700_instrumentation_and_control.py
+    # 220700: Instrumentation & Control — plasma control, diagnostics,
+    # safety interlocks, data acquisition, plant computer
+    # See docs/account_justification/CAS22_plant_systems.md
     # -----------------------------------------------------------------------
     c220700 = 85.0 * (p_th_total / 3500.0) ** 0.65
 

@@ -67,6 +67,7 @@ cas = [
     ("CAS24", "Electrical Plant", c.cas24),
     ("CAS25", "Miscellaneous", c.cas25),
     ("CAS26", "Heat Rejection", c.cas26),
+    ("CAS27", "Special Materials", c.cas27),
     ("CAS28", "Digital Twin", c.cas28),
     ("CAS29", "Contingency", c.cas29),
     ("CAS30", "Indirect Costs", c.cas30),
