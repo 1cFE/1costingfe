@@ -17,7 +17,7 @@ result = model.forward(
     inflation_rate=0.0245,
     noak=True,
     # CATF spherical-tokamak geometry
-    axis_t=3.0,
+    R0=3.0,
     elon=3.0,
     plasma_t=1.1,
     blanket_t=0.8,

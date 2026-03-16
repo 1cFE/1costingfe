@@ -18,7 +18,7 @@ from costingfe.layers.tokamak import (
 # ── Machine definition ────────────────────────────────────────────────
 # CATF-like spherical tokamak geometry
 MACHINE = dict(
-    axis_t=3.0,  # Major radius R [m]
+    R0=3.0,  # Major radius R [m]
     plasma_t=1.1,  # Minor radius a [m]
     elon=3.0,  # Elongation kappa
     B=5.0,  # Toroidal field on axis [T]

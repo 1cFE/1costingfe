@@ -20,7 +20,7 @@ result = model.forward(
     inflation_rate=0.02,
     noak=True,
     # Mirror geometry (cylindrical)
-    axis_t=0.0,  # No axis offset for cylinder
+    R0=0.0,  # No axis offset for cylinder
     plasma_t=1.5,  # Plasma radius [m]
     chamber_length=20.0,  # Cylinder length [m]
     blanket_t=0.60,  # Thinner blanket (shorter neutron path)

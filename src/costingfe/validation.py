@@ -67,7 +67,7 @@ class CostingInput(BaseModel):
     f_dec: float | None = None
     p_coils: float | None = None
     p_cool: float | None = None
-    axis_t: float | None = None
+    R0: float | None = None
     elon: float | None = None
 
     # IFE only
@@ -120,7 +120,7 @@ class CostingInput(BaseModel):
         "f_dec",
         "p_coils",
         "p_cool",
-        "axis_t",
+        "R0",
         "elon",
     ]
     _IFE_REQUIRED = [

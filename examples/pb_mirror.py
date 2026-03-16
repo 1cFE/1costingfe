@@ -19,7 +19,7 @@ result = model.forward(
     inflation_rate=0.02,
     noak=True,
     # Mirror geometry (cylindrical)
-    axis_t=0.0,  # No axis offset for cylinder
+    R0=0.0,  # No axis offset for cylinder
     plasma_t=1.5,  # Plasma radius [m]
     chamber_length=20.0,  # Cylinder length [m]
     blanket_t=0.00,  # Thinner blanket (shorter neutron path)
@@ -38,9 +38,10 @@ result = model.forward(
     p_coils=5.0,  # Solenoid coil power [MW]
     p_cool=20.0,  # Cooling [MW]
     p_pump=1.5,  # Pumping [MW]
-    p_trit=10.0,  # Tritium processing [MW]
+    p_trit=0.0,  # No tritium in p-B11
     p_house=4.0,  # Housekeeping [MW]
     p_cryo=1.0,  # Cryogenic [MW]
+    T_e=150.0,  # Electron temperature [keV] (p-B11 requires high T)
 )
 
 # ── Results ───────────────────────────────────────────────────────────

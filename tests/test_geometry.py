@@ -8,7 +8,7 @@ from costingfe.types import ConfinementConcept
 
 # ARC-like tokamak radial build (from pyFECONs customers/ARC)
 ARC_BUILD = RadialBuild(
-    axis_t=3.3,
+    R0=3.3,
     plasma_t=1.13,
     elon=1.84,
     vacuum_t=0.10,
@@ -59,7 +59,7 @@ def test_tokamak_plasma_volume_reasonable():
 def test_mirror_uses_cylinder():
     """Mirror geometry should use cylindrical volumes."""
     rb = RadialBuild(
-        axis_t=2.0,
+        R0=2.0,
         plasma_t=1.0,
         chamber_length=10.0,
         coil_t=0.0,  # Mirror has no TF coils in radial build
@@ -73,7 +73,7 @@ def test_mirror_uses_cylinder():
 def test_ife_uses_sphere():
     """IFE geometry should use spherical volumes."""
     rb = RadialBuild(
-        axis_t=5.0,  # Chamber radius
+        R0=5.0,  # Chamber radius
         plasma_t=1.0,
         coil_t=0.0,
     )
@@ -86,7 +86,7 @@ def test_ife_uses_sphere():
 def test_mif_uses_sphere():
     """MIF geometry should also use spherical volumes."""
     rb = RadialBuild(
-        axis_t=3.0,
+        R0=3.0,
         plasma_t=0.5,
         coil_t=0.0,
     )
@@ -97,8 +97,8 @@ def test_mif_uses_sphere():
 
 def test_elongation_scales_volume():
     """Higher elongation should give larger volumes."""
-    rb_circ = RadialBuild(axis_t=3.3, plasma_t=1.13, elon=1.0)
-    rb_elong = RadialBuild(axis_t=3.3, plasma_t=1.13, elon=2.0)
+    rb_circ = RadialBuild(R0=3.3, plasma_t=1.13, elon=1.0)
+    rb_elong = RadialBuild(R0=3.3, plasma_t=1.13, elon=2.0)
     geo_circ = compute_geometry(rb_circ, ConfinementConcept.TOKAMAK)
     geo_elong = compute_geometry(rb_elong, ConfinementConcept.TOKAMAK)
     assert geo_elong.plasma_vol > geo_circ.plasma_vol

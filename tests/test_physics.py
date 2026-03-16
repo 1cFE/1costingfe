@@ -89,7 +89,6 @@ def test_p_line_tungsten_wall():
         T_edge_keV=0.1,
         fw_area=600.0,
         plasma_volume=500.0,
-        f_screen=0.01,
         tau_ratio=3.0,
     )
     assert symbol == "W"
@@ -137,12 +136,8 @@ def test_lithium_wall_low_radiation():
     n_e, T_e, V = 1e20, 15.0, 500.0
     fw_area = 600.0
 
-    _, f_W = compute_impurity_fraction(
-        WallMaterial.TUNGSTEN, 0.1, fw_area, V, 0.01, 3.0
-    )
-    _, f_Li = compute_impurity_fraction(
-        WallMaterial.LITHIUM, 0.1, fw_area, V, 0.005, 3.0
-    )
+    _, f_W = compute_impurity_fraction(WallMaterial.TUNGSTEN, 0.1, fw_area, V, 3.0)
+    _, f_Li = compute_impurity_fraction(WallMaterial.LITHIUM, 0.1, fw_area, V, 3.0)
 
     imp_W = ImpurityMix(wall_derived={"W": f_W}, seeded={})
     imp_Li = ImpurityMix(wall_derived={"Li": f_Li}, seeded={})

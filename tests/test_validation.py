@@ -177,7 +177,7 @@ class TestTier2FamilyRequiredParams:
                 f_dec=0.0,
                 p_coils=2.0,
                 p_cool=13.7,
-                axis_t=6.2,
+                R0=6.2,
                 elon=1.7,
             )
 
@@ -264,7 +264,7 @@ class TestTier2FamilyRequiredParams:
             f_dec=0.0,
             p_coils=2.0,
             p_cool=13.7,
-            axis_t=6.2,
+            R0=6.2,
             elon=1.7,
         )
         assert inp.p_input == 50.0
@@ -298,7 +298,7 @@ class TestTier3PhysicsChecks:
             f_dec=0.0,
             p_coils=2.0,
             p_cool=13.7,
-            axis_t=6.2,
+            R0=6.2,
             elon=1.7,
         )
         defaults.update(overrides)

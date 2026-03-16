@@ -16,7 +16,7 @@ p_house: 4.0        # Housekeeping power [MW]
 p_cryo: 0.5         # Cryogenic power [MW]
 
 # Radial build geometry [m] — CATF spherical tokamak reference
-axis_t: 3.0          # Major radius R0
+R0: 3.0          # Major radius R0
 plasma_t: 1.1        # Minor radius a
 elon: 3.0            # Elongation kappa
 blanket_t: 0.80      # Blanket thickness
@@ -35,9 +35,8 @@ plasma_volume: 500.0 # Plasma volume [m^3]
 B: 5.0              # Magnetic field [T]
 
 # Impurity model
-wall_material: null    # Wall material: W, C, Be, Mo, SiC, Li (null = no line radiation)
+wall_material: W       # Wall material: W, C, Be, Mo, SiC, Li
 T_edge: 0.05           # Edge ion temperature at wall [keV] (50 eV, detached divertor)
-f_screen: 0.01         # SOL screening factor for wall impurities
 tau_ratio: 3.0         # Impurity confinement time / energy confinement time
 seeded_impurities: {}  # Deliberate impurities, e.g. {Ar: 0.002}
 R_w: 0.6               # Wall reflectivity for synchrotron (metallic walls 0.6-0.8)

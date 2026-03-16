@@ -20,7 +20,7 @@ class RadialBuild:
     """Input radial build thicknesses (meters), from center outward."""
 
     # Core geometry
-    axis_t: float = 6.2  # Major radius R0 (tokamak) or chamber radius (mirror/IFE)
+    R0: float = 6.2  # Major radius R0 (tokamak) or chamber radius (mirror/IFE)
     plasma_t: float = 2.0  # Minor radius a (tokamak) or plasma thickness
     elon: float = 1.0  # Elongation kappa (tokamak only, 1.0 = circular)
     chamber_length: float = 0.0  # Chamber length (mirror only)
@@ -127,7 +127,7 @@ def compute_geometry(rb: RadialBuild, concept: ConfinementConcept) -> Geometry:
         firstwall_area = 2 * math.pi * vacuum_or * h
     elif family == ConfinementFamily.MFE:
         # Tokamak / stellarator: torus
-        R = rb.axis_t
+        R = rb.R0
         k = rb.elon
 
         def vol(r_in, r_out):

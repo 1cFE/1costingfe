@@ -17,7 +17,7 @@ p_house: 4.0        # Housekeeping power [MW]
 p_cryo: 0.8         # Cryogenic power [MW]
 
 # Radial build geometry [m]
-axis_t: 5.5          # Major radius R0
+R0: 5.5          # Major radius R0
 plasma_t: 1.8        # Minor radius a
 elon: 1.0            # Near-circular cross-section
 blanket_t: 0.60      # Blanket thickness
@@ -29,9 +29,8 @@ vessel_t: 0.10       # Vacuum vessel
 construction_time_yr: 8.0  # Years (complex 3D coils, harder assembly)
 
 # Impurity model
-wall_material: null    # Wall material: W, C, Be, Mo, SiC, Li (null = no line radiation)
+wall_material: W       # Wall material: W, C, Be, Mo, SiC, Li
 T_edge: 0.05           # Edge ion temperature at wall [keV] (50 eV, island divertor)
-f_screen: 0.01         # SOL screening factor for wall impurities
 tau_ratio: 3.0         # Impurity confinement time / energy confinement time
 seeded_impurities: {}  # Deliberate impurities, e.g. {Ar: 0.002}
 R_w: 0.6               # Wall reflectivity for synchrotron (metallic walls 0.6-0.8)

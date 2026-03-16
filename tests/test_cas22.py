@@ -6,7 +6,7 @@ from costingfe.types import CoilMaterial, ConfinementConcept, ConfinementFamily,
 CC = load_costing_constants()
 
 # Reference tokamak geometry for tests
-RB = RadialBuild(axis_t=6.2, plasma_t=2.0, elon=1.7, blanket_t=0.70)
+RB = RadialBuild(R0=6.2, plasma_t=2.0, elon=1.7, blanket_t=0.70)
 GEO = compute_geometry(RB, ConfinementConcept.TOKAMAK)
 BLANKET_VOL = GEO.firstwall_vol + GEO.blanket_vol + GEO.reflector_vol
 SHIELD_VOL = GEO.ht_shield_vol + GEO.lt_shield_vol
@@ -16,7 +16,7 @@ VESSEL_VOL = GEO.vessel_vol
 
 def _make_cas22(fuel=Fuel.DT, n_mod=1, blanket_t=0.70):
     """Helper to compute CAS22 with geometry."""
-    rb = RadialBuild(axis_t=6.2, plasma_t=2.0, elon=1.7, blanket_t=blanket_t)
+    rb = RadialBuild(R0=6.2, plasma_t=2.0, elon=1.7, blanket_t=blanket_t)
     geo = compute_geometry(rb, ConfinementConcept.TOKAMAK)
     return cas22_reactor_plant_equipment(
         CC,
@@ -208,7 +208,7 @@ def _make_cas22_coil(
     coil_material=CoilMaterial.REBCO_HTS,
 ):
     """Helper for coil model tests."""
-    rb = RadialBuild(axis_t=6.2, plasma_t=2.0, elon=1.7, blanket_t=0.70)
+    rb = RadialBuild(R0=6.2, plasma_t=2.0, elon=1.7, blanket_t=0.70)
     geo = compute_geometry(rb, ConfinementConcept.TOKAMAK)
     return cas22_reactor_plant_equipment(
         CC,

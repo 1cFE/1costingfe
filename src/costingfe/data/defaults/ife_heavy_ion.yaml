@@ -15,7 +15,7 @@ p_cryo: 0.5          # Cryogenic power [MW]
 p_target: 0.8        # Target factory power [MW]
 
 # Radial build geometry [m] (spherical chamber)
-axis_t: 0.0          # Not used for sphere
+R0: 0.0          # Not used for sphere
 plasma_t: 4.0        # Chamber radius
 blanket_t: 0.80      # Blanket thickness
 ht_shield_t: 0.25    # High-temperature shield
