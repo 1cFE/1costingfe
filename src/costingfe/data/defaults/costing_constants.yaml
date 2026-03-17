@@ -31,8 +31,6 @@ blanket_unit_cost_pb11: 0.05 # Minimal X-ray only
 shield_unit_cost: 0.74       # DT reference, apply fuel scale factor
 
 # 220103-220108: Reactor components
-coils_base: 500.0            # M$ at 1 GWe (power-scaled)
-heating_base: 150.0          # M$ at 1 GWe (power-scaled)
 structure_unit_cost: 0.15    # M$/m³ (volume-based)
 vessel_unit_cost: 0.72       # M$/m³ (volume-based)
 power_supplies_base: 80.0    # M$ at 1 GWe (power-scaled)

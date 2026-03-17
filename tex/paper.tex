@@ -1100,7 +1100,7 @@ CAS & Description & Method \\
 \multicolumn{3}{l}{\textit{Per-module accounts (×\,$n_{\text{mod}}$):}} \\
 \hspace{1em}22.01.01 & First wall + blanket & Volume $\times$ thermal intensity, fuel-dependent \\
 \hspace{1em}22.01.02 & Shield & Volume $\times$ fuel-dependent neutron scale \\
-\hspace{1em}22.01.03 & Coils (magnets) & Conductor kAm $\times$ \$/kAm $\times$ markup \\
+\hspace{1em}22.01.03$^\dagger$ & Coils (magnets) & Conductor kAm $\times$ \$/kAm $\times$ markup \\
 \hspace{1em}22.01.04 & Supplementary heating & Per-MW linear (NBI, ICRF, ECRH, LHCD) \\
 \hspace{1em}22.01.05 & Primary structure & Volume $\times$ power scale \\
 \hspace{1em}22.01.06 & Vacuum system & Volume $\times$ power scale \\
@@ -1217,6 +1217,62 @@ non-D-T) rather than fuel-specific, as building cost uncertainty
 
 Source: ARIES cost-account tradition \citep{waganer2013}, calibrated
 against the NETL baseline \citep{netl2022}.
+
+
+%% ------------------------------------------------------------
+\subsection{CAS22.01.03: Superconducting Coils}
+\label{sec:cas2203}
+
+CAS22.01.03 covers the magnet system: toroidal field (TF), central
+solenoid (CS), poloidal field (PF) coils, structural casing,
+insulation, quench protection, cryostat interfaces, and testing.
+
+\subsubsection{Conductor scaling law.}
+Total conductor quantity is estimated from the magnetic energy stored
+in the coil system:
+\begin{equation}
+\label{eq:cas2203}
+C_{220103} = \frac{G \cdot B_{\max} \cdot R_{\text{coil}}^2}
+                   {\mu_0 \times 1000}
+             \times c_{\text{kAm}}
+             \times M_{\text{concept}}
+\end{equation}
+
+\noindent where $G$ is a geometry factor (tokamak: $4\pi^2$;
+stellarator: $4\pi^2 \times f_{\text{path}}$; mirror: $16\pi$),
+$c_{\text{kAm}}$ is the conductor cost per kA-metre, and
+$M_{\text{concept}}$ is a manufacturing markup capturing winding,
+insulation, quench protection, structural casing, cryostat, and testing.
+
+\begin{center}
+\begin{tabular}{lrrrl}
+\toprule
+Concept & Markup & Path factor & Example (12\,T, 1.85\,m) & Rationale \\
+\midrule
+Tokamak     &  8$\times$ & 1.0 & \$516M & TF+CS+PF complexity \\
+Stellarator & 12$\times$ & 2.0 & \$1{,}546M & Non-planar 3D coils \\
+Mirror      &  2.5$\times$ & 1.0 & \$26M & Simple solenoids \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsubsection{Conductor cost assumptions.}
+The default conductor is REBCO high-temperature superconductor at
+\$50/kA-m---an aggressive NOAK target.  Current market prices for
+REBCO tape are \$150--300/kA-m; the \$50/kA-m assumption reflects
+projected cost reductions from scaled-up manufacturing (analogous to
+the solar PV learning curve).  For comparison, Nb$_3$Sn (the ITER
+conductor) is \$7/kA-m at maturity, and NbTi (LHC heritage) is
+similar.
+
+This is a deliberate design choice: the model targets NOAK economics
+for a mature fusion industry, not FOAK procurement costs.  Users
+performing FOAK sensitivity analysis should override the conductor
+cost to \$150--300/kA-m, which roughly triples the coil account.
+Unlike B-11 enrichment---where the FOAK/NOAK gap reflects a missing
+industrial supply chain requiring \$10{,}000/kg falling to \$75/kg---the
+REBCO cost trajectory is a manufacturing learning curve for an
+existing product, making the aggressive target more defensible.
 
 
 %% ------------------------------------------------------------

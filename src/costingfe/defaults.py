@@ -45,9 +45,6 @@ class CostingConstants:
     shield_unit_cost: float = 0.74  # M$/m³, DT reference
 
     # 220103-220108: Reactor components
-    coils_base: float = (
-        500.0  # TF + CS + PF + structure (legacy, superseded by conductor scaling)
-    )
     # 220104: Supplementary Heating — per-MW linear costs (M$/MW, 2023$)
     # Source: pyFECONs cas220104 / ARIES + ITER average costs
     heating_nbi_per_mw: float = 7.0642  # Neutral Beam Injection
