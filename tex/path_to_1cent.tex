@@ -1,0 +1,268 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\title{Path to 1\,\textcent/kWh Fusion Energy}
+\author{1cFE Project}
+\date{March 2026}
+
+\newcommand{\target}{\$10/\text{MWh}}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+We decompose the \$10/MWh ($1\,\textcent$/kWh) levelized cost of
+electricity target for fusion power into its constituent requirements,
+using the \textsc{1costingfe} techno-economic model.  Starting from a
+baseline of \$43/MWh for a 1\,GWe NOAK pB11 mirror plant, we identify
+the lever stack required to close the $4.3\times$ gap.  We examine two
+bounding cases: (i)~a free fusion core, which isolates the irreducible
+balance-of-plant floor, and (ii)~a fully costed core, which represents
+the engineering challenge.  In both cases, direct energy conversion
+(DEC) emerges as a transformative lever by eliminating the steam cycle
+that dominates non-core costs.  No single lever reaches the target;
+the path requires simultaneous advances in plant scale, availability,
+construction speed, financing, and---for charged-particle-dominated
+fuels---DEC.
+\end{abstract}
+
+\tableofcontents
+
+
+%% ====================================================================
+\section{Baseline: Where Are We Today?}
+
+The cheapest configuration in the current model is a 1\,GWe NOAK pB11
+mirror plant at standard financial assumptions (7\% WACC, 85\%
+availability, 30-year life, 6-year construction):
+
+\begin{center}
+\begin{tabular}{lr}
+\toprule
+Metric & Value \\
+\midrule
+LCOE & \$42.9/MWh \\
+Overnight cost & \$3{,}548/kW \\
+CAS22 (reactor equipment) & \$1{,}563M \\
+CAS21 (buildings) & \$332M \\
+CAS23--26 (BOP) & \$421M \\
+CAS70 (annual O\&M) & \$24M/yr \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Capital charges (CAS90) account for $\sim$90\% of LCOE, with O\&M
+contributing $\sim$10\% and fuel $<$1\%.  The gap to the \target{}
+target is \$33/MWh---a $4.3\times$ reduction.  Because capital
+dominates, the path to \target{} is overwhelmingly a capital cost
+problem.
+
+CAS21 buildings are priced at industrial/enhanced-industrial grade
+appropriate for pB11 under 10~CFR~Part~30---not nuclear-grade
+(Part~50).  pB11 buildings at \$308/kW reflect zero hot cell, zero
+tritium infrastructure, standard HVAC, and industrial construction
+throughout.
+
+
+%% ====================================================================
+\section{Free Fusion Core: The Balance-of-Plant Floor}
+
+To isolate the irreducible non-core costs, we zero out all reactor
+plant equipment (CAS22 = 0, CAS27 = 0).  Even with a completely free
+heat source, the LCOE floor is \textbf{\$18/MWh (1.8\,\textcent/kWh)}
+for pB11.  The fusion core accounts for 58\% of baseline LCOE.
+
+\subsection{Closing the Gap}
+
+\begin{center}
+\begin{tabular}{lrr}
+\toprule
+Cumulative scenario & LCOE (\$/MWh) & O/N (\$/kW) \\
+\midrule
+Free core (baseline) & 18 & 1{,}231 \\
++ 2\,GWe, 95\%, 3\% WACC, 3yr, 50yr & \textbf{7.3} & 854 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{Effect of Direct Energy Conversion}
+
+\begin{center}
+\begin{tabular}{lrr}
+\toprule
+Scenario & LCOE (\$/MWh) & O/N (\$/kW) \\
+\midrule
+Steam: 2\,GWe, 95\%, 3\% WACC, 3yr, 50yr & 7.3 & 854 \\
+DEC: 2\,GWe, 95\%, 3\% WACC, 3yr, 50yr & \textbf{5.7} & 524 \\
+DEC: 5\,GWe, 95\%, 2\% WACC, 3yr, 50yr & \textbf{3.9} & 448 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+At mega-scale with sovereign financing, the DEC floor reaches
+\$3.9/MWh---dominated almost entirely by O\&M staff costs.
+
+
+%% ====================================================================
+\section{Fully Costed Fusion Core}
+
+With a realistic fusion core (CAS22 computed from first principles),
+the baseline LCOE is \$43/MWh for pB11 mirror.
+
+\subsection{Combined Scenario Stacking}
+
+\begin{center}
+\begin{tabular}{lrr}
+\toprule
+Cumulative scenario & LCOE (\$/MWh) & O/N (\$/kW) \\
+\midrule
+Baseline (1\,GWe, 7\% WACC, 30yr) & 42.9 & 3{,}548 \\
++ 2\,GWe, 95\%, 3yr, 3\% WACC, 50yr & \textbf{12.5} & 1{,}982 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+With all levers stacked and a steam cycle, the fully costed pB11
+mirror reaches \$12.5/MWh---close but still above target.
+
+\subsection{Effect of Direct Energy Conversion}
+
+\begin{center}
+\begin{tabular}{lrrrl}
+\toprule
+Scenario & $f_{\text{dec}}$ & LCOE (\$/MWh) & O/N (\$/kW) & Notes \\
+\midrule
+Baseline (steam only) & 0\% & 42.9 & 3{,}548 & \\
+DEC at baseline & 90\% & 35.8 & 2{,}896 & BOP reduced \\
+DEC + 2\,GWe, 95\%, 3yr, 3\%, 50yr & 90\% & 10.4 & 1{,}526 & At target \\
+DEC + 5\,GWe, 95\%, 3yr, 2\%, 50yr & 90\% & 6.1 & 1{,}026 & Below target \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\textbf{Key finding:} With DEC, the fully costed pB11 mirror reaches
+\$10.4/MWh at moderate scale (2\,GWe) and favorable-but-not-extreme
+financing (3\% WACC, 50-yr life, 3-yr build)---essentially at target.
+At mega-scale (5\,GWe, 2\% WACC), \$6.1/MWh.
+
+\subsection{Automation}
+
+The remaining pB11-specific lever is \textbf{automated operations}---
+reducing the 59-person baseline staff to $\sim$30~FTE via a
+data-center operating model (remote monitoring, AI predictive
+maintenance, robot-accessible plant with zero activation barriers).
+
+\begin{center}
+\begin{tabular}{lrr}
+\toprule
+Scenario & LCOE (\$/MWh) & O/N (\$/kW) \\
+\midrule
+DEC + moderate (59~FTE) & 10.4 & 1{,}526 \\
+DEC + moderate + automated (30~FTE) & \textbf{8.8} & 1{,}526 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Automation buys \$1.6/MWh---the difference between ``at target'' and
+``below target with margin.''
+
+
+%% ====================================================================
+\section{Summary of Paths}
+
+\begin{center}
+\begin{tabular}{clccp{5.5cm}}
+\toprule
+Path & Description & LCOE & Core & Key requirement \\
+\midrule
+1 & Steam, free core, all levers & \$7.3 & Free &
+  2\,GWe, 95\%, 3\% WACC, 3yr, 50yr \\
+2 & DEC, free core, moderate & \$5.7 & Free &
+  2\,GWe, 95\%, 3\% WACC, 3yr, 50yr \\
+3 & DEC, free core, mega-scale & \$3.9 & Free &
+  5\,GWe, 95\%, 2\% WACC, 3yr, 50yr \\
+\midrule
+4 & Steam, full core, all levers & \$12.5 & Full &
+  2\,GWe, 95\%, 3\% WACC, 3yr, 50yr \\
+5 & DEC, full core, moderate & \$10.4 & Full &
+  2\,GWe, 95\%, 3\% WACC, 3yr, 50yr \\
+6 & DEC, full core, mega-scale & \$6.1 & Full &
+  5\,GWe, 95\%, 2\% WACC, 3yr, 50yr \\
+\textbf{7} & \textbf{DEC + automated, full core} & \textbf{\$8.8} & \textbf{Full} &
+  \textbf{2\,GWe, 95\%, 3\% WACC, 3yr, 50yr, 30\,FTE} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{Required Conditions}
+
+All paths to \target{} require:
+
+\begin{enumerate}
+\item \textbf{Aneutronic fuel (pB11).}  DT adds $\sim$\$1.7B/GWe in
+  neutron infrastructure.  Even with a free DT core, the floor is
+  $\sim$\$40/MWh vs \$18/MWh for pB11.
+\item \textbf{Large plant ($\geq$2\,GWe net).}  Fixed costs must be
+  spread across many MWh.
+\item \textbf{High availability ($\geq$95\%).}
+\item \textbf{Low cost of capital ($\leq$3\% real WACC).}
+\item \textbf{Fast construction ($\leq$3\,yr).}
+\end{enumerate}
+
+\subsection{The DEC Dividend}
+
+DEC is the discriminating lever between ``close but not quite'' and
+``at target.''  For pB11:
+\begin{itemize}
+\item Without DEC: \$12.5/MWh at moderate scale (25\% above target).
+\item With DEC: \$10.4/MWh at moderate scale (at target).
+\item With DEC + automation: \$8.8/MWh (below target with margin).
+\end{itemize}
+
+
+%% ====================================================================
+\section{What Definitely Will Not Work}
+
+\begin{itemize}
+\item \textbf{7\% WACC:} Requires $<$\$500/kW overnight---below gas
+  turbines, physically implausible.
+\item \textbf{1\,GWe scale:} Fixed costs too high even at 2\% WACC.
+\item \textbf{DT fuel:} Free-core floor ($\sim$\$40/MWh) is close to
+  pB11's fully costed result (\$43/MWh).
+\item \textbf{Any single lever alone:} Deepest reach is $\sim$\$22/MWh
+  (5\,GWe scale).
+\end{itemize}
+
+
+%% ====================================================================
+\section{Conclusions}
+
+\begin{enumerate}
+\item \textbf{The fusion core is necessary but not sufficient.}  Even
+  a free core leaves an \$18/MWh floor.
+
+\item \textbf{DEC is the highest-value technology lever for pB11.}
+  It provides $\sim$\$2/MWh of headroom at moderate scale.
+
+\item \textbf{Scale matters more than unit cost reduction.}  Going
+  from 1 to 2\,GWe buys more LCOE reduction than any other single
+  lever.
+
+\item \textbf{Financial conditions are as important as engineering.}
+  Government-backed financing at 3\% WACC is worth $\sim$\$15/MWh
+  versus commercial 7\% WACC.
+
+\item \textbf{The path is pB11 + DEC + scale + favorable finance.}
+  Path~5 produces \$10.4/MWh with a fully costed reactor.  Path~7
+  (+ automation) reaches \$8.8/MWh.
+\end{enumerate}
+
+The key physics challenge is not reaching ignition---it is reaching
+ignition in a configuration that supports DEC, high availability,
+and multi-GWe deployment at low unit cost.
+
+\end{document}
