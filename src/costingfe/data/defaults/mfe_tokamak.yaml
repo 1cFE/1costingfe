@@ -1,6 +1,13 @@
 # Default engineering parameters for MFE tokamak
 
 p_input: 50.0       # Heating power [MW]
+
+# Heating mix for CAS22 costing (must sum to p_input)
+p_nbi: 50.0         # NBI heating [MW] (primary heating for tokamak)
+p_ecrh: 0.0         # ECRH heating [MW]
+p_icrf: 0.0         # ICRF heating [MW]
+p_lhcd: 0.0         # LHCD heating [MW]
+
 mn: 1.1             # Neutron energy multiplier
 eta_th: 0.46        # Thermal conversion efficiency
 eta_p: 0.5          # Pumping efficiency
@@ -14,6 +21,10 @@ p_pump: 1.0         # Pumping power [MW]
 p_trit: 10.0        # Tritium processing power [MW]
 p_house: 4.0        # Housekeeping power [MW]
 p_cryo: 0.5         # Cryogenic power [MW]
+
+# Coil parameters
+b_max: 12.0          # Peak field on conductor [T]
+r_coil: 1.85         # Effective winding bore radius [m] (pyFECONs calibration)
 
 # Radial build geometry [m] — CATF spherical tokamak reference
 R0: 3.0          # Major radius R0

@@ -476,6 +476,23 @@ class CostModel:
             overridden.append("CAS21")
 
         # CAS22: compute detail, apply sub-account overrides, recompute totals
+        # Coil parameters: from YAML defaults or user overrides.
+        # r_coil = effective winding bore radius (calibration parameter,
+        # not necessarily equal to the radial build vessel_or).
+        r_coil = params.get("r_coil", 1.85)
+        b_max = params.get("b_max", 12.0)
+
+        # Heating mix: use explicit breakdown if provided, else default
+        # all p_input to NBI (backward-compatible).
+        p_input = params.get("p_input", params.get("p_driver", 0.0))
+        p_nbi = params.get("p_nbi", p_input)
+        p_ecrh = params.get("p_ecrh", 0.0)
+        p_icrf = params.get("p_icrf", 0.0)
+        p_lhcd = params.get("p_lhcd", 0.0)
+        # If any explicit heating breakdown is provided, don't auto-fill p_nbi
+        if any(k in overrides for k in ("p_nbi", "p_ecrh", "p_icrf", "p_lhcd")):
+            p_nbi = params.get("p_nbi", 0.0)
+
         c22_detail = cas22_reactor_plant_equipment(
             cc,
             pt.p_net,
@@ -491,6 +508,13 @@ class CostModel:
             structure_vol=structure_vol,
             vessel_vol=vessel_vol,
             family=self.family,
+            concept=self.concept,
+            b_max=b_max,
+            r_coil=r_coil,
+            p_nbi=p_nbi,
+            p_ecrh=p_ecrh,
+            p_icrf=p_icrf,
+            p_lhcd=p_lhcd,
         )
         _PER_MODULE_KEYS = {
             "C220101",
