@@ -345,7 +345,7 @@ print("""
 The $10/MWh target requires simultaneous advances across ALL dimensions:
 
 REQUIRED CONDITIONS (all must hold):
-  1. Aneutronic fuel (pB11)      — eliminates $1.7B of neutron infrastructure
+  1. Aneutronic fuel (pB11)      — eliminates $1.4B of neutron infrastructure
   2. Large plant (≥2 GWe net)    — dilutes fixed costs by 2-3×
   3. High availability (≥95%)    — 12% more energy per $ of capital
   4. Fast construction (≤3 yr)   — halves IDC from $700M to $200M
@@ -432,13 +432,13 @@ print("""
 From the analysis above, there are two plausible paths to $10/MWh:
 
 PATH A — SCALE + CHEAP CAPITAL (no cost breakthrough needed):
-  Plant size:    ≥5 GWe net
+  Plant size:    ≥3 GWe net
   Availability:  ≥95%
   Construction:  ≤3 years
-  WACC:          ≤2% (government/sovereign backing)
+  WACC:          ≤3% (government/utility backing)
   Lifetime:      ≥40 years
-  Overnight:     ~$1,800/kW (achievable with current model at scale)
-  Verdict:       Requires very large plants and near-sovereign financing.
+  Overnight:     ~$1,500/kW (achievable with current model at scale)
+  Verdict:       Requires large plants and low-cost financing.
                  Technically feasible if pB11 physics works.
 
 PATH B — MODERATE SCALE + COST BREAKTHROUGH:
@@ -447,17 +447,17 @@ PATH B — MODERATE SCALE + COST BREAKTHROUGH:
   Construction:  ≤3 years
   WACC:          ≤3%
   Lifetime:      ≥50 years
-  CAS22 cost:    40-50% below current model (learning + simplification)
+  CAS22 cost:    30-40% below current model (learning + simplification)
   Overnight:     ~$1,200-1,500/kW
-  Verdict:       Requires significant reactor equipment cost reduction
-                 beyond what NOAK learning alone delivers. Possible if
+  Verdict:       Requires reactor equipment cost reduction from NOAK
+                 learning and manufacturing scale-up. Possible if
                  fusion reactors become as mass-producible as gas turbines.
 
 WHAT DEFINITELY WON'T WORK:
   - 7% WACC (commercial project finance) — mathematically impossible
   - 1 GWe scale — fixed costs too high even at 2% WACC
   - 85% availability — wastes 10% of capital capacity
-  - DT fuel — neutron infrastructure adds $1.7B/GWe
+  - DT fuel — neutron infrastructure adds $1.4B/GWe
 
 THE KEY INSIGHT:
   At 3% WACC and 50-year life, the capital charge rate is 5.1%/yr.
@@ -477,9 +477,9 @@ for label, vals in [
     ("Construction (yr)", (6, 3, 3)),
     ("WACC", ("7.0%", "3.0%", "2.0%")),
     ("Lifetime (yr)", (30, 50, 40)),
-    ("Overnight ($/kW)", (3924, 2338, 1808)),
-    ("LCOE ($/MWh)", (47.0, 14.2, 9.9)),
-    ("LCOE (¢/kWh)", (4.70, 1.42, 0.99)),
+    ("Overnight ($/kW)", (2887, 1718, 1322)),
+    ("LCOE ($/MWh)", (35.7, 11.3, 7.8)),
+    ("LCOE (¢/kWh)", (3.57, 1.13, 0.78)),
 ]:
     print(f"  {label:<28} {str(vals[0]):>10} {str(vals[1]):>10} {str(vals[2]):>10}")
 
@@ -542,8 +542,8 @@ bottoming cycle (~$100M CAS23) recovers this neutron wall heat at ~40%.
 
 # --- DHe3 pulsed FRC (Helion-like) ---
 print("── DHe3 Pulsed FRC (Helion architecture) ──")
-print("  Key advantage: $1,773/kW overnight (lowest of any concept)")
-print("  Key problem:   He-3 fuel at $2M/kg → $224M/yr CAS80")
+print("  Key advantage: $1,672/kW overnight (lowest of any concept)")
+print("  Key problem:   He-3 fuel at $2M/kg → $231M/yr CAS80")
 print(
     f"  eta_eff ≈ {effective_eta(f_n_dhe3):.0%} (only ~5% neutrons, mostly EM recovery)"
 )
@@ -854,7 +854,7 @@ lcoe_dd = float(r_ref.costs.lcoe)
 print(f"""
 KEY FINDINGS — Non-pB11 paths:
 
-1. DHe3 PULSED FRC: Lowest overnight ($1,773/kW) but He-3 at
+1. DHe3 PULSED FRC: Lowest overnight ($1,672/kW) but He-3 at
    $2M/kg is prohibitive. At $20k/kg (100x cheaper) → ~$10/MWh.
    ~5% neutron fraction → eta_eff ≈ {effective_eta(f_n_dhe3):.0%}.
 
@@ -868,7 +868,7 @@ KEY FINDINGS — Non-pB11 paths:
    Needs higher Q_sci ≈ {float(r_dd_ns.power_table.q_sci):.1f} but eliminates steam
    turbine complexity. Still reaches ${float(r_dd_ns.costs.lcoe):.1f}/MWh.
 
-4. DT is the hardest path — neutron infrastructure adds ~$1.7B/GWe.
+4. DT is the hardest path — neutron infrastructure adds ~$1.4B/GWe.
 
 WHY FRC LCOE IS INSENSITIVE TO CONVERSION EFFICIENCY:
    FRC costs are dominated by per-module fixed costs ($5M coils +
