@@ -23,3 +23,11 @@ vessel_t: 0.10       # Vacuum vessel
 
 # Construction
 construction_time_yr: 4.0  # Years (compact pulsed system)
+
+# Fuel burn fraction defaults (physics.py ash_neutron_split)
+dd_f_T: 0.969
+dd_f_He3: 0.689
+dhe3_dd_frac: 0.07
+dhe3_f_T: 0.97
+pb11_f_alpha_n: 0.0
+pb11_f_p_n: 0.0

@@ -64,3 +64,11 @@ q95: 3.5             # Safety factor at 95% flux surface
 f_GW: 0.85           # Greenwald density fraction
 M_ion: 2.5           # Average ion mass [AMU]
 lambda_q: 0.002      # SOL power width at midplane [m]
+
+# Fuel burn fraction defaults (physics.py ash_neutron_split)
+dd_f_T: 0.969
+dd_f_He3: 0.689
+dhe3_dd_frac: 0.07
+dhe3_f_T: 0.97
+pb11_f_alpha_n: 0.0
+pb11_f_p_n: 0.0
