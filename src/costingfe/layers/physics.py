@@ -63,12 +63,12 @@ _E_TOTAL_PRIMARY_DD = 0.5 * Q_DD_PT + 0.5 * Q_DD_NHE3  # ~3.65
 def ash_neutron_split(
     p_fus: float,
     fuel: Fuel,
-    dd_f_T: float = DD_F_T_DEFAULT,
-    dd_f_He3: float = DD_F_HE3_DEFAULT,
-    dhe3_dd_frac: float = 0.07,
-    dhe3_f_T: float = 0.97,
-    pb11_f_alpha_n: float = 0.0,
-    pb11_f_p_n: float = 0.0,
+    dd_f_T: float,
+    dd_f_He3: float,
+    dhe3_dd_frac: float,
+    dhe3_f_T: float,
+    pb11_f_alpha_n: float,
+    pb11_f_p_n: float,
 ) -> tuple[float, float]:
     """Compute charged-particle (ash) and neutron power from fusion power.
 

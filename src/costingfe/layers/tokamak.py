@@ -203,6 +203,12 @@ def tokamak_0d_forward(
     M_ion=2.5,
     Z_eff=1.5,
     lambda_q=0.002,
+    dd_f_T=0.969,
+    dd_f_He3=0.689,
+    dhe3_dd_frac=0.07,
+    dhe3_f_T=0.97,
+    pb11_f_alpha_n=0.0,
+    pb11_f_p_n=0.0,
 ):
     """Forward 0D tokamak model: machine params -> PlasmaState.
 
@@ -229,7 +235,16 @@ def tokamak_0d_forward(
     p_fus = compute_fusion_power(n_e, T_i, V_plasma)
 
     # 5. Alpha power and neutron split
-    p_alpha, p_neutron = ash_neutron_split(p_fus, fuel)
+    p_alpha, p_neutron = ash_neutron_split(
+        p_fus,
+        fuel,
+        dd_f_T=dd_f_T,
+        dd_f_He3=dd_f_He3,
+        dhe3_dd_frac=dhe3_dd_frac,
+        dhe3_f_T=dhe3_f_T,
+        pb11_f_alpha_n=pb11_f_alpha_n,
+        pb11_f_p_n=pb11_f_p_n,
+    )
 
     # 6. Radiation
     p_rad = compute_p_rad(n_e, T_e, Z_eff, V_plasma, B, R=R, a=a, kappa=kappa)
@@ -347,6 +362,12 @@ def tokamak_0d_inverse(
     p_house=4.0,
     p_cryo=0.5,
     n_mod=1,
+    dd_f_T=0.969,
+    dd_f_He3=0.689,
+    dhe3_dd_frac=0.07,
+    dhe3_f_T=0.97,
+    pb11_f_alpha_n=0.0,
+    pb11_f_p_n=0.0,
 ):
     """Inverse 0D tokamak: p_net target -> PlasmaState + PowerTable.
 
@@ -389,6 +410,12 @@ def tokamak_0d_inverse(
         R_major=R,
         a_minor=a,
         kappa=kappa,
+        dd_f_T=dd_f_T,
+        dd_f_He3=dd_f_He3,
+        dhe3_dd_frac=dhe3_dd_frac,
+        dhe3_f_T=dhe3_f_T,
+        pb11_f_alpha_n=pb11_f_alpha_n,
+        pb11_f_p_n=pb11_f_p_n,
     )
 
     # Step 2: Find T_i that produces this p_fus (T_e = T_i for DT)
@@ -409,6 +436,12 @@ def tokamak_0d_inverse(
         M_ion=M_ion,
         Z_eff=Z_eff,
         lambda_q=lambda_q,
+        dd_f_T=dd_f_T,
+        dd_f_He3=dd_f_He3,
+        dhe3_dd_frac=dhe3_dd_frac,
+        dhe3_f_T=dhe3_f_T,
+        pb11_f_alpha_n=pb11_f_alpha_n,
+        pb11_f_p_n=pb11_f_p_n,
     )
 
     # Step 4: Build power table using actual p_fus
@@ -437,6 +470,12 @@ def tokamak_0d_inverse(
         R_major=R,
         a_minor=a,
         kappa=kappa,
+        dd_f_T=dd_f_T,
+        dd_f_He3=dd_f_He3,
+        dhe3_dd_frac=dhe3_dd_frac,
+        dhe3_f_T=dhe3_f_T,
+        pb11_f_alpha_n=pb11_f_alpha_n,
+        pb11_f_p_n=pb11_f_p_n,
     )
 
     return plasma_state, pt
