@@ -49,6 +49,7 @@ from costingfe.layers.tokamak import (
 )
 from costingfe.types import (
     CONCEPT_TO_FAMILY,
+    CoilMaterial,
     ConfinementConcept,
     ConfinementFamily,
     CostResult,
@@ -502,6 +503,7 @@ class CostModel:
         # not necessarily equal to the radial build vessel_or).
         r_coil = params.get("r_coil", 1.85)
         b_max = params.get("b_max", 12.0)
+        coil_material = CoilMaterial(params.get("coil_material", "rebco_hts"))
 
         # Heating mix: use explicit breakdown if provided, else default
         # all p_input to NBI (backward-compatible).
@@ -532,6 +534,7 @@ class CostModel:
             concept=self.concept,
             b_max=b_max,
             r_coil=r_coil,
+            coil_material=coil_material,
             p_nbi=p_nbi,
             p_ecrh=p_ecrh,
             p_icrf=p_icrf,

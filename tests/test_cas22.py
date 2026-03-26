@@ -32,6 +32,15 @@ def _make_cas22(fuel=Fuel.DT, n_mod=1, blanket_t=0.70):
         shield_vol=geo.ht_shield_vol + geo.lt_shield_vol,
         structure_vol=geo.structure_vol,
         vessel_vol=geo.vessel_vol,
+        family=ConfinementFamily.MFE,
+        concept=ConfinementConcept.TOKAMAK,
+        b_max=12.0,
+        r_coil=1.85,
+        coil_material=CoilMaterial.REBCO_HTS,
+        p_nbi=50.0,
+        p_icrf=0.0,
+        p_ecrh=0.0,
+        p_lhcd=0.0,
     )
 
 
@@ -145,6 +154,14 @@ def _make_cas22_with_family(family=ConfinementFamily.MFE):
         structure_vol=STRUCTURE_VOL,
         vessel_vol=VESSEL_VOL,
         family=family,
+        concept=ConfinementConcept.TOKAMAK,
+        b_max=12.0,
+        r_coil=1.85,
+        coil_material=CoilMaterial.REBCO_HTS,
+        p_nbi=50.0,
+        p_icrf=0.0,
+        p_ecrh=0.0,
+        p_lhcd=0.0,
     )
 
 
@@ -224,10 +241,15 @@ def _make_cas22_coil(
         shield_vol=geo.ht_shield_vol + geo.lt_shield_vol,
         structure_vol=geo.structure_vol,
         vessel_vol=geo.vessel_vol,
+        family=ConfinementFamily.MFE,
         concept=concept,
         b_max=b_max,
         r_coil=r_coil,
         coil_material=coil_material,
+        p_nbi=50.0,
+        p_icrf=0.0,
+        p_ecrh=0.0,
+        p_lhcd=0.0,
     )
 
 
@@ -301,6 +323,11 @@ def _make_cas22_heating(p_nbi=50.0, p_icrf=0.0, p_ecrh=0.0, p_lhcd=0.0):
         shield_vol=SHIELD_VOL,
         structure_vol=STRUCTURE_VOL,
         vessel_vol=VESSEL_VOL,
+        family=ConfinementFamily.MFE,
+        concept=ConfinementConcept.TOKAMAK,
+        b_max=12.0,
+        r_coil=1.85,
+        coil_material=CoilMaterial.REBCO_HTS,
         p_nbi=p_nbi,
         p_icrf=p_icrf,
         p_ecrh=p_ecrh,
@@ -373,7 +400,15 @@ def test_cas220110_concept_scales():
         shield_vol=SHIELD_VOL,
         structure_vol=STRUCTURE_VOL,
         vessel_vol=VESSEL_VOL,
+        family=ConfinementFamily.MFE,
         concept=ConfinementConcept.TOKAMAK,
+        b_max=12.0,
+        r_coil=1.85,
+        coil_material=CoilMaterial.REBCO_HTS,
+        p_nbi=50.0,
+        p_icrf=0.0,
+        p_ecrh=0.0,
+        p_lhcd=0.0,
     )
     mir = cas22_reactor_plant_equipment(
         CC,
@@ -389,6 +424,14 @@ def test_cas220110_concept_scales():
         shield_vol=SHIELD_VOL,
         structure_vol=STRUCTURE_VOL,
         vessel_vol=VESSEL_VOL,
+        family=ConfinementFamily.MFE,
         concept=ConfinementConcept.MIRROR,
+        b_max=12.0,
+        r_coil=1.85,
+        coil_material=CoilMaterial.REBCO_HTS,
+        p_nbi=50.0,
+        p_icrf=0.0,
+        p_ecrh=0.0,
+        p_lhcd=0.0,
     )
     assert mir["C220110"] < tok["C220110"]

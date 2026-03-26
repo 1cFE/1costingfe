@@ -18,6 +18,7 @@ Usage:
 from costingfe.model import CostModel
 from costingfe.types import (
     CONCEPT_TO_FAMILY,
+    CoilMaterial,
     ConfinementConcept,
     ConfinementFamily,
     Fuel,
@@ -99,6 +100,15 @@ def generate_subsystems(
         shield_vol=geo.ht_shield_vol + geo.lt_shield_vol,
         structure_vol=geo.structure_vol,
         vessel_vol=geo.vessel_vol,
+        family=model.family,
+        concept=concept_enum,
+        b_max=params["b_max"],
+        r_coil=params["r_coil"],
+        coil_material=CoilMaterial(params.get("coil_material", "rebco_hts")),
+        p_nbi=params.get("p_nbi", 0.0),
+        p_icrf=params.get("p_icrf", 0.0),
+        p_ecrh=params.get("p_ecrh", 0.0),
+        p_lhcd=params.get("p_lhcd", 0.0),
     )
 
     # O&M split: distribute CAS70 proportional to capital cost
