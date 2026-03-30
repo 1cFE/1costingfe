@@ -23,6 +23,9 @@ from costingfe.types import (
     CostResult as CostResult,
 )
 from costingfe.types import (
+    PowerCycle as PowerCycle,
+)
+from costingfe.types import (
     PowerTable as PowerTable,
 )
 from costingfe.validation import CostingInput as CostingInput

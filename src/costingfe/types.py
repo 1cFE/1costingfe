@@ -68,6 +68,12 @@ _COIL_MATERIAL_COST = {
 }
 
 
+class PowerCycle(Enum):
+    RANKINE = "rankine"
+    BRAYTON_SCO2 = "brayton_sco2"
+    COMBINED = "combined"
+
+
 class Fuel(Enum):
     DT = "dt"
     DD = "dd"
