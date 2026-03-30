@@ -159,6 +159,96 @@ Shared BOP (e.g., common switchyard, shared cooling towers) could reduce
 CAS24-26 for multi-module plants, but this optimization is left for future
 work.  The current linear scaling is conservative.
 
+## Power Cycle Selection
+
+The model supports three thermal cycles, selected via `PowerCycle` enum.
+The cycle determines `eta_th`, CAS23 (`turbine_per_mw`), and CAS26
+(`heat_rej_per_mw`). CAS24 and CAS25 are cycle-independent.
+
+| Parameter | Rankine | sCO2 Brayton | Combined |
+|-----------|---------|--------------|----------|
+| `eta_th` | 0.40 | 0.47 | 0.53 |
+| `turbine_per_mw` (M$/MW) | 0.198 | 0.155 | 0.235 |
+| `heat_rej_per_mw` (M$/MW) | 0.034 | 0.022 | 0.018 |
+
+### Rankine (default)
+
+Conventional subcritical/supercritical steam cycle.
+
+- **eta_th = 0.40:** Conservative baseline for a large steam Rankine plant.
+  Supercritical designs achieve 0.42-0.46 depending on steam conditions
+  and blanket outlet temperature. The previous concept YAML values
+  (e.g., tokamak 0.46, from ARIES-AT) assumed optimistic high-temperature
+  LiPb blankets; 0.40 is a more defensible NOAK baseline. Users who want
+  the ARIES-optimistic efficiency can pass `eta_th=0.46` explicitly.
+- **turbine_per_mw = 0.198:** Steam TG set, condenser, feedwater. Unchanged
+  from original ARIES/NETL calibration (see above).
+- **heat_rej_per_mw = 0.034:** Cooling towers, circulating water. Unchanged.
+
+### sCO2 Brayton
+
+Supercritical CO2 recompression Brayton cycle.
+
+- **eta_th = 0.47:** DOE/Sandia target 45-50% for sCO2 recompression
+  Brayton at nuclear heat source temperatures (500-700C). 47% is a
+  moderate NOAK estimate.
+  Sources: DOE Quadrennial Technology Review 2015 Ch. 4R; Sandia National
+  Laboratories, Advanced Energy Conversion program (15 years of sCO2
+  Brayton cycle experiments); ORNL, "Brayton Cycle turbines promise giant
+  leap in conversion efficiency."
+
+- **turbine_per_mw = 0.155 (22% below Rankine):** sCO2 turbomachinery is
+  ~85% smaller by volume than steam turbines (DOE 10 MW sCO2 turbine
+  program). However, recuperators (compact heat exchangers for cycle
+  regeneration) add significant cost. Literature shows ~30% turbine
+  hardware cost reduction offset by recuperator costs, netting ~20%
+  overall BOP equipment cost reduction.
+  Sources: NCEPU, "Economic comparison between sCO2 power cycle and
+  water-steam Rankine cycle" (2021); NETL Supercritical CO2 Power
+  Cycles program.
+
+- **heat_rej_per_mw = 0.022 (35% below Rankine):** Higher thermal
+  efficiency (47% vs 40%) reduces waste heat fraction from ~60% to ~53%
+  of thermal input. Additionally, sCO2 condensing above atmospheric
+  pressure eliminates vacuum equipment (condenser air ejectors, etc.),
+  reducing cooling system complexity. Derived from thermodynamic first
+  principles.
+
+### Combined Cycle
+
+Topping cycle (helium or sCO2 gas turbine) + bottoming cycle (steam
+Rankine), with heat recovery steam generator (HRSG) between them.
+
+- **eta_th = 0.53:** Modern natural gas combined cycle (NGCC) plants
+  achieve 60%+ (EIA, GE HA class), but fusion heat source temperatures
+  are lower (~600C vs 1500C gas turbine inlet temperature). A helium
+  or sCO2 topping cycle paired with a steam bottoming cycle gives
+  ~50-55% at fusion-relevant temperatures. 53% is a reasonable NOAK
+  target.
+  Sources: EIA, "Most combined-cycle power plants employ two combustion
+  turbines with one steam turbine" (efficiency data); adjusted downward
+  for fusion temperature constraints.
+
+- **turbine_per_mw = 0.235 (19% above Rankine):** Two sets of
+  turbomachinery (topping gas turbine + bottoming steam turbine), plus
+  HRSG. Partially offset by smaller individual machines (each handles
+  a fraction of total power).
+  Source: NETL, "Cost and Performance Baseline for Fossil Energy Plants"
+  (DOE/NETL-2022/3575).
+
+- **heat_rej_per_mw = 0.018 (47% below Rankine):** Highest efficiency
+  among the three cycles means least waste heat. At 53% thermal
+  efficiency, only ~47% of thermal input is rejected (vs ~60% for
+  Rankine). Derived from thermodynamic first principles.
+
+### CAS24, CAS25 unchanged
+
+CAS24 (electric plant equipment: switchyard, transformers, cabling) and
+CAS25 (miscellaneous: fire protection, compressed air, HVAC) do not depend
+on the thermal cycle type. The same electrical infrastructure and plant
+services are needed regardless of whether the heat engine is a steam
+turbine, sCO2 turbine, or combined cycle.
+
 ## References
 
 - Waganer, L. M., "ARIES Cost Account Documentation," UCSD-CER-13-01,
