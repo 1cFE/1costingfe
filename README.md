@@ -195,6 +195,41 @@ result = model.forward(
 
 See `src/costingfe/data/defaults/` YAML files for all available parameters.
 
+## Power Cycle Selection
+
+Select the thermal cycle used for power conversion. This sets `eta_th` and BOP cost
+coefficients (CAS23, CAS26) appropriate for the chosen cycle.
+
+```python
+from costingfe import CostModel, ConfinementConcept, Fuel, PowerCycle
+
+# sCO2 Brayton cycle
+model = CostModel(
+    concept=ConfinementConcept.TOKAMAK,
+    fuel=Fuel.DT,
+    power_cycle=PowerCycle.BRAYTON_SCO2,
+)
+result = model.forward(net_electric_mw=1000.0, availability=0.85, lifetime_yr=30)
+```
+
+Available cycles:
+
+| Cycle | `eta_th` | Description |
+|-------|----------|-------------|
+| `RANKINE` (default) | 0.40 | Steam Rankine (sub/supercritical) |
+| `BRAYTON_SCO2` | 0.47 | Supercritical CO2 recompression Brayton |
+| `COMBINED` | 0.53 | Gas topping + steam bottoming |
+
+You can override `eta_th` or BOP coefficients independently:
+
+```python
+# sCO2 Brayton but with custom efficiency
+result = model.forward(
+    net_electric_mw=1000.0, availability=0.85, lifetime_yr=30,
+    eta_th=0.50,  # Override preset's 0.47
+)
+```
+
 ## Tests
 
 ```bash
