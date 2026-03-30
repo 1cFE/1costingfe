@@ -2,7 +2,6 @@
 
 p_driver: 20.0       # Plasma jet driver output [MW]
 mn: 1.1              # Neutron energy multiplier
-eta_th: 0.38         # Thermal conversion efficiency
 eta_p: 0.5           # Pumping efficiency
 eta_pin: 0.25        # Plasma jet wall-plug efficiency
 f_sub: 0.03          # Subsystem power fraction

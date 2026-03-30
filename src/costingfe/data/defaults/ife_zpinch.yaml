@@ -4,7 +4,6 @@
 p_implosion: 20.0    # Pulsed power driver output [MW]
 p_ignition: 0.0      # No separate ignition driver
 mn: 1.1              # Neutron energy multiplier
-eta_th: 0.40         # Thermal conversion efficiency
 eta_p: 0.5           # Pumping efficiency
 eta_pin1: 0.15       # Pulsed power wall-plug efficiency
 eta_pin2: 1.0        # No ignition driver (set to 1 to avoid div-by-zero)

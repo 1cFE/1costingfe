@@ -122,7 +122,6 @@ class CostingInput(BaseModel):
     # --- Tier 2: family-required parameter lists ---
     _COMMON_REQUIRED = [
         "mn",
-        "eta_th",
         "eta_p",
         "f_sub",
         "p_pump",

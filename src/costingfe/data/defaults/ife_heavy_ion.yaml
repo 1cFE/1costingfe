@@ -3,7 +3,6 @@
 p_implosion: 15.0    # Heavy ion beam output power [MW]
 p_ignition: 0.5      # Ignition beam power [MW]
 mn: 1.1              # Neutron energy multiplier
-eta_th: 0.46         # Thermal conversion efficiency
 eta_p: 0.5           # Pumping efficiency
 eta_pin1: 0.25       # Heavy ion accelerator wall-plug efficiency
 eta_pin2: 0.25       # Ignition accelerator wall-plug efficiency

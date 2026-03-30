@@ -10,7 +10,6 @@ p_icrf: 0.0         # ICRF heating [MW]
 p_lhcd: 0.0         # LHCD heating [MW]
 
 mn: 1.1             # Neutron energy multiplier
-eta_th: 0.40        # Thermal conversion efficiency (lower — end losses)
 eta_p: 0.5          # Pumping efficiency
 eta_pin: 0.5        # Heating system wall-plug efficiency
 eta_de: 0.60        # DEC efficiency (end-plug DEC)

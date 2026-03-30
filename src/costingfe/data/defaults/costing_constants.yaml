@@ -113,16 +113,14 @@ special_materials_dd: 2.0     # Conventional coolant fills only
 special_materials_dhe3: 1.0   # Minimal special materials
 special_materials_pb11: 0.0   # No special materials
 
-# CAS23-26 BOP costs (M$/MW of gross electric, 2024$)
-# Source: ARIES/NETL calibration, inflation-adjusted from 2019$ via CPI factor 1.22
+# CAS23-26 — BOP equipment (M$/MW gross electric, 2024$)
+# turbine_per_mw and heat_rej_per_mw are now set by PowerCycle preset
+# in POWER_CYCLE_DEFAULTS (see defaults.py). CAS24/25 remain here:
+# Source: ARIES/NETL calibration (2019$ × 1.22 CPI inflation)
 # See docs/account_justification/CAS23_26_balance_of_plant.md
-# Cross-checked against NREL ATB 2024 nuclear, NETL fossil energy baselines,
-# and industry equipment pricing (Siemens, GE, Marley/SPX).
 inflation_2019_2024: 1.22
-turbine_per_mw: 0.19764     # 0.162 * 1.22 — steam TG set, condenser, feedwater
 electric_per_mw: 0.08418    # 0.069 * 1.22 — switchyard, transformers, cabling
 misc_per_mw: 0.05124        # 0.042 * 1.22 — fire protection, compressed air, HVAC
-heat_rej_per_mw: 0.03416    # 0.028 * 1.22 — cooling towers, circ water
 
 # CAS28 — Digital twin (M$, fixed)
 # Source: NtTau Digital LTD in-house estimate (pyFECONS)

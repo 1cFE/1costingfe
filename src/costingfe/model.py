@@ -6,6 +6,7 @@ import jax
 import jax.numpy as jnp
 
 from costingfe.defaults import (
+    POWER_CYCLE_DEFAULTS,
     CostingConstants,
     cc_float_fields,
     load_costing_constants,
@@ -55,6 +56,7 @@ from costingfe.types import (
     CostResult,
     ForwardResult,
     Fuel,
+    PowerCycle,
     WallMaterial,
 )
 from costingfe.validation import CostingInput
@@ -385,6 +387,11 @@ class CostModel:
         # precedence (via params.update(overrides) below).
         for name in cc_float_fields():
             params.setdefault(name, getattr(self.cc, name))
+        # Inject power-cycle defaults (eta_th, turbine_per_mw, heat_rej_per_mw)
+        # from the Rankine preset as fallbacks.  Task 4 will wire in
+        # user-selectable cycle; for now Rankine is always the default.
+        for name, val in POWER_CYCLE_DEFAULTS[PowerCycle.RANKINE].items():
+            params.setdefault(name, val)
         params.update(overrides)
         params.update(
             dict(
