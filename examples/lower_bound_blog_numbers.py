@@ -21,6 +21,18 @@ m_dt = CostModel(
     fuel=Fuel.DT,
     power_cycle=PowerCycle.BRAYTON_SCO2,
 )
+m_dhe3 = CostModel(
+    concept=ConfinementConcept.MIRROR,
+    fuel=Fuel.DHE3,
+    power_cycle=PowerCycle.BRAYTON_SCO2,
+)
+
+BASELINE_KW = dict(
+    net_electric_mw=1000.0,
+    availability=0.85,
+    lifetime_yr=30,
+    inflation_rate=INFLATION,
+)
 
 # ══════════════════════════════════════════════════════════════════════
 # TABLE 1: BOP component breakdown (1 GWe pB11, free core)
@@ -186,38 +198,63 @@ print(f"  Automated floor:        ${automated_floor:.1f}/MWh (15 FTE)")
 print(f"  Automated core budget:  ${TARGET - automated_floor:.1f}/MWh")
 
 # ══════════════════════════════════════════════════════════════════════
-# TABLE 3: DT vs pB11 comparison
+# SECTION: D-T floor
 # ══════════════════════════════════════════════════════════════════════
 print()
 print("=" * 70)
-print("TABLE 3: DT vs pB11 comparison (1 GWe, sCO2)")
+print("SECTION: The D-T Floor")
 print("=" * 70)
 
-dt_full = m_dt.forward(
-    net_electric_mw=1000.0,
-    availability=0.85,
-    lifetime_yr=30,
-    inflation_rate=INFLATION,
-)
-dt_free = m_dt.forward(
-    net_electric_mw=1000.0,
-    availability=0.85,
-    lifetime_yr=30,
-    inflation_rate=INFLATION,
-    cost_overrides=FREE_CORE,
-)
-pb_full = full_base
-pb_free = free_base
+dt_full = m_dt.forward(**BASELINE_KW)
+dt_free = m_dt.forward(**BASELINE_KW, cost_overrides=FREE_CORE)
 
-hdr = f"  {'Metric':<20} {'pB11':>10} {'DT':>10}"
-print(hdr)
-print("-" * len(hdr))
-pb_b, dt_b = pb_full.costs.cas21, dt_full.costs.cas21
-print(f"  {'Buildings (1 GWe)':<20} ${pb_b:>7.0f}M ${dt_b:>7.0f}M")
-pb_f, dt_f = pb_free.costs.lcoe, dt_free.costs.lcoe
-print(f"  {'Free-core floor':<20} ${pb_f:>5.1f}/MWh ${dt_f:>5.1f}/MWh")
-pb_c, dt_c = pb_full.costs.lcoe, dt_full.costs.lcoe
-print(f"  {'Fully costed LCOE':<20} ${pb_c:>5.1f}/MWh ${dt_c:>5.1f}/MWh")
+print(f"  DT free-core LCOE:      ${dt_free.costs.lcoe:.1f}/MWh")
+print(f"  DT free-core overnight: ${dt_free.costs.overnight_cost:,.0f}/kW")
+print(f"  DT fully costed LCOE:   ${dt_full.costs.lcoe:.1f}/MWh")
+print(f"  DT buildings:           ${dt_full.costs.cas21:,.0f}M")
+print(f"  DT staffing (free):     ${dt_free.costs.cas71:.1f}M/yr")
+
+# ══════════════════════════════════════════════════════════════════════
+# TABLE 3: Fuel spectrum (DT, DHe3, pB11)
+# ══════════════════════════════════════════════════════════════════════
+print()
+print("=" * 70)
+print("TABLE 3: Fuel spectrum (1 GWe, sCO2, baseline conditions)")
+print("=" * 70)
+
+fuels = [
+    ("DT", m_dt),
+    ("DHe3", m_dhe3),
+    ("pB11", m_pb11),
+]
+
+print(f"  {'Fuel':<6} {'Bldg':>7} {'BOP floor':>10} {'Fuel cost':>10} {'CAS71':>10}")
+print("-" * 50)
+for label, model in fuels:
+    full = model.forward(**BASELINE_KW)
+    free = model.forward(**BASELINE_KW, cost_overrides=FREE_CORE)
+    energy = 8760 * 1000 * 0.85
+    bop_lcoe = (free.costs.cas90 + free.costs.cas70) * 1e6 / energy
+    fuel_lcoe = free.costs.cas80 * 1e6 / energy
+    print(
+        f"  {label:<6} ${full.costs.cas21:>5.0f}M"
+        f" ${bop_lcoe:>7.1f}/MWh"
+        f" ${fuel_lcoe:>7.1f}/MWh"
+        f" ${free.costs.cas71:>7.1f}M/yr"
+    )
+
+# DHe3 detail
+print()
+dhe3_free = m_dhe3.forward(**BASELINE_KW, cost_overrides=FREE_CORE)
+dhe3_full = m_dhe3.forward(**BASELINE_KW)
+energy = 8760 * 1000 * 0.85
+dhe3_fuel = dhe3_free.costs.cas80 * 1e6 / energy
+dhe3_bop = (dhe3_free.costs.cas90 + dhe3_free.costs.cas70) * 1e6 / energy
+print("  DHe3 detail:")
+print(f"    Buildings:            ${dhe3_full.costs.cas21:,.0f}M")
+print(f"    BOP floor (no fuel):  ${dhe3_bop:.1f}/MWh")
+print(f"    He-3 fuel cost:       ${dhe3_fuel:.1f}/MWh")
+print(f"    Total free-core LCOE: ${dhe3_free.costs.lcoe:.1f}/MWh")
 
 # ══════════════════════════════════════════════════════════════════════
 # CROSS-CHECK: Power cycle comparison
