@@ -2,8 +2,7 @@
 
 import math
 
-import jax
-import jax.numpy as jnp
+import numpy as jnp
 
 from costingfe.defaults import (
     POWER_CYCLE_DEFAULTS,
@@ -422,8 +421,7 @@ class CostModel:
             params["p_trit"] = 0.0
 
         # Validate merged parameters (skip under JAX tracing)
-        _tracing = any(isinstance(v, jax.core.Tracer) for v in params.values())
-        if not _tracing:
+        if True:
             CostingInput(
                 concept=self.concept,
                 fuel=self.fuel,
@@ -880,20 +878,25 @@ class CostModel:
         cost-of-capital givens, and costing are CostingConstants calibration
         parameters (unit costs, fractions, base costs).
 
-        Uses jax.grad for exact autodiff gradients.
+        Uses central finite differences (numpy-only, no JAX dependency).
         """
         lcoe_fn, keys, base_vals = self._build_lcoe_fn(params, cost_overrides)
         base_lcoe = float(lcoe_fn(base_vals))
 
-        grad_fn = jax.grad(lcoe_fn)
-        grads = grad_fn(base_vals)
-
         engineering = {}
         financial = {}
         costing = {}
+        h = 1e-5  # relative perturbation
         for i, key in enumerate(keys):
             p = float(base_vals[i])
-            dLCOE_dp = float(grads[i])
+            if abs(p) < 1e-12:
+                continue
+            dp = abs(p) * h
+            x_plus = base_vals.copy()
+            x_minus = base_vals.copy()
+            x_plus[i] = p + dp
+            x_minus[i] = p - dp
+            dLCOE_dp = (float(lcoe_fn(x_plus)) - float(lcoe_fn(x_minus))) / (2 * dp)
             elasticity = dLCOE_dp * p / base_lcoe
             if key in self._FINANCIAL_KEYS:
                 financial[key] = elasticity
@@ -914,7 +917,7 @@ class CostModel:
         params: dict,
         cost_overrides: dict[str, float] | None = None,
     ) -> list[float]:
-        """Evaluate LCOE for many parameter sets using jax.vmap.
+        """Evaluate LCOE for many parameter sets.
 
         Args:
             param_sets: Dict of param_name -> list of values (all same length).
@@ -928,18 +931,12 @@ class CostModel:
         lcoe_fn, keys, base_vals = self._build_lcoe_fn(params, cost_overrides)
 
         n = len(next(iter(param_sets.values())))
-        # Build matrix: each row is a param vector
-        rows = []
-        for _ in range(n):
-            rows.append(base_vals)
-        batch = jnp.stack(rows)
-
-        # Override the varying params
-        for param_name, values in param_sets.items():
-            if param_name in keys:
-                idx = keys.index(param_name)
-                batch = batch.at[:, idx].set(jnp.array(values))
-
-        vmapped = jax.vmap(lcoe_fn)
-        results = vmapped(batch)
-        return [float(r) for r in results]
+        results = []
+        for j in range(n):
+            x = base_vals.copy()
+            for param_name, values in param_sets.items():
+                if param_name in keys:
+                    idx = keys.index(param_name)
+                    x[idx] = values[j]
+            results.append(float(lcoe_fn(x)))
+        return results

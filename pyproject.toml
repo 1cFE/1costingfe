@@ -1,12 +1,11 @@
 [project]
 name = "costingfe"
 version = "0.1.0"
-description = "JAX-native fusion power plant costing framework"
+description = "Numpy-only fusion power plant costing framework (no JAX)"
 license = "MIT"
 requires-python = ">=3.10"
 dependencies = [
-    "jax>=0.4.0",
-    "jaxlib>=0.4.0",
+    "numpy>=1.24.0",
     "pydantic>=2.0",
     "pyyaml>=6.0",
     "scipy>=1.10.0",

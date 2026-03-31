@@ -1,9 +1,3 @@
-import os as _os
-
-# Default to CPU — suppresses "NVIDIA GPU may be present" warning.
-# Users with CUDA-enabled jaxlib can set JAX_PLATFORMS=cuda to override.
-_os.environ.setdefault("JAX_PLATFORMS", "cpu")
-
 from dataclasses import dataclass
 
 from costingfe.layers.tokamak import PlasmaState as PlasmaState

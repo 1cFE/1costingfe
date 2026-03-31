@@ -1,6 +1,6 @@
 """Layer 5: Economics — CRF, levelized costs, LCOE."""
 
-import jax.numpy as jnp
+import numpy as jnp
 
 
 def compute_crf(interest_rate: float, plant_lifetime: float) -> float:

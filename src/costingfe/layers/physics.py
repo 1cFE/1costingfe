@@ -1,6 +1,6 @@
 """Layer 2: Physics — fuel physics, power balance (forward + inverse)."""
 
-import jax.numpy as jnp
+import numpy as jnp
 from scipy import constants as sc
 
 from costingfe.layers.radiation import (

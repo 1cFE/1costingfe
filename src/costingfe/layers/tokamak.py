@@ -8,7 +8,7 @@ All core functions are pure and JAX-differentiable.
 
 from dataclasses import dataclass
 
-import jax.numpy as jnp
+import numpy as jnp
 from scipy import constants as sc
 
 from costingfe.layers.physics import (
@@ -316,23 +316,11 @@ def _find_T_for_pfus(target_pfus, n_e, V_plasma, T_lo=1.0, T_hi=100.0, n_iter=60
         hi = jnp.where(p_mid >= target_pfus, mid, hi)
         return (lo, hi)
 
-    lo, hi = jax_fori_loop(0, n_iter, body, (T_lo, T_hi))
+    state = (T_lo, T_hi)
+    for i in range(n_iter):
+        state = body(i, state)
+    lo, hi = state
     return 0.5 * (lo + hi)
-
-
-def _import_fori_loop():
-    import jax.lax
-
-    return jax.lax.fori_loop
-
-
-# Use jax.lax.fori_loop but import lazily to avoid issues
-try:
-    import jax.lax
-
-    jax_fori_loop = jax.lax.fori_loop
-except Exception:
-    jax_fori_loop = None
 
 
 def tokamak_0d_inverse(

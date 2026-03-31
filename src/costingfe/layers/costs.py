@@ -9,7 +9,7 @@ Source: pyFECONs costing/calculations/cas*.py
 
 import math
 
-import jax.numpy as jnp
+import numpy as jnp
 
 from costingfe.layers.economics import (
     compute_crf,
