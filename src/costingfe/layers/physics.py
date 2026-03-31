@@ -1,7 +1,6 @@
 """Layer 2: Physics — fuel physics, power balance (forward + inverse)."""
 
 import numpy as jnp
-from scipy import constants as sc
 
 from costingfe.layers.radiation import (
     compute_impurity_fraction,
@@ -10,14 +9,16 @@ from costingfe.layers.radiation import (
 from costingfe.types import Fuel, ImpurityMix, PowerTable, WallMaterial
 
 # ---------------------------------------------------------------------------
-# Fundamental constants from scipy (CODATA)
+# Fundamental constants (CODATA 2018 values, formerly from scipy.constants)
 # ---------------------------------------------------------------------------
-MEV_TO_JOULES = sc.eV * 1e6  # 1 MeV in J
-M_DEUTERIUM_KG = sc.physical_constants["deuteron mass"][0]  # kg
-M_PROTON_KG = sc.physical_constants["proton mass"][0]  # kg
-M_HE3_KG = sc.physical_constants["helion mass"][0]  # kg (helion = He-3 nucleus)
-M_LI6_KG = 6.015122795 * sc.atomic_mass  # kg (not in scipy CODATA)
-M_B11_KG = 11.0093054 * sc.atomic_mass  # kg (not in scipy CODATA)
+_EV = 1.602176634e-19  # J per eV
+_ATOMIC_MASS = 1.66053906892e-27  # kg
+MEV_TO_JOULES = _EV * 1e6  # 1 MeV in J
+M_DEUTERIUM_KG = 3.3435837768e-27  # deuteron mass, kg
+M_PROTON_KG = 1.67262192595e-27  # proton mass, kg
+M_HE3_KG = 5.0064127862e-27  # helion mass, kg (He-3 nucleus)
+M_LI6_KG = 6.015122795 * _ATOMIC_MASS  # kg
+M_B11_KG = 11.0093054 * _ATOMIC_MASS  # kg
 
 # DD burn fraction defaults (T=50 keV, tau_p=5 s)
 DD_F_T_DEFAULT = 0.969  # DD tritium burn fraction

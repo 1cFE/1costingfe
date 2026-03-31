@@ -9,7 +9,6 @@ All core functions are pure and JAX-differentiable.
 from dataclasses import dataclass
 
 import numpy as jnp
-from scipy import constants as sc
 
 from costingfe.layers.physics import (
     ash_neutron_split,
@@ -22,10 +21,11 @@ from costingfe.types import Fuel
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
-MU_0 = sc.mu_0  # Vacuum permeability [T·m/A]
+_EV = 1.602176634e-19  # J per eV
+MU_0 = 1.25663706127e-06  # Vacuum permeability [T·m/A]
 E_FUS_DT = 17.58  # DT fusion energy [MeV]
-MEV_TO_J = sc.eV * 1e6  # 1 MeV -> Joules
-KEV_TO_J = sc.eV * 1e3  # 1 keV -> Joules
+MEV_TO_J = _EV * 1e6  # 1 MeV -> Joules
+KEV_TO_J = _EV * 1e3  # 1 keV -> Joules
 
 
 # ---------------------------------------------------------------------------
