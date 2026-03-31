@@ -590,6 +590,14 @@ class CostModel:
         c22 = co.get("CAS22", c22_detail["C220000"])
         if "CAS22" in co:
             overridden.append("CAS22")
+            # Scale sub-account detail proportionally so downstream
+            # consumers (e.g. CAS72 scheduled replacement) reflect the
+            # override.  Without this, zeroing CAS22 still leaves
+            # non-zero sub-accounts that produce phantom replacement costs.
+            computed = c22_detail["C220000"]
+            scale = c22 / computed if computed > 0 else 0.0
+            for k in c22_detail:
+                c22_detail[k] = c22_detail[k] * scale
 
         c23 = co.get("CAS23", cas23_turbine(cc, pt.p_et, n_mod))
         if "CAS23" in co:
