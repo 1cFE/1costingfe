@@ -79,10 +79,10 @@ fuel_handling_pb11_base: 15.0  # Boron powder injection
 # From-scratch derivation: industrial benchmarks + fuel-specific scoping.
 # See docs/account_justification/CAS21_buildings.md
 # Each building has its own scaling basis (see "scales" key).
-# Totals: DT=$528/kW, DD=$466/kW, DHe3=$344/kW, pB11=$308/kW
+# Totals: DT=$502/kW, DD=$446/kW, DHe3=$339/kW, pB11=$308/kW
 building_costs:
   # --- Fuel-dependent, ~fixed (site footprint) ---
-  site_improvements:  {dt: 115, dd: 104, dhe3: 81, pb11: 69, scales: fixed}
+  site_improvements:  {dt: 85, dd: 81, dhe3: 75, pb11: 69, scales: fixed}
   # --- Fuel-dependent, scales with P_fus ---
   reactor_building:   {dt: 138, dd: 127, dhe3: 98, pb11: 81, scales: p_fus}
   hot_cell:           {dt: 104, dd: 78,  dhe3: 23, pb11: 0,  scales: p_fus}

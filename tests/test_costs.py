@@ -163,7 +163,7 @@ def test_cas21_fuel_differentiation():
         noak=True,
     )
     assert cost_pb < cost_dt
-    # pB11 should be roughly 55-65% of DT (308/528 ~ 58%)
+    # pB11 should be roughly 55-65% of DT (308/502 ~ 61%)
     assert cost_pb / cost_dt < 0.65
 
 
