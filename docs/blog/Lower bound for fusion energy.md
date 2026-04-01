@@ -28,19 +28,21 @@ The power conversion equipment is the same regardless of fuel choice:
 | Heat rejection | $25M | Cooling towers and circulating water (smaller with higher efficiency) |
 | **BOP subtotal** | **$360M** |  |
 
-Buildings are not fuel-independent — they range from $320M (industrial-grade, for aneutronic fuel) to $600M (nuclear-grade, for DT) depending on the radiation protection and tritium containment requirements. We return to this below.
+## The Rest of the Plant
+
+Buildings are not fuel-independent — they range from $320M (industrial-grade, for aneutronic fuel) to $570M (enhanced-industrial, for DT) depending on the radiation protection and tritium containment requirements. We return to this below.
 
 The BOP equipment is priced from [NETL's Cost and Performance Baseline for Fossil Energy Plants](https://www.osti.gov/servlets/purl/1893822) (DOE/NETL-2022/3575) and the [ARIES cost account documentation](https://cer.ucsd.edu/_files/publications/UCSD-CER-13-01.pdf) (Waganer, UCSD-CER-13-01, 2013), adjusted to 2024 dollars.
 
-On top of the direct costs, there are indirect costs (engineering, project management — roughly 20% of directs), owner's costs, supplementary costs (shipping, spares, insurance, decommissioning provisions), and financing charges. A plant also needs staff — roughly 30 to 80 full-time employees at 1 GWe scale depending on fuel choice and the associated radiation protection requirements, costing $18-40M/year in loaded operations and maintenance (O&M).
+On top of the direct costs, there are indirect costs (engineering, project management — roughly 20% of directs), owner's costs, supplementary costs (shipping, spares, insurance, decommissioning provisions), and financing charges. A plant also needs staff — roughly 30 to 80 full-time employees at 1 GWe scale depending on fuel choice and the associated radiation protection requirements, costing $18-40M/year in loaded operations and maintenance (O&M). All of these costs are included in the LCOE floors reported below.
 
 ## The Balance of Plant for Deuterium-Tritium
 
-Deuterium-tritium (DT) is the mainstream fuel choice for fusion. It includes radioactive tritium — an environmental hazard if it leaks into groundwater — and produces 80% of its energy as 14.1 MeV neutrons, which activate structural components. Even with a free fusion core, a DT plant still needs nuclear-grade buildings: hot cells for remote maintenance, tritium containment, radiation shielding, and nuclear-rated HVAC. These buildings cost $600M at 1 GWe, and the plant requires roughly 80 staff for radiation protection, tritium handling, and nuclear-grade maintenance procedures.
+Deuterium-tritium (DT) is the mainstream fuel choice for fusion. It produces 80% of its energy as 14.1 MeV neutrons, which activate structural components and require heavy shielding, and it uses radioactive tritium — an environmental hazard if it leaks into groundwater. Even with a free fusion core, a DT plant still needs buildings with radiation shielding, tritium containment with secondary barriers, hot cells for remote handling of activated components, and nuclear-rated HVAC. These requirements are driven by the hazards themselves — neutron activation and tritium inventory — not by regulatory classification. The buildings cost $570M at 1 GWe, and the plant requires roughly 80 staff for radiation protection, tritium handling, and the maintenance procedures these hazards demand.
 
 For a 1 GWe DT tokamak at standard financial assumptions (7% weighted average cost of capital (WACC), 85% availability, 30-year life, 6-year construction), the Levelized Cost of Electricity (LCOE) floor with a free fusion core is **$29/MWh** — nearly three times the 1-cent target ($10/MWh). The overnight capital cost of this core-free plant is $1,700/kW.
 
-For context, the fully costed DT tokamak at the same conditions comes in at $83/MWh. The fusion core accounts for about two-thirds of that. But the remaining third — $29/MWh of buildings, BOP, staffing, and financing — already exceeds the 1-cent target by itself. No improvement in the fusion core can close a gap that lives outside the core.
+For context, the fully costed DT tokamak at the same conditions comes in at $82/MWh. The fusion core accounts for about two-thirds of that. But the remaining third — $29/MWh of buildings, BOP, staffing, and financing — already exceeds the 1-cent target by itself. No improvement in the fusion core can close a gap that lives outside the core.
 
 ## Fuel Choice Reshapes the Floor
 
@@ -48,15 +50,15 @@ The $29/MWh DT floor is not an intrinsic property of fusion power. It is a conse
 
 | Fuel | Buildings (1 GWe) | BOP floor (excl. fuel) | Staffing |
 | --- | --- | --- | --- |
-| DT | $600M | $29/MWh | 78 FTE |
-| D-He3 | $384M | $19/MWh | 39 FTE |
+| DT | $570M | $29/MWh | 78 FTE |
+| D-He3 | $380M | $19/MWh | 39 FTE |
 | pB11 | $322M | $17/MWh | 36 FTE |
 
-Deuterium-helium-3 (D-He3) produces about 5% of its energy as neutrons from DD side reactions — far less than DT, but not zero. The buildings require some radiation shielding and modest tritium monitoring, bringing them to $384M. The BOP floor drops to $19/MWh. However, D-He3 carries a separate problem: helium-3 fuel at current prices ($2M/kg) contributes $79/MWh to the levelized electricity cost, pushing the total free-core floor to $98/MWh. The BOP is competitive; the fuel supply is not.
+Deuterium-helium-3 (D-He3) produces about 5% of its energy as neutrons from DD side reactions — far less than DT, but not zero. The buildings require some radiation shielding and modest tritium monitoring, bringing them to $380M. The BOP floor drops to $19/MWh. However, D-He3 carries a separate problem: helium-3 fuel at current prices ($2M/kg) contributes $79/MWh to the levelized electricity cost, pushing the total free-core floor to $98/MWh. The BOP is competitive; the fuel supply is not.
 
-Proton-boron (pB11) fuel is aneutronic — 99.8% of its fusion energy comes out as charged alpha particles, not neutrons. This is not radioactive and does not activate structural components. The buildings can be built to industrial standards under 10 CFR Part 30, not the Part 50 framework that governs fission — no hot cells, no tritium infrastructure, no nuclear-grade seismic requirements. The result is a BOP floor of **$17/MWh**, roughly half the DT floor.
+Proton-boron (pB11) fuel is aneutronic — 99.8% of its fusion energy comes out as charged alpha particles, not neutrons. It uses no tritium and does not activate structural components. The buildings can be built to conventional industrial standards — no shielding, no hot cells, no tritium containment infrastructure. The result is a BOP floor of **$17/MWh**, roughly half the DT floor.
 
-The $280M building cost gap between DT and pB11 is larger than most fusion core cost-reduction scenarios in the literature. This gap is not a statement about plasma physics difficulty. It is a statement about what the expectation of handling neutrons and tritium does to the cost of the building you put the plant in. The fuel choice reshapes the floor before the fusion core enters the picture.
+The $250M building cost gap between DT and pB11 is larger than most fusion core cost-reduction scenarios in the literature. This gap is not a statement about plasma physics difficulty. It is a statement about what the expectation of handling neutrons and tritium does to the cost of the building you put the plant in. The fuel choice reshapes the floor before the fusion core enters the picture.
 
 ## The Floor Is Not Fixed
 
@@ -86,7 +88,7 @@ O&M staffing accounts for $4/MWh of the $7/MWh floor — more than half. The mod
 
 ## Conclusions
 
-**1. Fuel choice is a BOP decision, not just a core decision.** The $280M building cost gap between DT ($600M) and pB11 ($320M) is larger than most fusion core cost-reduction scenarios. Aneutronic fuel downgrades the buildings from nuclear to industrial, eliminates scheduled replacement campaigns for the fusion core, and removes tritium infrastructure entirely. These savings compound through indirect costs and financing. The DT floor ($29/MWh) is nearly double the pB11 floor ($17/MWh). D-He3 falls in between on BOP ($19/MWh) but is burdened by helium-3 fuel costs.
+**1. Fuel choice is a BOP decision, not just a core decision.** The $250M building cost gap between DT ($570M) and pB11 ($320M) is larger than most fusion core cost-reduction scenarios. Aneutronic fuel downgrades the buildings from nuclear to industrial, eliminates scheduled replacement campaigns for the fusion core, and removes tritium infrastructure entirely. These savings compound through indirect costs and financing. The DT floor ($29/MWh) is nearly double the pB11 floor ($17/MWh). D-He3 falls in between on BOP ($19/MWh) but is burdened by helium-3 fuel costs.
 
 **2. No single lever reaches 1 cent.** At standard financial conditions, even the pB11 LCOE floor is 1.7x the target with a free fusion core. Reaching $10/MWh requires at least four favorable conditions simultaneously: scale (2+ GWe), high availability (95%+), low-cost financing (3% WACC or below), and fast construction (3 years or less). Each of these is individually achievable. Together they represent a systems integration challenge as much as an engineering one.
 
