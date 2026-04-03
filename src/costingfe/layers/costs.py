@@ -265,6 +265,7 @@ def cas70_om(
     construction_time,
     fuel,
     noak,
+    p_dee=0.0,
 ):
     """CAS70: Annualized O&M + scheduled replacement. Returns (total, cas71, cas72).
 
@@ -296,6 +297,24 @@ def cas70_om(
         pv = pv + jnp.where(k <= n_rep, cost_per_event / discount, 0.0)
     crf = compute_crf(interest_rate, lifetime_yr)
     cas72 = pv * crf
+
+    # DEC grid replacement (additive, independent cycle)
+    # Use jnp.maximum(p_dee, 1e-6) as a safe base for the power law to avoid NaN
+    # gradients at p_dee=0 (since d/dp_dee of p_dee^0.7 → ∞ there). The outer
+    # jnp.where masks the result to zero when p_dee == 0.
+    P_DEE_REF = 400.0
+    p_dee_safe = jnp.maximum(p_dee, 1e-6)
+    dec_grid = cc.dec_grid_cost * jnp.where(
+        p_dee > 0, (p_dee_safe / P_DEE_REF) ** 0.7, 0.0
+    )
+    dec_grid_life_cal = cc.dec_grid_lifetime(fuel) / availability
+    n_rep_dec = jnp.maximum(0.0, jnp.ceil(lifetime_yr / dec_grid_life_cal) - 1.0)
+    dec_cost = dec_grid * n_mod
+    pv_dec = 0.0
+    for k in range(1, MAX_REP + 1):
+        discount = (1 + interest_rate) ** (k * dec_grid_life_cal)
+        pv_dec = pv_dec + jnp.where(k <= n_rep_dec, dec_cost / discount, 0.0)
+    cas72 = cas72 + pv_dec * crf
 
     return cas71 + cas72, cas71, cas72
 

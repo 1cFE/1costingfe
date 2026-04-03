@@ -676,6 +676,7 @@ class CostModel:
             construction_time=construction_time_yr,
             fuel=self.fuel,
             noak=noak,
+            p_dee=pt.p_dee,
         )
         c80 = cas80_fuel(
             cc,
