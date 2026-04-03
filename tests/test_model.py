@@ -242,3 +242,27 @@ def test_cas72_uses_cost_overrides():
         cost_overrides={"C220101": base.cas22_detail["C220101"] * 5},
     )
     assert expensive.costs.cas72 > base.costs.cas72
+
+
+# ---- DEC (Direct Energy Conversion) wiring tests ----
+
+
+def test_mirror_dec_populates_c220109():
+    """Mirror with f_dec > 0 should have nonzero C220109."""
+    from costingfe import ConfinementConcept, CostModel, Fuel
+
+    model = CostModel(concept=ConfinementConcept.MIRROR, fuel=Fuel.DHE3)
+    result = model.forward(net_electric_mw=500.0, availability=0.85, lifetime_yr=30)
+    # Mirror defaults: f_dec=0.3, eta_de=0.60 → p_dee > 0
+    assert result.cas22_detail["C220109"] > 0, (
+        "DHe3 mirror with f_dec=0.3 should have nonzero DEC cost"
+    )
+
+
+def test_tokamak_no_dec():
+    """Tokamak with f_dec=0 should have zero C220109."""
+    from costingfe import ConfinementConcept, CostModel, Fuel
+
+    model = CostModel(concept=ConfinementConcept.TOKAMAK, fuel=Fuel.DT)
+    result = model.forward(net_electric_mw=1000.0, availability=0.85, lifetime_yr=30)
+    assert result.cas22_detail["C220109"] == 0.0
