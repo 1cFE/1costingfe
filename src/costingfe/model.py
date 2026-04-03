@@ -751,6 +751,13 @@ class CostModel:
             "structure_t",
             "vessel_t",
             "plasma_t",
+            # Fuel burn fractions (physics model)
+            "dd_f_T",
+            "dd_f_He3",
+            "dhe3_dd_frac",
+            "dhe3_f_T",
+            "pb11_f_alpha_n",
+            "pb11_f_p_n",
         ]
         family_specific = {
             ConfinementFamily.MFE: [
@@ -775,6 +782,21 @@ class CostModel:
                 # Impurity model parameters
                 "T_edge",
                 "tau_ratio",
+                # Magnet costing
+                "b_max",
+                "r_coil",
+                # Heating mix (CAS22 costing)
+                "p_nbi",
+                "p_ecrh",
+                "p_icrf",
+                "p_lhcd",
+                # 0D model / disruption parameters
+                "M_ion",
+                "lambda_q",
+                "disruption_rate_base",
+                "disruption_steepness",
+                "disruption_damage",
+                "disruption_downtime",
             ],
             ConfinementFamily.IFE: [
                 "p_implosion",
