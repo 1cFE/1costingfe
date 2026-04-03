@@ -62,6 +62,23 @@ class CostingConstants:
     # IFE/MIF target factory capital (M$ at 1 GWe reference)
     target_factory_base: float = 244.0
 
+    # C220109: DEC add-on for linear devices
+    # Source: docs/account_justification/CAS220109_direct_energy_converter.md
+    # Subsystem build-up: grids + power conditioning + incremental vacuum/tank
+    dec_base: float = 100.0  # M$ at 400 MWe DEC electric output (P_DEE_REF)
+    dec_grid_cost: float = 12.0  # M$ replaceable grid/collector modules at P_DEE_REF
+
+    # DEC grid lifetime (FPY) — HIGH UNCERTAINTY, no reactor-scale data.
+    # Conservative estimates. Primary degradation: sputtering + He blistering
+    # from charged particle exhaust. Neutron damage additive for DT/DD.
+    # Sensitivity range: 0.5x to 3x these values.
+    dec_grid_lifetime_dt: float = 2.0  # Sputtering + 14.1 MeV neutron damage
+    dec_grid_lifetime_dd: float = 3.0  # Sputtering + 2.45 MeV neutron damage
+    dec_grid_lifetime_dhe3: float = 4.0  # 14.7 MeV proton sputtering + He blistering
+    dec_grid_lifetime_pb11: float = (
+        3.0  # 2.9 MeV alpha sputtering + severe He blistering
+    )
+
     # 220110: Remote Handling & Maintenance Equipment (M$ at 1 GWe, tokamak ref)
     # See docs/account_justification/CAS220110_remote_handling.md
     remote_handling_dt_base: float = 150.0
@@ -232,6 +249,17 @@ class CostingConstants:
             Fuel.DHE3: self.core_lifetime_dhe3,
             Fuel.PB11: self.core_lifetime_pb11,
         }.get(fuel, self.core_lifetime_dt)
+
+    def dec_grid_lifetime(self, fuel):
+        """DEC grid replacement interval in FPY for a given fuel type."""
+        from costingfe.types import Fuel
+
+        return {
+            Fuel.DT: self.dec_grid_lifetime_dt,
+            Fuel.DD: self.dec_grid_lifetime_dd,
+            Fuel.DHE3: self.dec_grid_lifetime_dhe3,
+            Fuel.PB11: self.dec_grid_lifetime_pb11,
+        }.get(fuel, self.dec_grid_lifetime_dt)
 
     def spare_parts_frac(self, fuel):
         """Initial spare parts fraction of CAS22-28 for a given fuel type."""
