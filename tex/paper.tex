@@ -935,6 +935,26 @@ $P_{\text{et}} = P_{\text{dee}} + P_{\text{the}}$.  When
 $\eta_{\text{th}} = 0$ the concept is purely inductive and all
 thermal loads (pumps, BOP) are zeroed automatically.
 
+For inductive DEC, the capacitor bank is costed on a \$/J stored-energy
+basis (Account~22.01.07): $C_{220107} = c_{\text{cap}} \times
+E_{\text{stored}}$, where $c_{\text{cap}}$ is the all-in installed cost
+per joule (capacitors, switches, charging supplies, buswork).  The NOAK
+default is \$0.50/J, reflecting mature high-volume manufacturing of
+advanced-dielectric capacitors---a commercial viability requirement, not
+a current capability (present lab-scale pricing is \$20--50/J).
+Sensitivity to this parameter dominates the LCOE for pulsed DEC concepts.
+
+For the DEC inverse, the model takes the scientific gain $Q_{\text{sci}}$
+as input and derives the required stored energy per pulse:
+\begin{equation}
+E_{\text{stored}} = \frac{P_{\text{net}}}{f_{\text{rep}} \bigl(
+  \eta_{\text{eff}}\,(1 + Q_{\text{sci}}\,f_{\text{ch}}) - 1 \bigr)
+  \,\eta_{\text{pin}}}
+\end{equation}
+where $\eta_{\text{eff}}$ combines the DEC and thermal conversion
+efficiencies.  This ensures that higher DEC efficiency correctly reduces
+the required capacitor bank size rather than inflating it.
+
 \subsection{Inverse Power Balance}
 \label{sec:inverse-balance}
 
@@ -1506,14 +1526,20 @@ conversion efficiency $\eta_{\text{th}}$ and the per-MW coefficients for
 CAS23 (turbine plant) and CAS26 (heat rejection).  CAS24 (electrical
 equipment) and CAS25 (miscellaneous plant) are cycle-independent.
 
-Each account scales linearly with gross electric power:
+CAS23 (turbine plant) scales with thermal electric power
+$P_{\text{the}} = \eta_{\text{th}} P_{\text{th}}$, and CAS26 (heat
+rejection) scales with total thermal power $P_{\text{th}}$.  This ensures
+both accounts auto-zero for pure direct energy conversion plants
+($\eta_{\text{th}} = 0$) and scale correctly for hybrid DEC-plus-thermal
+configurations.  CAS24 and CAS25 scale with gross electric $P_{\text{et}}$:
 \begin{equation}
 \label{eq:bop}
-C_{2x} = n_{\text{mod}} \times P_{\text{et}} \times c_{2x}
+C_{23} = n_{\text{mod}} \, P_{\text{the}} \, c_{23}, \quad
+C_{26} = n_{\text{mod}} \, P_{\text{th}} \, c_{26}, \quad
+C_{24,25} = n_{\text{mod}} \, P_{\text{et}} \, c_{2x}
 \end{equation}
-\noindent where $P_{\text{et}}$ is gross electric output (MW) and $c_{2x}$
-is a per-MW coefficient (M\$/MW, 2024\$).  \Cref{tab:bop} lists the adopted
-values for each cycle.
+\noindent where $c_{2x}$ is a per-MW coefficient (M\$/MW, 2024\$).
+\Cref{tab:bop} lists the adopted values for each cycle.
 
 \begin{table}[htbp]
 \caption{Balance of plant per-MW coefficients by thermal cycle (2024\$).}
