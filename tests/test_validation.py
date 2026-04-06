@@ -181,15 +181,15 @@ class TestTier2FamilyRequiredParams:
                 elon=1.7,
             )
 
-    def test_ife_missing_p_implosion_rejected(self):
-        with pytest.raises(ValidationError, match="p_implosion"):
+    def test_pulsed_missing_e_driver_mj_rejected(self):
+        """Pulsed concept missing e_driver_mj should be rejected."""
+        with pytest.raises(ValidationError, match="e_driver_mj"):
             CostingInput(
                 concept=ConfinementConcept.LASER_IFE,
                 fuel=Fuel.DT,
                 net_electric_mw=1000.0,
                 mn=1.1,
                 eta_th=0.46,
-                eta_p=0.5,
                 f_sub=0.03,
                 p_pump=1.0,
                 p_trit=10.0,
@@ -200,35 +200,9 @@ class TestTier2FamilyRequiredParams:
                 structure_t=0.15,
                 vessel_t=0.1,
                 plasma_t=4.0,
-                p_ignition=0.1,
-                eta_pin1=0.1,
-                eta_pin2=0.1,
+                f_rep=10.0,
+                eta_pin=0.1,
                 p_target=1.0,
-            )
-
-    def test_pulsed_mif_missing_p_driver_uses_ife_validation(self):
-        """Without p_driver, pulsed validation uses IFE-style required list."""
-        with pytest.raises(ValidationError, match="p_implosion"):
-            CostingInput(
-                concept=ConfinementConcept.MAG_TARGET,
-                fuel=Fuel.DT,
-                net_electric_mw=1000.0,
-                mn=1.1,
-                eta_th=0.4,
-                eta_p=0.5,
-                f_sub=0.03,
-                p_pump=1.0,
-                p_trit=10.0,
-                p_house=4.0,
-                p_cryo=0.2,
-                blanket_t=0.7,
-                ht_shield_t=0.2,
-                structure_t=0.15,
-                vessel_t=0.1,
-                plasma_t=3.0,
-                eta_pin=0.3,
-                p_target=2.0,
-                p_coils=0.5,
             )
 
     def test_none_engineering_params_ok_when_template_will_fill(self):

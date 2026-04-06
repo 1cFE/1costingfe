@@ -34,12 +34,8 @@ from costingfe.layers.costs import (
 from costingfe.layers.economics import compute_lcoe
 from costingfe.layers.geometry import RadialBuild, compute_geometry
 from costingfe.layers.physics import (
-    ife_forward_power_balance,
-    ife_inverse_power_balance,
     mfe_forward_power_balance,
     mfe_inverse_power_balance,
-    mif_forward_power_balance,
-    mif_inverse_power_balance,
     pulsed_dec_forward,
     pulsed_dec_inverse,
     pulsed_thermal_forward,
@@ -193,125 +189,55 @@ class CostModel:
             )
 
         elif self.family == ConfinementFamily.PULSED:
-            # Unified pulsed balance (e_driver_mj present) or legacy dispatch
-            if "e_driver_mj" in params and params.get("e_driver_mj"):
-                fuel_frac_kw = dict(
-                    dd_f_T=params["dd_f_T"],
-                    dd_f_He3=params["dd_f_He3"],
-                    dhe3_dd_frac=params["dhe3_dd_frac"],
-                    dhe3_f_T=params["dhe3_f_T"],
-                    pb11_f_alpha_n=params["pb11_f_alpha_n"],
-                    pb11_f_p_n=params["pb11_f_p_n"],
-                )
-                common_kw = dict(
-                    fuel=self.fuel,
-                    e_driver_mj=params["e_driver_mj"],
-                    f_rep=params["f_rep"],
-                    mn=params["mn"],
-                    eta_th=params["eta_th"],
-                    eta_pin=params["eta_pin"],
-                    f_rad=params.get("f_rad", self.cc.f_rad(self.fuel)),
-                    f_sub=params["f_sub"],
-                    p_pump=params["p_pump"],
-                    p_trit=params["p_trit"],
-                    p_house=params["p_house"],
-                    p_cryo=params["p_cryo"],
-                    p_target=params.get("p_target", 0.0),
-                    p_coils=params.get("p_coils", 0.0),
-                    **fuel_frac_kw,
-                )
+            fuel_frac_kw = dict(
+                dd_f_T=params["dd_f_T"],
+                dd_f_He3=params["dd_f_He3"],
+                dhe3_dd_frac=params["dhe3_dd_frac"],
+                dhe3_f_T=params["dhe3_f_T"],
+                pb11_f_alpha_n=params["pb11_f_alpha_n"],
+                pb11_f_p_n=params["pb11_f_p_n"],
+            )
+            common_kw = dict(
+                fuel=self.fuel,
+                e_driver_mj=params["e_driver_mj"],
+                f_rep=params["f_rep"],
+                mn=params["mn"],
+                eta_th=params["eta_th"],
+                eta_pin=params["eta_pin"],
+                f_rad=params.get("f_rad", self.cc.f_rad(self.fuel)),
+                f_sub=params["f_sub"],
+                p_pump=params["p_pump"],
+                p_trit=params["p_trit"],
+                p_house=params["p_house"],
+                p_cryo=params["p_cryo"],
+                p_target=params.get("p_target", 0.0),
+                p_coils=params.get("p_coils", 0.0),
+                **fuel_frac_kw,
+            )
 
-                if self.pulsed_conversion == PulsedConversion.INDUCTIVE_DEC:
-                    dec_kw = dict(
-                        eta_dec=params["eta_dec"],
-                        f_pdv=params.get("f_pdv", self.cc.f_pdv),
-                    )
-                    p_fus = pulsed_dec_inverse(
-                        p_net_target=p_net_per_mod,
-                        **common_kw,
-                        **dec_kw,
-                    )
-                    pt = pulsed_dec_forward(
-                        p_fus=p_fus,
-                        **common_kw,
-                        **dec_kw,
-                    )
-                else:
-                    p_fus = pulsed_thermal_inverse(
-                        p_net_target=p_net_per_mod,
-                        **common_kw,
-                    )
-                    pt = pulsed_thermal_forward(
-                        p_fus=p_fus,
-                        **common_kw,
-                    )
-            elif "p_driver" in params and params["p_driver"]:
-                p_fus = mif_inverse_power_balance(
-                    p_net_target=p_net_per_mod,
-                    fuel=self.fuel,
-                    p_driver=params["p_driver"],
-                    mn=params["mn"],
-                    eta_th=params["eta_th"],
-                    eta_p=params["eta_p"],
-                    eta_pin=params["eta_pin"],
-                    f_sub=params["f_sub"],
-                    p_pump=params["p_pump"],
-                    p_trit=params["p_trit"],
-                    p_house=params["p_house"],
-                    p_cryo=params["p_cryo"],
-                    p_target=params["p_target"],
-                    p_coils=params.get("p_coils", 0.0),
+            if self.pulsed_conversion == PulsedConversion.INDUCTIVE_DEC:
+                dec_kw = dict(
+                    eta_dec=params["eta_dec"],
+                    f_pdv=params.get("f_pdv", self.cc.f_pdv),
                 )
-                pt = mif_forward_power_balance(
+                p_fus = pulsed_dec_inverse(
+                    p_net_target=p_net_per_mod,
+                    **common_kw,
+                    **dec_kw,
+                )
+                pt = pulsed_dec_forward(
                     p_fus=p_fus,
-                    fuel=self.fuel,
-                    p_driver=params["p_driver"],
-                    mn=params["mn"],
-                    eta_th=params["eta_th"],
-                    eta_p=params["eta_p"],
-                    eta_pin=params["eta_pin"],
-                    f_sub=params["f_sub"],
-                    p_pump=params["p_pump"],
-                    p_trit=params["p_trit"],
-                    p_house=params["p_house"],
-                    p_cryo=params["p_cryo"],
-                    p_target=params["p_target"],
-                    p_coils=params.get("p_coils", 0.0),
+                    **common_kw,
+                    **dec_kw,
                 )
             else:
-                p_fus = ife_inverse_power_balance(
+                p_fus = pulsed_thermal_inverse(
                     p_net_target=p_net_per_mod,
-                    fuel=self.fuel,
-                    p_implosion=params["p_implosion"],
-                    p_ignition=params["p_ignition"],
-                    mn=params["mn"],
-                    eta_th=params["eta_th"],
-                    eta_p=params["eta_p"],
-                    eta_pin1=params["eta_pin1"],
-                    eta_pin2=params["eta_pin2"],
-                    f_sub=params["f_sub"],
-                    p_pump=params["p_pump"],
-                    p_trit=params["p_trit"],
-                    p_house=params["p_house"],
-                    p_cryo=params["p_cryo"],
-                    p_target=params["p_target"],
+                    **common_kw,
                 )
-                pt = ife_forward_power_balance(
+                pt = pulsed_thermal_forward(
                     p_fus=p_fus,
-                    fuel=self.fuel,
-                    p_implosion=params["p_implosion"],
-                    p_ignition=params["p_ignition"],
-                    mn=params["mn"],
-                    eta_th=params["eta_th"],
-                    eta_p=params["eta_p"],
-                    eta_pin1=params["eta_pin1"],
-                    eta_pin2=params["eta_pin2"],
-                    f_sub=params["f_sub"],
-                    p_pump=params["p_pump"],
-                    p_trit=params["p_trit"],
-                    p_house=params["p_house"],
-                    p_cryo=params["p_cryo"],
-                    p_target=params["p_target"],
+                    **common_kw,
                 )
 
         else:
@@ -881,12 +807,6 @@ class CostModel:
                 "p_coils",
                 "eta_dec",
                 "f_pdv",
-                # Legacy params (kept for backward compatibility)
-                "p_implosion",
-                "p_ignition",
-                "eta_pin1",
-                "eta_pin2",
-                "p_driver",
             ],
         }
         return common + family_specific.get(self.family, [])
