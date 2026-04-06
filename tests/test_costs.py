@@ -168,11 +168,11 @@ def test_cas21_fuel_differentiation():
 
 
 def test_cas23_to_26_scale_with_power():
-    """BOP equipment scales with gross electric power."""
-    c23 = cas23_turbine(CC, p_et=1000.0, n_mod=1)
+    """BOP equipment scales with power (CAS23: thermal electric, CAS26: thermal)."""
+    c23 = cas23_turbine(CC, p_the=1000.0, n_mod=1)
     c24 = cas24_electrical(CC, p_et=1000.0, n_mod=1)
     c25 = cas25_misc(CC, p_et=1000.0, n_mod=1)
-    c26 = cas26_heat_rejection(CC, p_et=1000.0, n_mod=1)
+    c26 = cas26_heat_rejection(CC, p_th=2500.0, n_mod=1)
     for c in [c23, c24, c25, c26]:
         assert c > 0
 

@@ -40,6 +40,8 @@ from costingfe.layers.physics import (
     mfe_inverse_power_balance,
     mif_forward_power_balance,
     mif_inverse_power_balance,
+    pulsed_dec_forward,
+    pulsed_dec_inverse,
     pulsed_thermal_forward,
     pulsed_thermal_inverse,
 )
@@ -51,6 +53,7 @@ from costingfe.layers.tokamak import (
     tokamak_0d_inverse,
 )
 from costingfe.types import (
+    CONCEPT_DEFAULT_CONVERSION,
     CONCEPT_TO_FAMILY,
     CoilMaterial,
     ConfinementConcept,
@@ -59,6 +62,7 @@ from costingfe.types import (
     ForwardResult,
     Fuel,
     PowerCycle,
+    PulsedConversion,
     WallMaterial,
 )
 from costingfe.validation import CostingInput
@@ -71,11 +75,15 @@ class CostModel:
         fuel: Fuel,
         costing_constants: CostingConstants = None,
         power_cycle: PowerCycle = PowerCycle.RANKINE,
+        pulsed_conversion: PulsedConversion = None,
     ):
         self.concept = concept
         self.fuel = fuel
         self.family = CONCEPT_TO_FAMILY[concept]
         self.power_cycle = power_cycle
+        self.pulsed_conversion = pulsed_conversion or CONCEPT_DEFAULT_CONVERSION.get(
+            concept
+        )
         self._cc_user_provided = costing_constants is not None
         self.cc = costing_constants or load_costing_constants()
         self._eng_defaults = load_engineering_defaults(
@@ -195,31 +203,48 @@ class CostModel:
                     pb11_f_alpha_n=params["pb11_f_alpha_n"],
                     pb11_f_p_n=params["pb11_f_p_n"],
                 )
-                pulsed_kw = dict(
+                common_kw = dict(
                     fuel=self.fuel,
                     e_driver_mj=params["e_driver_mj"],
                     f_rep=params["f_rep"],
                     mn=params["mn"],
                     eta_th=params["eta_th"],
                     eta_pin=params["eta_pin"],
-                    f_rad=params["f_rad"],
+                    f_rad=params.get("f_rad", self.cc.f_rad(self.fuel)),
                     f_sub=params["f_sub"],
                     p_pump=params["p_pump"],
                     p_trit=params["p_trit"],
                     p_house=params["p_house"],
                     p_cryo=params["p_cryo"],
-                    p_target=params["p_target"],
+                    p_target=params.get("p_target", 0.0),
                     p_coils=params.get("p_coils", 0.0),
                     **fuel_frac_kw,
                 )
-                p_fus = pulsed_thermal_inverse(
-                    p_net_target=p_net_per_mod,
-                    **pulsed_kw,
-                )
-                pt = pulsed_thermal_forward(
-                    p_fus=p_fus,
-                    **pulsed_kw,
-                )
+
+                if self.pulsed_conversion == PulsedConversion.INDUCTIVE_DEC:
+                    dec_kw = dict(
+                        eta_dec=params["eta_dec"],
+                        f_pdv=params.get("f_pdv", self.cc.f_pdv),
+                    )
+                    p_fus = pulsed_dec_inverse(
+                        p_net_target=p_net_per_mod,
+                        **common_kw,
+                        **dec_kw,
+                    )
+                    pt = pulsed_dec_forward(
+                        p_fus=p_fus,
+                        **common_kw,
+                        **dec_kw,
+                    )
+                else:
+                    p_fus = pulsed_thermal_inverse(
+                        p_net_target=p_net_per_mod,
+                        **common_kw,
+                    )
+                    pt = pulsed_thermal_forward(
+                        p_fus=p_fus,
+                        **common_kw,
+                    )
             elif "p_driver" in params and params["p_driver"]:
                 p_fus = mif_inverse_power_balance(
                     p_net_target=p_net_per_mod,
@@ -458,6 +483,10 @@ class CostModel:
         if self.fuel != Fuel.DT and "p_trit" not in overrides:
             params["p_trit"] = 0.0
 
+        # Fuel-dependent f_rad default for pulsed concepts
+        if self.family == ConfinementFamily.PULSED and "f_rad" not in overrides:
+            params.setdefault("f_rad", self.cc.f_rad(self.fuel))
+
         # Validate merged parameters (skip under JAX tracing)
         _tracing = any(isinstance(v, jax.core.Tracer) for v in params.values())
         if not _tracing:
@@ -638,7 +667,7 @@ class CostModel:
             for k in c22_detail:
                 c22_detail[k] = c22_detail[k] * scale
 
-        c23 = co.get("CAS23", cas23_turbine(cc, pt.p_et, n_mod))
+        c23 = co.get("CAS23", cas23_turbine(cc, pt.p_the, n_mod))
         if "CAS23" in co:
             overridden.append("CAS23")
 
@@ -650,7 +679,7 @@ class CostModel:
         if "CAS25" in co:
             overridden.append("CAS25")
 
-        c26 = co.get("CAS26", cas26_heat_rejection(cc, pt.p_et, n_mod))
+        c26 = co.get("CAS26", cas26_heat_rejection(cc, pt.p_th, n_mod))
         if "CAS26" in co:
             overridden.append("CAS26")
 
@@ -836,14 +865,20 @@ class CostModel:
                 "disruption_downtime",
             ],
             ConfinementFamily.PULSED: [
+                "e_driver_mj",
+                "f_rep",
+                "eta_pin",
+                "f_rad",
+                "p_target",
+                "p_coils",
+                "eta_dec",
+                "f_pdv",
+                # Legacy params (kept for backward compatibility)
                 "p_implosion",
                 "p_ignition",
                 "eta_pin1",
                 "eta_pin2",
                 "p_driver",
-                "eta_pin",
-                "p_target",
-                "p_coils",
             ],
         }
         return common + family_specific.get(self.family, [])

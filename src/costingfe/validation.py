@@ -108,6 +108,9 @@ class CostingInput(BaseModel):
     # Pulsed (new unified parameter set)
     e_driver_mj: float | None = None
     f_rep: float | None = None
+    f_rad: float | None = None
+    eta_dec: float | None = None
+    f_pdv: float | None = None
 
     # Plasma parameters (MFE radiation calculation)
     n_e: float | None = None

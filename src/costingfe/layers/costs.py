@@ -106,14 +106,14 @@ def cas21_buildings(cc, p_et, p_the, p_th, p_fus, fuel, noak):
     return total + contingency
 
 
-def cas23_turbine(cc, p_et, n_mod):
+def cas23_turbine(cc, p_the, n_mod):
     """CAS23: Turbine plant equipment. Returns M$.
 
-    Linear scaling with gross electric power. Coefficient from
-    ARIES/NETL calibration, inflation-adjusted to 2024$.
+    Scales with thermal electric power (steam turbine output).
+    When eta_th=0, p_the=0 and CAS23=0 automatically.
     See docs/account_justification/CAS23_26_balance_of_plant.md
     """
-    return n_mod * p_et * cc.turbine_per_mw
+    return n_mod * p_the * cc.turbine_per_mw
 
 
 def cas24_electrical(cc, p_et, n_mod):
@@ -132,12 +132,13 @@ def cas25_misc(cc, p_et, n_mod):
     return n_mod * p_et * cc.misc_per_mw
 
 
-def cas26_heat_rejection(cc, p_et, n_mod):
+def cas26_heat_rejection(cc, p_th, n_mod):
     """CAS26: Heat rejection. Returns M$.
 
+    Scales with total thermal power (heat to be rejected).
     See docs/account_justification/CAS23_26_balance_of_plant.md
     """
-    return n_mod * p_et * cc.heat_rej_per_mw
+    return n_mod * p_th * cc.heat_rej_per_mw
 
 
 def cas27_special_materials(cc, p_net, fuel):
