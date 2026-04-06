@@ -38,7 +38,7 @@ result = model.forward(
     inflation_rate=0.02,
     noak=True,
     # Pulsed parameters
-    e_driver_mj=12.0,
+    q_sci=5.0,
     f_rep=1.0,
     eta_pin=0.95,
     eta_dec=0.85,

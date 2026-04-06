@@ -149,8 +149,14 @@ def test_dec_forward_with_thermal_bop():
 
 def test_dec_inverse_roundtrip():
     pt = pulsed_dec_forward(**DEC_PARAMS)
-    inv_params = {k: v for k, v in DEC_PARAMS.items() if k not in ("p_fus", "fuel")}
-    p_fus_recovered = pulsed_dec_inverse(
-        p_net_target=pt.p_net, fuel=Fuel.DHE3, **inv_params
+    # Inverse takes q_sci instead of e_driver_mj, returns (p_fus, e_driver_mj)
+    inv_params = {
+        k: v for k, v in DEC_PARAMS.items() if k not in ("p_fus", "fuel", "e_driver_mj")
+    }
+    p_fus_recovered, e_driver_recovered = pulsed_dec_inverse(
+        p_net_target=pt.p_net, fuel=Fuel.DHE3, q_sci=pt.q_sci, **inv_params
     )
-    assert abs(p_fus_recovered - 500.0) < 0.5
+    assert abs(p_fus_recovered - 500.0) < 0.5, f"Expected ~500, got {p_fus_recovered}"
+    assert abs(e_driver_recovered - 12.0) < 0.5, (
+        f"Expected ~12, got {e_driver_recovered}"
+    )

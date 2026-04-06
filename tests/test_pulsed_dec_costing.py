@@ -3,6 +3,7 @@ from costingfe.types import ConfinementConcept, PulsedConversion
 
 
 def test_dec_c220107_uses_joule_basis():
+    """C220107 should equal c_cap_allin * e_stored_mj for INDUCTIVE_DEC."""
     model = CostModel(
         concept=ConfinementConcept.MAG_TARGET,
         fuel=Fuel.DHE3,
@@ -12,7 +13,7 @@ def test_dec_c220107_uses_joule_basis():
         net_electric_mw=50.0,
         availability=0.85,
         lifetime_yr=30,
-        e_driver_mj=12.0,
+        q_sci=5.0,
         f_rep=1.0,
         eta_pin=0.95,
         eta_dec=0.85,
@@ -21,8 +22,10 @@ def test_dec_c220107_uses_joule_basis():
         p_cryo=0.0,
         p_target=0.0,
     )
-    c220107 = result.cas22_detail["C220107"]
-    expected = 2.0 * 12.0 / 0.95  # c_cap * e_stored_mj
+    c220107 = float(result.cas22_detail["C220107"])
+    e_stored = float(result.power_table.e_stored_mj)
+    # $/J basis: c220107 = c_cap_allin_per_joule * e_stored_mj
+    expected = 2.0 * e_stored
     assert abs(c220107 - expected) < 0.5, f"Expected ~{expected:.1f}, got {c220107:.1f}"
 
 
@@ -36,7 +39,7 @@ def test_dec_c220109_populated():
         net_electric_mw=50.0,
         availability=0.85,
         lifetime_yr=30,
-        e_driver_mj=12.0,
+        q_sci=5.0,
         f_rep=1.0,
         eta_pin=0.95,
         eta_dec=0.85,
@@ -58,7 +61,7 @@ def test_dec_cas23_zero_when_no_thermal():
         net_electric_mw=50.0,
         availability=0.85,
         lifetime_yr=30,
-        e_driver_mj=12.0,
+        q_sci=5.0,
         f_rep=1.0,
         eta_pin=0.95,
         eta_dec=0.85,
@@ -94,7 +97,7 @@ def test_dec_no_cost_overrides_needed():
         availability=0.85,
         lifetime_yr=30,
         n_mod=20,
-        e_driver_mj=12.0,
+        q_sci=5.0,
         f_rep=1.0,
         eta_pin=0.95,
         eta_dec=0.85,

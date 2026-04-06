@@ -834,7 +834,7 @@ def pulsed_dec_forward(
 def pulsed_dec_inverse(
     p_net_target: float,
     fuel: Fuel,
-    e_driver_mj: float,
+    q_sci: float,
     f_rep: float,
     mn: float,
     eta_th: float,
@@ -855,65 +855,72 @@ def pulsed_dec_inverse(
     dhe3_f_T: float = 0.97,
     pb11_f_alpha_n: float = 0.0,
     pb11_f_p_n: float = 0.0,
-) -> float:
-    """Inverse pulsed DEC power balance: target net electric -> required P_fus.
+) -> tuple[float, float]:
+    """Inverse pulsed DEC: target P_net + Q_sci -> required e_driver_mj and P_fus.
 
-    Closed-form linear inversion separating p_fus-proportional and constant
-    terms through the DEC + thermal power path.
+    For inductive DEC, the cap bank size (e_driver_mj) is the design variable,
+    not an independent input. Given a target net power and scientific gain,
+    this function derives the required driver energy per pulse and fusion power.
+
+    All energy terms scale with P_driver, so the inversion is linear:
+        P_net = a * P_driver - b  =>  P_driver = (P_net + b) / a
+    Then: e_driver_mj = P_driver / f_rep, P_fus = Q_sci * P_driver.
+
+    Returns (p_fus, e_driver_mj).
     """
-    p_driver = e_driver_mj * f_rep
-
-    # Ash fraction per unit p_fus
-    ash_frac, _ = ash_neutron_split(
-        1.0,
-        fuel,
-        dd_f_T,
-        dd_f_He3,
-        dhe3_dd_frac,
-        dhe3_f_T,
-        pb11_f_alpha_n,
-        pb11_f_p_n,
+    fuel_frac_kw = dict(
+        dd_f_T=dd_f_T,
+        dd_f_He3=dd_f_He3,
+        dhe3_dd_frac=dhe3_dd_frac,
+        dhe3_f_T=dhe3_f_T,
+        pb11_f_alpha_n=pb11_f_alpha_n,
+        pb11_f_p_n=pb11_f_p_n,
     )
+    f_ch = _charged_particle_fraction(fuel, **fuel_frac_kw)
+    ash_frac = f_ch
     neutron_frac = 1.0 - ash_frac
 
-    # Per unit p_fus: charged_net, PdV, DEC electric
-    charged_net_per = ash_frac * (1.0 - f_rad)
-    pdv_per = f_pdv * charged_net_per
-    undirected_per = charged_net_per - pdv_per
-    dec_waste_per = (1.0 - eta_dec) * pdv_per
+    # All terms expressed per unit P_driver:
+    # P_fus = Q_sci * P_driver
+    # P_ash = Q_sci * f_ch * P_driver
+    # P_charged_net = Q_sci * f_ch * (1 - f_rad) * P_driver
+    # P_pdv = f_pdv * P_charged_net
+    # P_recovered = eta_dec * (P_driver + P_pdv)
+    # P_dee = P_recovered - P_driver
+    q_cn = q_sci * f_ch * (1.0 - f_rad)  # charged_net per P_driver
+    q_pdv = f_pdv * q_cn  # PdV per P_driver
 
-    # DEC electric from fusion (per unit p_fus)
-    c_dee = eta_dec * pdv_per  # p_dee = eta_dec*(p_driver + p_pdv) - p_driver
+    # DEC electric per P_driver
+    p_dee_per = eta_dec * (1.0 + q_pdv) - 1.0
 
-    # Constant DEC terms (from p_driver)
-    # p_dee0 = eta_dec * p_driver - p_driver = p_driver * (eta_dec - 1)
-    p_dee0 = p_driver * (eta_dec - 1.0)
-    dec_waste0 = (1.0 - eta_dec) * p_driver
-
-    # Thermal pool per unit p_fus
+    # Thermal per P_driver
+    q_undirected = q_cn - q_pdv
+    q_dec_waste = (1.0 - eta_dec) * (1.0 + q_pdv)
+    q_rad = q_sci * f_ch * f_rad
     pump_term = jnp.where(eta_th > 0, p_pump, 0.0)
-    c_th = mn * neutron_frac + ash_frac * f_rad + undirected_per + dec_waste_per
-    c_th0 = dec_waste0 + pump_term
+    p_th_per = mn * q_sci * neutron_frac + q_rad + q_undirected + q_dec_waste
+    p_the_per = eta_th * p_th_per
 
-    # Gross electric coefficients
-    c_et = c_dee + eta_th * c_th  # per unit p_fus
-    c_et0 = p_dee0 + eta_th * c_th0  # constant
+    # Gross electric per P_driver
+    p_et_per = p_dee_per + p_the_per
 
-    # Recirculating loads
+    # Recirculating per P_driver
+    p_sub_per = f_sub * p_et_per
+    p_recirc_per = (1.0 / eta_pin - 1.0) + p_sub_per
+
+    # Net electric per P_driver (= a)
+    a = p_et_per - p_recirc_per
+
+    # Fixed loads (independent of P_driver) (= b)
     p_aux = p_trit + p_house
-    # p_fus-dependent recirculating: f_sub * c_et * p_fus
-    c_recirc = f_sub * c_et
-    # Constant recirculating
-    c_recirc0 = (
-        p_driver * (1.0 / eta_pin - 1.0)
-        + jnp.where(eta_th > 0, p_pump, 0.0)
-        + f_sub * c_et0
-        + p_aux
-        + p_cryo
-        + p_target
-        + p_coils
-    )
+    # Thermal constant: pump heat contributes to p_th but only if eta_th > 0
+    p_th_const = pump_term
+    p_the_const = eta_th * p_th_const
+    p_et_const = p_the_const
+    b = pump_term + f_sub * p_et_const + p_aux + p_cryo + p_target + p_coils
 
-    # P_net = (c_et - c_recirc) * p_fus + (c_et0 - c_recirc0)
-    p_fus = (p_net_target - c_et0 + c_recirc0) / (c_et - c_recirc)
-    return p_fus
+    # P_net = a * P_driver - b  =>  P_driver = (P_net + b) / a
+    p_driver = (p_net_target + b) / a
+    e_driver_mj = p_driver / f_rep
+    p_fus = q_sci * p_driver
+    return p_fus, e_driver_mj

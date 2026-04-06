@@ -8,6 +8,7 @@ mn: 1.1              # Neutron energy multiplier
 eta_pin: 0.30        # Pulsed power wall-plug efficiency
 eta_dec: 0.85           # Inductive DEC efficiency (used when pulsed_conversion: inductive_dec)
 f_pdv: 0.80            # PdV work fraction (used when pulsed_conversion: inductive_dec)
+q_sci: 5.0               # Scientific gain target (used for inductive DEC inverse)
 f_sub: 0.03          # Subsystem power fraction
 p_pump: 1.0          # Pumping power [MW]
 p_trit: 10.0         # Tritium processing power [MW]

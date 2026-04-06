@@ -220,11 +220,17 @@ class CostModel:
                     eta_dec=params["eta_dec"],
                     f_pdv=params.get("f_pdv", self.cc.f_pdv),
                 )
-                p_fus = pulsed_dec_inverse(
+                # DEC inverse: solve for e_driver_mj from P_net and Q_sci
+                q_sci = params.get("q_sci", 5.0)
+                inv_kw = {k: v for k, v in common_kw.items() if k != "e_driver_mj"}
+                p_fus, e_driver_solved = pulsed_dec_inverse(
                     p_net_target=p_net_per_mod,
-                    **common_kw,
+                    q_sci=q_sci,
+                    **inv_kw,
                     **dec_kw,
                 )
+                # Use solved e_driver_mj for forward pass
+                common_kw["e_driver_mj"] = e_driver_solved
                 pt = pulsed_dec_forward(
                     p_fus=p_fus,
                     **common_kw,
@@ -807,6 +813,7 @@ class CostModel:
                 "p_coils",
                 "eta_dec",
                 "f_pdv",
+                "q_sci",
             ],
         }
         return common + family_specific.get(self.family, [])
