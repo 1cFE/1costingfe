@@ -209,7 +209,7 @@ markup_controls: 0.04        # FPGA/energy management upgrade (frac of driver co
 c_inv_per_kw_net: 150.0      # Grid-tie inverter ($/kW_net)
 
 # Pulsed inductive DEC — CAS72 cap replacement
-cap_shot_lifetime: 1.0e8     # Shots, NOAK baseline. Sensitivity: 1e7-1e9
+cap_shot_lifetime: 1.0e+8    # Shots, NOAK baseline. Sensitivity: 1e7-1e9
 
 # Pulsed radiation fraction defaults (frac of charged-particle energy)
 f_rad_dt: 0.10

@@ -623,6 +623,12 @@ class CostModel:
             p_lhcd=p_lhcd,
             f_dec=params.get("f_dec", 0.0),
             p_dee=pt.p_dee,
+            # Pulsed DEC params
+            pulsed_conversion=self.pulsed_conversion,
+            e_stored_mj=getattr(pt, "e_stored_mj", 0.0),
+            q_sci=pt.q_sci,
+            f_ch=getattr(pt, "f_ch", 0.0),
+            eta_dec=params.get("eta_dec", 0.0),
         )
         _PER_MODULE_KEYS = {
             "C220101",
@@ -743,6 +749,8 @@ class CostModel:
             fuel=self.fuel,
             noak=noak,
             p_dee=pt.p_dee,
+            pulsed_conversion=self.pulsed_conversion,
+            f_rep=params.get("f_rep", 0.0),
         )
         c80 = cas80_fuel(
             cc,

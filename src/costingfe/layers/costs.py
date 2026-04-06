@@ -30,7 +30,7 @@ from costingfe.layers.physics import (
     Q_DT,
     Q_PB11,
 )
-from costingfe.types import Fuel
+from costingfe.types import Fuel, PulsedConversion
 
 
 def _total_project_time(cc, construction_time, fuel, noak):
@@ -267,6 +267,8 @@ def cas70_om(
     fuel,
     noak,
     p_dee=0.0,
+    pulsed_conversion=None,
+    f_rep=0.0,
 ):
     """CAS70: Annualized O&M + scheduled replacement. Returns (total, cas71, cas72).
 
@@ -316,6 +318,18 @@ def cas70_om(
         discount = (1 + interest_rate) ** (k * dec_grid_life_cal)
         pv_dec = pv_dec + jnp.where(k <= n_rep_dec, dec_cost / discount, 0.0)
     cas72 = cas72 + pv_dec * crf
+
+    # Cap bank scheduled replacement (INDUCTIVE_DEC only)
+    if pulsed_conversion == PulsedConversion.INDUCTIVE_DEC and f_rep > 0:
+        n_shots_per_year = f_rep * 8760.0 * 3600.0 * availability
+        t_replace_cap = cc.cap_shot_lifetime / n_shots_per_year
+        n_rep_cap = jnp.maximum(0.0, jnp.ceil(lifetime_yr / t_replace_cap) - 1.0)
+        cap_cost = cas22_detail.get("C220107", 0.0) * n_mod
+        pv_cap = 0.0
+        for k in range(1, MAX_REP + 1):
+            discount = (1 + interest_rate) ** (k * t_replace_cap)
+            pv_cap = pv_cap + jnp.where(k <= n_rep_cap, cap_cost / discount, 0.0)
+        cas72 = cas72 + pv_cap * crf
 
     return cas71 + cas72, cas71, cas72
 
