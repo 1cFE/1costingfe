@@ -10,7 +10,12 @@ from dataclasses import dataclass, field
 
 from costingfe.defaults import load_costing_constants
 from costingfe.model import CostModel
-from costingfe.types import ConfinementConcept, Fuel, PowerCycle
+from costingfe.types import (
+    ConfinementConcept,
+    Fuel,
+    PowerCycle,
+    PulsedConversion,
+)
 from costingfe.validation import CostingInput
 
 
@@ -31,6 +36,9 @@ class FusionTeaInput:
     power_cycle: str = "rankine"
     overrides: dict = field(default_factory=dict)
     cost_overrides: dict[str, float] = field(default_factory=dict)  # CAS account → M$
+    pulsed_conversion: str = (
+        ""  # "" means use concept default; "thermal" or "inductive_dec"
+    )
     costing_overrides: dict[str, float] = field(
         default_factory=dict
     )  # CostingConstants field → value
@@ -84,8 +92,16 @@ def run_costing(inp: FusionTeaInput) -> FusionTeaOutput:
     if inp.costing_overrides:
         cc = cc.replace(**inp.costing_overrides)
 
+    pulsed_conv = None
+    if inp.pulsed_conversion:
+        pulsed_conv = PulsedConversion(inp.pulsed_conversion)
+
     model = CostModel(
-        concept=concept, fuel=fuel, costing_constants=cc, power_cycle=power_cycle
+        concept=concept,
+        fuel=fuel,
+        costing_constants=cc,
+        power_cycle=power_cycle,
+        pulsed_conversion=pulsed_conv,
     )
     result = model.forward(
         net_electric_mw=inp.net_electric_mw,
@@ -136,6 +152,11 @@ def run_costing(inp: FusionTeaInput) -> FusionTeaOutput:
         "q_sci": float(pt.q_sci),
         "q_eng": float(pt.q_eng),
         "rec_frac": float(pt.rec_frac),
+        "e_driver_mj": float(pt.e_driver_mj),
+        "e_stored_mj": float(pt.e_stored_mj),
+        "f_rep": float(pt.f_rep),
+        "f_ch": float(pt.f_ch),
+        "p_dee": float(pt.p_dee),
     }
 
     sens = model.sensitivity(result.params, cost_overrides=inp.cost_overrides or None)
