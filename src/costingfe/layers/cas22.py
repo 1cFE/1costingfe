@@ -15,8 +15,16 @@ All costs in M$. Source: pyFECONs costing/calculations/cas22/
 
 import math
 
+import numpy as jnp
+
 from costingfe.defaults import CostingConstants
-from costingfe.types import CoilMaterial, ConfinementConcept, ConfinementFamily, Fuel
+from costingfe.types import (
+    CoilMaterial,
+    ConfinementConcept,
+    ConfinementFamily,
+    Fuel,
+    PulsedConversion,
+)
 
 # Concept-dependent coil defaults (from pyFECONs cas220103_coils.py)
 # markup: manufacturing complexity multiplier over raw conductor cost
@@ -73,6 +81,14 @@ def cas22_reactor_plant_equipment(
     p_icrf: float,
     p_ecrh: float,
     p_lhcd: float,
+    f_dec: float,
+    p_dee: float,
+    # Pulsed DEC parameters
+    pulsed_conversion=None,
+    e_stored_mj: float = 0.0,
+    q_sci: float = 0.0,
+    f_ch: float = 0.0,
+    eta_dec: float = 0.0,
 ) -> dict[str, float]:
     """Compute all CAS22 sub-accounts. Returns dict of account_code -> M$.
 
@@ -162,9 +178,14 @@ def cas22_reactor_plant_equipment(
     # -----------------------------------------------------------------------
     # 220107: Power Supplies — vendor-purchased (ABB, GE, Siemens)
     # High-current DC for magnets, pulsed power, switchgear.
+    # Inductive DEC: cap bank + switches + charging + buswork on $/J basis.
     # See docs/account_justification/CAS22_plant_systems.md
     # -----------------------------------------------------------------------
-    c220107 = cc.power_supplies_base * (p_et / 1000.0) ** 0.7
+    if pulsed_conversion == PulsedConversion.INDUCTIVE_DEC:
+        # $/J_stored basis: cap bank + switches + charging + buswork
+        c220107 = cc.c_cap_allin_per_joule * e_stored_mj  # $/J * MJ = M$
+    else:
+        c220107 = cc.power_supplies_base * (p_et / 1000.0) ** 0.7
 
     # -----------------------------------------------------------------------
     # 220108: Divertor (MFE) or Target Factory (IFE/MIF)
@@ -172,18 +193,34 @@ def cas22_reactor_plant_equipment(
     # IFE/MIF: high-rep-rate target manufacturing infrastructure
     # See docs/account_justification/CAS22_plant_systems.md
     # -----------------------------------------------------------------------
-    if family == ConfinementFamily.MFE:
+    if family == ConfinementFamily.STEADY_STATE:
         c220108 = cc.divertor_base * (p_th / 1000.0) ** 0.5
     else:  # IFE or MIF — target factory
         c220108 = cc.target_factory_base * (p_et / 1000.0) ** 0.7
 
     # -----------------------------------------------------------------------
-    # 220109: Direct Energy Converter — excluded for tokamak/stellarator.
-    # Relevant only for mirror/FRC concepts with charged-particle exhaust.
-    # Override via cost_overrides["C220109"] for custom configurations.
-    # See docs/account_justification/CAS22_plant_systems.md
+    # 220109: Direct Energy Converter
+    # Inductive DEC: circuit-derived markups on pulsed driver cost.
+    # Electrostatic DEC: for mirrors/FRCs with directed axial exhaust.
+    # See docs/account_justification/CAS220109_direct_energy_converter.md
     # -----------------------------------------------------------------------
-    c220109 = 0.0
+    if pulsed_conversion == PulsedConversion.INDUCTIVE_DEC:
+        # Inductive DEC: circuit-derived markups on pulsed driver cost
+        markup_cap = eta_dec * (1.0 + q_sci * f_ch) - 1.0
+        delta_cap = c220107 * jnp.maximum(markup_cap, 0.0)
+        delta_switch = c220107 * cc.markup_switch_bidir
+        delta_inv = cc.c_inv_per_kw_net * p_net / 1e3  # $/kW * MW -> M$
+        delta_ctrl = c220107 * cc.markup_controls
+        c220109 = delta_cap + delta_switch + delta_inv + delta_ctrl
+    else:
+        # Electrostatic DEC for mirrors (existing logic) — JAX-safe
+        P_DEE_REF = 400.0
+        p_dee_safe = jnp.where(p_dee > 0, p_dee, 1.0)
+        c220109 = jnp.where(
+            p_dee > 0,
+            cc.dec_base * (p_dee_safe / P_DEE_REF) ** 0.7,
+            0.0,
+        )
 
     # -----------------------------------------------------------------------
     # 220110: Remote Handling & Maintenance Equipment

@@ -33,12 +33,12 @@ from costingfe.layers.costs import (
 from costingfe.layers.economics import compute_lcoe
 from costingfe.layers.geometry import RadialBuild, compute_geometry
 from costingfe.layers.physics import (
-    ife_forward_power_balance,
-    ife_inverse_power_balance,
     mfe_forward_power_balance,
     mfe_inverse_power_balance,
-    mif_forward_power_balance,
-    mif_inverse_power_balance,
+    pulsed_dec_forward,
+    pulsed_dec_inverse,
+    pulsed_thermal_forward,
+    pulsed_thermal_inverse,
 )
 from costingfe.layers.tokamak import (
     DisruptionModel,
@@ -48,6 +48,7 @@ from costingfe.layers.tokamak import (
     tokamak_0d_inverse,
 )
 from costingfe.types import (
+    CONCEPT_DEFAULT_CONVERSION,
     CONCEPT_TO_FAMILY,
     CoilMaterial,
     ConfinementConcept,
@@ -56,6 +57,7 @@ from costingfe.types import (
     ForwardResult,
     Fuel,
     PowerCycle,
+    PulsedConversion,
     WallMaterial,
 )
 from costingfe.validation import CostingInput
@@ -68,11 +70,15 @@ class CostModel:
         fuel: Fuel,
         costing_constants: CostingConstants = None,
         power_cycle: PowerCycle = PowerCycle.RANKINE,
+        pulsed_conversion: PulsedConversion = None,
     ):
         self.concept = concept
         self.fuel = fuel
         self.family = CONCEPT_TO_FAMILY[concept]
         self.power_cycle = power_cycle
+        self.pulsed_conversion = pulsed_conversion or CONCEPT_DEFAULT_CONVERSION.get(
+            concept
+        )
         self._cc_user_provided = costing_constants is not None
         self.cc = costing_constants or load_costing_constants()
         self._eng_defaults = load_engineering_defaults(
@@ -88,7 +94,7 @@ class CostModel:
         if use_0d and self.concept == ConfinementConcept.TOKAMAK:
             return self._power_balance_0d(params, n_mod)
 
-        if self.family == ConfinementFamily.MFE:
+        if self.family == ConfinementFamily.STEADY_STATE:
             # Parse impurity model params
             wm_raw = params.get("wall_material")
             wall_mat = None
@@ -181,75 +187,57 @@ class CostModel:
                 **sync_kw,
             )
 
-        elif self.family == ConfinementFamily.IFE:
-            p_fus = ife_inverse_power_balance(
-                p_net_target=p_net_per_mod,
-                fuel=self.fuel,
-                p_implosion=params["p_implosion"],
-                p_ignition=params["p_ignition"],
-                mn=params["mn"],
-                eta_th=params["eta_th"],
-                eta_p=params["eta_p"],
-                eta_pin1=params["eta_pin1"],
-                eta_pin2=params["eta_pin2"],
-                f_sub=params["f_sub"],
-                p_pump=params["p_pump"],
-                p_trit=params["p_trit"],
-                p_house=params["p_house"],
-                p_cryo=params["p_cryo"],
-                p_target=params["p_target"],
+        elif self.family == ConfinementFamily.PULSED:
+            fuel_frac_kw = dict(
+                dd_f_T=params["dd_f_T"],
+                dd_f_He3=params["dd_f_He3"],
+                dhe3_dd_frac=params["dhe3_dd_frac"],
+                dhe3_f_T=params["dhe3_f_T"],
+                pb11_f_alpha_n=params["pb11_f_alpha_n"],
+                pb11_f_p_n=params["pb11_f_p_n"],
             )
-            pt = ife_forward_power_balance(
-                p_fus=p_fus,
+            common_kw = dict(
                 fuel=self.fuel,
-                p_implosion=params["p_implosion"],
-                p_ignition=params["p_ignition"],
+                e_driver_mj=params["e_driver_mj"],
+                f_rep=params["f_rep"],
                 mn=params["mn"],
                 eta_th=params["eta_th"],
-                eta_p=params["eta_p"],
-                eta_pin1=params["eta_pin1"],
-                eta_pin2=params["eta_pin2"],
+                eta_pin=params["eta_pin"],
+                f_rad=params.get("f_rad", self.cc.f_rad(self.fuel)),
                 f_sub=params["f_sub"],
                 p_pump=params["p_pump"],
                 p_trit=params["p_trit"],
                 p_house=params["p_house"],
                 p_cryo=params["p_cryo"],
-                p_target=params["p_target"],
+                p_target=params.get("p_target", 0.0),
+                p_coils=params.get("p_coils", 0.0),
+                **fuel_frac_kw,
             )
 
-        elif self.family == ConfinementFamily.MIF:
-            p_fus = mif_inverse_power_balance(
-                p_net_target=p_net_per_mod,
-                fuel=self.fuel,
-                p_driver=params["p_driver"],
-                mn=params["mn"],
-                eta_th=params["eta_th"],
-                eta_p=params["eta_p"],
-                eta_pin=params["eta_pin"],
-                f_sub=params["f_sub"],
-                p_pump=params["p_pump"],
-                p_trit=params["p_trit"],
-                p_house=params["p_house"],
-                p_cryo=params["p_cryo"],
-                p_target=params["p_target"],
-                p_coils=params.get("p_coils", 0.0),
-            )
-            pt = mif_forward_power_balance(
-                p_fus=p_fus,
-                fuel=self.fuel,
-                p_driver=params["p_driver"],
-                mn=params["mn"],
-                eta_th=params["eta_th"],
-                eta_p=params["eta_p"],
-                eta_pin=params["eta_pin"],
-                f_sub=params["f_sub"],
-                p_pump=params["p_pump"],
-                p_trit=params["p_trit"],
-                p_house=params["p_house"],
-                p_cryo=params["p_cryo"],
-                p_target=params["p_target"],
-                p_coils=params.get("p_coils", 0.0),
-            )
+            if self.pulsed_conversion == PulsedConversion.INDUCTIVE_DEC:
+                dec_kw = dict(
+                    eta_dec=params["eta_dec"],
+                    f_pdv=params.get("f_pdv", self.cc.f_pdv),
+                )
+                p_fus = pulsed_dec_inverse(
+                    p_net_target=p_net_per_mod,
+                    **common_kw,
+                    **dec_kw,
+                )
+                pt = pulsed_dec_forward(
+                    p_fus=p_fus,
+                    **common_kw,
+                    **dec_kw,
+                )
+            else:
+                p_fus = pulsed_thermal_inverse(
+                    p_net_target=p_net_per_mod,
+                    **common_kw,
+                )
+                pt = pulsed_thermal_forward(
+                    p_fus=p_fus,
+                    **common_kw,
+                )
 
         else:
             raise ValueError(f"Unknown confinement family: {self.family}")
@@ -420,6 +408,10 @@ class CostModel:
         if self.fuel != Fuel.DT and "p_trit" not in overrides:
             params["p_trit"] = 0.0
 
+        # Fuel-dependent f_rad default for pulsed concepts
+        if self.family == ConfinementFamily.PULSED and "f_rad" not in overrides:
+            params.setdefault("f_rad", self.cc.f_rad(self.fuel))
+
         # Validate merged parameters (skip under JAX tracing)
         if True:
             CostingInput(
@@ -553,6 +545,14 @@ class CostModel:
             p_ecrh=p_ecrh,
             p_icrf=p_icrf,
             p_lhcd=p_lhcd,
+            f_dec=params.get("f_dec", 0.0),
+            p_dee=pt.p_dee,
+            # Pulsed DEC params
+            pulsed_conversion=self.pulsed_conversion,
+            e_stored_mj=getattr(pt, "e_stored_mj", 0.0),
+            q_sci=pt.q_sci,
+            f_ch=getattr(pt, "f_ch", 0.0),
+            eta_dec=params.get("eta_dec", 0.0),
         )
         _PER_MODULE_KEYS = {
             "C220101",
@@ -597,7 +597,7 @@ class CostModel:
             for k in c22_detail:
                 c22_detail[k] = c22_detail[k] * scale
 
-        c23 = co.get("CAS23", cas23_turbine(cc, pt.p_et, n_mod))
+        c23 = co.get("CAS23", cas23_turbine(cc, pt.p_the, n_mod))
         if "CAS23" in co:
             overridden.append("CAS23")
 
@@ -609,7 +609,7 @@ class CostModel:
         if "CAS25" in co:
             overridden.append("CAS25")
 
-        c26 = co.get("CAS26", cas26_heat_rejection(cc, pt.p_et, n_mod))
+        c26 = co.get("CAS26", cas26_heat_rejection(cc, pt.p_th, n_mod))
         if "CAS26" in co:
             overridden.append("CAS26")
 
@@ -655,7 +655,7 @@ class CostModel:
         # For IFE/MIF, C220108 is the target factory (capital equipment),
         # not the divertor — it does not need periodic replacement.
         repl_accounts = cc.replaceable_accounts
-        if self.family.value != "mfe":
+        if self.family != ConfinementFamily.STEADY_STATE:
             repl_accounts = tuple(a for a in repl_accounts if a != "C220108")
 
         c70, c71, c72 = cas70_om(
@@ -672,6 +672,9 @@ class CostModel:
             construction_time=construction_time_yr,
             fuel=self.fuel,
             noak=noak,
+            p_dee=pt.p_dee,
+            pulsed_conversion=self.pulsed_conversion,
+            f_rep=params.get("f_rep", 0.0),
         )
         c80 = cas80_fuel(
             cc,
@@ -746,9 +749,16 @@ class CostModel:
             "structure_t",
             "vessel_t",
             "plasma_t",
+            # Fuel burn fractions (physics model)
+            "dd_f_T",
+            "dd_f_He3",
+            "dhe3_dd_frac",
+            "dhe3_f_T",
+            "pb11_f_alpha_n",
+            "pb11_f_p_n",
         ]
         family_specific = {
-            ConfinementFamily.MFE: [
+            ConfinementFamily.STEADY_STATE: [
                 "p_input",
                 "eta_pin",
                 "eta_de",
@@ -770,19 +780,31 @@ class CostModel:
                 # Impurity model parameters
                 "T_edge",
                 "tau_ratio",
+                # Magnet costing
+                "b_max",
+                "r_coil",
+                # Heating mix (CAS22 costing)
+                "p_nbi",
+                "p_ecrh",
+                "p_icrf",
+                "p_lhcd",
+                # 0D model / disruption parameters
+                "M_ion",
+                "lambda_q",
+                "disruption_rate_base",
+                "disruption_steepness",
+                "disruption_damage",
+                "disruption_downtime",
             ],
-            ConfinementFamily.IFE: [
-                "p_implosion",
-                "p_ignition",
-                "eta_pin1",
-                "eta_pin2",
-                "p_target",
-            ],
-            ConfinementFamily.MIF: [
-                "p_driver",
+            ConfinementFamily.PULSED: [
+                "e_driver_mj",
+                "f_rep",
                 "eta_pin",
+                "f_rad",
                 "p_target",
                 "p_coils",
+                "eta_dec",
+                "f_pdv",
             ],
         }
         return common + family_specific.get(self.family, [])

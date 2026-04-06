@@ -92,18 +92,17 @@ class CostingInput(BaseModel):
     R0: float | None = None
     elon: float | None = None
 
-    # IFE only
-    p_implosion: float | None = None
-    p_ignition: float | None = None
-    eta_pin1: float | None = None
-    eta_pin2: float | None = None
-    p_target: float | None = None  # shared with MIF
+    # Pulsed shared
+    p_target: float | None = None
+    # eta_pin: already declared above (shared MFE/PULSED)
+    # p_coils: already declared above (shared MFE/PULSED)
 
-    # MIF only
-    p_driver: float | None = None
-    # eta_pin: already declared above (shared MFE/MIF)
-    # p_target: already declared above (shared IFE/MIF)
-    # p_coils: already declared above (shared MFE/MIF)
+    # Pulsed (new unified parameter set)
+    e_driver_mj: float | None = None
+    f_rep: float | None = None
+    f_rad: float | None = None
+    eta_dec: float | None = None
+    f_pdv: float | None = None
 
     # Plasma parameters (MFE radiation calculation)
     n_e: float | None = None
@@ -122,7 +121,6 @@ class CostingInput(BaseModel):
     # --- Tier 2: family-required parameter lists ---
     _COMMON_REQUIRED = [
         "mn",
-        "eta_p",
         "f_sub",
         "p_pump",
         "p_trit",
@@ -137,6 +135,7 @@ class CostingInput(BaseModel):
     _MFE_REQUIRED = [
         "p_input",
         "eta_pin",
+        "eta_p",
         "eta_de",
         "f_dec",
         "p_coils",
@@ -144,18 +143,11 @@ class CostingInput(BaseModel):
         "R0",
         "elon",
     ]
-    _IFE_REQUIRED = [
-        "p_implosion",
-        "p_ignition",
-        "eta_pin1",
-        "eta_pin2",
-        "p_target",
-    ]
-    _MIF_REQUIRED = [
-        "p_driver",
+    _PULSED_REQUIRED = [
+        "e_driver_mj",
+        "f_rep",
         "eta_pin",
         "p_target",
-        "p_coils",
     ]
 
     @model_validator(mode="after")
@@ -163,22 +155,18 @@ class CostingInput(BaseModel):
         """Tier 2: If any eng param is set, all family-required must be present."""
         family = CONCEPT_TO_FAMILY[self.concept]
 
-        all_eng = (
-            self._COMMON_REQUIRED
-            + self._MFE_REQUIRED
-            + self._IFE_REQUIRED
-            + self._MIF_REQUIRED
-        )
+        all_eng = self._COMMON_REQUIRED + self._MFE_REQUIRED + self._PULSED_REQUIRED
         any_set = any(getattr(self, k) is not None for k in all_eng)
         if not any_set:
             return self
 
-        family_required = {
-            ConfinementFamily.MFE: self._MFE_REQUIRED,
-            ConfinementFamily.IFE: self._IFE_REQUIRED,
-            ConfinementFamily.MIF: self._MIF_REQUIRED,
-        }
-        required = self._COMMON_REQUIRED + family_required.get(family, [])
+        if family == ConfinementFamily.PULSED:
+            family_keys = self._PULSED_REQUIRED
+        else:
+            family_keys = (
+                self._MFE_REQUIRED if family == ConfinementFamily.STEADY_STATE else []
+            )
+        required = self._COMMON_REQUIRED + family_keys
 
         missing = [k for k in required if getattr(self, k) is None]
         if missing:
@@ -235,12 +223,10 @@ class CostingInput(BaseModel):
         if any(getattr(self, k) is None for k in self._COMMON_REQUIRED):
             return self
 
-        if family == ConfinementFamily.MFE:
+        if family == ConfinementFamily.STEADY_STATE:
             self._check_mfe_physics()
-        elif family == ConfinementFamily.IFE:
-            self._check_ife_physics()
-        elif family == ConfinementFamily.MIF:
-            self._check_mif_physics()
+        elif family == ConfinementFamily.PULSED:
+            self._check_pulsed_physics()
 
         return self
 
@@ -302,78 +288,30 @@ class CostingInput(BaseModel):
         )
         self._check_power_table(pt, p_fus)
 
-    def _check_ife_physics(self):
+    def _check_pulsed_physics(self):
         from costingfe.layers.physics import (
-            ife_forward_power_balance,
-            ife_inverse_power_balance,
+            pulsed_thermal_forward,
+            pulsed_thermal_inverse,
         )
 
-        ife_params = [
-            self.p_implosion,
-            self.p_ignition,
-            self.eta_pin1,
-            self.eta_pin2,
+        pulsed_params = [
+            self.e_driver_mj,
+            self.f_rep,
+            self.eta_pin,
             self.p_target,
         ]
-        if any(v is None for v in ife_params):
+        if any(v is None for v in pulsed_params):
             return
 
         p_net_per_mod = self.net_electric_mw / self.n_mod
-        p_fus = ife_inverse_power_balance(
-            p_net_target=p_net_per_mod,
+        common_kw = dict(
             fuel=self.fuel,
-            p_implosion=self.p_implosion,
-            p_ignition=self.p_ignition,
+            e_driver_mj=self.e_driver_mj,
+            f_rep=self.f_rep,
             mn=self.mn,
             eta_th=self.eta_th,
-            eta_p=self.eta_p,
-            eta_pin1=self.eta_pin1,
-            eta_pin2=self.eta_pin2,
-            f_sub=self.f_sub,
-            p_pump=self.p_pump,
-            p_trit=self.p_trit,
-            p_house=self.p_house,
-            p_cryo=self.p_cryo,
-            p_target=self.p_target,
-        )
-        pt = ife_forward_power_balance(
-            p_fus=p_fus,
-            fuel=self.fuel,
-            p_implosion=self.p_implosion,
-            p_ignition=self.p_ignition,
-            mn=self.mn,
-            eta_th=self.eta_th,
-            eta_p=self.eta_p,
-            eta_pin1=self.eta_pin1,
-            eta_pin2=self.eta_pin2,
-            f_sub=self.f_sub,
-            p_pump=self.p_pump,
-            p_trit=self.p_trit,
-            p_house=self.p_house,
-            p_cryo=self.p_cryo,
-            p_target=self.p_target,
-        )
-        self._check_power_table(pt, p_fus)
-
-    def _check_mif_physics(self):
-        from costingfe.layers.physics import (
-            mif_forward_power_balance,
-            mif_inverse_power_balance,
-        )
-
-        mif_params = [self.p_driver, self.eta_pin, self.p_target]
-        if any(v is None for v in mif_params):
-            return
-
-        p_net_per_mod = self.net_electric_mw / self.n_mod
-        p_fus = mif_inverse_power_balance(
-            p_net_target=p_net_per_mod,
-            fuel=self.fuel,
-            p_driver=self.p_driver,
-            mn=self.mn,
-            eta_th=self.eta_th,
-            eta_p=self.eta_p,
             eta_pin=self.eta_pin,
+            f_rad=0.1,
             f_sub=self.f_sub,
             p_pump=self.p_pump,
             p_trit=self.p_trit,
@@ -382,21 +320,13 @@ class CostingInput(BaseModel):
             p_target=self.p_target,
             p_coils=self.p_coils or 0.0,
         )
-        pt = mif_forward_power_balance(
+        p_fus = pulsed_thermal_inverse(
+            p_net_target=p_net_per_mod,
+            **common_kw,
+        )
+        pt = pulsed_thermal_forward(
             p_fus=p_fus,
-            fuel=self.fuel,
-            p_driver=self.p_driver,
-            mn=self.mn,
-            eta_th=self.eta_th,
-            eta_p=self.eta_p,
-            eta_pin=self.eta_pin,
-            f_sub=self.f_sub,
-            p_pump=self.p_pump,
-            p_trit=self.p_trit,
-            p_house=self.p_house,
-            p_cryo=self.p_cryo,
-            p_target=self.p_target,
-            p_coils=self.p_coils or 0.0,
+            **common_kw,
         )
         self._check_power_table(pt, p_fus)
 

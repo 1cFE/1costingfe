@@ -62,6 +62,48 @@ class CostingConstants:
     # IFE/MIF target factory capital (M$ at 1 GWe reference)
     target_factory_base: float = 244.0
 
+    # C220109: DEC add-on for linear devices
+    # Source: docs/account_justification/CAS220109_direct_energy_converter.md
+    # Subsystem build-up: grids + power conditioning + incremental vacuum/tank
+    dec_base: float = 100.0  # M$ at 400 MWe DEC electric output (P_DEE_REF)
+    dec_grid_cost: float = 12.0  # M$ replaceable grid/collector modules at P_DEE_REF
+
+    # DEC grid lifetime (FPY) — HIGH UNCERTAINTY, no reactor-scale data.
+    # Conservative estimates. Primary degradation: sputtering + He blistering
+    # from charged particle exhaust. Neutron damage additive for DT/DD.
+    # Sensitivity range: 0.5x to 3x these values.
+    dec_grid_lifetime_dt: float = 2.0  # Sputtering + 14.1 MeV neutron damage
+    dec_grid_lifetime_dd: float = 3.0  # Sputtering + 2.45 MeV neutron damage
+    dec_grid_lifetime_dhe3: float = 4.0  # 14.7 MeV proton sputtering + He blistering
+    dec_grid_lifetime_pb11: float = (
+        3.0  # 2.9 MeV alpha sputtering + severe He blistering
+    )
+
+    # Pulsed inductive DEC — driver cost basis
+    # $/J_stored, NOAK all-in (caps + switches + charging + buswork)
+    # Sensitivity range: 1.5-4.0
+    c_cap_allin_per_joule: float = 2.0
+
+    # Pulsed inductive DEC — C220109 incremental markups
+    markup_switch_bidir: float = 0.06  # Bidirectional switch premium (frac of driver)
+    markup_controls: float = 0.04  # FPGA/energy management (frac of driver)
+    c_inv_per_kw_net: float = 150.0  # Grid-tie inverter ($/kW_net)
+
+    # Pulsed inductive DEC — CAS72 cap replacement
+    cap_shot_lifetime: float = 1.0e8  # Shots, NOAK baseline. Range: 1e7-1e9
+
+    # Pulsed radiation fraction defaults (fraction of charged-particle energy)
+    f_rad_dt: float = 0.10
+    f_rad_dd: float = 0.08
+    f_rad_dhe3: float = 0.05
+    f_rad_pb11: float = 0.15  # High Z^2 bremsstrahlung
+
+    # PdV work fraction — fraction of charged-particle energy doing work
+    # against confining field. For adiabatic expansion:
+    # f_pdv = 1 - (1/r)^(gamma-1), gamma=5/3
+    # r=10 -> 0.78, r=20 -> 0.86, r=50 -> 0.91
+    f_pdv: float = 0.80
+
     # 220110: Remote Handling & Maintenance Equipment (M$ at 1 GWe, tokamak ref)
     # See docs/account_justification/CAS220110_remote_handling.md
     remote_handling_dt_base: float = 150.0
@@ -232,6 +274,28 @@ class CostingConstants:
             Fuel.DHE3: self.core_lifetime_dhe3,
             Fuel.PB11: self.core_lifetime_pb11,
         }.get(fuel, self.core_lifetime_dt)
+
+    def dec_grid_lifetime(self, fuel):
+        """DEC grid replacement interval in FPY for a given fuel type."""
+        from costingfe.types import Fuel
+
+        return {
+            Fuel.DT: self.dec_grid_lifetime_dt,
+            Fuel.DD: self.dec_grid_lifetime_dd,
+            Fuel.DHE3: self.dec_grid_lifetime_dhe3,
+            Fuel.PB11: self.dec_grid_lifetime_pb11,
+        }.get(fuel, self.dec_grid_lifetime_dt)
+
+    def f_rad(self, fuel):
+        """Default radiation fraction for pulsed concepts."""
+        from costingfe.types import Fuel
+
+        return {
+            Fuel.DT: self.f_rad_dt,
+            Fuel.DD: self.f_rad_dd,
+            Fuel.DHE3: self.f_rad_dhe3,
+            Fuel.PB11: self.f_rad_pb11,
+        }.get(fuel, self.f_rad_dt)
 
     def spare_parts_frac(self, fuel):
         """Initial spare parts fraction of CAS22-28 for a given fuel type."""

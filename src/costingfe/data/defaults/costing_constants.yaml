@@ -37,6 +37,18 @@ power_supplies_base: 80.0    # M$ at 1 GWe (power-scaled)
 divertor_base: 60.0          # M$ at 1 GWth (power-scaled)
 target_factory_base: 244.0   # M$ at 1 GWe ref (IFE/MIF target factory capital)
 
+# C220109: DEC add-on for linear devices (M$ at 400 MWe DEC electric output)
+# Source: docs/account_justification/CAS220109_direct_energy_converter.md
+dec_base: 100.0              # Total DEC add-on cost at P_DEE_REF
+dec_grid_cost: 12.0          # Replaceable grid/collector modules at P_DEE_REF
+
+# DEC grid lifetime (FPY) — HIGH UNCERTAINTY, no reactor-scale data.
+# Conservative estimates. Sensitivity range: 0.5x to 3x.
+dec_grid_lifetime_dt: 2.0    # Sputtering + 14.1 MeV neutron damage
+dec_grid_lifetime_dd: 3.0    # Sputtering + 2.45 MeV neutron damage
+dec_grid_lifetime_dhe3: 4.0  # 14.7 MeV proton sputtering + He blistering
+dec_grid_lifetime_pb11: 3.0  # 2.9 MeV alpha sputtering + severe He blistering
+
 # 220110: Remote Handling & Maintenance Equipment (M$ at 1 GWe reference, tokamak)
 # See docs/account_justification/CAS220110_remote_handling.md
 # DT: Full RH suite (in-vessel transporter, divertor handler, cask transfer,
@@ -186,3 +198,26 @@ u_b11_noak: 75.0             # $/kg, NOAK B-11 (industrial chemical exchange dis
 # CAS80 — fuel utilization
 burn_fraction: 0.05          # Fraction of injected fuel that undergoes fusion per pass
 fuel_recovery: 0.95          # Fraction of unburned fuel recovered and recycled
+
+# Pulsed inductive DEC — driver cost basis
+c_cap_allin_per_joule: 2.0   # $/J_stored, NOAK all-in (caps+switches+charging+buswork)
+                              # Sensitivity range: 1.5-4.0
+
+# Pulsed inductive DEC — C220109 incremental markups
+markup_switch_bidir: 0.06    # Bidirectional switch premium (frac of driver cost)
+markup_controls: 0.04        # FPGA/energy management upgrade (frac of driver cost)
+c_inv_per_kw_net: 150.0      # Grid-tie inverter ($/kW_net)
+
+# Pulsed inductive DEC — CAS72 cap replacement
+cap_shot_lifetime: 1.0e+8    # Shots, NOAK baseline. Sensitivity: 1e7-1e9
+
+# Pulsed radiation fraction defaults (frac of charged-particle energy)
+f_rad_dt: 0.10
+f_rad_dd: 0.08
+f_rad_dhe3: 0.05
+f_rad_pb11: 0.15             # High Z^2 bremsstrahlung
+
+# PdV work fraction for inductive DEC expansion stroke
+# For adiabatic expansion: f_pdv = 1 - (1/r)^(gamma-1), gamma=5/3
+# r=10 -> 0.78, r=20 -> 0.86, r=50 -> 0.91
+f_pdv: 0.80

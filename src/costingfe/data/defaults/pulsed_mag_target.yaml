@@ -1,27 +1,29 @@
-# Default engineering parameters for MIF plasma jet driven fusion
+# Default engineering parameters for MIF magnetized target fusion
 
-p_driver: 20.0       # Plasma jet driver output [MW]
+e_driver_mj: 50.0       # Pulsed power per pulse [MJ]
+f_rep: 1.0               # Repetition rate [Hz]
+pulsed_conversion: thermal
+f_rad: 0.10
 mn: 1.1              # Neutron energy multiplier
-eta_p: 0.5           # Pumping efficiency
-eta_pin: 0.25        # Plasma jet wall-plug efficiency
+eta_pin: 0.30        # Pulsed power wall-plug efficiency
 f_sub: 0.03          # Subsystem power fraction
 p_pump: 1.0          # Pumping power [MW]
 p_trit: 10.0         # Tritium processing power [MW]
 p_house: 4.0         # Housekeeping power [MW]
 p_cryo: 0.2          # Cryogenic power [MW]
-p_target: 3.0        # Liner/target factory power [MW]
-p_coils: 0.2         # Guide field coils [MW]
+p_target: 2.0        # Liner/target factory power [MW]
+p_coils: 0.5         # Guide field coils [MW]
 
 # Radial build geometry [m] (spherical chamber)
 R0: 0.0          # Not used for sphere
-plasma_t: 3.5        # Chamber radius
+plasma_t: 3.0        # Chamber radius
 blanket_t: 0.70      # Blanket thickness
 ht_shield_t: 0.20    # High-temperature shield
 structure_t: 0.15    # Primary structure
 vessel_t: 0.10       # Vacuum vessel
 
 # Construction
-construction_time_yr: 4.0  # Years (compact pulsed system)
+construction_time_yr: 4.0  # Years (compact, simple magnets)
 
 # Fuel burn fraction defaults (physics.py ash_neutron_split)
 dd_f_T: 0.969

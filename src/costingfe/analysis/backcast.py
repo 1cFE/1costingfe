@@ -1,11 +1,9 @@
 """Backcasting: given a target LCOE, find required parameter values.
 
-Uses scipy.optimize.brentq for single-parameter backcasting (robust,
-bracketed root-finding). The forward model is the oracle — no analytic
-inversion needed.
+Uses bisection for single-parameter backcasting (robust, bracketed
+root-finding). The forward model is the oracle — no analytic inversion
+needed.
 """
-
-from scipy.optimize import brentq
 
 from costingfe.model import CostModel
 
@@ -99,8 +97,20 @@ def backcast_single(
             f"LCOE range: [{min(lcoe_lo, lcoe_hi):.1f}, {max(lcoe_lo, lcoe_hi):.1f}]"
         )
 
-    result = brentq(lambda x: _lcoe_at(x) - target_lcoe, lo, hi, xtol=tol * 0.01)
-    return result
+    # Bisection root-finding (replaces scipy.optimize.brentq)
+    xtol = tol * 0.01
+    a, b = lo, hi
+    fa = f_lo
+    for _ in range(100):  # 100 iterations gives ~1e-30 relative precision
+        mid = (a + b) / 2.0
+        if (b - a) < xtol:
+            break
+        fm = _lcoe_at(mid) - target_lcoe
+        if fa * fm <= 0:
+            b = mid
+        else:
+            a, fa = mid, fm
+    return (a + b) / 2.0
 
 
 def backcast_multi(

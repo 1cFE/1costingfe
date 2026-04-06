@@ -65,14 +65,14 @@ def test_eta_th_not_in_concept_yamls():
         Path(__file__).parent.parent / "src" / "costingfe" / "data" / "defaults"
     )
     concept_files = [
-        "mfe_tokamak.yaml",
-        "mfe_stellarator.yaml",
-        "mfe_mirror.yaml",
-        "ife_laser_ife.yaml",
-        "ife_zpinch.yaml",
-        "ife_heavy_ion.yaml",
-        "mif_mag_target.yaml",
-        "mif_plasma_jet.yaml",
+        "steady_state_tokamak.yaml",
+        "steady_state_stellarator.yaml",
+        "steady_state_mirror.yaml",
+        "pulsed_laser_ife.yaml",
+        "pulsed_zpinch.yaml",
+        "pulsed_heavy_ion.yaml",
+        "pulsed_mag_target.yaml",
+        "pulsed_plasma_jet.yaml",
     ]
     for fname in concept_files:
         with open(defaults_dir / fname) as f:

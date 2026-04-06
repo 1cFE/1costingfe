@@ -442,9 +442,11 @@ concept-specific physics model is required.
 equilibrium model included as the first such layer; models for other
 confinement families will follow the same pattern.
 
-The power balance described here applies to magnetic fusion energy
-(MFE) systems; inertial and magneto-inertial variants follow the same
-logic with minor differences noted below.
+The power balance described next applies to steady-state confinement
+systems (tokamaks, stellarators, mirrors). Pulsed confinement
+systems---laser IFE, Z-pinch, and inductive-recovery concepts such as
+field-reversed configurations---use a separate per-pulse energy
+framework described in \cref{sec:pulsed-balance}.
 
 \subsection{Fusion Power Split}
 
@@ -866,11 +868,72 @@ $1/Q_{\text{eng}}$ is a key figure of merit: lower recirculating
 fractions leave more power for sale and directly reduce the LCOE
 denominator.
 
-For inertial fusion energy (IFE) systems, $P_{\text{aux}}$ is replaced
-by driver power (laser or pulsed power) with its own wall-plug
-efficiency, and target fabrication adds a fixed power load. For
-magneto-inertial fusion (MIF), both driver and target/liner fabrication
-power contribute. The power balance structure is otherwise identical.
+\subsection{Pulsed Power Balance}
+\label{sec:pulsed-balance}
+
+Pulsed confinement concepts---laser IFE, Z-pinch, and inductive
+recovery schemes---differ from the steady-state balance above in two
+respects: (i)~energy is delivered in discrete pulses rather than as
+continuous heating, and (ii)~charged-particle energy may be recovered
+electromagnetically rather than thermally. \textsc{1costingfe}
+provides two pulsed power balance variants, selected by the
+\texttt{PulsedConversion} parameter.
+
+\subsubsection{Per-pulse energy framework.}
+Each pulse delivers a driver energy $E_{\text{drv}}$ (MJ) at a
+repetition rate $f_{\text{rep}}$ (Hz).  The average driver power is
+$P_{\text{drv}} = E_{\text{drv}} \, f_{\text{rep}}$.  The driver
+wall-plug efficiency $\eta_{\text{pin}}$ relates stored energy to
+delivered energy: $E_{\text{stored}} = E_{\text{drv}} / \eta_{\text{pin}}$.
+The charged-particle fraction $f_{\text{ch}}$ is derived from the fuel
+type and determines the ash--neutron split, while
+$f_{\text{rad}}$ is the fraction of ash power radiated during the burn.
+
+\subsubsection{Pulsed thermal conversion.}
+For laser IFE and Z-pinch concepts the driver energy thermalises into
+the blanket alongside neutron and radiation power.  The thermal pool
+is:
+\begin{equation}
+P_{\text{th}} = M_n P_n + P_{\text{ash}} + P_{\text{drv}} + P_{\text{pump}}
+\end{equation}
+where $M_n$ is the neutron energy multiplier.  All electrical output
+comes from the thermal cycle at efficiency $\eta_{\text{th}}$, and
+the full driver draw $P_{\text{drv}}/\eta_{\text{pin}}$ enters the
+recirculating load.
+
+\subsubsection{Pulsed inductive DEC conversion.}
+For inductive recovery concepts (e.g.\ Helion-style FRCs), the driver
+energy circulates in an electromagnetic loop: capacitor bank $\to$
+compression coils $\to$ plasma $\to$ coils $\to$ capacitor bank.
+Charged-particle energy does PdV work on the expanding plasmoid,
+which is recovered inductively.  The fraction of net charged-particle
+power that couples as PdV work is
+\begin{equation}
+f_{\text{pdv}} = 1 - \left(\frac{r_{\min}}{r_{\max}}\right)^{\!2(\gamma-1)}
+\end{equation}
+with $\gamma = 5/3$ for an ideal monatomic plasma.  The recovered and
+net DEC powers are then
+\begin{align}
+P_{\text{recovered}} &= \eta_{\text{dec}} \bigl(P_{\text{drv}}
+  + f_{\text{pdv}} \, P_{\text{ch,net}}\bigr), \\
+P_{\text{dee}} &= P_{\text{recovered}} - P_{\text{drv}},
+\end{align}
+where $P_{\text{ch,net}} = (1 - f_{\text{rad}})\,P_{\text{ash}}$
+and $\eta_{\text{dec}}$ is the round-trip efficiency of the
+inductive recovery circuit.
+
+A key distinction from the steady-state balance is the recirculating
+load: because the capacitor bank energy goes out and comes back each
+cycle, only the charging \emph{losses}
+$P_{\text{drv}}\,(1/\eta_{\text{pin}} - 1)$ are drawn from the grid,
+not the full $P_{\text{drv}}/\eta_{\text{pin}}$.
+
+Neutrons, bremsstrahlung, and undirected charged particles still enter
+a thermal blanket.  When $\eta_{\text{th}} > 0$ a conventional thermal
+cycle runs in parallel with the DEC, and the total gross electric is
+$P_{\text{et}} = P_{\text{dee}} + P_{\text{the}}$.  When
+$\eta_{\text{th}} = 0$ the concept is purely inductive and all
+thermal loads (pumps, BOP) are zeroed automatically.
 
 \subsection{Inverse Power Balance}
 \label{sec:inverse-balance}
@@ -1104,9 +1167,9 @@ CAS & Description & Method \\
 \hspace{1em}22.01.04 & Supplementary heating & Per-MW linear (NBI, ICRF, ECRH, LHCD) \\
 \hspace{1em}22.01.05 & Primary structure & Volume $\times$ power scale \\
 \hspace{1em}22.01.06 & Vacuum system & Volume $\times$ power scale \\
-\hspace{1em}22.01.07 & Power supplies & Power-scaled (0.7) \\
+\hspace{1em}22.01.07 & Power supplies & Power-scaled (0.7); \$/J stored basis for pulsed DEC \\
 \hspace{1em}22.01.08 & Divertor / target factory & Thermal-scaled (MFE) or power-scaled (IFE) \\
-\hspace{1em}22.01.09 & Direct energy converter & Excluded (override for mirror/FRC) \\
+\hspace{1em}22.01.09 & Direct energy converter & Mirror/FRC override; circuit-derived markups for inductive DEC \\
 \hspace{1em}22.01.10$^\dagger$ & Remote handling \& maintenance & Fuel- and concept-dependent \\
 \hspace{1em}22.01.11 & Installation labor & 14\% of reactor subtotal \\
 \hspace{1em}22.01.12$^\dagger$ & Isotope separation plant & Zeroed; market purchase in CAS80 \\
@@ -1117,10 +1180,10 @@ CAS & Description & Method \\
 \hspace{1em}22.05 & Fuel handling \& storage & Fuel-dependent, power-scaled (0.7) \\
 \hspace{1em}22.06 & Other reactor plant equip.\ & Power-scaled (0.8) \\
 \hspace{1em}22.07 & Instrumentation \& control & Thermal-scaled (0.65) \\
-23$^\dagger$ & Turbine plant equipment & Linear scaling on gross electric (NETL-calibrated) \\
+23$^\dagger$ & Turbine plant equipment & Linear scaling on thermal electric $P_{\text{the}}$ (NETL-calibrated) \\
 24$^\dagger$ & Electric plant equipment & Linear scaling on gross electric (NETL-calibrated) \\
 25$^\dagger$ & Miscellaneous plant equip.\ & Linear scaling on gross electric (NETL-calibrated) \\
-26$^\dagger$ & Heat rejection systems & Linear scaling on gross electric (NETL-calibrated) \\
+26$^\dagger$ & Heat rejection systems & Linear scaling on total thermal $P_{\text{th}}$ (NETL-calibrated) \\
 27$^\dagger$ & Special materials & Fuel-dependent blanket fill inventory \\
 28$^\dagger$ & Digital twin & Fixed cost (\$5M) \\
 29$^\dagger$ & Contingency on direct costs & 10\% FOAK, 0\% NOAK (Gen-IV EMWG) \\
@@ -1865,7 +1928,10 @@ CAS70 comprises two sub-accounts:
   a fuel-dependent base cost per MW of net electric capacity.
 \item \textbf{CAS72} --- Annualized scheduled component replacement.
   Replacement costs are discounted to present value at the time of
-  each replacement event and annualized via the CRF.
+  each replacement event and annualized via the CRF.  For pulsed
+  inductive DEC concepts, CAS72 includes capacitor bank scheduled
+  replacement, whose lifetime is derived from cycle count and
+  repetition rate.
 \end{itemize}
 
 \subsubsection{CAS71: Staffing-based O\&M.}

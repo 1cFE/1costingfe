@@ -19,9 +19,9 @@ from costingfe.layers.physics import (
 from costingfe.types import Fuel
 
 # ---------------------------------------------------------------------------
-# Constants
+# Constants (CODATA 2018 values)
 # ---------------------------------------------------------------------------
-_EV = 1.602176634e-19  # J per eV
+_EV = 1.602176634e-19  # J per eV (exact by 2019 SI redefinition)
 MU_0 = 1.25663706127e-06  # Vacuum permeability [T·m/A]
 E_FUS_DT = 17.58  # DT fusion energy [MeV]
 MEV_TO_J = _EV * 1e6  # 1 MeV -> Joules

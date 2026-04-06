@@ -118,14 +118,17 @@ def compute_geometry(rb: RadialBuild, concept: ConfinementConcept) -> Geometry:
     bioshield_or = lt_shield_or + rb.bioshield_t
 
     # Select volume function
-    if family == ConfinementFamily.MFE and concept == ConfinementConcept.MIRROR:
+    if (
+        family == ConfinementFamily.STEADY_STATE
+        and concept == ConfinementConcept.MIRROR
+    ):
         h = rb.chamber_length
 
         def vol(r_in, r_out):
             return _cylinder_shell_volume(h, r_in, r_out)
 
         firstwall_area = 2 * math.pi * vacuum_or * h
-    elif family == ConfinementFamily.MFE:
+    elif family == ConfinementFamily.STEADY_STATE:
         # Tokamak / stellarator: torus
         R = rb.R0
         k = rb.elon

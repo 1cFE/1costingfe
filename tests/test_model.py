@@ -67,7 +67,7 @@ def test_sensitivity_ife():
     model = CostModel(concept=ConfinementConcept.LASER_IFE, fuel=Fuel.DT)
     result = model.forward(net_electric_mw=1000.0, availability=0.85, lifetime_yr=30)
     sens = model.sensitivity(result.params)
-    assert "eta_pin1" in sens["engineering"]  # IFE-specific param
+    assert "eta_pin" in sens["engineering"]  # Pulsed driver efficiency
     assert "p_input" not in sens["engineering"]  # MFE-specific param
 
 
@@ -242,3 +242,78 @@ def test_cas72_uses_cost_overrides():
         cost_overrides={"C220101": base.cas22_detail["C220101"] * 5},
     )
     assert expensive.costs.cas72 > base.costs.cas72
+
+
+# ---- DEC (Direct Energy Conversion) wiring tests ----
+
+
+def test_mirror_dec_populates_c220109():
+    """Mirror with f_dec > 0 should have nonzero C220109."""
+    from costingfe import ConfinementConcept, CostModel, Fuel
+
+    model = CostModel(concept=ConfinementConcept.MIRROR, fuel=Fuel.DHE3)
+    result = model.forward(net_electric_mw=500.0, availability=0.85, lifetime_yr=30)
+    # Mirror defaults: f_dec=0.3, eta_de=0.60 → p_dee > 0
+    assert result.cas22_detail["C220109"] > 0, (
+        "DHe3 mirror with f_dec=0.3 should have nonzero DEC cost"
+    )
+
+
+def test_tokamak_no_dec():
+    """Tokamak with f_dec=0 should have zero C220109."""
+    from costingfe import ConfinementConcept, CostModel, Fuel
+
+    model = CostModel(concept=ConfinementConcept.TOKAMAK, fuel=Fuel.DT)
+    result = model.forward(net_electric_mw=1000.0, availability=0.85, lifetime_yr=30)
+    assert result.cas22_detail["C220109"] == 0.0
+
+
+def test_mirror_dhe3_dec_full_integration():
+    """Full DHe3 mirror plant should have DEC costs in capital and O&M."""
+    from costingfe import ConfinementConcept, CostModel, Fuel
+
+    model = CostModel(concept=ConfinementConcept.MIRROR, fuel=Fuel.DHE3)
+    result = model.forward(
+        net_electric_mw=500.0,
+        availability=0.85,
+        lifetime_yr=30,
+    )
+    pt = result.power_table
+    c = result.costs
+
+    # Physics: DEC should produce electric power
+    assert pt.p_dee > 0, "DHe3 mirror should have DEC electric output"
+
+    # Capital: C220109 should be nonzero
+    c220109 = result.cas22_detail["C220109"]
+    assert c220109 > 0, "C220109 should be nonzero for DHe3 mirror"
+
+    # C220109 should be included in CAS22 total
+    assert c.cas22 > c220109, "CAS22 should include C220109"
+
+    # O&M: CAS72 should include DEC grid replacement
+    # Run same plant without DEC to compare
+    model_no_dec = CostModel(concept=ConfinementConcept.MIRROR, fuel=Fuel.DHE3)
+    result_no_dec = model_no_dec.forward(
+        net_electric_mw=500.0,
+        availability=0.85,
+        lifetime_yr=30,
+        f_dec=0.0,
+    )
+    assert c.cas72 > result_no_dec.costs.cas72, (
+        "CAS72 should be higher with DEC grid replacement"
+    )
+
+
+def test_mirror_dt_no_dec_by_default():
+    """DT mirror with default f_dec=0.3 should still compute DEC costs.
+
+    The model does not gate on fuel — f_dec > 0 is sufficient.
+    Mirror defaults have f_dec=0.3 for all fuels.
+    """
+    from costingfe import ConfinementConcept, CostModel, Fuel
+
+    model = CostModel(concept=ConfinementConcept.MIRROR, fuel=Fuel.DT)
+    result = model.forward(net_electric_mw=500.0, availability=0.85, lifetime_yr=30)
+    # Mirror default f_dec=0.3 applies even for DT
+    assert result.cas22_detail["C220109"] > 0

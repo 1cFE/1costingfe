@@ -1,18 +1,18 @@
-# Default engineering parameters for IFE z-pinch
-# Z-pinch: pulsed power driver, similar to IFE target model
+# Default engineering parameters for MIF plasma jet driven fusion
 
-p_implosion: 20.0    # Pulsed power driver output [MW]
-p_ignition: 0.0      # No separate ignition driver
+e_driver_mj: 30.0       # Plasma jet per pulse [MJ]
+f_rep: 1.0               # Repetition rate [Hz]
+pulsed_conversion: thermal
+f_rad: 0.10
 mn: 1.1              # Neutron energy multiplier
-eta_p: 0.5           # Pumping efficiency
-eta_pin1: 0.15       # Pulsed power wall-plug efficiency
-eta_pin2: 1.0        # No ignition driver (set to 1 to avoid div-by-zero)
+eta_pin: 0.25        # Plasma jet wall-plug efficiency
 f_sub: 0.03          # Subsystem power fraction
 p_pump: 1.0          # Pumping power [MW]
 p_trit: 10.0         # Tritium processing power [MW]
 p_house: 4.0         # Housekeeping power [MW]
-p_cryo: 0.3          # Cryogenic power [MW]
-p_target: 1.5        # Target/liner factory power [MW]
+p_cryo: 0.2          # Cryogenic power [MW]
+p_target: 3.0        # Liner/target factory power [MW]
+p_coils: 0.2         # Guide field coils [MW]
 
 # Radial build geometry [m] (spherical chamber)
 R0: 0.0          # Not used for sphere
@@ -23,7 +23,7 @@ structure_t: 0.15    # Primary structure
 vessel_t: 0.10       # Vacuum vessel
 
 # Construction
-construction_time_yr: 4.0  # Years (simple pulsed system)
+construction_time_yr: 4.0  # Years (compact pulsed system)
 
 # Fuel burn fraction defaults (physics.py ash_neutron_split)
 dd_f_T: 0.969

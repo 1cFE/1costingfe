@@ -3,9 +3,8 @@ from enum import Enum
 
 
 class ConfinementFamily(Enum):
-    MFE = "mfe"
-    IFE = "ife"
-    MIF = "mif"
+    STEADY_STATE = "steady_state"
+    PULSED = "pulsed"
 
 
 class ConfinementConcept(Enum):
@@ -19,15 +18,28 @@ class ConfinementConcept(Enum):
     PLASMA_JET = "plasma_jet"
 
 
+class PulsedConversion(Enum):
+    THERMAL = "thermal"
+    INDUCTIVE_DEC = "inductive_dec"
+
+
 CONCEPT_TO_FAMILY = {
-    ConfinementConcept.TOKAMAK: ConfinementFamily.MFE,
-    ConfinementConcept.STELLARATOR: ConfinementFamily.MFE,
-    ConfinementConcept.MIRROR: ConfinementFamily.MFE,
-    ConfinementConcept.LASER_IFE: ConfinementFamily.IFE,
-    ConfinementConcept.ZPINCH: ConfinementFamily.IFE,
-    ConfinementConcept.HEAVY_ION: ConfinementFamily.IFE,
-    ConfinementConcept.MAG_TARGET: ConfinementFamily.MIF,
-    ConfinementConcept.PLASMA_JET: ConfinementFamily.MIF,
+    ConfinementConcept.TOKAMAK: ConfinementFamily.STEADY_STATE,
+    ConfinementConcept.STELLARATOR: ConfinementFamily.STEADY_STATE,
+    ConfinementConcept.MIRROR: ConfinementFamily.STEADY_STATE,
+    ConfinementConcept.LASER_IFE: ConfinementFamily.PULSED,
+    ConfinementConcept.ZPINCH: ConfinementFamily.PULSED,
+    ConfinementConcept.HEAVY_ION: ConfinementFamily.PULSED,
+    ConfinementConcept.MAG_TARGET: ConfinementFamily.PULSED,
+    ConfinementConcept.PLASMA_JET: ConfinementFamily.PULSED,
+}
+
+CONCEPT_DEFAULT_CONVERSION = {
+    ConfinementConcept.LASER_IFE: PulsedConversion.THERMAL,
+    ConfinementConcept.ZPINCH: PulsedConversion.THERMAL,
+    ConfinementConcept.HEAVY_ION: PulsedConversion.THERMAL,
+    ConfinementConcept.MAG_TARGET: PulsedConversion.THERMAL,
+    ConfinementConcept.PLASMA_JET: PulsedConversion.THERMAL,
 }
 
 
@@ -110,6 +122,10 @@ class PowerTable:
     q_sci: float  # Scientific Q
     q_eng: float  # Engineering Q
     rec_frac: float  # Recirculating power fraction
+    e_driver_mj: float = 0.0  # Per-pulse driver energy [MJ]
+    e_stored_mj: float = 0.0  # Per-pulse cap bank energy [MJ]
+    f_rep: float = 0.0  # Repetition rate [Hz]
+    f_ch: float = 0.0  # Charged-particle fraction
 
 
 @dataclass

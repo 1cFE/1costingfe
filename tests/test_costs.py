@@ -168,11 +168,11 @@ def test_cas21_fuel_differentiation():
 
 
 def test_cas23_to_26_scale_with_power():
-    """BOP equipment scales with gross electric power."""
-    c23 = cas23_turbine(CC, p_et=1000.0, n_mod=1)
+    """BOP equipment scales with power (CAS23: thermal electric, CAS26: thermal)."""
+    c23 = cas23_turbine(CC, p_the=1000.0, n_mod=1)
     c24 = cas24_electrical(CC, p_et=1000.0, n_mod=1)
     c25 = cas25_misc(CC, p_et=1000.0, n_mod=1)
-    c26 = cas26_heat_rejection(CC, p_et=1000.0, n_mod=1)
+    c26 = cas26_heat_rejection(CC, p_th=2500.0, n_mod=1)
     for c in [c23, c24, c25, c26]:
         assert c > 0
 
@@ -529,3 +529,99 @@ def test_cas80_dd_unaffected_by_noak_unit_cost():
     foak = cas80_fuel(cc_no_lic, fuel=Fuel.DD, noak=False, **kwargs_no_noak)
     noak = cas80_fuel(cc_no_lic, fuel=Fuel.DD, noak=True, **kwargs_no_noak)
     assert abs(foak - noak) < 1e-10
+
+
+def test_cas72_includes_dec_grid_replacement():
+    """CAS72 should include DEC grid replacement when p_dee > 0."""
+    from costingfe.defaults import load_costing_constants
+    from costingfe.layers.costs import cas70_om
+    from costingfe.types import Fuel
+
+    cc = load_costing_constants()
+    cas22_detail = {
+        "C220101": 500.0,
+        "C220108": 60.0,
+        "C220109": 100.0,
+    }
+
+    _, _, cas72_with = cas70_om(
+        cc,
+        cas22_detail=cas22_detail,
+        replaceable_accounts=("C220101", "C220108"),
+        n_mod=1,
+        p_net=1000.0,
+        availability=0.85,
+        inflation_rate=0.02,
+        interest_rate=0.07,
+        lifetime_yr=30,
+        core_lifetime=5.0,
+        construction_time=6.0,
+        fuel=Fuel.DHE3,
+        noak=True,
+        p_dee=400.0,
+    )
+    _, _, cas72_without = cas70_om(
+        cc,
+        cas22_detail=cas22_detail,
+        replaceable_accounts=("C220101", "C220108"),
+        n_mod=1,
+        p_net=1000.0,
+        availability=0.85,
+        inflation_rate=0.02,
+        interest_rate=0.07,
+        lifetime_yr=30,
+        core_lifetime=5.0,
+        construction_time=6.0,
+        fuel=Fuel.DHE3,
+        noak=True,
+        p_dee=0.0,
+    )
+    assert cas72_with > cas72_without, (
+        "CAS72 should be higher with DEC grid replacement"
+    )
+
+
+def test_cas72_no_dec_grid_when_p_dee_zero():
+    """CAS72 should not include DEC grid term when p_dee = 0."""
+    from costingfe.defaults import load_costing_constants
+    from costingfe.layers.costs import cas70_om
+    from costingfe.types import Fuel
+
+    cc = load_costing_constants()
+    cas22_detail = {
+        "C220101": 500.0,
+        "C220108": 60.0,
+        "C220109": 0.0,
+    }
+    _, _, cas72_a = cas70_om(
+        cc,
+        cas22_detail=cas22_detail,
+        replaceable_accounts=("C220101", "C220108"),
+        n_mod=1,
+        p_net=1000.0,
+        availability=0.85,
+        inflation_rate=0.02,
+        interest_rate=0.07,
+        lifetime_yr=30,
+        core_lifetime=5.0,
+        construction_time=6.0,
+        fuel=Fuel.DT,
+        noak=True,
+        p_dee=0.0,
+    )
+    _, _, cas72_b = cas70_om(
+        cc,
+        cas22_detail=cas22_detail,
+        replaceable_accounts=("C220101", "C220108"),
+        n_mod=1,
+        p_net=1000.0,
+        availability=0.85,
+        inflation_rate=0.02,
+        interest_rate=0.07,
+        lifetime_yr=30,
+        core_lifetime=5.0,
+        construction_time=6.0,
+        fuel=Fuel.DT,
+        noak=True,
+    )
+    assert cas72_a == cas72_b, "CAS72 should be identical when p_dee=0 vs not provided"

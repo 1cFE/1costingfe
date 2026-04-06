@@ -161,12 +161,18 @@ def test_correlation_changes_joint_distribution():
     r_cor = run_uncertainty(**shared, correlation_matrix=corr)
 
     # Rank correlation of samples should differ noticeably
-    from scipy.stats import spearmanr
+    def _spearman_rho(x, y):
+        """Spearman rank correlation (no scipy dependency)."""
+        n = len(x)
+        rx = np.argsort(np.argsort(x)).astype(float)
+        ry = np.argsort(np.argsort(y)).astype(float)
+        d = rx - ry
+        return 1.0 - 6.0 * np.sum(d**2) / (n * (n**2 - 1))
 
-    rho_ind, _ = spearmanr(
+    rho_ind = _spearman_rho(
         r_ind.param_samples["eta_th"], r_ind.param_samples["availability"]
     )
-    rho_cor, _ = spearmanr(
+    rho_cor = _spearman_rho(
         r_cor.param_samples["eta_th"], r_cor.param_samples["availability"]
     )
     # Independent should be near 0; correlated should be strongly negative

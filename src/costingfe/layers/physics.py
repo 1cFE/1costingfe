@@ -9,9 +9,9 @@ from costingfe.layers.radiation import (
 from costingfe.types import Fuel, ImpurityMix, PowerTable, WallMaterial
 
 # ---------------------------------------------------------------------------
-# Fundamental constants (CODATA 2018 values, formerly from scipy.constants)
+# Fundamental constants (CODATA 2018 values)
 # ---------------------------------------------------------------------------
-_EV = 1.602176634e-19  # J per eV
+_EV = 1.602176634e-19  # J per eV (exact by 2019 SI redefinition)
 _ATOMIC_MASS = 1.66053906892e-27  # kg
 MEV_TO_JOULES = _EV * 1e6  # 1 MeV in J
 M_DEUTERIUM_KG = 3.3435837768e-27  # deuteron mass, kg
@@ -440,144 +440,8 @@ def mfe_inverse_power_balance(
     return p_fus
 
 
-# ---------------------------------------------------------------------------
-# IFE Power Balance
-# ---------------------------------------------------------------------------
-
-
-def ife_forward_power_balance(
-    p_fus: float,
+def _charged_particle_fraction(
     fuel: Fuel,
-    p_implosion: float,
-    p_ignition: float,
-    mn: float,
-    eta_th: float,
-    eta_p: float,
-    eta_pin1: float,
-    eta_pin2: float,
-    f_sub: float,
-    p_pump: float,
-    p_trit: float,
-    p_house: float,
-    p_cryo: float,
-    p_target: float,
-    dd_f_T: float = DD_F_T_DEFAULT,
-    dd_f_He3: float = DD_F_HE3_DEFAULT,
-    dhe3_dd_frac: float = 0.07,
-    dhe3_f_T: float = 0.97,
-    pb11_f_alpha_n: float = 0.0,
-    pb11_f_p_n: float = 0.0,
-) -> PowerTable:
-    """IFE forward power balance: fusion power -> net electric.
-
-    Key differences from MFE:
-    - No DEC (all ash thermalizes)
-    - Split driver: implosion + ignition, each with own wall-plug efficiency
-    - Target factory power in recirculating
-    - No coil power or coil cooling
-    - No plasma confinement radiation (p_rad=0)
-    Source: pyFECONs power_balance.py (IFE branch)
-    """
-    p_input = p_implosion + p_ignition
-
-    # Step 1: Ash/neutron split
-    p_ash, p_neutron = ash_neutron_split(
-        p_fus,
-        fuel,
-        dd_f_T,
-        dd_f_He3,
-        dhe3_dd_frac,
-        dhe3_f_T,
-        pb11_f_alpha_n,
-        pb11_f_p_n,
-    )
-
-    # Step 2: No DEC in IFE — all ash thermalizes
-    p_rad = 0.0
-    p_wall = p_ash
-    p_dee = 0.0
-    p_dec_waste = 0.0
-
-    # Step 3: Auxiliary power
-    p_aux = p_trit + p_house
-
-    # Step 4: Thermal power (all ash thermalizes + neutrons + heating + pumping)
-    p_th = mn * p_neutron + p_ash + p_input + eta_p * p_pump
-
-    # Step 5: Thermal electric
-    p_the = eta_th * p_th
-
-    # Step 6: Gross electric (no DEC)
-    p_et = p_the
-
-    # Step 7: Lost power
-    p_loss = p_th - p_the
-
-    # Step 8: Subsystem power
-    p_sub = f_sub * p_et
-
-    # Step 9: Scientific Q
-    q_sci = p_fus / p_input
-
-    # Step 10: Engineering Q — split driver efficiencies
-    recirculating = (
-        p_target
-        + p_pump
-        + p_sub
-        + p_aux
-        + p_cryo
-        + p_implosion / eta_pin1
-        + p_ignition / eta_pin2
-    )
-    q_eng = p_et / recirculating
-
-    # Step 11: Net electric
-    rec_frac = 1.0 / q_eng
-    p_net = (1.0 - rec_frac) * p_et
-
-    return PowerTable(
-        p_fus=p_fus,
-        p_ash=p_ash,
-        p_neutron=p_neutron,
-        p_rad=p_rad,
-        p_wall=p_wall,
-        p_dee=p_dee,
-        p_dec_waste=p_dec_waste,
-        p_th=p_th,
-        p_the=p_the,
-        p_et=p_et,
-        p_loss=p_loss,
-        p_net=p_net,
-        p_input=0.0,
-        p_pump=p_pump,
-        p_sub=p_sub,
-        p_aux=p_aux,
-        p_coils=0.0,
-        p_cool=0.0,
-        p_cryo=p_cryo,
-        p_target=p_target,
-        q_sci=q_sci,
-        q_eng=q_eng,
-        rec_frac=rec_frac,
-    )
-
-
-def ife_inverse_power_balance(
-    p_net_target: float,
-    fuel: Fuel,
-    p_implosion: float,
-    p_ignition: float,
-    mn: float,
-    eta_th: float,
-    eta_p: float,
-    eta_pin1: float,
-    eta_pin2: float,
-    f_sub: float,
-    p_pump: float,
-    p_trit: float,
-    p_house: float,
-    p_cryo: float,
-    p_target: float,
     dd_f_T: float = DD_F_T_DEFAULT,
     dd_f_He3: float = DD_F_HE3_DEFAULT,
     dhe3_dd_frac: float = 0.07,
@@ -585,13 +449,7 @@ def ife_inverse_power_balance(
     pb11_f_alpha_n: float = 0.0,
     pb11_f_p_n: float = 0.0,
 ) -> float:
-    """Inverse IFE power balance: target net electric -> required fusion power.
-
-    Closed-form linear inversion (same approach as MFE inverse).
-    """
-    p_input = p_implosion + p_ignition
-
-    # Ash fraction
+    """Return charged-particle (ash) fraction for a given fuel."""
     ash_frac, _ = ash_neutron_split(
         1.0,
         fuel,
@@ -602,48 +460,23 @@ def ife_inverse_power_balance(
         pb11_f_alpha_n,
         pb11_f_p_n,
     )
-    neutron_frac = 1.0 - ash_frac
-
-    # All ash thermalizes (no DEC in IFE)
-    c_th = mn * neutron_frac + ash_frac
-    c_th0 = p_input + eta_p * p_pump
-
-    # Gross electric = thermal electric (no DEC)
-    c_et = eta_th * c_th
-    c_et0 = eta_th * c_th0
-
-    # Recirculating (p_fus-dependent part): p_sub = f_sub * p_et
-    c_den = f_sub * c_et
-
-    # Recirculating (constant loads)
-    p_aux = p_trit + p_house
-    c_den0 = (
-        p_target
-        + p_pump
-        + f_sub * c_et0
-        + p_aux
-        + p_cryo
-        + p_implosion / eta_pin1
-        + p_ignition / eta_pin2
-    )
-
-    p_fus = (p_net_target - c_et0 + c_den0) / (c_et - c_den)
-    return p_fus
+    return ash_frac
 
 
 # ---------------------------------------------------------------------------
-# MIF Power Balance
+# Pulsed Thermal Power Balance
 # ---------------------------------------------------------------------------
 
 
-def mif_forward_power_balance(
+def pulsed_thermal_forward(
     p_fus: float,
     fuel: Fuel,
-    p_driver: float,
+    e_driver_mj: float,
+    f_rep: float,
     mn: float,
     eta_th: float,
-    eta_p: float,
     eta_pin: float,
+    f_rad: float,
     f_sub: float,
     p_pump: float,
     p_trit: float,
@@ -658,15 +491,18 @@ def mif_forward_power_balance(
     pb11_f_alpha_n: float = 0.0,
     pb11_f_p_n: float = 0.0,
 ) -> PowerTable:
-    """MIF forward power balance: fusion power -> net electric.
+    """Pulsed thermal forward power balance: fusion power -> net electric.
 
-    MIF uses pulsed magnetic compression. Key differences:
-    - Single driver (pulsed power) with one wall-plug efficiency
-    - Target/liner factory power in recirculating
-    - Optional small guide-field coils
-    - No DEC (all ash thermalizes)
-    - No plasma confinement radiation
+    Unified pulsed-confinement balance using per-pulse energy parameters
+    (e_driver_mj, f_rep) and a radiation loss fraction (f_rad).  All ash
+    thermalises into the blanket (no DEC).
+
+    CRITICAL: All conditionals on float parameters use jnp.where because
+    these parameters may be JAX tracers during sensitivity analysis.
     """
+    # Average driver power
+    p_driver = e_driver_mj * f_rep
+
     # Step 1: Ash/neutron split
     p_ash, p_neutron = ash_neutron_split(
         p_fus,
@@ -679,23 +515,25 @@ def mif_forward_power_balance(
         pb11_f_p_n,
     )
 
-    # Step 2: No DEC — all ash thermalizes
-    p_rad = 0.0
-    p_wall = p_ash
+    # Step 2: Radiation and charged-particle split
+    p_rad = f_rad * p_ash
+    p_charged_net = p_ash - p_rad
+
+    # Step 3: Thermal power — all ash thermalises (p_rad + p_charged_net = p_ash)
+    # Driver energy also thermalises. Pump power included only when thermal
+    # conversion is active (eta_th > 0).
+    p_th = mn * p_neutron + p_ash + p_driver + jnp.where(eta_th > 0, p_pump, 0.0)
+
+    # Step 4: Thermal electric
+    p_the = eta_th * p_th
+
+    # Step 5: Gross electric (no DEC)
+    p_et = p_the
     p_dee = 0.0
     p_dec_waste = 0.0
 
-    # Step 3: Auxiliary power
-    p_aux = p_trit + p_house
-
-    # Step 4: Thermal power
-    p_th = mn * p_neutron + p_ash + p_driver + eta_p * p_pump
-
-    # Step 5: Thermal electric
-    p_the = eta_th * p_th
-
-    # Step 6: Gross electric (no DEC)
-    p_et = p_the
+    # Step 6: Wall load from charged particles
+    p_wall = p_charged_net
 
     # Step 7: Lost power
     p_loss = p_th - p_the
@@ -706,15 +544,34 @@ def mif_forward_power_balance(
     # Step 9: Scientific Q
     q_sci = p_fus / p_driver
 
-    # Step 10: Engineering Q
+    # Step 10: Recirculating and engineering Q
+    p_aux = p_trit + p_house
     recirculating = (
-        p_target + p_coils + p_pump + p_sub + p_aux + p_cryo + p_driver / eta_pin
+        p_driver / eta_pin
+        + jnp.where(eta_th > 0, p_pump, 0.0)
+        + p_sub
+        + p_aux
+        + p_cryo
+        + p_target
+        + p_coils
     )
     q_eng = p_et / recirculating
 
     # Step 11: Net electric
     rec_frac = 1.0 / q_eng
     p_net = (1.0 - rec_frac) * p_et
+
+    # Pulsed-specific fields
+    e_stored_mj = e_driver_mj / eta_pin
+    f_ch = _charged_particle_fraction(
+        fuel,
+        dd_f_T,
+        dd_f_He3,
+        dhe3_dd_frac,
+        dhe3_f_T,
+        pb11_f_alpha_n,
+        pb11_f_p_n,
+    )
 
     return PowerTable(
         p_fus=p_fus,
@@ -740,17 +597,22 @@ def mif_forward_power_balance(
         q_sci=q_sci,
         q_eng=q_eng,
         rec_frac=rec_frac,
+        e_driver_mj=e_driver_mj,
+        e_stored_mj=e_stored_mj,
+        f_rep=f_rep,
+        f_ch=f_ch,
     )
 
 
-def mif_inverse_power_balance(
+def pulsed_thermal_inverse(
     p_net_target: float,
     fuel: Fuel,
-    p_driver: float,
+    e_driver_mj: float,
+    f_rep: float,
     mn: float,
     eta_th: float,
-    eta_p: float,
     eta_pin: float,
+    f_rad: float,
     f_sub: float,
     p_pump: float,
     p_trit: float,
@@ -765,10 +627,13 @@ def mif_inverse_power_balance(
     pb11_f_alpha_n: float = 0.0,
     pb11_f_p_n: float = 0.0,
 ) -> float:
-    """Inverse MIF power balance: target net electric -> required fusion power.
+    """Inverse pulsed thermal power balance: target net electric -> required P_fus.
 
-    Closed-form linear inversion.
+    Closed-form linear inversion: P_net = a * P_fus + b, solve for P_fus.
+    f_rad doesn't affect thermal pool size since p_rad + p_charged_net = p_ash.
     """
+    p_driver = e_driver_mj * f_rep
+
     # Ash fraction
     ash_frac, _ = ash_neutron_split(
         1.0,
@@ -782,27 +647,273 @@ def mif_inverse_power_balance(
     )
     neutron_frac = 1.0 - ash_frac
 
-    # All ash thermalizes
-    c_th = mn * neutron_frac + ash_frac
-    c_th0 = p_driver + eta_p * p_pump
+    # p_th = (mn * neutron_frac + ash_frac) * p_fus + p_driver + pump_term
+    # p_et = eta_th * p_th
+    # p_sub = f_sub * p_et
+    pump_term = jnp.where(eta_th > 0, p_pump, 0.0)
 
-    # Gross electric = thermal electric
-    c_et = eta_th * c_th
-    c_et0 = eta_th * c_th0
+    c_th = mn * neutron_frac + ash_frac  # coefficient of p_fus in p_th
+    c_th0 = p_driver + pump_term  # constant part of p_th
 
-    # Recirculating
-    c_den = f_sub * c_et
+    c_et = eta_th * c_th  # coefficient of p_fus in p_et
+    c_et0 = eta_th * c_th0  # constant part of p_et
 
+    # Recirculating loads
     p_aux = p_trit + p_house
-    c_den0 = (
-        p_target
-        + p_coils
-        + p_pump
+    # p_fus-dependent recirculating: f_sub * c_et * p_fus
+    c_recirc = f_sub * c_et
+    # Constant recirculating
+    c_recirc0 = (
+        p_driver / eta_pin
+        + pump_term
         + f_sub * c_et0
         + p_aux
         + p_cryo
-        + p_driver / eta_pin
+        + p_target
+        + p_coils
     )
 
-    p_fus = (p_net_target - c_et0 + c_den0) / (c_et - c_den)
+    # P_net = p_et - recirculating = (c_et - c_recirc) * p_fus + (c_et0 - c_recirc0)
+    p_fus = (p_net_target - c_et0 + c_recirc0) / (c_et - c_recirc)
+    return p_fus
+
+
+# ---------------------------------------------------------------------------
+# Pulsed DEC (Inductive) Power Balance
+# ---------------------------------------------------------------------------
+
+
+def pulsed_dec_forward(
+    p_fus: float,
+    fuel: Fuel,
+    e_driver_mj: float,
+    f_rep: float,
+    mn: float,
+    eta_th: float,
+    eta_pin: float,
+    eta_dec: float,
+    f_pdv: float,
+    f_rad: float,
+    f_sub: float,
+    p_pump: float,
+    p_trit: float,
+    p_house: float,
+    p_cryo: float,
+    p_target: float,
+    p_coils: float = 0.0,
+    dd_f_T: float = DD_F_T_DEFAULT,
+    dd_f_He3: float = DD_F_HE3_DEFAULT,
+    dhe3_dd_frac: float = 0.07,
+    dhe3_f_T: float = 0.97,
+    pb11_f_alpha_n: float = 0.0,
+    pb11_f_p_n: float = 0.0,
+) -> PowerTable:
+    """Pulsed inductive DEC forward power balance: fusion power -> net electric.
+
+    Models inductive DEC where driver energy circulates in an electromagnetic
+    loop (cap bank -> coils -> plasma -> coils -> cap bank).  Charged-particle
+    PdV work is recovered inductively.
+
+    CRITICAL: The recirculating power for the driver is only the charging
+    losses p_driver * (1/eta_pin - 1), NOT the full p_driver/eta_pin, because
+    the cap bank energy goes out and comes back each cycle.
+
+    All conditionals on float parameters use jnp.where for JAX traceability.
+    """
+    # Average driver power
+    p_driver = e_driver_mj * f_rep
+
+    # Step 1: Ash/neutron split
+    p_ash, p_neutron = ash_neutron_split(
+        p_fus,
+        fuel,
+        dd_f_T,
+        dd_f_He3,
+        dhe3_dd_frac,
+        dhe3_f_T,
+        pb11_f_alpha_n,
+        pb11_f_p_n,
+    )
+
+    # Step 2: Radiation and charged-particle split
+    p_rad = f_rad * p_ash
+    p_charged_net = p_ash - p_rad
+
+    # Step 3: DEC recovery
+    p_pdv = f_pdv * p_charged_net
+    p_recovered = eta_dec * (p_driver + p_pdv)
+    p_dee = p_recovered - p_driver  # net DEC electric output
+
+    # Step 4: Waste heat
+    p_dec_waste = (1.0 - eta_dec) * (p_driver + p_pdv)
+    p_undirected = p_charged_net - p_pdv
+
+    # Step 5: Thermal pool (neutrons + rad + undirected + DEC waste)
+    p_pump_heat = jnp.where(eta_th > 0, p_pump, 0.0)
+    p_th = mn * p_neutron + p_rad + p_undirected + p_dec_waste + p_pump_heat
+
+    # Step 6: Thermal electric
+    p_the = eta_th * p_th
+
+    # Step 7: Gross electric: DEC net + thermal
+    p_et = p_dee + p_the
+
+    # Step 8: Wall load from undirected charged particles + DEC waste + radiation
+    p_wall = p_undirected + p_dec_waste + p_rad
+
+    # Step 9: Lost power
+    p_loss = p_th - p_the
+
+    # Step 10: Subsystem power
+    p_sub = f_sub * p_et
+
+    # Step 11: Scientific Q
+    q_sci = p_fus / p_driver
+
+    # Step 12: Recirculating — driver CHARGING LOSSES ONLY
+    p_pump_recirc = jnp.where(eta_th > 0, p_pump, 0.0)
+    p_aux = p_trit + p_house
+    recirculating = (
+        p_driver * (1.0 / eta_pin - 1.0)
+        + p_pump_recirc
+        + p_sub
+        + p_aux
+        + p_cryo
+        + p_target
+        + p_coils
+    )
+    q_eng = p_et / recirculating
+
+    # Step 13: Net electric
+    rec_frac = 1.0 / q_eng
+    p_net = (1.0 - rec_frac) * p_et
+
+    # Pulsed-specific fields
+    e_stored_mj = e_driver_mj / eta_pin
+    f_ch = _charged_particle_fraction(
+        fuel,
+        dd_f_T,
+        dd_f_He3,
+        dhe3_dd_frac,
+        dhe3_f_T,
+        pb11_f_alpha_n,
+        pb11_f_p_n,
+    )
+
+    return PowerTable(
+        p_fus=p_fus,
+        p_ash=p_ash,
+        p_neutron=p_neutron,
+        p_rad=p_rad,
+        p_wall=p_wall,
+        p_dee=p_dee,
+        p_dec_waste=p_dec_waste,
+        p_th=p_th,
+        p_the=p_the,
+        p_et=p_et,
+        p_loss=p_loss,
+        p_net=p_net,
+        p_input=0.0,
+        p_pump=p_pump,
+        p_sub=p_sub,
+        p_aux=p_aux,
+        p_coils=p_coils,
+        p_cool=0.0,
+        p_cryo=p_cryo,
+        p_target=p_target,
+        q_sci=q_sci,
+        q_eng=q_eng,
+        rec_frac=rec_frac,
+        e_driver_mj=e_driver_mj,
+        e_stored_mj=e_stored_mj,
+        f_rep=f_rep,
+        f_ch=f_ch,
+    )
+
+
+def pulsed_dec_inverse(
+    p_net_target: float,
+    fuel: Fuel,
+    e_driver_mj: float,
+    f_rep: float,
+    mn: float,
+    eta_th: float,
+    eta_pin: float,
+    eta_dec: float,
+    f_pdv: float,
+    f_rad: float,
+    f_sub: float,
+    p_pump: float,
+    p_trit: float,
+    p_house: float,
+    p_cryo: float,
+    p_target: float,
+    p_coils: float = 0.0,
+    dd_f_T: float = DD_F_T_DEFAULT,
+    dd_f_He3: float = DD_F_HE3_DEFAULT,
+    dhe3_dd_frac: float = 0.07,
+    dhe3_f_T: float = 0.97,
+    pb11_f_alpha_n: float = 0.0,
+    pb11_f_p_n: float = 0.0,
+) -> float:
+    """Inverse pulsed DEC power balance: target net electric -> required P_fus.
+
+    Closed-form linear inversion separating p_fus-proportional and constant
+    terms through the DEC + thermal power path.
+    """
+    p_driver = e_driver_mj * f_rep
+
+    # Ash fraction per unit p_fus
+    ash_frac, _ = ash_neutron_split(
+        1.0,
+        fuel,
+        dd_f_T,
+        dd_f_He3,
+        dhe3_dd_frac,
+        dhe3_f_T,
+        pb11_f_alpha_n,
+        pb11_f_p_n,
+    )
+    neutron_frac = 1.0 - ash_frac
+
+    # Per unit p_fus: charged_net, PdV, DEC electric
+    charged_net_per = ash_frac * (1.0 - f_rad)
+    pdv_per = f_pdv * charged_net_per
+    undirected_per = charged_net_per - pdv_per
+    dec_waste_per = (1.0 - eta_dec) * pdv_per
+
+    # DEC electric from fusion (per unit p_fus)
+    c_dee = eta_dec * pdv_per  # p_dee = eta_dec*(p_driver + p_pdv) - p_driver
+
+    # Constant DEC terms (from p_driver)
+    # p_dee0 = eta_dec * p_driver - p_driver = p_driver * (eta_dec - 1)
+    p_dee0 = p_driver * (eta_dec - 1.0)
+    dec_waste0 = (1.0 - eta_dec) * p_driver
+
+    # Thermal pool per unit p_fus
+    pump_term = jnp.where(eta_th > 0, p_pump, 0.0)
+    c_th = mn * neutron_frac + ash_frac * f_rad + undirected_per + dec_waste_per
+    c_th0 = dec_waste0 + pump_term
+
+    # Gross electric coefficients
+    c_et = c_dee + eta_th * c_th  # per unit p_fus
+    c_et0 = p_dee0 + eta_th * c_th0  # constant
+
+    # Recirculating loads
+    p_aux = p_trit + p_house
+    # p_fus-dependent recirculating: f_sub * c_et * p_fus
+    c_recirc = f_sub * c_et
+    # Constant recirculating
+    c_recirc0 = (
+        p_driver * (1.0 / eta_pin - 1.0)
+        + jnp.where(eta_th > 0, p_pump, 0.0)
+        + f_sub * c_et0
+        + p_aux
+        + p_cryo
+        + p_target
+        + p_coils
+    )
+
+    # P_net = (c_et - c_recirc) * p_fus + (c_et0 - c_recirc0)
+    p_fus = (p_net_target - c_et0 + c_recirc0) / (c_et - c_recirc)
     return p_fus

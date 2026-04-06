@@ -1,18 +1,17 @@
-# Default engineering parameters for IFE laser fusion
-# Source: pyFECONs CATF IFE configuration
+# Default engineering parameters for IFE heavy ion beam fusion
 
-p_implosion: 10.0    # Implosion laser output power [MW]
-p_ignition: 0.1      # Ignition laser output power [MW]
+e_driver_mj: 5.0        # Heavy ion beam per pulse [MJ]
+f_rep: 5.0               # Repetition rate [Hz]
+pulsed_conversion: thermal
+f_rad: 0.10
+eta_pin: 0.25            # Accelerator wall-plug efficiency
 mn: 1.1              # Neutron energy multiplier
-eta_p: 0.5           # Pumping efficiency
-eta_pin1: 0.10       # Implosion laser wall-plug efficiency
-eta_pin2: 0.10       # Ignition laser wall-plug efficiency
 f_sub: 0.03          # Subsystem power fraction
 p_pump: 1.0          # Pumping power [MW]
 p_trit: 10.0         # Tritium processing power [MW]
 p_house: 4.0         # Housekeeping power [MW]
 p_cryo: 0.5          # Cryogenic power [MW]
-p_target: 1.0        # Target factory power [MW]
+p_target: 0.8        # Target factory power [MW]
 
 # Radial build geometry [m] (spherical chamber)
 R0: 0.0          # Not used for sphere
@@ -23,7 +22,7 @@ structure_t: 0.15    # Primary structure
 vessel_t: 0.10       # Vacuum vessel
 
 # Construction
-construction_time_yr: 5.0  # Years (no magnets, simpler)
+construction_time_yr: 6.0  # Years (large accelerator complex)
 
 # Fuel burn fraction defaults (physics.py ash_neutron_split)
 dd_f_T: 0.969

@@ -26,9 +26,8 @@ from costingfe.types import (
 
 # Map 1costingfe concepts to fusion-backcasting confinement types
 _FAMILY_TO_CONFINEMENT = {
-    ConfinementFamily.MFE: "MCF",
-    ConfinementFamily.IFE: "ICF",
-    ConfinementFamily.MIF: "MCF",  # MIF uses magnetic guide fields
+    ConfinementFamily.STEADY_STATE: "MCF",
+    ConfinementFamily.PULSED: "ICF",
 }
 
 # Map 1costingfe fuels to fusion-backcasting fuel types
@@ -109,6 +108,8 @@ def generate_subsystems(
         p_icrf=params.get("p_icrf", 0.0),
         p_ecrh=params.get("p_ecrh", 0.0),
         p_lhcd=params.get("p_lhcd", 0.0),
+        f_dec=params.get("f_dec", 0.0),
+        p_dee=float(pt.p_dee),
     )
 
     # O&M split: distribute CAS70 proportional to capital cost

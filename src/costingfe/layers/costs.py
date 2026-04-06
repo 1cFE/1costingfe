@@ -30,7 +30,7 @@ from costingfe.layers.physics import (
     Q_DT,
     Q_PB11,
 )
-from costingfe.types import Fuel
+from costingfe.types import Fuel, PulsedConversion
 
 
 def _total_project_time(cc, construction_time, fuel, noak):
@@ -106,14 +106,14 @@ def cas21_buildings(cc, p_et, p_the, p_th, p_fus, fuel, noak):
     return total + contingency
 
 
-def cas23_turbine(cc, p_et, n_mod):
+def cas23_turbine(cc, p_the, n_mod):
     """CAS23: Turbine plant equipment. Returns M$.
 
-    Linear scaling with gross electric power. Coefficient from
-    ARIES/NETL calibration, inflation-adjusted to 2024$.
+    Scales with thermal electric power (steam turbine output).
+    When eta_th=0, p_the=0 and CAS23=0 automatically.
     See docs/account_justification/CAS23_26_balance_of_plant.md
     """
-    return n_mod * p_et * cc.turbine_per_mw
+    return n_mod * p_the * cc.turbine_per_mw
 
 
 def cas24_electrical(cc, p_et, n_mod):
@@ -132,12 +132,13 @@ def cas25_misc(cc, p_et, n_mod):
     return n_mod * p_et * cc.misc_per_mw
 
 
-def cas26_heat_rejection(cc, p_et, n_mod):
+def cas26_heat_rejection(cc, p_th, n_mod):
     """CAS26: Heat rejection. Returns M$.
 
+    Scales with total thermal power (heat to be rejected).
     See docs/account_justification/CAS23_26_balance_of_plant.md
     """
-    return n_mod * p_et * cc.heat_rej_per_mw
+    return n_mod * p_th * cc.heat_rej_per_mw
 
 
 def cas27_special_materials(cc, p_net, fuel):
@@ -265,6 +266,9 @@ def cas70_om(
     construction_time,
     fuel,
     noak,
+    p_dee=0.0,
+    pulsed_conversion=None,
+    f_rep=0.0,
 ):
     """CAS70: Annualized O&M + scheduled replacement. Returns (total, cas71, cas72).
 
@@ -296,6 +300,36 @@ def cas70_om(
         pv = pv + jnp.where(k <= n_rep, cost_per_event / discount, 0.0)
     crf = compute_crf(interest_rate, lifetime_yr)
     cas72 = pv * crf
+
+    # DEC grid replacement (additive, independent cycle)
+    # Use jnp.maximum(p_dee, 1e-6) as a safe base for the power law to avoid NaN
+    # gradients at p_dee=0 (since d/dp_dee of p_dee^0.7 → ∞ there). The outer
+    # jnp.where masks the result to zero when p_dee == 0.
+    P_DEE_REF = 400.0
+    p_dee_safe = jnp.maximum(p_dee, 1e-6)
+    dec_grid = cc.dec_grid_cost * jnp.where(
+        p_dee > 0, (p_dee_safe / P_DEE_REF) ** 0.7, 0.0
+    )
+    dec_grid_life_cal = cc.dec_grid_lifetime(fuel) / availability
+    n_rep_dec = jnp.maximum(0.0, jnp.ceil(lifetime_yr / dec_grid_life_cal) - 1.0)
+    dec_cost = dec_grid * n_mod
+    pv_dec = 0.0
+    for k in range(1, MAX_REP + 1):
+        discount = (1 + interest_rate) ** (k * dec_grid_life_cal)
+        pv_dec = pv_dec + jnp.where(k <= n_rep_dec, dec_cost / discount, 0.0)
+    cas72 = cas72 + pv_dec * crf
+
+    # Cap bank scheduled replacement (INDUCTIVE_DEC only)
+    if pulsed_conversion == PulsedConversion.INDUCTIVE_DEC and f_rep > 0:
+        n_shots_per_year = f_rep * 8760.0 * 3600.0 * availability
+        t_replace_cap = cc.cap_shot_lifetime / n_shots_per_year
+        n_rep_cap = jnp.maximum(0.0, jnp.ceil(lifetime_yr / t_replace_cap) - 1.0)
+        cap_cost = cas22_detail.get("C220107", 0.0) * n_mod
+        pv_cap = 0.0
+        for k in range(1, MAX_REP + 1):
+            discount = (1 + interest_rate) ** (k * t_replace_cap)
+            pv_cap = pv_cap + jnp.where(k <= n_rep_cap, cap_cost / discount, 0.0)
+        cas72 = cas72 + pv_cap * crf
 
     return cas71 + cas72, cas71, cas72
 
