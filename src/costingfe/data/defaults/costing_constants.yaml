@@ -200,8 +200,8 @@ burn_fraction: 0.05          # Fraction of injected fuel that undergoes fusion p
 fuel_recovery: 0.95          # Fraction of unburned fuel recovered and recycled
 
 # Pulsed inductive DEC — driver cost basis
-c_cap_allin_per_joule: 2.0   # $/J_stored, NOAK all-in (caps+switches+charging+buswork)
-                              # Sensitivity range: 1.5-4.0
+c_cap_allin_per_joule: 0.5   # $/J_stored, NOAK all-in (caps+switches+charging+buswork)
+                              # Sensitivity range: 0.5-4.0
 
 # Pulsed inductive DEC — C220109 incremental markups
 markup_switch_bidir: 0.06    # Bidirectional switch premium (frac of driver cost)

@@ -390,7 +390,11 @@ class CostModel:
         # of truth. User explicit kwargs (in `overrides`) always win.
         cycle_preset = POWER_CYCLE_DEFAULTS[self.power_cycle]
         if "eta_th" not in overrides:
-            params["eta_th"] = cycle_preset["eta_th"]
+            if self.pulsed_conversion == PulsedConversion.INDUCTIVE_DEC:
+                # Pure DEC: default to no thermal BOP
+                params["eta_th"] = 0.0
+            else:
+                params["eta_th"] = cycle_preset["eta_th"]
         # BOP coefficients: apply preset unless user provided custom
         # CostingConstants (which means they want full control).
         if not self._cc_user_provided:

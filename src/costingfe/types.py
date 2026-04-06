@@ -16,6 +16,7 @@ class ConfinementConcept(Enum):
     HEAVY_ION = "heavy_ion"
     MAG_TARGET = "mag_target"
     PLASMA_JET = "plasma_jet"
+    PULSED_FRC = "pulsed_frc"
 
 
 class PulsedConversion(Enum):
@@ -32,6 +33,7 @@ CONCEPT_TO_FAMILY = {
     ConfinementConcept.HEAVY_ION: ConfinementFamily.PULSED,
     ConfinementConcept.MAG_TARGET: ConfinementFamily.PULSED,
     ConfinementConcept.PLASMA_JET: ConfinementFamily.PULSED,
+    ConfinementConcept.PULSED_FRC: ConfinementFamily.PULSED,
 }
 
 CONCEPT_DEFAULT_CONVERSION = {
@@ -40,6 +42,7 @@ CONCEPT_DEFAULT_CONVERSION = {
     ConfinementConcept.HEAVY_ION: PulsedConversion.THERMAL,
     ConfinementConcept.MAG_TARGET: PulsedConversion.THERMAL,
     ConfinementConcept.PLASMA_JET: PulsedConversion.THERMAL,
+    ConfinementConcept.PULSED_FRC: PulsedConversion.INDUCTIVE_DEC,
 }
 
 

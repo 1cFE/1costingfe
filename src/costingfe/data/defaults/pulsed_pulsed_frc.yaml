@@ -1,0 +1,48 @@
+# Default engineering parameters for pulsed FRC (Helion-like)
+# Colliding field-reversed configuration with inductive DEC.
+# Copper pulsed coils, no superconductors, no cryogenics.
+# In-situ plasmoid formation (no manufactured targets).
+
+# Pulsed parameters
+e_driver_mj: 12.0       # Energy delivered to plasma per pulse [MJ]
+f_rep: 1.0               # Repetition rate [Hz]
+pulsed_conversion: inductive_dec
+f_rad: 0.05              # Radiation fraction (D-He3, short burn)
+eta_pin: 0.95            # Solid-state pulsed power wall-plug efficiency
+eta_dec: 0.85            # Inductive DEC efficiency (coil-to-cap)
+f_pdv: 0.80              # PdV work fraction
+q_sci: 5.0               # Scientific gain target
+
+mn: 1.0              # No breeding blanket (no neutron multiplier)
+f_sub: 0.03          # Subsystem power fraction
+p_pump: 0.0          # No coolant pumping (no thermal BOP)
+p_trit: 0.5          # Tritium monitoring from DD side reactions [MW]
+p_house: 2.0         # Housekeeping power [MW]
+p_cryo: 0.0          # No cryogenics (copper coils)
+p_target: 0.0        # No manufactured targets (in-situ FRC formation)
+p_coils: 0.5         # Formation/acceleration coils average power [MW]
+
+# Coil parameters — copper pulsed coils (not HTS)
+coil_material: copper
+b_max: 5.0           # Peak field [T] (pulsed copper, lower than HTS)
+r_coil: 0.6          # Effective winding bore [m]
+
+# Radial build geometry [m] (cylindrical, per module)
+# Each module is a linear machine ~10m long with ~0.5m plasma radius.
+R0: 0.0              # Linear geometry (no major radius)
+plasma_t: 0.5        # Plasma / chamber radius [m]
+blanket_t: 0.05      # Thin first wall only (no breeding blanket)
+ht_shield_t: 0.05    # Minimal shielding (~5% neutron fraction)
+structure_t: 0.10    # Primary structure
+vessel_t: 0.10       # Vacuum vessel
+
+# Construction
+construction_time_yr: 4.0  # Factory-built modular assembly
+
+# Fuel burn fraction defaults
+dd_f_T: 0.969
+dd_f_He3: 0.689
+dhe3_dd_frac: 0.07
+dhe3_f_T: 0.97
+pb11_f_alpha_n: 0.0
+pb11_f_p_n: 0.0

@@ -25,7 +25,7 @@ def test_dec_c220107_uses_joule_basis():
     c220107 = float(result.cas22_detail["C220107"])
     e_stored = float(result.power_table.e_stored_mj)
     # $/J basis: c220107 = c_cap_allin_per_joule * e_stored_mj
-    expected = 2.0 * e_stored
+    expected = 0.5 * e_stored
     assert abs(c220107 - expected) < 0.5, f"Expected ~{expected:.1f}, got {c220107:.1f}"
 
 

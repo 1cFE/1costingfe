@@ -64,6 +64,7 @@ def compare_all(
             ConfinementConcept.HEAVY_ION,
             ConfinementConcept.MAG_TARGET,
             ConfinementConcept.PLASMA_JET,
+            ConfinementConcept.PULSED_FRC,
         ]
     if fuels is None:
         fuels = list(Fuel)

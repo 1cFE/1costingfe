@@ -81,8 +81,8 @@ class CostingConstants:
 
     # Pulsed inductive DEC — driver cost basis
     # $/J_stored, NOAK all-in (caps + switches + charging + buswork)
-    # Sensitivity range: 1.5-4.0
-    c_cap_allin_per_joule: float = 2.0
+    # Sensitivity range: 0.5-4.0
+    c_cap_allin_per_joule: float = 0.5
 
     # Pulsed inductive DEC — C220109 incremental markups
     markup_switch_bidir: float = 0.06  # Bidirectional switch premium (frac of driver)
