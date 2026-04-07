@@ -18,6 +18,12 @@ m = CostModel(
     power_cycle=PowerCycle.BRAYTON_SCO2,
 )
 
+m_dhe3 = CostModel(
+    concept=ConfinementConcept.MIRROR,
+    fuel=Fuel.DHE3,
+    power_cycle=PowerCycle.BRAYTON_SCO2,
+)
+
 
 def free_core_with_dec(model, f_dec, eta_de, **kw):
     """Run free-core analysis but keep C220109 (DEC hardware) cost."""
@@ -190,26 +196,40 @@ print(
 
 
 # ══════════════════════════════════════════════════════════════════════
-# TABLE 4: Fully costed comparison (blog inline)
+# TABLE 4: Fully costed D-He3 — DEC vs thermal (blog "Where DEC Helps")
 # ══════════════════════════════════════════════════════════════════════
 print()
 print("=" * 75)
-print("TABLE 4: Fully costed pB11 mirror — DEC vs thermal (1 GWe baseline)")
+print("TABLE 4: Fully costed D-He3 mirror — DEC vs thermal (1 GWe baseline)")
 print("=" * 75)
 
-r_full_th = m.forward(**BASE_KW, inflation_rate=INFLATION)
-r_full_vb = m.forward(**BASE_KW, inflation_rate=INFLATION, f_dec=0.9, eta_de=0.60)
+energy_base = 8760 * 1000.0 * 0.85
 
-print(f"  {'Configuration':<35} {'LCOE':>7} {'CAS22':>8}")
-print("-" * 55)
-print(
-    f"  {'Thermal only (47%)':<35}"
-    f" {r_full_th.costs.lcoe:>6.0f} {r_full_th.costs.cas22:>7.0f}"
-)
-print(
-    f"  {'VB DEC 60% (hybrid)':<35}"
-    f" {r_full_vb.costs.lcoe:>6.0f} {r_full_vb.costs.cas22:>7.0f}"
-)
+r_dhe3_th = m_dhe3.forward(**BASE_KW, inflation_rate=INFLATION)
+r_dhe3_vb = m_dhe3.forward(**BASE_KW, inflation_rate=INFLATION, f_dec=0.9, eta_de=0.60)
+r_dhe3_pi = m_dhe3.forward(**BASE_KW, inflation_rate=INFLATION, f_dec=0.95, eta_de=0.85)
+
+print(f"  {'Configuration':<35} {'LCOE':>7} {'Core':>8} {'Fuel':>7}")
+print("-" * 62)
+for label, r in [
+    ("Thermal only (47%)", r_dhe3_th),
+    ("VB DEC 60% (hybrid)", r_dhe3_vb),
+    ("Pulsed inductive (85%)", r_dhe3_pi),
+]:
+    fuel_mwh = r.costs.cas80 * 1e6 / energy_base
+    print(f"  {label:<35} {r.costs.lcoe:>6.0f} {r.costs.cas22:>7.0f} {fuel_mwh:>6.0f}")
+
+# Also p-B11 for comparison
+print()
+print("  p-B11 comparison:")
+r_pb_th = m.forward(**BASE_KW, inflation_rate=INFLATION)
+r_pb_vb = m.forward(**BASE_KW, inflation_rate=INFLATION, f_dec=0.9, eta_de=0.60)
+pb_th_lcoe = f"{r_pb_th.costs.lcoe:>6.0f}"
+pb_th_core = f"{r_pb_th.costs.cas22:>7.0f}"
+print(f"  {'Thermal only (47%)':<35} {pb_th_lcoe} {pb_th_core}")
+pb_vb_lcoe = f"{r_pb_vb.costs.lcoe:>6.0f}"
+pb_vb_core = f"{r_pb_vb.costs.cas22:>7.0f}"
+print(f"  {'VB DEC 60% (hybrid)':<35} {pb_vb_lcoe} {pb_vb_core}")
 
 
 # ══════════════════════════════════════════════════════════════════════
@@ -264,12 +284,6 @@ print()
 print("=" * 75)
 print("TABLE 5: D-He3 BOP floors — free core, fuel separated")
 print("=" * 75)
-
-m_dhe3 = CostModel(
-    concept=ConfinementConcept.MIRROR,
-    fuel=Fuel.DHE3,
-    power_cycle=PowerCycle.BRAYTON_SCO2,
-)
 
 FREE_CORE_DHE3 = {"CAS22": 0.0, "CAS27": 0.0}
 
