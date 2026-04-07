@@ -10,7 +10,7 @@ Direct energy conversion skips the thermal intermediary. Charged particles from 
 
 DEC only works on charged particles. Neutrons pass through any DEC system unaffected. Bremsstrahlung and synchrotron photons radiate to the walls as heat. This means DEC is only useful for fuels where most of the fusion energy comes out as charged particles: deuterium-helium-3 (~60% charged) and proton-boron (~99.8% charged). For deuterium-tritium (~20% charged), DEC is a marginal add-on that doesn't justify its cost. The design space for DEC is aneutronic fuel.
 
-There is a further constraint. Even for p-B11, a significant fraction of fusion power — [15–30%](https://doi.org/10.1063/1.871319) depending on plasma conditions — is radiated as bremsstrahlung, driven by the high plasma temperature (>100 keV) and the Z=5 boron nucleus. These photons are invisible to any DEC. They hit the walls and become heat. This heat must either be converted thermally (a small turbine) or rejected as waste. The DEC handles the charged particles; the bremsstrahlung sets a floor on the thermal plant that remains.
+There is a further constraint. Even for p-B11, a significant fraction of fusion power is radiated as bremsstrahlung, driven by the high plasma temperature (>100 keV) and the Z=5 boron nucleus. The exact fraction depends on plasma conditions — [Ochs et al. (2022)](https://doi.org/10.1103/PhysRevE.106.055215) showed that in a thermonuclear p-B11 plasma at optimal conditions, bremsstrahlung consumes roughly **97% of fusion power** — the margin between fusion energy production and radiative loss is only ~3%. Alpha channeling (redirecting fusion product energy back into fuel ions) can widen this margin: channeling to fast protons raises the net power to ~17% of fusion power, but bremsstrahlung still dominates at ~83% of P_fus. The radiated fraction is not a minor correction — it is most of the energy. These photons are invisible to any DEC. They hit the walls and become heat. This heat must either be converted thermally (a small turbine) or rejected as waste. The DEC handles the charged particles; the bremsstrahlung sets a floor on the thermal plant that remains.
 
 ## Three Architectures
 
@@ -92,15 +92,35 @@ For the pulsed inductive case at 85% efficiency, the cascade is larger: roughly 
 
 ## The Bremsstrahlung Constraint
 
-Every DEC architecture for p-B11 runs into the same wall: bremsstrahlung. At the plasma conditions required for p-B11 fusion (>100 keV, Z_eff elevated by the Z=5 boron nucleus), 15–30% of fusion power is radiated as X-ray photons that pass through any DEC system and deposit on the walls as heat.
+Every DEC architecture for p-B11 runs into the same wall: bremsstrahlung. At the plasma conditions required for p-B11 fusion (>100 keV, Z_eff elevated by the Z=5 boron nucleus), the vast majority of fusion power is radiated as X-ray photons that pass through any DEC system and deposit on the walls as heat. Even with alpha channeling — the most favorable scenario studied — bremsstrahlung is ~83% of fusion power. Without it, the margin between fusion and radiation is only ~3%.
 
-This heat must go somewhere. The options are:
+This is a more severe constraint than the previous dispatch acknowledged. DEC does not handle the majority of the energy in a p-B11 plant — radiation does. The charged-particle transport that a venetian blind or pulsed system can capture is the net margin after bremsstrahlung, not the gross fusion power. The thermal plant is not a small bottoming cycle — it is the primary power conversion pathway.
 
-1. **Small thermal cycle** — a reduced turbine island converts brem heat at 47–53%. This is what the "hybrid" configurations above assume. It works but preserves a significant fraction of the thermal BOP.
+The options for the radiated fraction are:
+
+1. **Thermal cycle** — a full turbine island converts brem heat at 47–53%. This is what the "hybrid" configurations above assume. It works but preserves essentially the full thermal BOP.
 2. **MHD on the coolant** — if the brem-heated wall coolant is liquid metal, an MHD channel could convert at >60% with no turbine. Undemonstrated at reactor scale.
-3. **Reject as waste** — accept the efficiency loss and dump the brem heat to cooling towers. The simplest approach: it eliminates the turbine entirely at the cost of losing 15–30% of total energy. For a plant already operating at 85% DEC efficiency on the charged fraction, the overall plant efficiency drops from ~85% to ~60–72%, which is still better than thermal-only (47%).
+3. **Reject as waste** — accept the efficiency loss and dump the brem heat to cooling towers. At 83% brem fraction, this means wasting most of the fusion energy. The overall plant efficiency collapses — a DEC at 85% efficiency on the 17% net charged fraction yields only ~14% of fusion power as electricity, far worse than thermal-only (47%).
 
-Option 3 is the path to truly deleting the turbine. If the fusion core is cheap enough, wasting brem heat may be the right economic choice — the capital savings from eliminating the turbine, its building, and its cooling infrastructure may exceed the revenue lost from lower efficiency. This is a plant-level optimization, not a physics question.
+Option 3 does not work for p-B11 at these bremsstrahlung fractions. The thermal plant is not optional — it handles most of the energy. DEC captures the margin.
+
+## D-He3: Better Physics, Different Problem
+
+Deuterium-helium-3 changes the bremsstrahlung picture. D-He3 operates at lower temperature (~50–60 keV vs >100 keV for p-B11) with lower effective charge (Z_eff ~1.3 vs ~2.5), so bremsstrahlung is a much smaller fraction of fusion power. The primary reaction produces a 14.7 MeV proton and a 3.6 MeV alpha — both charged particles, ~60% of total fusion energy. D-D side reactions contribute ~5% neutrons, but the bulk of the energy is available to DEC. This is why [Helion Energy](https://www.helionenergy.com/) chose D-He3 for their pulsed inductive architecture.
+
+The BOP floors for D-He3 are comparable to p-B11 once fuel cost is separated out:
+
+| Approach (1 GWe, D-He3, free core) | BOP floor (\$/MWh) | He-3 fuel (\$/MWh) | Total (\$/MWh) |
+| --- | --- | --- | --- |
+| Thermal only (sCO2 Brayton, 47%) | 18 | 79 | 97 |
+| VB DEC 60% + thermal (hybrid) | 15 | 69 | 84 |
+| Pulsed inductive (85%, no turbine) | 17 | 49 | 66 |
+
+The BOP floors — \$15–18/MWh — are in the same range as p-B11. But the He-3 fuel cost dominates everything at \$49–79/MWh, five to eight times the 1-cent target by itself. At the [DOE-allocated price](https://www.everycrsreport.com/reports/R41419.html) of ~\$4.5M/kg, the fuel cost roughly doubles. Purchased He-3 makes 1-cent D-He3 impossible regardless of what the BOP costs.
+
+Helion's answer is to breed He-3 internally from D-D side reactions, avoiding the need to purchase it. If the fuel cost drops to zero, the D-He3 BOP floor is \$15–18/MWh at baseline conditions and \$5–8/MWh at aggressive conditions — essentially the same as p-B11. The economics then hinge on (a) whether self-breeding produces enough He-3 to sustain the burn, and (b) whether the pulsed inductive DEC achieves 85%+ round-trip efficiency. Neither has been demonstrated.
+
+The advantage of D-He3 over p-B11 for DEC is not the floor — it's the bremsstrahlung. With most of the energy in charged particles and a manageable radiated fraction, DEC can be the primary power conversion pathway, not just a margin-capture add-on. The pulsed inductive architecture eliminates the turbine entirely. Whether this translates to cheaper electricity depends on the fusion core, not the BOP.
 
 ## Conclusions
 
@@ -112,9 +132,11 @@ Option 3 is the path to truly deleting the turbine. If the fusion core is cheap 
 
 **4. The pulsed inductive approach is all-or-nothing.** If the round-trip efficiency is 85%+, the pulsed architecture halves the required fusion power and eliminates the turbine — a genuine transformation. If it's below 70%, the economics favor building a turbine. The gap between "transformative" and "not viable" is 15 percentage points of unverified efficiency.
 
-**5. Aneutronic fuel is required, but not sufficient.** DEC only makes sense when most of the fusion energy is in charged particles. But even p-B11 radiates 15–30% of its energy as bremsstrahlung that DEC cannot capture. The turbine can be reduced but not trivially eliminated — unless you're willing to waste the radiated fraction.
+**5. Aneutronic fuel is required, but not sufficient.** DEC only makes sense when most of the fusion energy is in charged particles. But p-B11 radiates 83–97% of its fusion power as bremsstrahlung. The net charged-particle energy that DEC can capture is the thin margin that remains — at most 17% of fusion power with alpha channeling, and only 3% without it. The turbine is not a small bottoming cycle; it handles most of the energy.
 
-**6. MHD could close the gap — someday.** An MHD generator on the brem-heated coolant could convert the radiated fraction at >60% efficiency with no moving parts, eliminating the last piece of the conventional thermal plant. The physics is demonstrated. The engineering for fusion environments is not.
+**6. D-He3 is the better DEC fuel — if you can get the He-3.** D-He3 has manageable bremsstrahlung and ~60% charged fraction, making DEC the primary power path rather than a margin add-on. But purchased He-3 costs \$49–79/MWh — far more than the entire BOP floor. Self-breeding eliminates this, but whether a D-He3 device can breed enough He-3 to sustain itself is undemonstrated.
+
+**7. MHD could close the gap — someday.** An MHD generator on the brem-heated coolant could convert the radiated fraction at >60% efficiency with no moving parts, eliminating the last piece of the conventional thermal plant. The physics is demonstrated. The engineering for fusion environments is not.
 
 The path to 1-cent fusion energy does not run through direct energy conversion alone. DEC is one lever — it raises the budget for the core by improving efficiency — but it does not remove the industrial cost structure that creates the floor. Reaching \$10/MWh still requires the same conditions identified in the previous dispatch: large plants, high availability, low-cost financing, fast construction, and long plant life. DEC makes those conditions slightly easier to achieve, not unnecessary.
 
@@ -123,10 +145,11 @@ The path to 1-cent fusion energy does not run through direct energy conversion a
 1. Moir, R.W. & Barr, W.L., "Venetian-blind direct energy converter for fusion reactors," *Nuclear Fusion* 13, 35–45 (1973). [Link](https://www.osti.gov/biblio/4563116)
 2. Hoffman, M.A., "Electrostatic Direct Energy Converter Performance and Cost Scaling Laws," UCID-17560, LLNL (1977). [Link](https://www.osti.gov/biblio/7218298)
 3. Slough, J. et al., "Creation of a high-temperature plasma through merging and compression of supersonic field reversed configuration plasmoids," *Nuclear Fusion* 51(5), 053008 (2011). [Link](https://doi.org/10.1088/0029-5515/51/5/053008)
-4. Rider, T.H., "Fundamental limitations on plasma fusion systems not in thermodynamic equilibrium," PhD thesis, MIT (1995). [Link](https://doi.org/10.1063/1.871319)
+4. Ochs, I.E. et al., "Improving the feasibility of economical proton-boron-11 fusion via alpha channeling with a hybrid fast and thermal proton scheme," *Physical Review E* 106, 055215 (2022). [Link](https://doi.org/10.1103/PhysRevE.106.055215)
 5. Kirtley, D. et al., "Generalized burn cycle efficiency framework," APS DPP 2024, Abstract GO05.8. [Presentation](https://youtu.be/5nHmqk1cI2E?t=505)
 6. CATF IWG, "Extension of the Fusion Power Plant Costing Standard," arXiv:2602.19389 (2026). [Link](https://arxiv.org/abs/2602.19389)
 7. Rosa, R.J., *Magnetohydrodynamic Energy Conversion*, Hemisphere Publishing (1987). [Link](https://doi.org/10.1016/B978-0-08-025566-5.50008-1)
 8. GAO, "Magnetohydrodynamics: A Promising Technology for Efficiently Generating Electricity From Coal," EMD-80-14 (1980). [Link](https://www.gao.gov/products/emd-80-14)
-9. Realta Fusion, US Patent 12,166,398 B2, "Axisymmetric ferromagnetic venetian blinds" (2025). [Link](https://patents.google.com/patent/US12166398B2)
-10. 1cFE, "1costingfe: Open-source fusion techno-economic model." [GitHub](https://github.com/1cfe/1costingfe)
+9. Shea, D.A. & Morgan, D., "The Helium-3 Shortage: Supply, Demand, and Options for Congress," Congressional Research Service, R41419 (2010). [Link](https://www.everycrsreport.com/reports/R41419.html)
+10. Realta Fusion, US Patent 12,166,398 B2, "Axisymmetric ferromagnetic venetian blinds" (2025). [Link](https://patents.google.com/patent/US12166398B2)
+11. 1cFE, "1costingfe: Open-source fusion techno-economic model." [GitHub](https://github.com/1cfe/1costingfe)

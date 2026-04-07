@@ -17,6 +17,10 @@ class ConfinementConcept(Enum):
     MAG_TARGET = "mag_target"
     PLASMA_JET = "plasma_jet"
     PULSED_FRC = "pulsed_frc"
+    MAGLIF = "maglif"
+    THETA_PINCH = "theta_pinch"
+    DENSE_PLASMA_FOCUS = "dense_plasma_focus"
+    STAGED_ZPINCH = "staged_zpinch"
 
 
 class PulsedConversion(Enum):
@@ -34,6 +38,10 @@ CONCEPT_TO_FAMILY = {
     ConfinementConcept.MAG_TARGET: ConfinementFamily.PULSED,
     ConfinementConcept.PLASMA_JET: ConfinementFamily.PULSED,
     ConfinementConcept.PULSED_FRC: ConfinementFamily.PULSED,
+    ConfinementConcept.MAGLIF: ConfinementFamily.PULSED,
+    ConfinementConcept.THETA_PINCH: ConfinementFamily.PULSED,
+    ConfinementConcept.DENSE_PLASMA_FOCUS: ConfinementFamily.PULSED,
+    ConfinementConcept.STAGED_ZPINCH: ConfinementFamily.PULSED,
 }
 
 CONCEPT_DEFAULT_CONVERSION = {
@@ -43,6 +51,10 @@ CONCEPT_DEFAULT_CONVERSION = {
     ConfinementConcept.MAG_TARGET: PulsedConversion.THERMAL,
     ConfinementConcept.PLASMA_JET: PulsedConversion.THERMAL,
     ConfinementConcept.PULSED_FRC: PulsedConversion.INDUCTIVE_DEC,
+    ConfinementConcept.MAGLIF: PulsedConversion.THERMAL,
+    ConfinementConcept.THETA_PINCH: PulsedConversion.INDUCTIVE_DEC,
+    ConfinementConcept.DENSE_PLASMA_FOCUS: PulsedConversion.THERMAL,
+    ConfinementConcept.STAGED_ZPINCH: PulsedConversion.THERMAL,
 }
 
 

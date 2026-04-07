@@ -255,3 +255,68 @@ print(
     f" {r_vb.costs.overnight_cost:>10.0f}"
     f" {r_p.costs.overnight_cost:>10.0f}"
 )
+
+
+# ══════════════════════════════════════════════════════════════════════
+# TABLE 5: D-He3 BOP floors (blog D-He3 section)
+# ══════════════════════════════════════════════════════════════════════
+print()
+print("=" * 75)
+print("TABLE 5: D-He3 BOP floors — free core, fuel separated")
+print("=" * 75)
+
+m_dhe3 = CostModel(
+    concept=ConfinementConcept.MIRROR,
+    fuel=Fuel.DHE3,
+    power_cycle=PowerCycle.BRAYTON_SCO2,
+)
+
+FREE_CORE_DHE3 = {"CAS22": 0.0, "CAS27": 0.0}
+
+configs_dhe3 = [
+    ("Thermal only (sCO2 Brayton, 47%)", 0.0, 0.0),
+    ("VB DEC 60% + thermal (hybrid)", 0.9, 0.60),
+]
+
+energy_1gw = 8760 * 1000.0 * 0.85
+
+print(f"  {'Configuration':<45} {'BOP':>6} {'Fuel':>6} {'Total':>6}")
+print("-" * 68)
+for label, f_dec, eta_de in configs_dhe3:
+    kw = dict(BASE_KW, inflation_rate=INFLATION, cost_overrides=FREE_CORE_DHE3)
+    if f_dec > 0:
+        kw["f_dec"] = f_dec
+        kw["eta_de"] = eta_de
+    r = m_dhe3.forward(**kw)
+    fuel_mwh = r.costs.cas80 * 1e6 / energy_1gw
+    bop_floor = r.costs.lcoe - fuel_mwh
+    print(f"  {label:<45} {bop_floor:>5.0f} {fuel_mwh:>5.0f} {r.costs.lcoe:>5.0f}")
+
+# Pulsed inductive D-He3
+r_th_dhe3 = m_dhe3.forward(
+    **BASE_KW, inflation_rate=INFLATION, cost_overrides=FREE_CORE_DHE3
+)
+inv_dhe3 = 150.0
+cas21_p_dhe3 = float(r_th_dhe3.costs.cas21) * 0.75
+cas26_p_dhe3 = float(r_th_dhe3.costs.cas26) * 0.15
+r_p_dhe3 = m_dhe3.forward(
+    **BASE_KW,
+    inflation_rate=INFLATION,
+    f_dec=0.95,
+    eta_de=0.85,
+    cost_overrides={
+        "CAS22": inv_dhe3,
+        "CAS27": 0.0,
+        "CAS23": 0.0,
+        "CAS26": cas26_p_dhe3,
+        "CAS21": cas21_p_dhe3,
+    },
+)
+fuel_p = r_p_dhe3.costs.cas80 * 1e6 / energy_1gw
+bop_p = r_p_dhe3.costs.lcoe - fuel_p
+print(
+    f"  {'Pulsed inductive (85%, no turbine)':<45}"
+    f" {bop_p:>5.0f} {fuel_p:>5.0f} {r_p_dhe3.costs.lcoe:>5.0f}"
+)
+print()
+print("  He-3 price assumption: $2M/kg (optimistic).")

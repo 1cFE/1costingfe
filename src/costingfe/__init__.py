@@ -59,6 +59,10 @@ def compare_all(
             ConfinementConcept.MAG_TARGET,
             ConfinementConcept.PLASMA_JET,
             ConfinementConcept.PULSED_FRC,
+            ConfinementConcept.MAGLIF,
+            ConfinementConcept.THETA_PINCH,
+            ConfinementConcept.DENSE_PLASMA_FOCUS,
+            ConfinementConcept.STAGED_ZPINCH,
         ]
     if fuels is None:
         fuels = list(Fuel)

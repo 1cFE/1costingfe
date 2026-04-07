@@ -1,0 +1,40 @@
+# Default engineering parameters for MagLIF (Magnetized Liner Inertial Fusion)
+# Sandia-style: Z-pinch driver + laser preheat + axial magnetic field.
+# Liner is imploded by pulsed current, compressing magnetized preheated fuel.
+
+# Pulsed parameters
+e_driver_mj: 20.0       # Z-pinch driver energy per pulse [MJ]
+f_rep: 0.1               # Repetition rate [Hz] (limited by liner fabrication)
+pulsed_conversion: thermal
+f_rad: 0.10
+eta_pin: 0.15            # Z-pinch pulsed power wall-plug efficiency
+eta_dec: 0.85
+f_pdv: 0.80
+q_sci: 5.0
+
+mn: 1.1              # Neutron energy multiplier (breeding blanket)
+f_sub: 0.03          # Subsystem power fraction
+p_pump: 1.0          # Pumping power [MW]
+p_trit: 10.0         # Tritium processing power [MW]
+p_house: 4.0         # Housekeeping power [MW]
+p_cryo: 0.5          # Cryogenic power [MW] (for axial field coils)
+p_target: 3.0        # Liner manufacturing [MW]
+p_coils: 1.0         # Axial field coils [MW]
+
+# Radial build geometry [m] (cylindrical chamber)
+R0: 0.0
+plasma_t: 4.0        # Chamber radius
+blanket_t: 0.80      # Blanket thickness
+ht_shield_t: 0.25    # High-temperature shield
+structure_t: 0.20    # Primary structure
+vessel_t: 0.10       # Vacuum vessel
+
+construction_time_yr: 6.0
+
+# Fuel burn fraction defaults
+dd_f_T: 0.969
+dd_f_He3: 0.689
+dhe3_dd_frac: 0.07
+dhe3_f_T: 0.97
+pb11_f_alpha_n: 0.0
+pb11_f_p_n: 0.0

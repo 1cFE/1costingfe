@@ -34,6 +34,7 @@ _COIL_DEFAULTS = {
     ConfinementConcept.STELLARATOR: {"markup": 12.0, "path_factor": 2.0},
     ConfinementConcept.MIRROR: {"markup": 2.5, "path_factor": 1.0},
     ConfinementConcept.PULSED_FRC: {"markup": 1.5, "path_factor": 1.0},
+    ConfinementConcept.THETA_PINCH: {"markup": 1.5, "path_factor": 1.0},
 }
 
 _MU0 = 4 * math.pi * 1e-7  # Vacuum permeability (T·m/A)
@@ -196,8 +197,13 @@ def cas22_reactor_plant_equipment(
     # -----------------------------------------------------------------------
     if family == ConfinementFamily.STEADY_STATE:
         c220108 = cc.divertor_base * (p_th / 1000.0) ** 0.5
-    elif concept == ConfinementConcept.PULSED_FRC:
-        c220108 = 0.0  # In-situ plasmoid formation, no target factory
+    elif concept in (
+        ConfinementConcept.PULSED_FRC,
+        ConfinementConcept.THETA_PINCH,
+        ConfinementConcept.DENSE_PLASMA_FOCUS,
+        ConfinementConcept.STAGED_ZPINCH,
+    ):
+        c220108 = 0.0  # No manufactured targets
     else:  # IFE or MIF — target factory
         c220108 = cc.target_factory_base * (p_et / 1000.0) ** 0.7
 

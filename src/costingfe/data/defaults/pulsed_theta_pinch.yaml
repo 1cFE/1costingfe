@@ -1,0 +1,46 @@
+# Default engineering parameters for Theta Pinch
+# Linear pulsed magnetic compression with inductive energy recovery.
+# Open-ended geometry, copper coils, no manufactured targets.
+# Classic DEC candidate (Oliphant, Ribe & Coultas 1973).
+
+# Pulsed parameters
+e_driver_mj: 15.0       # Energy per pulse [MJ]
+f_rep: 1.0               # Repetition rate [Hz]
+pulsed_conversion: inductive_dec
+f_rad: 0.05
+eta_pin: 0.93            # Pulsed power wall-plug efficiency
+eta_dec: 0.70            # Conservative DEC efficiency (Oliphant 1973 baseline)
+f_pdv: 0.78              # PdV fraction (moderate expansion ratio ~10)
+q_sci: 3.0
+
+mn: 1.0              # No breeding blanket
+f_sub: 0.03
+p_pump: 0.0          # No thermal cycle pumping
+p_trit: 0.5          # Tritium monitoring [MW]
+p_house: 2.0         # Housekeeping [MW]
+p_cryo: 0.0          # Copper coils
+p_target: 0.0        # No manufactured targets
+p_coils: 0.5         # Compression coils average power [MW]
+
+# Coil parameters — copper pulsed coils
+coil_material: copper
+b_max: 8.0           # Peak compression field [T]
+r_coil: 0.4          # Winding bore [m]
+
+# Radial build geometry [m] (cylindrical)
+R0: 0.0
+plasma_t: 0.3        # Plasma radius [m]
+blanket_t: 0.05      # Thin first wall
+ht_shield_t: 0.05    # Minimal shielding
+structure_t: 0.10
+vessel_t: 0.10
+
+construction_time_yr: 4.0
+
+# Fuel burn fraction defaults
+dd_f_T: 0.969
+dd_f_He3: 0.689
+dhe3_dd_frac: 0.07
+dhe3_f_T: 0.97
+pb11_f_alpha_n: 0.0
+pb11_f_p_n: 0.0
