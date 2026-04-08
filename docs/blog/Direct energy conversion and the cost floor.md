@@ -60,7 +60,7 @@ The obstacle is that no fusion-MHD system has ever been built. The coal programs
 
 ## The Floor Doesn't Move Much
 
-Here is the comparison at aggressive conditions (2 GWe, 95% availability, 3% WACC, 50-year life, 3-year construction) where every lever is pulled:
+Here is the comparison at aggressive conditions (2 GWe, 95% availability, 3% WACC, 50-year life, 3-year construction) where every parameter is pushed:
 
 | Approach (2 GWe, pB11, free core) | Floor (\$/MWh) | Overnight (\$/kW) | Budget for core |
 | --- | --- | --- | --- |
@@ -134,7 +134,7 @@ The pulsed inductive floors in this post already assume the 40–100x cost reduc
 
 **7. MHD could close the gap, someday.** An MHD generator on the brem-heated coolant could convert the radiated fraction at >60% efficiency with no moving parts, eliminating the last piece of the conventional thermal plant. The physics is demonstrated. The engineering for fusion environments is not.
 
-The path to 1-cent fusion energy does not run through direct energy conversion alone. DEC is one lever (it raises the budget for the core by improving efficiency) but it does not remove the industrial cost structure that creates the floor. Reaching \$10/MWh still requires the same conditions identified in the previous dispatch: large plants, high availability, low-cost financing, fast construction, and long plant life. DEC makes those conditions slightly easier to achieve, not unnecessary.
+The path to 1-cent fusion energy does not run through direct energy conversion alone. DEC is one parameter (it raises the budget for the core by improving efficiency) but it does not remove the industrial cost structure that creates the floor. Reaching \$10/MWh still requires the same conditions identified in the previous dispatch: large plants, high availability, low-cost financing, fast construction, and long plant life. DEC makes those conditions slightly easier to achieve, not unnecessary.
 
 ## References
 

@@ -16,7 +16,7 @@ A fusion plant must convert the energy generated in the fusion core to useful el
 
 Using the [1costingfe](https://github.com/1cfe/1costingfe) techno-economic model, we can approximate costs for these components in a 1 GWe plant. The table below uses a supercritical CO2 Brayton cycle, which gives the lowest floor of the three options we modeled (Rankine, sCO2, and combined cycle). All numbers in this post can be reproduced with the [companion script](https://github.com/1cfe/1costingfe/blob/master/examples/lower_bound_blog_numbers.py).
 
-The table shows a D-T plant where all electric power goes through the thermal cycle. For fuels with direct energy conversion (D-He3, p-B11), roughly a third of the gross electric power bypasses the turbine entirely, reducing the turbine cost to ~$115M and the BOP subtotal to ~$305M:
+The table shows a D-T plant where all electric power goes through the thermal cycle. For fuels with direct energy conversion (D-He3, p-B11), roughly a third of the gross electric power bypasses the turbine entirely, reducing the turbine cost to $115M and the BOP subtotal to $305M:
 
 | Component | Cost | What it is |
 | --- | --- | --- |
@@ -51,14 +51,15 @@ The $29/MWh floor assumes a single 1 GWe plant built with commercial project fin
 - **Financing cost (WACC)** determines the annual capital charge rate
 - **Construction time** determines interest during construction
 - **Plant lifetime** determines how many years of revenue amortize the capital
+- **Staffing** determines O&M cost, which can be half the floor at large scale
 
 | Scenario (D-T) | Floor (\$/MWh) | Overnight (\$/kW) | Budget left for core |
 | --- | --- | --- | --- |
 | Baseline: 1 GWe, 85%, 7% WACC, 30yr, 6yr build | 29 | 1,720 | -\$19/MWh |
 | 2 GWe, 85%, 7%, 30yr, 6yr | 24 | 1,500 | -\$14/MWh |
-| 2 GWe, 95%, 3% WACC, 50yr, 3yr build | 14 | 1,210 | -\$3.7/MWh |
+| 2 GWe, 95%, 3%, 50yr, 3yr build | 14 | 1,210 | -\$3.7/MWh |
 | 3 GWe, 95%, 3%, 50yr, 3yr | 12 | 1,150 | -\$2.0/MWh |
-| 5 GWe, 95%, 2% WACC, 50yr, 3yr | 9.6 | 1,090 | +\$0.4/MWh |
+| 5 GWe, 95%, 2%, 50yr, 3yr | 9.6 | 1,090 | +\$0.4/MWh |
 
 Even at the most aggressive conditions (a 5 GWe plant with 95% availability, 2% WACC, 50-year life, and 3-year construction), the D-T floor barely crosses $10/MWh, leaving only $0.4/MWh of budget for the fusion core. That translates to roughly $40/kW of overnight capital for the entire core: magnets, heating, vacuum vessel, structure, power supplies, and installation. For reference, a single large superconducting magnet costs more than this. The D-T floor cannot be squeezed far enough to make room for the core.
 
@@ -72,14 +73,20 @@ Lights-out operation (already deployed in semiconductor fabs, chemical plants, a
 
 What prevents going to zero? The remaining functions are grid dispatch (mostly SCADA-automated already), routine maintenance, unplanned fault response, regulatory compliance, and security. Routine operations are automatable with current technology. The binding constraint is the unplanned event: a novel failure mode that requires judgment under uncertainty. If the 10-year technology trajectory holds (humanoid robotics for physical intervention, AI agents matching human expert judgment in relevant domains), the binding constraint shifts from technical capability to regulatory accountability. Utility-scale grid infrastructure may still require human accountability for some period regardless of what the technology can do. That is likely the imposed floor on staffing, not what is technically possible.
 
-Even with radical automation, D-T retains a staffing penalty. The radiation-specific roles may be reducible but not eliminable on any near-term horizon. As long as humans enter the plant for any reason, health physics coverage is required; as long as tritium is on site, accountability is required. Optimistically halving D-T staffing from 78 to 39 FTE at the aggressive 5 GWe conditions might shave $1-2/MWh from the floor, bringing it to $8-9/MWh. That is still not enough headroom for the core.
+But how much does staffing actually need to fall? At the aggressive 5 GWe conditions, the D-T floor is \$9.6/MWh, of which \$5.2/MWh is O&M. The capital-only floor is \$4.3/MWh, well below the target. D-T reaches 1 cent at this scale with current staffing levels. At 2 GWe (a more realistic near-term scale), the capital floor is \$5.8/MWh, and staffing needs to fall to about 53% of current levels (roughly 40 FTE instead of 78) to reach \$10/MWh.
 
+| Scenario (D-T, free core) | Floor | Capital only | Staffing threshold for 1 cent |
+| --- | --- | --- | --- |
+| 2 GWe, 95%, 3%, 50yr, 3yr | \$13.7/MWh | \$5.8/MWh | 53% of current (40 FTE) |
+| 5 GWe, 95%, 2%, 50yr, 3yr | \$9.6/MWh | \$4.3/MWh | 108% of current (no cuts needed) |
 
-# Look at lights out staffing for DT and see if it flips the conclusion
+Halving D-T staffing from 78 to 39 FTE is not lights-out operation. It is a moderate automation scenario: SCADA-automated grid dispatch, reduced shift coverage, streamlined radiation protection procedures. The radiation-specific roles resist full elimination (as long as humans enter the plant, health physics coverage is required; as long as tritium is on site, accountability is required), but a 50% reduction is within reach of current industrial automation technology.
+
+This means D-T *can* reach 1 cent at aggressive conditions, but only with large scale (2+ GWe), favorable financing, and moderate staffing automation. The margin is thin and leaves essentially no budget for the core. Compare this to p-B11, which reaches 1 cent at full staffing (see below).
 
 ## Fuel Choice Reshapes the Floor
 
-The D-T floor resists every lever we have applied: scale, financing, construction time, and staffing automation. The constraint is not the plant parameters. It is the fuel.
+The D-T floor resists every parameter we have pushed: scale, financing, construction time, and staffing automation. The constraint is not the plant parameters. It is the fuel.
 
 Different fuel choices produce different floors.
 
@@ -95,27 +102,27 @@ Proton-boron (p-B11) fuel is aneutronic: 99.8% of its fusion energy comes out as
 
 The $250M building cost gap between D-T and p-B11 is larger than most fusion core cost-reduction scenarios in the literature. This gap is not a statement about plasma physics difficulty. It is a statement about what the expectation of handling neutrons and tritium does to the cost of the building you put the plant in. The fuel choice reshapes the floor before the fusion core enters the picture.
 
-# Say something to the effect "with zero He3 cost, a DHe3 plant without a core is slightly more expensive than pb11, see next section"
+With zero He-3 fuel cost (self-bred), a D-He3 plant without a core is slightly more expensive than p-B11 (\$18/MWh vs \$17/MWh) due to the modest shielding required for D-D side reaction neutrons.
 
 ## Squeezing the p-B11 Floor
 
-The p-B11 baseline floor is $17/MWh, still 1.7x the target, but much closer than D-T. Applying the same levers:
+The p-B11 baseline floor is $17/MWh, still 1.7x the target, but much closer than D-T. Applying the same parameters:
 
 | Scenario (p-B11) | Floor (\$/MWh) | Overnight (\$/kW) | Budget left for core |
 | --- | --- | --- | --- |
 | Baseline: 1 GWe, 85%, 7% WACC, 30yr, 6yr build | 17 | 1,040 | -\$7/MWh |
 | 2 GWe, 85%, 7%, 30yr, 6yr | 13 | 890 | -\$3/MWh |
-| 2 GWe, 95%, 3% WACC, 50yr, 3yr build | 7.3 | 710 | +\$2.7/MWh |
+| 2 GWe, 95%, 3%, 50yr, 3yr build | 7.3 | 710 | +\$2.7/MWh |
 | 3 GWe, 95%, 3%, 50yr, 3yr | 6.4 | 670 | +\$3.6/MWh |
-| 5 GWe, 95%, 2% WACC, 50yr, 3yr | 5.1 | 630 | +\$4.9/MWh |
+| 5 GWe, 95%, 2%, 50yr, 3yr | 5.1 | 630 | +\$4.9/MWh |
 
-At 2 GWe with 95% availability, 3% WACC, 3-year construction, and 50-year life, the p-B11 floor drops to $7/MWh (below the target), leaving $2.7/MWh of budget for the fusion core. Compare this to D-T at the same conditions: $14/MWh floor, no budget for the core at all.
+At 2 GWe with 95% availability, 3% WACC, 3-year construction, and 50-year life, the p-B11 floor drops to $7/MWh (below the target), leaving $2.7/MWh of budget for the fusion core. Compare this to D-T at the same conditions: \$14/MWh floor at full staffing, or \$10/MWh with staffing halved, leaving no budget for the core either way.
 
 Is 3-year construction realistic for the BOP? Modern gas combined-cycle plants of comparable scale are built in 2-3 years. The BOP of a fusion plant is similar in scope and complexity. In the scenario we are solving for, we do not construct the fusion core, only the turbine halls, cooling systems, switchyards, and buildings. A 3% WACC is not realistic for an unsubsidized first-of-a-kind plant; commercial project finance for new energy technologies typically runs 7-10%. But government-backed financing (DOE Loan Programs Office, export credit agencies) routinely achieves 2-4% for qualifying infrastructure. The Vogtle nuclear expansion, for example, received an \$8.3B DOE loan guarantee. Reaching 3% WACC assumes the plant is financed as infrastructure, not as a venture bet.
 
 At the 2 GWe aggressive conditions, the remaining budget for the fusion core is $3/MWh, roughly $960/kW of overnight capital for magnets, heating, vacuum vessel, structure, power supplies, and installation. For reference, the entire overnight cost of a natural gas combined-cycle plant is $900-1,200/kW. The fusion core has to fit inside that budget while being none of those things (mature, mass-produced, or built at scale) yet.
 
-O&M staffing accounts for \$4/MWh of the \$7/MWh p-B11 floor, more than half. Because p-B11 has no radiation-specific roles, the staffing automation argument is much stronger here. The remaining functions (grid dispatch, routine maintenance, unplanned fault response) are the same as any conventional thermal plant. Lights-out operation could bring staffing from 30 to 15 employees, dropping the floor from \$7 to \$5/MWh.
+O&M staffing accounts for \$4/MWh of the \$7/MWh p-B11 floor, more than half. But unlike D-T, p-B11 is already below the 1-cent target at full staffing. No automation is required to reach \$10/MWh. Because p-B11 has no radiation-specific roles, the staffing automation argument is much stronger here, and the gains go directly to widening the core budget. The remaining functions (grid dispatch, routine maintenance, unplanned fault response) are the same as any conventional thermal plant. Lights-out operation could bring staffing from 30 to 15 employees, dropping the floor from \$7 to \$5/MWh.
 
 Radical staffing reduction also reshapes the buildings. A 15-FTE plant still needs a control room, canteen, locker rooms, parking. A near-zero-FTE plant looks more like a data center: remote monitoring, automated systems, minimal human-occupied space. That could strip \$50-100M from the \$320M building cost, flowing directly into overnight capital and LCOE. Together, near-zero staffing and the associated building scope reduction would drop the floor from \$7/MWh to roughly \$4/MWh, leaving \$6/MWh of budget for the fusion core, more than double the baseline. At the limit, automation does not just reduce O&M; it removes building scope.
 
@@ -129,17 +136,17 @@ This is not a theoretical curiosity. Helion Energy's approach to D-He3 fusion is
 
 Direct energy conversion is less mature than thermal cycles, and its cost uncertainty is much larger. The efficiency, capital cost, and reliability of direct conversion at utility scale are open questions. We will explore the economics of direct conversion in a future post.
 
-# visualization of all the datapoints in the tables at the same figure
+![Free-core LCOE floor by scenario](lower_bound_floor_chart.png)
 
 ## Conclusions
 
-**1. D-T cannot reach 1 cent.** Even with a free fusion core, a 5 GWe D-T plant at the most aggressive financial conditions barely crosses $10/MWh, leaving essentially no budget for the core. Even radical staffing automation cannot close the gap. Radiation-specific roles resist elimination. The buildings ($570M), staffing (78 FTE), and the procedures required to handle neutrons and tritium create a floor that is a structural consequence of the fuel, not the plant design.
+**1. D-T can reach 1 cent, but the margin is razor-thin.** At 5 GWe with the most aggressive financial conditions, D-T crosses \$10/MWh with current staffing, but leaves no budget for the core. At 2 GWe, it requires cutting staffing to about half of current levels. The buildings (\$570M), radiation-specific staffing, and the procedures required to handle neutrons and tritium eat most of the budget. D-T can reach the target, but only at extreme scale with favorable financing, and with essentially nothing left for the fusion core.
 
 **2. Fuel choice is a BOP decision, not just a core decision.** The $250M building cost gap between D-T ($570M) and p-B11 ($320M) is larger than most fusion core cost-reduction scenarios. Aneutronic fuel downgrades the buildings from enhanced-industrial to industrial, eliminates scheduled replacement campaigns for the fusion core, and removes tritium infrastructure entirely. These savings compound through indirect costs and financing. The D-T floor ($29/MWh) is nearly double the p-B11 floor ($17/MWh). D-He3 falls in between on BOP ($18/MWh) but is burdened by helium-3 fuel costs.
 
-**3. No single lever reaches 1 cent.** At standard financial conditions, even the p-B11 LCOE floor is 1.7x the target with a free fusion core. Reaching $10/MWh requires at least four favorable conditions simultaneously: scale (2+ GWe), high availability (95%+), low-cost financing (3% WACC or below), and fast construction (3 years or less). Each of these is individually achievable. Together they represent a systems integration challenge as much as an engineering one.
+**3. No single parameter reaches 1 cent.** At standard financial conditions, even the p-B11 LCOE floor is 1.7x the target with a free fusion core. Reaching $10/MWh requires at least four favorable conditions simultaneously: scale (2+ GWe), high availability (95%+), low-cost financing (3% WACC or below), and fast construction (3 years or less). Each of these is individually achievable. Together they represent a systems integration challenge as much as an engineering one.
 
-**4. Scale matters more than unit cost.** Going from 1 GWe to 2 GWe buys more LCOE reduction than any other single lever. Buildings, staff, and indirect costs do not double when the plant doubles. Staffing scales as P^0.5, so a 2 GWe plant needs 1.4x the staff of a 1 GWe plant, not 2x. This economy of scale does not depend on any technology breakthrough.
+**4. Scale matters more than unit cost.** Going from 1 GWe to 2 GWe buys more LCOE reduction than any other single parameter. Buildings, staff, and indirect costs do not double when the plant doubles. Staffing scales as P^0.5, so a 2 GWe plant needs 1.4x the staff of a 1 GWe plant, not 2x. This economy of scale does not depend on any technology breakthrough.
 
 **5. Direct conversion could change the floor entirely.** For aneutronic fuels, direct energy conversion bypasses the thermal cycle, the largest single component of the floor. If it works at the projected efficiencies, the economics of fusion change category: from squeezing a floor to building a fundamentally different kind of power plant.
 

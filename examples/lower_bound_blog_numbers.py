@@ -268,6 +268,84 @@ print(f"    Building savings:     ${cap_savings_mwh:.1f}/MWh (from ${bldg_s:.0f}
 print(f"  Near-zero core budget:  ${TARGET - near_zero_floor:.1f}/MWh")
 
 # ══════════════════════════════════════════════════════════════════════
+# SECTION: Staffing thresholds for 1 cent (blog staffing table)
+# ══════════════════════════════════════════════════════════════════════
+print()
+print("=" * 70)
+print("SECTION: Staffing thresholds for 1 cent")
+print("=" * 70)
+
+threshold_kw = dict(
+    net_electric_mw=2000.0,
+    availability=0.95,
+    lifetime_yr=50,
+    inflation_rate=INFLATION,
+    interest_rate=0.03,
+    construction_time_yr=3.0,
+)
+energy_thr = 8760 * 2000 * 0.95
+
+print("\n  2 GWe, 95%, 3% WACC, 50yr, 3yr:")
+print(f"  {'Fuel':<12} {'Floor':>7} {'Capital':>8} {'O&M':>7} {'Threshold':>12}")
+print("-" * 52)
+for label, model in [("DT", m_dt), ("pB11", m_pb11)]:
+    r = model.forward(**threshold_kw, cost_overrides=FREE_CORE)
+    om = r.costs.cas70 * 1e6 / energy_thr
+    cap = r.costs.lcoe - om
+    staff = r.costs.cas71 * 1e6 / energy_thr
+    repl = r.costs.cas72 * 1e6 / energy_thr
+    staff_thr = (TARGET - cap - repl) / staff if staff > 0 else float("inf")
+    if staff_thr > 1:
+        thr_str = "no cuts needed"
+    elif staff_thr < 0:
+        thr_str = "impossible"
+    else:
+        thr_str = f"{staff_thr:.0%} of current"
+    print(f"  {label:<12} {r.costs.lcoe:>6.1f} {cap:>7.1f} {om:>6.1f} {thr_str:>12}")
+
+# Also 5 GWe mega
+threshold_mega = dict(
+    net_electric_mw=5000.0,
+    availability=0.95,
+    lifetime_yr=50,
+    inflation_rate=INFLATION,
+    interest_rate=0.02,
+    construction_time_yr=3.0,
+)
+energy_mega = 8760 * 5000 * 0.95
+
+print("\n  5 GWe, 95%, 2% WACC, 50yr, 3yr:")
+print(f"  {'Fuel':<12} {'Floor':>7} {'Capital':>8} {'O&M':>7} {'Threshold':>12}")
+print("-" * 52)
+for label, model in [("DT", m_dt), ("pB11", m_pb11)]:
+    r = model.forward(**threshold_mega, cost_overrides=FREE_CORE)
+    om = r.costs.cas70 * 1e6 / energy_mega
+    cap = r.costs.lcoe - om
+    staff = r.costs.cas71 * 1e6 / energy_mega
+    repl = r.costs.cas72 * 1e6 / energy_mega
+    staff_thr = (TARGET - cap - repl) / staff if staff > 0 else float("inf")
+    if staff_thr > 1:
+        thr_str = "no cuts needed"
+    elif staff_thr < 0:
+        thr_str = "impossible"
+    else:
+        thr_str = f"{staff_thr:.0%} of current"
+    print(f"  {label:<12} {r.costs.lcoe:>6.1f} {cap:>7.1f} {om:>6.1f} {thr_str:>12}")
+
+# DT zero-staff floor
+print("\n  D-T with zero staffing:")
+for label, kw, en in [
+    ("2 GWe agg", threshold_kw, energy_thr),
+    ("5 GWe mega", threshold_mega, energy_mega),
+]:
+    r = m_dt.forward(**kw, cost_overrides=FREE_CORE)
+    om = r.costs.cas70 * 1e6 / en
+    zero_floor = r.costs.lcoe - om
+    budget = TARGET - zero_floor
+    print(f"  {label:<12} zero-staff floor=${zero_floor:.1f}/MWh  budget={budget:+.1f}")
+
+
+# ══════════════════════════════════════════════════════════════════════
 # SECTION: pB11 free-core floor breakdown
 # ══════════════════════════════════════════════════════════════════════
 print()
