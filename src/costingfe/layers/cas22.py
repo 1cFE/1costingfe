@@ -35,6 +35,8 @@ _COIL_DEFAULTS = {
     ConfinementConcept.MIRROR: {"markup": 2.5, "path_factor": 1.0},
     ConfinementConcept.PULSED_FRC: {"markup": 1.5, "path_factor": 1.0},
     ConfinementConcept.THETA_PINCH: {"markup": 1.5, "path_factor": 1.0},
+    ConfinementConcept.ORBITRON: {"markup": 1.5, "path_factor": 1.0},
+    ConfinementConcept.POLYWELL: {"markup": 2.0, "path_factor": 1.0},
 }
 
 _MU0 = 4 * math.pi * 1e-7  # Vacuum permeability (T·m/A)

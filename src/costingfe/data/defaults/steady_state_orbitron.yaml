@@ -1,0 +1,70 @@
+# Default engineering parameters for Orbitron (Avalanche Energy)
+# Crossed E×B electrostatic confinement. Ions in stable orbits at
+# fusion energies. Non-thermal plasma (suppressed bremsstrahlung).
+# Compact device, modular, steady-state.
+# Primary fuel: p-B11 (aneutronic, all charged products).
+
+p_input: 10.0        # E-field + injection power [MW]
+
+# Heating mix — no conventional heating systems.
+# p_input represents electrostatic power supply; map to NBI as proxy
+# for CAS22 costing (override C220104 for actual device).
+p_nbi: 0.0
+p_ecrh: 0.0
+p_icrf: 0.0
+p_lhcd: 0.0
+
+mn: 1.0              # No blanket multiplication (aneutronic target)
+eta_p: 0.5           # Pumping efficiency
+eta_pin: 0.80        # E-field power supply wall-plug efficiency
+eta_de: 0.70         # Electrostatic DEC efficiency on escaping alphas
+f_sub: 0.03          # Subsystem power fraction
+f_dec: 0.90          # Most charged products escape radially to DEC
+p_coils: 1.0         # Simple magnet power [MW]
+p_cool: 2.0          # Cooling power [MW]
+p_pump: 0.5          # Pumping power [MW]
+p_trit: 0.0          # No tritium (p-B11)
+p_house: 2.0         # Housekeeping power [MW]
+p_cryo: 0.0          # No cryogenics (permanent or normal-conducting magnets)
+
+# Coil parameters — simple magnets
+coil_material: copper
+b_max: 2.0           # Low field [T]
+r_coil: 0.3          # Small bore [m]
+
+# Radial build geometry [m] (cylindrical, compact)
+R0: 0.0
+plasma_t: 0.3        # Plasma radius [m] (compact device)
+elon: 1.0
+chamber_length: 2.0  # Short device
+blanket_t: 0.02      # Minimal (aneutronic)
+ht_shield_t: 0.02    # Minimal
+structure_t: 0.10
+vessel_t: 0.05
+
+# Construction
+construction_time_yr: 3.0  # Factory-built, compact
+
+# Plasma parameters for radiation calculation
+# Non-thermal: set low T_e to suppress bremsstrahlung in the model.
+# Real Orbitron has beam-like ions, not thermal — this is an approximation.
+n_e: 1.0e+18         # Low density [m^-3]
+T_e: 5.0             # Effective electron temperature [keV]
+Z_eff: 1.5           # Effective charge
+plasma_volume: 0.5   # Small volume [m^3]
+B: 1.0               # Central field [T]
+
+# Impurity model
+wall_material: W
+T_edge: 0.05
+tau_ratio: 3.0
+seeded_impurities: {}
+R_w: 0.3
+
+# Fuel burn fraction defaults
+dd_f_T: 0.969
+dd_f_He3: 0.689
+dhe3_dd_frac: 0.07
+dhe3_f_T: 0.97
+pb11_f_alpha_n: 0.0
+pb11_f_p_n: 0.0

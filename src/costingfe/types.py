@@ -21,6 +21,8 @@ class ConfinementConcept(Enum):
     THETA_PINCH = "theta_pinch"
     DENSE_PLASMA_FOCUS = "dense_plasma_focus"
     STAGED_ZPINCH = "staged_zpinch"
+    ORBITRON = "orbitron"
+    POLYWELL = "polywell"
 
 
 class PulsedConversion(Enum):
@@ -42,6 +44,8 @@ CONCEPT_TO_FAMILY = {
     ConfinementConcept.THETA_PINCH: ConfinementFamily.PULSED,
     ConfinementConcept.DENSE_PLASMA_FOCUS: ConfinementFamily.PULSED,
     ConfinementConcept.STAGED_ZPINCH: ConfinementFamily.PULSED,
+    ConfinementConcept.ORBITRON: ConfinementFamily.STEADY_STATE,
+    ConfinementConcept.POLYWELL: ConfinementFamily.STEADY_STATE,
 }
 
 CONCEPT_DEFAULT_CONVERSION = {
