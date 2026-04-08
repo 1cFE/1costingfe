@@ -69,6 +69,8 @@ def compare_all(
             ConfinementConcept.THETA_PINCH,
             ConfinementConcept.DENSE_PLASMA_FOCUS,
             ConfinementConcept.STAGED_ZPINCH,
+            ConfinementConcept.ORBITRON,
+            ConfinementConcept.POLYWELL,
         ]
     if fuels is None:
         fuels = list(Fuel)

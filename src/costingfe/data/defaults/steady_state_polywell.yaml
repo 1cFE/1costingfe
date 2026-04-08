@@ -1,0 +1,64 @@
+# Default engineering parameters for Polywell (EMC2-like)
+# Magnetic cusp geometry with electrostatic potential well.
+# Electrons confined magnetically in Wiffle Ball, ions confined
+# electrostatically. Quasi-steady-state.
+
+p_input: 20.0        # Electron injector + magnet power [MW]
+
+# Heating mix — electron injection, no conventional heating
+p_nbi: 0.0
+p_ecrh: 0.0
+p_icrf: 0.0
+p_lhcd: 0.0
+
+mn: 1.1              # Neutron multiplier (if D-T with blanket)
+eta_p: 0.5           # Pumping efficiency
+eta_pin: 0.70        # Electron injector wall-plug efficiency
+eta_de: 0.60         # DEC efficiency (cusp-loss collection)
+f_sub: 0.03          # Subsystem power fraction
+f_dec: 0.50          # Fraction of transport to DEC (cusp losses)
+p_coils: 3.0         # Cusp magnet power [MW]
+p_cool: 5.0          # Cooling power [MW]
+p_pump: 1.0          # Pumping power [MW]
+p_trit: 10.0         # Tritium processing [MW] (if D-T)
+p_house: 3.0         # Housekeeping power [MW]
+p_cryo: 0.5          # Cryogenic power [MW] (if superconducting cusps)
+
+# Coil parameters — cusp magnets
+coil_material: copper
+b_max: 5.0           # Cusp field [T]
+r_coil: 0.8          # Cusp radius [m]
+
+# Radial build geometry [m] (spherical-ish)
+R0: 0.0
+plasma_t: 0.5        # Plasma radius [m]
+elon: 1.0
+blanket_t: 0.50      # Blanket (if D-T)
+ht_shield_t: 0.15    # Shield
+structure_t: 0.15
+vessel_t: 0.10
+
+# Construction
+construction_time_yr: 4.0
+
+# Plasma parameters for radiation calculation
+n_e: 5.0e+19         # Electron density [m^-3]
+T_e: 10.0            # Electron temperature [keV]
+Z_eff: 1.3           # Effective charge
+plasma_volume: 1.0   # Small volume [m^3]
+B: 3.0               # Central field [T]
+
+# Impurity model
+wall_material: W
+T_edge: 0.1
+tau_ratio: 3.0
+seeded_impurities: {}
+R_w: 0.3
+
+# Fuel burn fraction defaults
+dd_f_T: 0.969
+dd_f_He3: 0.689
+dhe3_dd_frac: 0.07
+dhe3_f_T: 0.97
+pb11_f_alpha_n: 0.0
+pb11_f_p_n: 0.0
