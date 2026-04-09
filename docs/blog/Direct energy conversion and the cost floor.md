@@ -12,6 +12,8 @@ DEC only works on charged particles. Neutrons pass through unaffected, and photo
 
 Photons are a separate problem. For p-B11, bremsstrahlung is severe: the high plasma temperature (>100 keV) and the Z=5 boron nucleus drive intense radiation. In a best-case thermonuclear p-B11 plasma, bremsstrahlung carries away roughly 97% of fusion power; the margin between production and loss is only 3%. Driving the plasma out of thermal equilibrium can widen this to about 17% ([Ochs et al., 2022](https://doi.org/10.1103/PhysRevE.106.055215)), but bremsstrahlung still dominates. These photons hit the walls and become heat. The DEC handles the charged-particle margin; the thermal plant handles the rest.
 
+![p-B11 thermal only (f_dec=0), 1 GWe net output, Heating: 80 MW wall-plug, 40 MW delivered to plasma](<p-B11 Thermal Cycle.svg>)
+
 ## Three Architectures
 
 We modeled three DEC architectures with a free fusion core, using the same methodology as the previous dispatch. Numbers can be reproduced with the [companion script](https://github.com/1cfe/1costingfe/blob/master/examples/dec_blog_numbers.py).
@@ -49,6 +51,8 @@ The BOP floor is comparable to thermal: $17/MWh vs $18/MWh. The turbine island i
 The He-3 fuel cost is a different problem. At $2M/kg (optimistic), He-3 adds $49/MWh, five times the 1-cent target by itself. At the [DOE-allocated price](https://www.everycrsreport.com/reports/R41419.html) of $4.5M/kg, it roughly doubles. Helion's answer is to breed He-3 internally from D-D side reactions. If the fuel cost drops to zero, the D-He3 pulsed DEC floor is $17/MWh at baseline and $5–8/MWh at aggressive conditions, comparable to p-B11.
 
 The round-trip efficiency of the compression-expansion cycle is the other open question. Helion [claims 95%](https://www.helionenergy.com/) but has not published data. The [theoretical framework](https://youtu.be/5nHmqk1cI2E?t=505) (Kirtley et al., APS DPP 2024) suggests 68–87% is more realistic for plasma-present operation, depending on the burn cycle. If the efficiency is 85%, the system works. If it's 70%, the advantage over a turbine narrows. If it drops below 60%, the economics favor just building a turbine. Polaris (Helion's seventh device, under construction) is the make-or-break test.
+
+![D-He3 pulsed inductive DEC at 85%, f_dec=0.95, 95% of charged transport to DEC, 5% + neutrons to thermal](<D-He3 Pulsed Inductive DEC.svg>)
 
 ### 3. MHD Generator
 
@@ -107,6 +111,8 @@ The options for the radiated fraction are:
 4. **X-ray photovoltaic DEC**: convert bremsstrahlung directly to electricity via cascading Auger emission in nanometric high-Z/low-Z layers ([Binderbauer & Tajima, 2018](https://patents.google.com/patent/US9893226B2/)). If it works, this would capture the bremsstrahlung fraction without a thermal cycle, but no prototype has been built, no efficiency has been measured, and the radiation damage environment (keV photons at GW/m² flux for years) is extreme. This is a TRL 1 concept.
 
 Options 3 and 4 do not have a demonstrated path. The thermal plant is not optional today; it handles most of the energy. DEC captures the margin.
+
+![p-B11 venetian blind DEC at 60%, f_dec=0.9, 90% of transport to DEC, 10% hits walls as bremsstrahlung heat](<p-B11 VB DEC.svg>)
 
 ## Learning Rates
 
