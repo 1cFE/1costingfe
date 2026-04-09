@@ -197,12 +197,12 @@ def cas22_reactor_plant_equipment(
 
     # -----------------------------------------------------------------------
     # 220107: Power Supplies — vendor-purchased (ABB, GE, Siemens)
-    # High-current DC for magnets, pulsed power, switchgear.
-    # Inductive DEC: cap bank + switches + charging + buswork on $/J basis.
+    # Steady-state: high-current DC for superconducting magnets, switchgear.
+    # Pulsed: cap bank + switches + charging + buswork on $/J_stored basis.
     # See docs/account_justification/CAS22_plant_systems.md
     # -----------------------------------------------------------------------
-    if pulsed_conversion == PulsedConversion.INDUCTIVE_DEC:
-        # $/J_stored basis: cap bank + switches + charging + buswork
+    if family == ConfinementFamily.PULSED:
+        # $/J_stored basis: pulsed driver (cap bank, laser, accelerator)
         c220107 = cc.c_cap_allin_per_joule * e_stored_mj  # $/J * MJ = M$
     else:
         c220107 = cc.power_supplies_base * (p_et / 1000.0) ** 0.7
