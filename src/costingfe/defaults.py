@@ -105,6 +105,13 @@ class CostingConstants:
     f_rad_dhe3: float = 0.05
     f_rad_pb11: float = 0.15  # High Z^2 bremsstrahlung
 
+    # Steady-state radiation fraction (fraction of P_fus radiated as bremsstrahlung)
+    # Used to override compute_p_rad for fuels where bremsstrahlung dominates.
+    # p-B11: 87% with alpha channeling (Ochs et al. 2022, PhysRevE 106 055215)
+    # D-He3: 35% — needs further investigation
+    f_rad_fus_pb11: float = 0.87
+    f_rad_fus_dhe3: float = 0.35
+
     # PdV work fraction — fraction of charged-particle energy doing work
     # against confining field. For adiabatic expansion:
     # f_pdv = 1 - (1/r)^(gamma-1), gamma=5/3
@@ -303,6 +310,18 @@ class CostingConstants:
             Fuel.DHE3: self.f_rad_dhe3,
             Fuel.PB11: self.f_rad_pb11,
         }.get(fuel, self.f_rad_dt)
+
+    def f_rad_fus(self, fuel):
+        """Radiation fraction of P_fus for steady-state concepts.
+
+        Returns None for fuels where compute_p_rad should be used instead.
+        """
+        from costingfe.types import Fuel
+
+        return {
+            Fuel.PB11: self.f_rad_fus_pb11,
+            Fuel.DHE3: self.f_rad_fus_dhe3,
+        }.get(fuel)
 
     def spare_parts_frac(self, fuel):
         """Initial spare parts fraction of CAS22-28 for a given fuel type."""

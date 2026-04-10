@@ -131,6 +131,7 @@ class CostModel:
                 Z_eff=_to_num(params["Z_eff"]),
                 plasma_volume=_to_num(params["plasma_volume"]),
                 B=_to_num(params["B"]),
+                f_rad_fus=params.get("f_rad_fus", self.cc.f_rad_fus(self.fuel)),
             )
 
             fuel_frac_kw = dict(

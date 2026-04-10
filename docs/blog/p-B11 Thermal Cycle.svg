@@ -1,0 +1,76 @@
+<svg height="400" width="1000" xmlns="http://www.w3.org/2000/svg">
+<title>Your Diagram Title</title>
+<!-- Generated with SankeyMATIC: 4/9/2026, 8:29:10 PM -->
+<g transform="translate(134.51665,10)">
+<g id="sankey_flows">
+<path id="flow0" d="M10 40.94154v235.23389L181.65 276.56268v-235.23389z" fill="#d45" stroke-width="0.5" stroke="#d45" opacity="0.25"><title>Fusion Reactions → Charged Particles: 2,397</title></path>
+<path id="flow2" d="M191.65 143.68546C277.475 143.68546 277.475 140.89357 363.3 140.89357" fill="none" stroke-width="204.71335" stroke="#2a7fff" opacity="0.25"><title>Charged Particles → Bremsstrahlung → Thermal (sCO2): 2,086</title></path>
+<path id="flow5" d="M373.3 188.98059C459.125 188.98059 459.125 220.62055 544.95 220.62055" fill="none" stroke-width="108.53929" stroke="#c33" opacity="0.25"><title>Bremsstrahlung → Thermal (sCO2) → Waste Heat: 1,106</title></path>
+<path id="flow8" d="M554.95 79.36148C640.775 79.36148 640.775 75.37445 726.6 75.37445" fill="none" stroke-width="98.13679" stroke="#0a0" opacity="0.25"><title>Gross Electric → Net Electric: 1,000</title></path>
+<path id="flow4" d="M373.3 86.62392C459.125 86.62392 459.125 78.38012 544.95 78.38012" fill="none" stroke-width="96.17406" stroke="#6a3" opacity="0.25"><title>Bremsstrahlung → Thermal (sCO2) → Gross Electric: 980</title></path>
+<path id="flow3" d="M191.65 263.31421C277.475 263.31421 277.475 284.11537 363.3 284.11537" fill="none" stroke-width="34.54415" stroke="#2a7fff" opacity="0.25"><title>Charged Particles → Transport → Thermal (sCO2): 352</title></path>
+<path id="flow7" d="M373.3 292.26072C459.125 292.26072 459.125 284.01692 544.95 284.01692" fill="none" stroke-width="18.25344" stroke="#c33" opacity="0.25"><title>Transport → Thermal (sCO2) → Waste Heat: 186</title></path>
+<path id="flow6" d="M373.3 274.98864C459.125 274.98864 459.125 134.6125 544.95 134.6125" fill="none" stroke-width="16.29071" stroke="#6a3" opacity="0.25"><title>Transport → Thermal (sCO2) → Gross Electric: 166</title></path>
+<path id="flow9" d="M554.95 133.63113C640.775 133.63113 640.775 153.23714 726.6 153.23714" fill="none" stroke-width="10.4025" stroke="#bcbd22" opacity="0.25"><title>Gross Electric → BOP: 106</title></path>
+<path id="flow1" d="M10 301.73121C95.825 301.73121 95.825 278.52541 181.65 278.52541" fill="none" stroke-width="3.92547" stroke="#c80" opacity="0.25"><title>Heating System → Charged Particles: 40</title></path>
+<path id="flow10" d="M554.95 140.795 C 750 180, 780 330, 370 330 C -40 330, -20 315, 6 301.7" fill="none" stroke-width="3.92547" stroke="#c80" opacity="0.25"><title>Gross Electric → Heating System: 40</title></path>
+</g>
+<g id="sankey_nodes">
+<g class="node" style="touch-action: none;">
+<rect id="r0" class="for_r0" x="0" y="40.94154" height="235.23389" width="10" fill="#d45" fill-opacity="1"><title>Fusion Reactions:
+2,397</title></rect>
+</g>
+<g class="node" style="touch-action: none;">
+<rect id="r1" class="for_r1" x="181.65" y="41.32878" height="239.2575" width="10" fill="#2a7fff" fill-opacity="1"><title>Charged Particles:
+2,438</title></rect>
+</g>
+<g class="node" style="touch-action: none;">
+<rect id="r2" class="for_r2" x="0" y="299.76848" height="3.92547" width="10" fill="#c80" fill-opacity="1"><title>Heating System:
+40</title></rect>
+</g>
+<g class="node" style="touch-action: none;">
+<rect id="r3" class="for_r3" x="363.3" y="38.53689" height="204.71335" width="10" fill="#e8a030" fill-opacity="1"><title>Bremsstrahlung → Thermal (sCO2):
+2,086</title></rect>
+</g>
+<g class="node" style="touch-action: none;">
+<rect id="r4" class="for_r4" x="363.3" y="266.84329" height="34.54415" width="10" fill="#888" fill-opacity="1"><title>Transport → Thermal (sCO2):
+352</title></rect>
+</g>
+<g class="node" style="touch-action: none;">
+<rect id="r5" class="for_r5" x="544.95" y="30.29309" height="112.46476" width="10" fill="#6a3" fill-opacity="1"><title>Gross Electric:
+1,146</title></rect>
+</g>
+<g class="node" style="touch-action: none;">
+<rect id="r6" class="for_r6" x="544.95" y="166.3509" height="126.79274" width="10" fill="#c33" fill-opacity="1"><title>Waste Heat:
+1,292</title></rect>
+</g>
+<g class="node" style="touch-action: none;">
+<rect id="r7" class="for_r7" x="726.6" y="26.30605" height="98.13679" width="10" fill="#0a0" fill-opacity="1"><title>Net Electric:
+1,000</title></rect>
+</g>
+<g class="node" style="touch-action: none;">
+<rect id="r8" class="for_r8" x="726.6" y="148.03589" height="10.4025" width="10" fill="#bcbd22" fill-opacity="1"><title>BOP:
+106</title></rect>
+</g>
+</g>
+<g id="sankey_labels" font-family="sans-serif" font-size="16px" fill="#000000">
+<rect id="label0_bg" class="for_r0" x="-122.51667" y="136.83848" width="120.65" height="42.52001" rx="4" fill="#fff" fill-opacity="0.75" stroke="none" stroke-width="0" stroke-opacity="0"></rect>
+<text id="label0" class="for_r0" text-anchor="end" x="-6.53333" y="158.55848" font-weight="400" font-size="14.4px" dy="-4.12">Fusion Reactions<tspan x="-6.53333" dy="19.32" font-weight="400" font-size="17.6px">2,397</tspan></text>
+<rect id="label1_bg" class="for_r1" x="124.725" y="139.23753" width="123.85" height="42.52001" rx="4" fill="#fff" fill-opacity="0.75" stroke="none" stroke-width="0" stroke-opacity="0"></rect>
+<text id="label1" class="for_r1" text-anchor="middle" x="186.65" y="160.95753" font-weight="400" font-size="14.4px" dy="-4.12">Charged Particles<tspan x="186.65" dy="19.32" font-weight="400" font-size="17.6px">2,438</tspan></text>
+<rect id="label2_bg" class="for_r2" x="84.5" y="308" width="111.01667" height="42.52003" rx="4" fill="#fff" fill-opacity="0.75" stroke="none" stroke-width="0" stroke-opacity="0"></rect>
+<text id="label2" class="for_r2" text-anchor="middle" x="140" y="329.72" font-weight="400" font-size="14.4px" dy="-4.12">Heating System<tspan x="140" dy="19.32" font-weight="400" font-size="17.6px">40</tspan></text>
+<rect id="label3_bg" class="for_r3" x="250.34998" y="119.17357" width="235.9" height="42.52" rx="4" fill="#fff" fill-opacity="0.75" stroke="none" stroke-width="0" stroke-opacity="0"></rect>
+<text id="label3" class="for_r3" text-anchor="middle" x="368.3" y="140.89357" font-weight="400" font-size="14.4px" dy="-4.12">Bremsstrahlung → Thermal (sCO2)<tspan x="368.3" dy="19.32" font-weight="400" font-size="17.6px">2,086</tspan></text>
+<rect id="label4_bg" class="for_r4" x="270.23333" y="262.39535" width="196.13335" height="42.52003" rx="4" fill="#fff" fill-opacity="0.75" stroke="none" stroke-width="0" stroke-opacity="0"></rect>
+<text id="label4" class="for_r4" text-anchor="middle" x="368.3" y="284.11537" font-weight="400" font-size="14.4px" dy="-4.12">Transport → Thermal (sCO2)<tspan x="368.3" dy="19.32" font-weight="400" font-size="17.6px">352</tspan></text>
+<rect id="label5_bg" class="for_r5" x="500.46666" y="64.80547" width="98.96666" height="42.52" rx="4" fill="#fff" fill-opacity="0.75" stroke="none" stroke-width="0" stroke-opacity="0"></rect>
+<text id="label5" class="for_r5" text-anchor="middle" x="549.95" y="86.52547" font-weight="400" font-size="14.4px" dy="-4.12">Gross Electric<tspan x="549.95" dy="19.32" font-weight="400" font-size="17.6px">1,146</tspan></text>
+<rect id="label6_bg" class="for_r6" x="556.81667" y="208.02726" width="84.05001" height="42.52001" rx="4" fill="#fff" fill-opacity="0.75" stroke="none" stroke-width="0" stroke-opacity="0"></rect>
+<text id="label6" class="for_r6" text-anchor="start" x="561.48333" y="229.74727" font-weight="400" font-size="14.4px" dy="-4.12">Waste Heat<tspan x="561.48333" dy="19.32" font-weight="400" font-size="17.6px">1,292</tspan></text>
+<rect id="label7_bg" class="for_r7" x="738.46663" y="53.65445" width="82.96663" height="42.52" rx="4" fill="#fff" fill-opacity="0.75" stroke="none" stroke-width="0" stroke-opacity="0"></rect>
+<text id="label7" class="for_r7" text-anchor="start" x="743.13333" y="75.37445" font-weight="400" font-size="14.4px" dy="-4.12">Net Electric<tspan x="743.13333" dy="19.32" font-weight="400" font-size="17.6px">1,000</tspan></text>
+<rect id="label8_bg" class="for_r8" x="738.46663" y="131.51713" width="39.73336" height="42.52001" rx="4" fill="#fff" fill-opacity="0.75" stroke="none" stroke-width="0" stroke-opacity="0"></rect>
+<text id="label8" class="for_r8" text-anchor="start" x="743.13333" y="153.23714" font-weight="400" font-size="14.4px" dy="-4.12">BOP<tspan x="743.13333" dy="19.32" font-weight="400" font-size="17.6px">106</tspan></text>
+</g>
+</g></svg>
