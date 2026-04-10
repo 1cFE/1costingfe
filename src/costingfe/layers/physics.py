@@ -160,6 +160,7 @@ def mfe_forward_power_balance(
     R_w: float,
     # Genuine optional overrides (keep defaults)
     p_rad_override: float | None = None,
+    f_rad_fus: float | None = None,
     seeded_impurities: dict[str, float] | None = None,
 ) -> PowerTable:
     """MFE forward power balance: fusion power -> net electric.
@@ -168,7 +169,8 @@ def mfe_forward_power_balance(
     If P_rad > P_ash + P_input at the given T_e, heating power is increased
     to sustain the plasma (P_input_eff = P_rad - P_ash).
 
-    Radiation model: bremsstrahlung + synchrotron + impurity line radiation.
+    Radiation model: bremsstrahlung + synchrotron + impurity line radiation,
+    or f_rad_fus * P_fus when the radiation fraction is specified directly.
     """
     # Step 1: Ash/neutron split
     p_ash, p_neutron = ash_neutron_split(
@@ -184,7 +186,7 @@ def mfe_forward_power_balance(
 
     # Step 2: Build impurity mix (if wall_material provided)
     impurities = None
-    if wall_material is not None and p_rad_override is None:
+    if wall_material is not None and p_rad_override is None and f_rad_fus is None:
         wall_derived = {}
         symbol, f_z = compute_impurity_fraction(
             wall_material,
@@ -198,12 +200,14 @@ def mfe_forward_power_balance(
             wall_derived=wall_derived,
             seeded=seeded_impurities or {},
         )
-    elif seeded_impurities and p_rad_override is None:
+    elif seeded_impurities and p_rad_override is None and f_rad_fus is None:
         # Seeded impurities without wall material (wall_material=None explicitly)
         impurities = ImpurityMix(wall_derived={}, seeded=seeded_impurities)
 
     # Step 3: Radiation power
-    if p_rad_override is not None:
+    if f_rad_fus is not None:
+        p_rad = f_rad_fus * p_fus
+    elif p_rad_override is not None:
         p_rad = p_rad_override
     else:
         p_rad = compute_p_rad(
@@ -326,6 +330,7 @@ def mfe_inverse_power_balance(
     R_w: float,
     # Genuine optional overrides (keep defaults)
     p_rad_override: float | None = None,
+    f_rad_fus: float | None = None,
     seeded_impurities: dict[str, float] | None = None,
 ) -> float:
     """Inverse MFE power balance: target net electric -> required fusion power.
@@ -339,11 +344,13 @@ def mfe_inverse_power_balance(
     P_ash + P_input, the effective heating increases to sustain T_e, which
     raises recirculating power and penalises LCOE.
 
-    Newton converges in ≤2 iterations (piecewise-linear function).
+    When f_rad_fus is provided, P_rad = f_rad_fus * P_fus (proportional to
+    P_fus rather than constant).  P_net remains piecewise linear in P_fus,
+    so Newton still converges in ≤2 iterations.
     """
     # Step 1: Build impurity mix (if wall_material provided)
     impurities = None
-    if wall_material is not None and p_rad_override is None:
+    if wall_material is not None and p_rad_override is None and f_rad_fus is None:
         wall_derived = {}
         symbol, f_z = compute_impurity_fraction(
             wall_material,
@@ -357,26 +364,31 @@ def mfe_inverse_power_balance(
             wall_derived=wall_derived,
             seeded=seeded_impurities or {},
         )
-    elif seeded_impurities and p_rad_override is None:
+    elif seeded_impurities and p_rad_override is None and f_rad_fus is None:
         # Seeded impurities without wall material (wall_material=None explicitly)
         impurities = ImpurityMix(wall_derived={}, seeded=seeded_impurities)
 
-    # Step 2: Radiation power (constant w.r.t. p_fus)
-    if p_rad_override is not None:
-        p_rad_raw = p_rad_override
+    # Step 2: Radiation power
+    # When f_rad_fus is set, p_rad = f_rad_fus * p_fus (handled inside _p_net).
+    # Otherwise, p_rad is constant w.r.t. p_fus.
+    if f_rad_fus is None:
+        if p_rad_override is not None:
+            p_rad_raw = p_rad_override
+        else:
+            p_rad_raw = compute_p_rad(
+                n_e,
+                T_e,
+                Z_eff,
+                plasma_volume,
+                B,
+                impurities,
+                R=R_major,
+                a=a_minor,
+                kappa=kappa,
+                R_w=R_w,
+            )
     else:
-        p_rad_raw = compute_p_rad(
-            n_e,
-            T_e,
-            Z_eff,
-            plasma_volume,
-            B,
-            impurities,
-            R=R_major,
-            a=a_minor,
-            kappa=kappa,
-            R_w=R_w,
-        )
+        p_rad_raw = 0.0  # placeholder; _p_net uses f_rad_fus * pf
 
     # Step 3: Ash fraction from fuel type (use p_fus=1.0 to get the fraction)
     p_ash_unit, _ = ash_neutron_split(
@@ -384,6 +396,8 @@ def mfe_inverse_power_balance(
     )
     ash_frac = p_ash_unit
     neutron_frac = 1.0 - ash_frac
+    fr = f_rad_fus if f_rad_fus is not None else 0.0
+    use_frf = f_rad_fus is not None
 
     # Constant recirculating loads (independent of p_fus and p_input_eff)
     p_aux = p_trit + p_house
@@ -393,39 +407,59 @@ def mfe_inverse_power_balance(
     def _p_net(pf):
         pa = ash_frac * pf
         pn = neutron_frac * pf
-        # Plasma energy balance: effective heating covers radiation deficit
-        pi_eff = jnp.maximum(p_input, p_rad_raw - pa)
-        p_transport = pa + pi_eff - p_rad_raw
+        pr = fr * pf if use_frf else p_rad_raw
+        pi_eff = jnp.maximum(p_input, pr - pa)
+        p_transport = pa + pi_eff - pr
         p_dee = f_dec * eta_de * p_transport
         p_wall = (1.0 - f_dec) * p_transport
-        # P_input enters via transport, not directly into P_th
-        p_th = mn * pn + p_rad_raw + p_wall + eta_p * p_pump
+        p_th = mn * pn + pr + p_wall + eta_p * p_pump
         p_et = eta_th * p_th + p_dee
         p_sub = f_sub * p_et
         return p_et - p_sub - p_recirc_base - pi_eff / eta_pin
 
-    # Analytical dP_net/dP_fus (piecewise constant — function is piecewise linear)
+    # Analytical dP_net/dP_fus (piecewise linear in P_fus)
     def _dp_net(pf):
         pa = ash_frac * pf
-        capped = p_rad_raw >= pa + p_input
-        # Uncapped: p_input_eff = p_input (constant), transport active
-        dp_uncapped = (1.0 - f_sub) * (
+        pr = fr * pf if use_frf else p_rad_raw
+        capped = pr >= pa + p_input
+        if use_frf:
+            # Uncapped: pi_eff = p_input, transport = (af - fr)*pf + p_input
+            # p_th = (mn*nf + f_dec*fr + (1-f_dec)*af)*pf + const
+            dp_uncapped = (1.0 - f_sub) * (
+                eta_th * (mn * neutron_frac + f_dec * fr + (1.0 - f_dec) * ash_frac)
+                + f_dec * eta_de * (ash_frac - fr)
+            )
+            # Capped: pi_eff = (fr - af)*pf, transport = 0
+            # p_th = (mn*nf + fr)*pf + const
+            dp_capped = (1.0 - f_sub) * eta_th * (mn * neutron_frac + fr) - (
+                fr - ash_frac
+            ) / eta_pin
+        else:
+            # Original: p_rad constant
+            dp_uncapped = (1.0 - f_sub) * (
+                eta_th * (mn * neutron_frac + (1.0 - f_dec) * ash_frac)
+                + f_dec * eta_de * ash_frac
+            )
+            dp_capped = (1.0 - f_sub) * eta_th * mn * neutron_frac + ash_frac / eta_pin
+        return jnp.where(capped, dp_capped, dp_uncapped)
+
+    # Step 5: Linear initial guess (uncapped assumption)
+    if use_frf:
+        c_et = eta_th * (
+            mn * neutron_frac + f_dec * fr + (1.0 - f_dec) * ash_frac
+        ) + f_dec * eta_de * (ash_frac - fr)
+        c_et0 = (
+            eta_th * ((1.0 - f_dec) * p_input + eta_p * p_pump)
+            + f_dec * eta_de * p_input
+        )
+    else:
+        c_et = (
             eta_th * (mn * neutron_frac + (1.0 - f_dec) * ash_frac)
             + f_dec * eta_de * ash_frac
         )
-        # Capped: p_input_eff = p_rad - p_ash → dp_input_eff/dp_fus = -ash_frac
-        # transport = 0, p_th = mn*nf*pf + p_rad + eta_p*p_pump
-        dp_capped = (1.0 - f_sub) * eta_th * mn * neutron_frac + ash_frac / eta_pin
-        return jnp.where(capped, dp_capped, dp_uncapped)
-
-    # Step 5: Linear initial guess (uncapped assumption — P_input in transport)
-    c_et = (
-        eta_th * (mn * neutron_frac + (1.0 - f_dec) * ash_frac)
-        + f_dec * eta_de * ash_frac
-    )
-    c_et0 = eta_th * (
-        f_dec * p_rad_raw + (1.0 - f_dec) * p_input + eta_p * p_pump
-    ) + f_dec * eta_de * (p_input - p_rad_raw)
+        c_et0 = eta_th * (
+            f_dec * p_rad_raw + (1.0 - f_dec) * p_input + eta_p * p_pump
+        ) + f_dec * eta_de * (p_input - p_rad_raw)
     p_recirc_init = p_recirc_base + p_input / eta_pin
     p_fus = (p_net_target + p_recirc_init - (1.0 - f_sub) * c_et0) / (
         (1.0 - f_sub) * c_et
