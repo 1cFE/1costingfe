@@ -98,7 +98,7 @@ class CostingInput(BaseModel):
     # p_coils: already declared above (shared MFE/PULSED)
 
     # Pulsed (new unified parameter set)
-    e_driver_mj: float | None = None
+    q_eng: float | None = None
     f_rep: float | None = None
     f_rad: float | None = None
     eta_dec: float | None = None
@@ -144,7 +144,7 @@ class CostingInput(BaseModel):
         "elon",
     ]
     _PULSED_REQUIRED = [
-        "e_driver_mj",
+        "q_eng",
         "f_rep",
         "eta_pin",
         "p_target",
@@ -295,7 +295,7 @@ class CostingInput(BaseModel):
         )
 
         pulsed_params = [
-            self.e_driver_mj,
+            self.q_eng,
             self.f_rep,
             self.eta_pin,
             self.p_target,
@@ -303,10 +303,13 @@ class CostingInput(BaseModel):
         if any(v is None for v in pulsed_params):
             return
 
+        # Thermal inverse requires eta_th > 0; skip for DEC (eta_th=0)
+        if self.eta_th is not None and self.eta_th == 0.0:
+            return
+
         p_net_per_mod = self.net_electric_mw / self.n_mod
         common_kw = dict(
             fuel=self.fuel,
-            e_driver_mj=self.e_driver_mj,
             f_rep=self.f_rep,
             mn=self.mn,
             eta_th=self.eta_th,
@@ -320,16 +323,10 @@ class CostingInput(BaseModel):
             p_target=self.p_target,
             p_coils=self.p_coils or 0.0,
         )
-        # Run a reference forward to get q_eng for the inverse
-        ref_pt = pulsed_thermal_forward(p_fus=1000.0, **common_kw)
-        inv_kw = {
-            k: v for k, v in common_kw.items() if k not in ("fuel", "e_driver_mj")
-        }
         p_fus, e_driver_solved = pulsed_thermal_inverse(
             p_net_target=p_net_per_mod,
-            fuel=self.fuel,
-            q_eng=ref_pt.q_eng,
-            **inv_kw,
+            q_eng=self.q_eng,
+            **common_kw,
         )
         common_kw["e_driver_mj"] = e_driver_solved
         pt = pulsed_thermal_forward(

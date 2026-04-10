@@ -181,9 +181,9 @@ class TestTier2FamilyRequiredParams:
                 elon=1.7,
             )
 
-    def test_pulsed_missing_e_driver_mj_rejected(self):
-        """Pulsed concept missing e_driver_mj should be rejected."""
-        with pytest.raises(ValidationError, match="e_driver_mj"):
+    def test_pulsed_missing_q_eng_rejected(self):
+        """Pulsed concept missing q_eng should be rejected."""
+        with pytest.raises(ValidationError, match="q_eng"):
             CostingInput(
                 concept=ConfinementConcept.LASER_IFE,
                 fuel=Fuel.DT,

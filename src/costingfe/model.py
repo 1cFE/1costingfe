@@ -536,7 +536,7 @@ class CostModel:
 
         # Pulsed driver power (MW) for C220104 driver costing
         if self.family == ConfinementFamily.PULSED:
-            p_driver = params["e_driver_mj"] * params["f_rep"]
+            p_driver = pt.e_driver_mj * params["f_rep"]
         else:
             p_driver = 0.0
 
@@ -816,7 +816,7 @@ class CostModel:
                 "disruption_downtime",
             ],
             ConfinementFamily.PULSED: [
-                "e_driver_mj",
+                "q_eng",
                 "f_rep",
                 "eta_pin",
                 "f_rad",
@@ -824,7 +824,6 @@ class CostModel:
                 "p_coils",
                 "eta_dec",
                 "f_pdv",
-                "q_sci",
             ],
         }
         return common + family_specific.get(self.family, [])
