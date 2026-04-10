@@ -1,16 +1,15 @@
 # Default engineering parameters for MagLIF (Magnetized Liner Inertial Fusion)
+q_eng: 3.0               # Engineering gain target (P_et / P_recirc)
 # Sandia-style: Z-pinch driver + laser preheat + axial magnetic field.
 # Liner is imploded by pulsed current, compressing magnetized preheated fuel.
 
 # Pulsed parameters
-e_driver_mj: 20.0       # Z-pinch driver energy per pulse [MJ]
 f_rep: 0.1               # Repetition rate [Hz] (limited by liner fabrication)
 pulsed_conversion: thermal
 f_rad: 0.10
 eta_pin: 0.15            # Z-pinch pulsed power wall-plug efficiency
 eta_dec: 0.85
 f_pdv: 0.80
-q_sci: 5.0
 
 mn: 1.1              # Neutron energy multiplier (breeding blanket)
 f_sub: 0.03          # Subsystem power fraction

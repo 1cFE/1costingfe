@@ -1,17 +1,16 @@
 # Default engineering parameters for pulsed FRC (Helion-like)
+q_eng: 3.0               # Engineering gain target (P_et / P_recirc)
 # Colliding field-reversed configuration with inductive DEC.
 # Copper pulsed coils, no superconductors, no cryogenics.
 # In-situ plasmoid formation (no manufactured targets).
 
 # Pulsed parameters
-e_driver_mj: 12.0       # Energy delivered to plasma per pulse [MJ]
 f_rep: 1.0               # Repetition rate [Hz]
 pulsed_conversion: inductive_dec
 f_rad: 0.05              # Radiation fraction (D-He3, short burn)
 eta_pin: 0.95            # Solid-state pulsed power wall-plug efficiency
 eta_dec: 0.85            # Inductive DEC efficiency (coil-to-cap)
 f_pdv: 0.80              # PdV work fraction
-q_sci: 5.0               # Scientific gain target
 
 mn: 1.0              # No breeding blanket (no neutron multiplier)
 f_sub: 0.03          # Subsystem power fraction

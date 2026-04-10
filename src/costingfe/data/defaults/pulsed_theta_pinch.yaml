@@ -1,17 +1,16 @@
 # Default engineering parameters for Theta Pinch
+q_eng: 3.0               # Engineering gain target (P_et / P_recirc)
 # Linear pulsed magnetic compression with inductive energy recovery.
 # Open-ended geometry, copper coils, no manufactured targets.
 # Classic DEC candidate (Oliphant, Ribe & Coultas 1973).
 
 # Pulsed parameters
-e_driver_mj: 15.0       # Energy per pulse [MJ]
 f_rep: 1.0               # Repetition rate [Hz]
 pulsed_conversion: inductive_dec
 f_rad: 0.05
 eta_pin: 0.93            # Pulsed power wall-plug efficiency
 eta_dec: 0.70            # Conservative DEC efficiency (Oliphant 1973 baseline)
 f_pdv: 0.78              # PdV fraction (moderate expansion ratio ~10)
-q_sci: 3.0
 
 mn: 1.0              # No breeding blanket
 f_sub: 0.03
