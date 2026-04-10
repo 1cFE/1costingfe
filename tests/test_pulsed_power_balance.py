@@ -58,11 +58,16 @@ def test_thermal_forward_no_pump_without_thermal():
 
 def test_thermal_inverse_roundtrip():
     pt = pulsed_thermal_forward(**THERMAL_PARAMS)
-    inv_params = {k: v for k, v in THERMAL_PARAMS.items() if k not in ("p_fus", "fuel")}
-    p_fus_recovered = pulsed_thermal_inverse(
-        p_net_target=pt.p_net, fuel=Fuel.DT, **inv_params
+    inv_params = {
+        k: v
+        for k, v in THERMAL_PARAMS.items()
+        if k not in ("p_fus", "fuel", "e_driver_mj")
+    }
+    p_fus_recovered, e_driver_recovered = pulsed_thermal_inverse(
+        p_net_target=pt.p_net, fuel=Fuel.DT, q_eng=pt.q_eng, **inv_params
     )
     assert abs(p_fus_recovered - 2500.0) < 0.5
+    assert abs(e_driver_recovered - 100.0) < 0.5
 
 
 # ---------------------------------------------------------------------------

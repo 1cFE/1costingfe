@@ -641,7 +641,7 @@ def pulsed_thermal_forward(
 def pulsed_thermal_inverse(
     p_net_target: float,
     fuel: Fuel,
-    e_driver_mj: float,
+    q_eng: float,
     f_rep: float,
     mn: float,
     eta_th: float,
@@ -660,13 +660,24 @@ def pulsed_thermal_inverse(
     dhe3_f_T: float = 0.97,
     pb11_f_alpha_n: float = 0.0,
     pb11_f_p_n: float = 0.0,
-) -> float:
-    """Inverse pulsed thermal power balance: target net electric -> required P_fus.
+) -> tuple[float, float]:
+    """Inverse pulsed thermal power balance.
 
-    Closed-form linear inversion: P_net = a * P_fus + b, solve for P_fus.
-    f_rad doesn't affect thermal pool size since p_rad + p_charged_net = p_ash.
+    Target net electric -> required P_fus and E_driver.
+    Derives driver energy from q_eng, then solves for P_fus.
     """
-    p_driver = e_driver_mj * f_rep
+    # Derive gross electric and recirculating from q_eng
+    p_et = p_net_target * q_eng / (q_eng - 1.0)
+    p_recirc = p_et / q_eng
+
+    # Solve for p_driver from recirculating budget
+    # p_recirc = p_driver/eta_pin + pump_term + f_sub*p_et
+    #          + p_aux + p_cryo + p_target + p_coils
+    pump_term = jnp.where(eta_th > 0, p_pump, 0.0)
+    p_aux = p_trit + p_house
+    fixed_loads = pump_term + f_sub * p_et + p_aux + p_cryo + p_target + p_coils
+    p_driver = (p_recirc - fixed_loads) * eta_pin
+    e_driver_mj = p_driver / f_rep
 
     # Ash fraction
     ash_frac, _ = ash_neutron_split(
@@ -681,35 +692,12 @@ def pulsed_thermal_inverse(
     )
     neutron_frac = 1.0 - ash_frac
 
-    # p_th = (mn * neutron_frac + ash_frac) * p_fus + p_driver + pump_term
     # p_et = eta_th * p_th
-    # p_sub = f_sub * p_et
-    pump_term = jnp.where(eta_th > 0, p_pump, 0.0)
-
-    c_th = mn * neutron_frac + ash_frac  # coefficient of p_fus in p_th
-    c_th0 = p_driver + pump_term  # constant part of p_th
-
-    c_et = eta_th * c_th  # coefficient of p_fus in p_et
-    c_et0 = eta_th * c_th0  # constant part of p_et
-
-    # Recirculating loads
-    p_aux = p_trit + p_house
-    # p_fus-dependent recirculating: f_sub * c_et * p_fus
-    c_recirc = f_sub * c_et
-    # Constant recirculating
-    c_recirc0 = (
-        p_driver / eta_pin
-        + pump_term
-        + f_sub * c_et0
-        + p_aux
-        + p_cryo
-        + p_target
-        + p_coils
-    )
-
-    # P_net = p_et - recirculating = (c_et - c_recirc) * p_fus + (c_et0 - c_recirc0)
-    p_fus = (p_net_target - c_et0 + c_recirc0) / (c_et - c_recirc)
-    return p_fus
+    # p_th = (mn*nfrac + ash_frac)*p_fus + p_driver + pump
+    # Solve for p_fus
+    c_th = mn * neutron_frac + ash_frac
+    p_fus = (p_et / eta_th - p_driver - pump_term) / c_th
+    return p_fus, e_driver_mj
 
 
 # ---------------------------------------------------------------------------

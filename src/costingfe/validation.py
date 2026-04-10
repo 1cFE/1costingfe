@@ -320,10 +320,18 @@ class CostingInput(BaseModel):
             p_target=self.p_target,
             p_coils=self.p_coils or 0.0,
         )
-        p_fus = pulsed_thermal_inverse(
+        # Run a reference forward to get q_eng for the inverse
+        ref_pt = pulsed_thermal_forward(p_fus=1000.0, **common_kw)
+        inv_kw = {
+            k: v for k, v in common_kw.items() if k not in ("fuel", "e_driver_mj")
+        }
+        p_fus, e_driver_solved = pulsed_thermal_inverse(
             p_net_target=p_net_per_mod,
-            **common_kw,
+            fuel=self.fuel,
+            q_eng=ref_pt.q_eng,
+            **inv_kw,
         )
+        common_kw["e_driver_mj"] = e_driver_solved
         pt = pulsed_thermal_forward(
             p_fus=p_fus,
             **common_kw,

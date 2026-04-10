@@ -237,10 +237,14 @@ class CostModel:
                     **dec_kw,
                 )
             else:
-                p_fus = pulsed_thermal_inverse(
+                q_eng = params.get("q_eng", 5.0)
+                inv_kw = {k: v for k, v in common_kw.items() if k != "e_driver_mj"}
+                p_fus, e_driver_solved = pulsed_thermal_inverse(
                     p_net_target=p_net_per_mod,
-                    **common_kw,
+                    q_eng=q_eng,
+                    **inv_kw,
                 )
+                common_kw["e_driver_mj"] = e_driver_solved
                 pt = pulsed_thermal_forward(
                     p_fus=p_fus,
                     **common_kw,
