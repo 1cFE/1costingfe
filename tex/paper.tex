@@ -896,14 +896,26 @@ provides two pulsed power balance variants, selected by the
 \texttt{PulsedConversion} parameter.
 
 \subsubsection{Per-pulse energy framework.}
-Each pulse delivers a driver energy $E_{\text{drv}}$ (MJ) at a
-repetition rate $f_{\text{rep}}$ (Hz).  The average driver power is
-$P_{\text{drv}} = E_{\text{drv}} \, f_{\text{rep}}$.  The driver
-wall-plug efficiency $\eta_{\text{pin}}$ relates stored energy to
-delivered energy: $E_{\text{stored}} = E_{\text{drv}} / \eta_{\text{pin}}$.
+The user specifies three primary inputs: the target net electric power
+$P_{\text{net}}^*$, the engineering gain $Q_{\text{eng}} = P_{\text{et}}
+/ P_{\text{recirc}}$, and the repetition rate $f_{\text{rep}}$ (Hz).
+From these, the model derives the required driver energy per pulse
+$E_{\text{drv}}$ (MJ), the average driver power
+$P_{\text{drv}} = E_{\text{drv}} \, f_{\text{rep}}$, and the fusion
+power $P_{\text{fus}}$.  The scientific gain
+$Q_{\text{sci}} = P_{\text{fus}} / P_{\text{drv}}$ falls out as a
+derived quantity.  The driver wall-plug efficiency $\eta_{\text{pin}}$
+relates stored energy to delivered energy:
+$E_{\text{stored}} = E_{\text{drv}} / \eta_{\text{pin}}$.
 The charged-particle fraction $f_{\text{ch}}$ is derived from the fuel
 type and determines the ash--neutron split, while
 $f_{\text{rad}}$ is the fraction of ash power radiated during the burn.
+
+$Q_{\text{eng}}$ is preferred over $Q_{\text{sci}}$ as the primary input
+because it directly determines economic viability ($Q_{\text{eng}} < 1$
+means no net power; $Q_{\text{eng}} \approx 2$ means 50\% recirculation),
+and it works uniformly across thermal and DEC conversion pathways without
+requiring concept-dependent parameterization.
 
 \subsubsection{Pulsed thermal conversion.}
 For laser IFE and Z-pinch concepts the driver energy thermalises into
@@ -973,7 +985,27 @@ the required capacitor bank size rather than inflating it.
 
 The costing model operates in ``inverse'' mode: given a target net
 electric output $P_{\text{net}}^*$, determine the required fusion power
-$P_{\text{fus}}$.  Substituting the forward power balance into
+$P_{\text{fus}}$.
+
+\subsubsection{Pulsed inverse.}
+For pulsed concepts, $Q_{\text{eng}}$ determines the gross electric and
+recirculating powers directly:
+\begin{align}
+P_{\text{et}} &= P_{\text{net}}^* \cdot \frac{Q_{\text{eng}}}{Q_{\text{eng}} - 1}, \\
+P_{\text{recirc}} &= P_{\text{et}} / Q_{\text{eng}}.
+\end{align}
+The driver power follows from the recirculating budget.  For thermal
+conversion, $P_{\text{recirc}} = P_{\text{drv}}/\eta_{\text{pin}}
++ P_{\text{fixed}}$; for inductive DEC,
+$P_{\text{recirc}} = P_{\text{drv}}(1/\eta_{\text{pin}} - 1)
++ P_{\text{fixed}}$, where $P_{\text{fixed}}$ collects
+pumping, subsystem, auxiliary, cryogenic, target, and coil loads.
+Then $E_{\text{drv}} = P_{\text{drv}} / f_{\text{rep}}$, and
+$P_{\text{fus}}$ is obtained from the forward energy balance
+with the derived $E_{\text{drv}}$.  The inversion is closed-form
+(linear in $P_{\text{drv}}$ and $P_{\text{fus}}$).
+
+\subsubsection{Steady-state inverse.}  Substituting the forward power balance into
 \cref{eq:p-net} gives $P_{\text{net}}(P_{\text{fus}})$; the inverse
 problem is to find the root
 $P_{\text{net}}(P_{\text{fus}}) = P_{\text{net}}^*$.
