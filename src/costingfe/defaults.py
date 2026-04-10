@@ -53,6 +53,13 @@ class CostingConstants:
     heating_icrf_per_mw: float = 4.1494  # Ion Cyclotron Resonance Frequency
     heating_ecrh_per_mw: float = 5.0  # Electron Cyclotron Resonance Heating (gyrotrons)
     heating_lhcd_per_mw: float = 4.0  # Lower Hybrid Current Drive (klystrons)
+    # 220104: Pulsed driver capital — per-MW linear costs (M$/MW, 2023$)
+    # Used when family == PULSED; concept-dispatched in cas22.py C220104
+    driver_laser_per_mw: float = 8.0  # Diode-pumped solid-state laser (NOAK)
+    driver_heavy_ion_per_mw: float = 12.0  # RF linac + storage rings
+    driver_mag_target_per_mw: float = 3.0  # Pneumatic pistons, liquid metal loop
+    driver_plasma_jet_per_mw: float = 4.0  # Plasma gun array
+    driver_maglif_per_mw: float = 6.0  # Laser preheat (Z-pinch electrical in C220107)
     # 220105: Primary Structure — volume-based (M$/m³)
     structure_unit_cost: float = 0.15  # Calibrated at ~208 m³
     # 220106: Vacuum System — volume-based (M$/m³)

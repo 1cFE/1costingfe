@@ -143,6 +143,14 @@ are actively working to reduce.
 | Tokamak | 8.0× | TF + CS + PF coil systems. Complex D-shaped winding, insulation, quench protection, structural casing, cryostat integration. Conductor is ~10–15% of finished magnet cost. |
 | Stellarator | 12.0× | Non-planar 3D coil geometry. Tighter tolerances, longer winding paths (2× path factor), higher manufacturing complexity. |
 | Mirror | 2.5× | Simple solenoid coils. Well-established manufacturing. 4 independent coils. |
+| Pulsed FRC | 1.5× | Theta-pinch formation coils. Simple, repetitive geometry. |
+| Theta pinch | 1.5× | Compression coils. Simple solenoid geometry. |
+| MagLIF | 2.0× | Axial field solenoid. Moderate complexity (pulsed duty). |
+| Mag. target | 1.5× | Guide-field solenoid. Small, simple coils. |
+| Plasma jet | 1.5× | Guide-field solenoid. Small, simple coils. |
+| Orbitron | 1.5× | Electrostatic confinement coils. |
+| Polywell | 2.0× | Polyhedral magrid. Moderate 3D complexity. |
+| IFE / Z-pinch / DPF | — | $0: no confinement magnets. |
 
 ### Validation
 
@@ -157,16 +165,20 @@ A full tokamak power plant coil set is ~5–10× larger.
 
 ---
 
-## C220104: Supplementary Heating
+## C220104: Supplementary Heating (MFE) / Primary Driver (pulsed)
 
-### Costing model
+This account covers different hardware depending on the confinement
+family, analogous to how C220108 flips between divertor (MFE) and
+target factory (IFE/MIF).
+
+### Steady-state MFE: Supplementary Heating
 
     C220104 = Σ (cost_per_MW_i × P_i)  for i ∈ {NBI, ICRF, ECRH, LHCD}
 
 These are **vendor-purchased turnkey systems**: the per-MW cost includes
 the vendor's engineering, manufacturing, testing, and margin.
 
-### Per-MW costs (M$/MW, 2023$)
+#### Per-MW costs (M$/MW, 2023$)
 
 | System | $/MW | Source | Scope |
 |--------|-----:|--------|-------|
@@ -175,7 +187,7 @@ the vendor's engineering, manufacturing, testing, and margin.
 | ECRH | 5.00 | ARIES/pyFECONS | Gyrotrons (1 MW each), transmission waveguides, launchers |
 | LHCD | 4.00 | ARIES/pyFECONS | Klystrons, waveguide grills, power supply |
 
-### Validation
+#### Validation
 
 Default: 50 MW NBI → $353M.
 
@@ -187,6 +199,41 @@ is estimated at EUR 300–500M (FOAK, including test facility and R&D).
 ITER ECRH: 24 gyrotrons providing 20 MW total. Gyrotrons cost ~$1–2M
 each (vendor-purchased). Total ECRH system ~EUR 100–200M → EUR 5–10M/MW.
 Our $5M/MW is mid-range.
+
+### Pulsed concepts: Primary Driver Capital
+
+    C220104 = driver_cost_per_MW × P_driver
+
+where P_driver = E_driver × f_rep (average driver power in MW).
+
+This is the pulsed analog of the magnet system (C220103) — the
+hardware that provides confinement.  A tokamak confines with magnets;
+laser IFE confines with a laser driver.  The electrical infrastructure
+(capacitor banks, switches, charging circuits) is in C220107.
+
+#### Per-MW driver costs (M$/MW, 2023$)
+
+| Concept | $/MW | Hardware | Rationale |
+|---------|-----:|----------|-----------|
+| Laser IFE | 8 | Diode-pumped solid-state laser | NIF-heritage optics at NOAK volume. Current DPSSL: $20–50/W; NOAK target: $8/W with diode cost reduction. |
+| Heavy ion | 12 | RF linac + storage rings | Accelerator cost scales ~linearly with beam power. Higher than laser due to ring infrastructure. |
+| MagLIF | 6 | Laser preheat system | Smaller laser than IFE (preheat only, not full driver). Z-pinch electrical driver is in C220107. |
+| Mag. target | 3 | Pneumatic pistons, liquid metal loop | Mechanical compression hardware. Mature industrial technology (pneumatics, hydraulics). |
+| Plasma jet | 4 | Plasma gun array | Electromagnetic plasma guns. More complex than pneumatics, simpler than lasers. |
+| Z-pinch, DPF, Staged Z-pinch | 0 | — | Driver is purely electrical (capacitor bank), costed in C220107. |
+| Pulsed FRC, Theta pinch | 0 | — | Driver is magnetic coils, costed in C220103. |
+
+#### Design rationale: avoiding double-counting
+
+The split between C220104 (driver hardware) and C220107 (electrical
+infrastructure) avoids double-counting:
+
+- **Laser IFE**: C220104 = laser amplifiers + optics; C220107 = capacitor
+  bank that fires the diodes (on $/J basis)
+- **Z-pinch**: C220104 = $0; C220107 = full pulsed power system (Marx
+  generators, transmission lines, on $/J basis)
+- **Mag target**: C220104 = pneumatic compression hardware; C220107 =
+  capacitor bank for guide-field pulsing (on $/J basis)
 
 ---
 

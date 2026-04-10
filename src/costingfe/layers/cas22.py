@@ -97,6 +97,7 @@ def cas22_reactor_plant_equipment(
     p_icrf: float,
     p_ecrh: float,
     p_lhcd: float,
+    p_driver: float,
     f_dec: float,
     p_dee: float,
     # Pulsed DEC parameters
@@ -170,16 +171,29 @@ def cas22_reactor_plant_equipment(
         c220103 = conductor_cost * coil_markup
 
     # -----------------------------------------------------------------------
-    # 220104: Supplementary Heating — vendor-purchased turnkey systems
-    # Per-MW linear costs calibrated to ITER procurement (FOAK-to-NOAK adjusted)
+    # 220104: Supplementary Heating (MFE) or Primary Driver (pulsed)
+    # MFE: per-MW linear costs calibrated to ITER procurement (FOAK→NOAK)
+    # Pulsed: concept-specific driver capital (laser, accelerator, mechanical)
+    # Concepts whose driver is purely electrical use C220107 instead.
     # See docs/account_justification/CAS22_reactor_components.md
     # -----------------------------------------------------------------------
-    c220104 = (
-        cc.heating_nbi_per_mw * p_nbi
-        + cc.heating_icrf_per_mw * p_icrf
-        + cc.heating_ecrh_per_mw * p_ecrh
-        + cc.heating_lhcd_per_mw * p_lhcd
-    )
+    if family == ConfinementFamily.STEADY_STATE:
+        c220104 = (
+            cc.heating_nbi_per_mw * p_nbi
+            + cc.heating_icrf_per_mw * p_icrf
+            + cc.heating_ecrh_per_mw * p_ecrh
+            + cc.heating_lhcd_per_mw * p_lhcd
+        )
+    else:
+        _DRIVER_COST_PER_MW = {
+            ConfinementConcept.LASER_IFE: cc.driver_laser_per_mw,
+            ConfinementConcept.HEAVY_ION: cc.driver_heavy_ion_per_mw,
+            ConfinementConcept.MAG_TARGET: cc.driver_mag_target_per_mw,
+            ConfinementConcept.PLASMA_JET: cc.driver_plasma_jet_per_mw,
+            ConfinementConcept.MAGLIF: cc.driver_maglif_per_mw,
+        }
+        driver_per_mw = _DRIVER_COST_PER_MW.get(concept, 0.0)
+        c220104 = driver_per_mw * p_driver
 
     # -----------------------------------------------------------------------
     # 220105: Primary Structure — gravity supports, thermal shields,

@@ -532,6 +532,12 @@ class CostModel:
         if any(k in overrides for k in ("p_nbi", "p_ecrh", "p_icrf", "p_lhcd")):
             p_nbi = params.get("p_nbi", 0.0)
 
+        # Pulsed driver power (MW) for C220104 driver costing
+        if self.family == ConfinementFamily.PULSED:
+            p_driver = params["e_driver_mj"] * params["f_rep"]
+        else:
+            p_driver = 0.0
+
         c22_detail = cas22_reactor_plant_equipment(
             cc,
             pt.p_net,
@@ -555,6 +561,7 @@ class CostModel:
             p_ecrh=p_ecrh,
             p_icrf=p_icrf,
             p_lhcd=p_lhcd,
+            p_driver=p_driver,
             f_dec=params.get("f_dec", 0.0),
             p_dee=pt.p_dee,
             # Pulsed DEC params

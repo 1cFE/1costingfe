@@ -41,6 +41,7 @@ def _make_cas22(fuel=Fuel.DT, n_mod=1, blanket_t=0.70):
         p_icrf=0.0,
         p_ecrh=0.0,
         p_lhcd=0.0,
+        p_driver=0.0,
         f_dec=0.0,
         p_dee=0.0,
     )
@@ -164,6 +165,7 @@ def _make_cas22_with_family(family=ConfinementFamily.STEADY_STATE):
         p_icrf=0.0,
         p_ecrh=0.0,
         p_lhcd=0.0,
+        p_driver=0.0,
         f_dec=0.0,
         p_dee=0.0,
     )
@@ -254,6 +256,7 @@ def _make_cas22_coil(
         p_icrf=0.0,
         p_ecrh=0.0,
         p_lhcd=0.0,
+        p_driver=0.0,
         f_dec=0.0,
         p_dee=0.0,
     )
@@ -338,6 +341,7 @@ def _make_cas22_heating(p_nbi=50.0, p_icrf=0.0, p_ecrh=0.0, p_lhcd=0.0):
         p_icrf=p_icrf,
         p_ecrh=p_ecrh,
         p_lhcd=p_lhcd,
+        p_driver=0.0,
         f_dec=0.0,
         p_dee=0.0,
     )
@@ -417,6 +421,7 @@ def test_cas220110_concept_scales():
         p_icrf=0.0,
         p_ecrh=0.0,
         p_lhcd=0.0,
+        p_driver=0.0,
         f_dec=0.0,
         p_dee=0.0,
     )
@@ -443,6 +448,7 @@ def test_cas220110_concept_scales():
         p_icrf=0.0,
         p_ecrh=0.0,
         p_lhcd=0.0,
+        p_driver=0.0,
         f_dec=0.0,
         p_dee=0.0,
     )
@@ -479,6 +485,7 @@ def _make_cas22_dec(f_dec=0.3, p_dee=300.0):
         p_icrf=0.0,
         p_ecrh=0.0,
         p_lhcd=0.0,
+        p_driver=0.0,
         f_dec=f_dec,
         p_dee=p_dee,
     )
