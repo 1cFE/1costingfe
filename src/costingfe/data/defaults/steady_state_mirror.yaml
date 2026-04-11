@@ -31,7 +31,7 @@ R0: 0.0          # Not used for cylinder
 plasma_t: 1.5        # Plasma radius
 elon: 1.0            # Not used for cylinder (circular cross-section)
 chamber_length: 20.0 # Chamber length
-blanket_t: 0.60      # Blanket thickness
+blanket_t: 0.80      # Blanket thickness (DT breeding requirement)
 ht_shield_t: 0.20    # High-temperature shield
 structure_t: 0.15    # Primary structure
 vessel_t: 0.10       # Vacuum vessel

@@ -31,7 +31,7 @@ r_coil: 1.85         # Effective winding bore radius [m] (calibration parameter)
 R0: 5.5          # Major radius R0
 plasma_t: 1.8        # Minor radius a
 elon: 1.0            # Near-circular cross-section
-blanket_t: 0.60      # Blanket thickness
+blanket_t: 0.80      # Blanket thickness (same TBR requirement as tokamak)
 ht_shield_t: 0.20    # High-temperature shield
 structure_t: 0.15    # Primary structure
 vessel_t: 0.10       # Vacuum vessel

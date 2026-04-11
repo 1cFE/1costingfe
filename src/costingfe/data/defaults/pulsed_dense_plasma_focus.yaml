@@ -24,7 +24,7 @@ p_coils: 0.0         # No external field coils
 # Radial build geometry [m] (cylindrical, compact)
 R0: 0.0
 plasma_t: 1.0        # Chamber radius
-blanket_t: 0.50      # Blanket
+blanket_t: 0.80      # Blanket thickness (DT breeding requirement)
 ht_shield_t: 0.20    # Shield
 structure_t: 0.15
 vessel_t: 0.10

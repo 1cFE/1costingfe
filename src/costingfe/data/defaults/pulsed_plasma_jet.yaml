@@ -19,7 +19,7 @@ p_coils: 0.2         # Guide field coils [MW]
 # Radial build geometry [m] (spherical chamber)
 R0: 0.0          # Not used for sphere
 plasma_t: 3.5        # Chamber radius
-blanket_t: 0.70      # Blanket thickness
+blanket_t: 0.80      # Blanket thickness (DT breeding requirement)
 ht_shield_t: 0.20    # High-temperature shield
 structure_t: 0.15    # Primary structure
 vessel_t: 0.10       # Vacuum vessel

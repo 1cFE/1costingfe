@@ -24,7 +24,7 @@ p_coils: 0.5         # Stabilization coils [MW]
 # Radial build geometry [m] (cylindrical)
 R0: 0.0
 plasma_t: 1.5        # Chamber radius
-blanket_t: 0.60      # Blanket
+blanket_t: 0.80      # Blanket thickness (DT breeding requirement)
 ht_shield_t: 0.20    # Shield
 structure_t: 0.15
 vessel_t: 0.10

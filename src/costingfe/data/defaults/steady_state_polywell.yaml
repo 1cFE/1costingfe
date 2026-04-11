@@ -33,7 +33,7 @@ r_coil: 0.8          # Cusp radius [m]
 R0: 0.0
 plasma_t: 0.5        # Plasma radius [m]
 elon: 1.0
-blanket_t: 0.50      # Blanket (if D-T)
+blanket_t: 0.80      # Blanket thickness (DT breeding requirement)
 ht_shield_t: 0.15    # Shield
 structure_t: 0.15
 vessel_t: 0.10
