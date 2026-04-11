@@ -61,7 +61,6 @@ configs_vb = [
     ("Thermal only (sCO2 Brayton, 47%)", 0.0, 0.0, {}),
     ("VB DEC at 48% + thermal (hybrid)", 0.9, 0.48, {}),
     ("VB DEC at 60% + thermal (hybrid)", 0.9, 0.60, {}),
-    ("VB DEC at 60%, no turbine (waste brem)", 0.9, 0.60, {"CAS23": 0.0}),
 ]
 
 print(f"  {'Configuration':<45} {'Floor':>6} {'O/N':>7}")
@@ -82,44 +81,12 @@ for label, f_dec, eta_de, extra in configs_vb:
     print(f"  {label:<45} {c.lcoe:>5.0f} {c.overnight_cost:>7.0f}")
 
 
-# ══════════════════════════════════════════════════════════════════════
-# TABLE 2: Pulsed inductive DEC at 1 GWe baseline (blog table 2)
-# ══════════════════════════════════════════════════════════════════════
-print()
-print("=" * 75)
-print("TABLE 2: Pulsed inductive DEC — 1 GWe pB11 baseline, free core")
-print("=" * 75)
+# TABLE 2 (pulsed p-B11 no-turbine) removed: wasting 87% brem heat
+# requires enormous fusion power, making no-turbine unviable for p-B11.
+# Pulsed inductive DEC is modeled for D-He3 in TABLE 5 below.
 
-# Thermal reference
+# Thermal reference (needed for supplementary table)
 r_th = m.forward(**BASE_KW, inflation_rate=INFLATION, cost_overrides=FREE_CORE)
-
-# Pulsed: no turbine, inverter only, reduced buildings and heat rejection
-inverter_1gw = 150.0  # M$, $150/kW_net from NREL benchmarks
-cas21_pulsed = float(r_th.costs.cas21) * 0.75  # 25% building reduction
-cas26_pulsed = float(r_th.costs.cas26) * 0.15  # only brem waste heat
-
-r_pulsed = m.forward(
-    **BASE_KW,
-    inflation_rate=INFLATION,
-    f_dec=0.95,
-    eta_de=0.85,
-    cost_overrides={
-        "CAS22": inverter_1gw,
-        "CAS27": 0.0,
-        "CAS23": 0.0,
-        "CAS26": cas26_pulsed,
-        "CAS21": cas21_pulsed,
-    },
-)
-
-th_lcoe = float(r_th.costs.lcoe)
-th_oc = float(r_th.costs.overnight_cost)
-p_lcoe = float(r_pulsed.costs.lcoe)
-p_oc = float(r_pulsed.costs.overnight_cost)
-print(f"  Thermal floor:          ${th_lcoe:.0f}/MWh  (${th_oc:.0f}/kW)")
-print(f"  Pulsed inductive floor: ${p_lcoe:.0f}/MWh  (${p_oc:.0f}/kW)")
-print(f"    Inverter: ${inverter_1gw:.0f}M, CAS23=$0")
-print(f"    Buildings: ${cas21_pulsed:.0f}M (vs ${r_th.costs.cas21:.0f}M thermal)")
 
 
 # ══════════════════════════════════════════════════════════════════════
@@ -159,40 +126,9 @@ print(
     f" {budget:>+7.1f}"
 )
 
-# VB DEC 60% no turbine
-kw_vb_nt = dict(AGG_KW, inflation_rate=INFLATION, f_dec=0.9, eta_de=0.60)
-kw_vb_nt["cost_overrides"] = {"CAS22": dec_agg, "CAS27": 0.0, "CAS23": 0.0}
-r_vb_nt = m.forward(**kw_vb_nt)
-budget = TARGET - r_vb_nt.costs.lcoe
-print(
-    f"  {'VB DEC 60%, no turbine':<45}"
-    f" {r_vb_nt.costs.lcoe:>5.1f} {r_vb_nt.costs.overnight_cost:>7.0f}"
-    f" {budget:>+7.1f}"
-)
-
-# Pulsed inductive
-inverter_2gw = 300.0
-cas21_p_agg = float(r_th_agg.costs.cas21) * 0.75
-cas26_p_agg = float(r_th_agg.costs.cas26) * 0.15
-r_p_agg = m.forward(
-    **AGG_KW,
-    inflation_rate=INFLATION,
-    f_dec=0.95,
-    eta_de=0.85,
-    cost_overrides={
-        "CAS22": inverter_2gw,
-        "CAS27": 0.0,
-        "CAS23": 0.0,
-        "CAS26": cas26_p_agg,
-        "CAS21": cas21_p_agg,
-    },
-)
-budget = TARGET - r_p_agg.costs.lcoe
-print(
-    f"  {'Pulsed inductive (85%, no turbine)':<45}"
-    f" {r_p_agg.costs.lcoe:>5.1f} {r_p_agg.costs.overnight_cost:>7.0f}"
-    f" {budget:>+7.1f}"
-)
+# No-turbine cases omitted for p-B11: wasting 87% brem heat requires
+# enormous fusion power (16-30 GW for 1-2 GWe net), making the fully
+# costed LCOE far worse than thermal.
 
 
 # ══════════════════════════════════════════════════════════════════════
@@ -240,13 +176,12 @@ print("=" * 75)
 print("SUPPLEMENTARY: Detailed cost breakdown at 1 GWe baseline")
 print("=" * 75)
 
-print(f"\n  {'Account':<20} {'Thermal':>10} {'VB 60%':>10} {'Pulsed':>10}")
-print(f"  {'':20} {'M$':>10} {'M$':>10} {'M$':>10}")
-print("-" * 55)
+print(f"\n  {'Account':<20} {'Thermal':>10} {'VB 60%':>10}")
+print(f"  {'':20} {'M$':>10} {'M$':>10}")
+print("-" * 45)
 
 # Get VB 60% free-core result
 r_vb, _ = free_core_with_dec(m, 0.9, 0.60, **BASE_KW)
-r_p = r_pulsed  # from earlier
 
 for label, attr in [
     ("CAS21 Buildings", "cas21"),
@@ -260,20 +195,14 @@ for label, attr in [
 ]:
     vt = float(getattr(r_th.costs, attr))
     vv = float(getattr(r_vb.costs, attr))
-    vp = float(getattr(r_p.costs, attr))
-    print(f"  {label:<20} {vt:>10.0f} {vv:>10.0f} {vp:>10.0f}")
+    print(f"  {label:<20} {vt:>10.0f} {vv:>10.0f}")
 
-print("-" * 55)
-print(
-    f"  {'LCOE ($/MWh)':<20}"
-    f" {r_th.costs.lcoe:>10.1f} {r_vb.costs.lcoe:>10.1f}"
-    f" {r_p.costs.lcoe:>10.1f}"
-)
+print("-" * 45)
+print(f"  {'LCOE ($/MWh)':<20} {r_th.costs.lcoe:>10.1f} {r_vb.costs.lcoe:>10.1f}")
 print(
     f"  {'Overnight ($/kW)':<20}"
     f" {r_th.costs.overnight_cost:>10.0f}"
     f" {r_vb.costs.overnight_cost:>10.0f}"
-    f" {r_p.costs.overnight_cost:>10.0f}"
 )
 
 
