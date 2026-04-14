@@ -376,9 +376,33 @@ class CostModel:
         inflation_rate: float = 0.02,
         noak: bool = True,
         cost_overrides: dict[str, float] | None = None,
+        override_reference_mw: float | None = None,
         **overrides,
     ) -> ForwardResult:
-        """Forward costing: customer requirements -> LCOE."""
+        """Forward costing: customer requirements -> LCOE.
+
+        If override_reference_mw is set, cost_overrides are interpreted as
+        absolute M$ values valid at that reference power.  The framework
+        scales them to net_electric_mw by computing the ratio of each
+        account at the target vs. reference power and applying that as a
+        multiplier.  This preserves the model's internal scaling laws
+        (which depend on different power quantities per account) while
+        respecting the user's empirical data.
+        """
+        if override_reference_mw is not None and cost_overrides:
+            cost_overrides = self._scale_overrides(
+                cost_overrides,
+                override_reference_mw,
+                net_electric_mw,
+                availability=availability,
+                lifetime_yr=lifetime_yr,
+                n_mod=n_mod,
+                construction_time_yr=construction_time_yr,
+                interest_rate=interest_rate,
+                inflation_rate=inflation_rate,
+                noak=noak,
+                **overrides,
+            )
         # Merge defaults with overrides
         params = dict(self._eng_defaults)
         # Inject CostingConstants float fields into params so they are
@@ -747,6 +771,73 @@ class CostModel:
             cas22_detail=c22_detail,
             plasma_state=self._plasma_state,
         )
+
+    # Map from cost_overrides keys to CostResult attribute names.
+    _OVERRIDE_TO_ATTR = {
+        "CAS10": "cas10",
+        "CAS21": "cas21",
+        "CAS22": "cas22",
+        "CAS23": "cas23",
+        "CAS24": "cas24",
+        "CAS25": "cas25",
+        "CAS26": "cas26",
+        "CAS27": "cas27",
+        "CAS28": "cas28",
+        "CAS30": "cas30",
+        "CAS40": "cas40",
+        "CAS50": "cas50",
+        "CAS70": "cas70",
+        "CAS80": "cas80",
+    }
+
+    def _scale_overrides(
+        self,
+        cost_overrides: dict[str, float],
+        reference_mw: float,
+        target_mw: float,
+        **forward_kwargs,
+    ) -> dict[str, float]:
+        """Scale cost overrides from reference_mw to target_mw.
+
+        Runs the model at both power levels (without overrides) to get
+        the computed cost for each overridden account, then applies the
+        ratio as a multiplier to the user's override values.
+
+        CAS22 sub-account overrides (C220101, etc.) are scaled using the
+        CAS22 sub-account detail from the reference and target runs.
+        """
+        ref_result = self.forward(
+            net_electric_mw=reference_mw, cost_overrides=None, **forward_kwargs
+        )
+        target_result = self.forward(
+            net_electric_mw=target_mw, cost_overrides=None, **forward_kwargs
+        )
+
+        scaled = {}
+        for key, value in cost_overrides.items():
+            # CAS22 sub-accounts
+            if key.startswith("C22") and key in ref_result.cas22_detail:
+                ref_val = ref_result.cas22_detail[key]
+                tgt_val = target_result.cas22_detail[key]
+            # Top-level CAS accounts
+            elif key in self._OVERRIDE_TO_ATTR:
+                attr = self._OVERRIDE_TO_ATTR[key]
+                ref_val = getattr(ref_result.costs, attr)
+                tgt_val = getattr(target_result.costs, attr)
+            else:
+                # Unknown key: pass through unscaled
+                scaled[key] = value
+                continue
+
+            if ref_val > 0:
+                scaled[key] = value * (tgt_val / ref_val)
+            else:
+                # Reference value is zero (e.g. CAS28 digital twin at both
+                # scales, or an account that doesn't exist for this config).
+                # Pass through unscaled.
+                scaled[key] = value
+
+        return scaled
 
     # Financial parameters — given by cost of capital, not engineering levers
     _FINANCIAL_KEYS = ["interest_rate", "inflation_rate"]
