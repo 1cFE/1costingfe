@@ -86,9 +86,18 @@ def ash_neutron_split(
         E_total = _E_TOTAL_PRIMARY_DD + 0.5 * dd_f_T * Q_DT + 0.5 * dd_f_He3 * Q_DHE3
         ash_frac = E_charged / E_total
     elif fuel == Fuel.DHE3:
+        # Energy-weighted ash fraction: total charged energy / total fusion energy.
+        # D-He3 events release Q_DHE3 = 18.35 MeV (all charged); D-D events release
+        # E_n_dd + E_c_dd = ~12.18 MeV with the tritium-burnup chain. The previous
+        # reaction-fraction-weighted formula treated all events as equal-energy and
+        # underestimated D-He3's contribution (overcounting f_n by ~40% at typical
+        # mixes). See examples/dhe3_mix_optimization.py for a Bosch-Hale verification.
         E_n_dd = _E_NEUTRON_PRIMARY_DD + 0.5 * dhe3_f_T * E_N_DT
         E_c_dd = _E_CHARGED_PRIMARY_DD + 0.5 * dhe3_f_T * E_ALPHA_DT
-        ash_frac = (1 - dhe3_dd_frac) + dhe3_dd_frac * E_c_dd / (E_n_dd + E_c_dd)
+        E_DD_event = E_n_dd + E_c_dd
+        E_charged = (1 - dhe3_dd_frac) * Q_DHE3 + dhe3_dd_frac * E_c_dd
+        E_total = (1 - dhe3_dd_frac) * Q_DHE3 + dhe3_dd_frac * E_DD_event
+        ash_frac = E_charged / E_total
     elif fuel == Fuel.PB11:
         # Side reaction 1: 11B(alpha,n)14N
         # Each p+11B produces 3 alphas (~2.89 MeV each). Each alpha has
@@ -478,7 +487,7 @@ def _charged_particle_fraction(
     fuel: Fuel,
     dd_f_T: float = DD_F_T_DEFAULT,
     dd_f_He3: float = DD_F_HE3_DEFAULT,
-    dhe3_dd_frac: float = 0.07,
+    dhe3_dd_frac: float = 0.131,
     dhe3_f_T: float = 0.97,
     pb11_f_alpha_n: float = 0.0,
     pb11_f_p_n: float = 0.0,
@@ -520,7 +529,7 @@ def pulsed_thermal_forward(
     p_coils: float = 0.0,
     dd_f_T: float = DD_F_T_DEFAULT,
     dd_f_He3: float = DD_F_HE3_DEFAULT,
-    dhe3_dd_frac: float = 0.07,
+    dhe3_dd_frac: float = 0.131,
     dhe3_f_T: float = 0.97,
     pb11_f_alpha_n: float = 0.0,
     pb11_f_p_n: float = 0.0,
@@ -656,7 +665,7 @@ def pulsed_thermal_inverse(
     p_coils: float = 0.0,
     dd_f_T: float = DD_F_T_DEFAULT,
     dd_f_He3: float = DD_F_HE3_DEFAULT,
-    dhe3_dd_frac: float = 0.07,
+    dhe3_dd_frac: float = 0.131,
     dhe3_f_T: float = 0.97,
     pb11_f_alpha_n: float = 0.0,
     pb11_f_p_n: float = 0.0,
@@ -725,7 +734,7 @@ def pulsed_dec_forward(
     p_coils: float = 0.0,
     dd_f_T: float = DD_F_T_DEFAULT,
     dd_f_He3: float = DD_F_HE3_DEFAULT,
-    dhe3_dd_frac: float = 0.07,
+    dhe3_dd_frac: float = 0.131,
     dhe3_f_T: float = 0.97,
     pb11_f_alpha_n: float = 0.0,
     pb11_f_p_n: float = 0.0,
@@ -873,7 +882,7 @@ def pulsed_dec_inverse(
     p_coils: float = 0.0,
     dd_f_T: float = DD_F_T_DEFAULT,
     dd_f_He3: float = DD_F_HE3_DEFAULT,
-    dhe3_dd_frac: float = 0.07,
+    dhe3_dd_frac: float = 0.131,
     dhe3_f_T: float = 0.97,
     pb11_f_alpha_n: float = 0.0,
     pb11_f_p_n: float = 0.0,

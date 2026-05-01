@@ -107,11 +107,14 @@ class CostingConstants:
 
     # Steady-state radiation fraction (fraction of P_fus radiated as bremsstrahlung)
     # Used to override compute_p_rad for fuels where bremsstrahlung dominates.
-    # p-B11: 87% with alpha channeling (Ochs et al. 2022, PhysRevE 106 055215)
-    # D-He3: 25% — consensus clean-plasma value for 50/50 mix at T ~70 keV
-    # (literature spread 20-30%; see Santarius & Kulcinski, Miyamoto, Rider 1995)
-    f_rad_fus_pb11: float = 0.87
-    f_rad_fus_dhe3: float = 0.25
+    # p-B11: 83% with alpha channeling at the optimal hybrid fast/thermal
+    # operating point (P_L/P_F = 17%, Ochs et al. 2022, PhysRevE 106 055215).
+    # D-He3: 24% for a 50/50 D/He3 mix at T = 70 keV with relativistic + e-e
+    # bremsstrahlung (Bosch-Hale cross sections, Rider 1995 brem corrections).
+    # Literature spread: Wesson ~20% at 100 keV, Santarius/Kulcinski ~25%, Rider ~30%.
+    # See examples/dhe3_mix_optimization.py for the self-consistent calculation.
+    f_rad_fus_pb11: float = 0.83
+    f_rad_fus_dhe3: float = 0.24
 
     # PdV work fraction — fraction of charged-particle energy doing work
     # against confining field. For adiabatic expansion:

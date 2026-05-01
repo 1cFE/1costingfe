@@ -58,7 +58,7 @@ R_w: 0.3
 # Fuel burn fraction defaults
 dd_f_T: 0.969
 dd_f_He3: 0.689
-dhe3_dd_frac: 0.07
+dhe3_dd_frac: 0.131
 dhe3_f_T: 0.97
 pb11_f_alpha_n: 0.0
 pb11_f_p_n: 0.0
