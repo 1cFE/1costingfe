@@ -2280,15 +2280,31 @@ Gradient-enabled use cases (sensitivity tornados, target-driven inverse
 design, autodiff-versus-finite-difference comparisons) are supported by
 the framework but are not demonstrated in the present text.
 
+%% ============================================================
+\section*{Acknowledgments}
+
+This work was performed within the 1cFE program at the Astera
+Institute Residency. The 1cFE program seeks to identify plausible
+corridors to fusion electricity at $\le \$0.01$/kWh (2025 USD); see
+\url{https://1cf.energy/}. \textsc{1costingfe} is the cost-accounting
+layer of the program's broader techno-economic analysis stack,
+developed alongside the \texttt{fusion-tea} repository family.
+
+%% ============================================================
 \section{Code Availability}
 \label{sec:code-availability}
 
 The \textsc{1costingfe} source code, example scripts, and per-account
 documentation are released at
-\url{https://github.com/1cfe/1costingfe}. The framework targets
-Python~3.11 or later and depends on JAX. Reproduction of the figures
-and account-level cost tables in this paper requires only the
-example scripts shipped in the \texttt{examples/} directory.
+\url{https://github.com/1cfe/1costingfe}. The 1cFE program landing
+page is available at \url{https://1cf.energy/}. The framework targets
+Python~3.11 or later and depends on JAX. Reproduction of most figures
+and account-level cost tables in this paper requires only the example
+scripts shipped in the \texttt{examples/} directory; the benchmarking
+results in \cref{sec:benchmark} are reproduced by the scripts
+\texttt{benchmark\_arc.py}, \texttt{benchmark\_aries\_at.py}, and
+\texttt{make\_benchmark\_bars.py}, located in
+\texttt{docs/papers/1costingfe\_paper/scripts/}.
 
 
 %% ============================================================
