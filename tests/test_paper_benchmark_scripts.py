@@ -59,3 +59,33 @@ def test_benchmark_arc_produces_expected_keys(tmp_path):
     assert payload["reactor"] == "ARC"
     assert payload["fuel"] == "DT"
     assert payload["concept"] == "TOKAMAK"
+
+
+def test_benchmark_aries_at_produces_expected_keys(tmp_path):
+    import benchmark_aries_at
+
+    payload = benchmark_aries_at.run(tmp_path)
+
+    assert (tmp_path / "aries_at.json").exists()
+    on_disk = json.loads((tmp_path / "aries_at.json").read_text())
+    assert payload == on_disk
+
+    expected_top_level = {
+        "reactor",
+        "fuel",
+        "concept",
+        "inputs",
+        "predicted_overnight_musd",
+        "predicted_overnight_per_kwe_usd",
+        "predicted_lcoe_usd_per_mwh",
+        "fusion_power_mw",
+        "net_electric_mw",
+        "cas",
+        "cas22_detail",
+    }
+    assert expected_top_level.issubset(payload.keys())
+    assert payload["reactor"] == "ARIES-AT"
+    assert payload["fuel"] == "DT"
+    assert payload["concept"] == "TOKAMAK"
+    assert "cas22" in payload["cas"]
+    assert "C220103" in payload["cas22_detail"]
