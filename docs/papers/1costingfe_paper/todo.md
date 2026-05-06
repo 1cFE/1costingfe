@@ -22,11 +22,9 @@ Without this, the paper is a methodology document, not a JAX-differentiable cont
 
 ## Validation against prior tools
 
-No end-to-end LCOE comparison against pyFECONS, ARIES, or NETL baselines appears anywhere. The CAS21 "Comparison with benchmarks" table lists ranges for fission and CCGT, not actual 1costingfe outputs vs pyFECONS outputs.
+Done as of 2026-05-06: see Section 5 ("Benchmarking and Cross-Validation") in `1costingfe_paper.tex`, with reproducible scripts under `scripts/` and the figure produced by `make_benchmark_bars.py` in `figures/`. ARIES-AT cross-walk is at top-level rollups only (Direct/Owner's/Total/LCOE) because Najmabadi 2006 publishes that granularity, not per-CAS-account detail. Per-account cross-walk against pyFECONS is left as future work.
 
-- Run 1costingfe on ARIES-AT D-T tokamak.
-- Compare LCOE and overnight capital to the published ARIES number.
-- Show a per-account cross-walk.
+Three `% TODO` discussion paragraphs in Section 5 are preserved for author review before publication.
 
 ## Stub appendices for non-tokamak plasma models
 
