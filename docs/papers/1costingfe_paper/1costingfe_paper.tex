@@ -98,25 +98,35 @@ pdfkeywords={fusion energy, LCOE, cost estimation, automatic differentiation, JA
 \maketitle
 
 \begin{abstract}
-We present \textsc{1costingfe}, a JAX-based costing framework for fusion power plants
-that computes the levelized cost of electricity (LCOE) from customer-level requirements.
-Cost accounts follow the Code of Accounts Structure (CAS), originated by Schulte et~al.\
-at PNL in 1978, adapted for fusion by the ARIES program, and later formalized by the
-Generation~IV Economic Modeling Working Group.
-The framework spans the four candidate fuel cycles (D-T, D-D, D-${}^3$He, p-${}^{11}$B)
-and the principal confinement families (tokamak, stellarator, mirror, field-reversed
-configuration, laser and Z-pinch inertial systems, and magneto-inertial concepts),
-with each cost account justified independently from procurement and benchmark data
-rather than from heritage scaling factors alone.
-The use of JAX as the computational backend exposes exact gradients of LCOE with
-respect to every input parameter through reverse-mode automatic differentiation,
-and supports vectorized sensitivity sweeps and Monte Carlo uncertainty propagation
-via \texttt{vmap}, transforming what are traditionally bottleneck operations into
-routine ones.
-The purpose of \textsc{1costingfe} is to enable identification of technological
-corridors compatible with a 1~cent/kWh LCOE target.
-We describe the economics module, the physics module, and the cost account
-methodology, noting where the treatment diverges from prior work.
+We present \textsc{1costingfe}, a fusion power plant costing framework that
+computes the levelized cost of electricity (LCOE) from the ground up.
+The code uses the Code of Accounts Structure (CAS) approach, used in
+the ARIES program and later formalized by the Generation~IV Economic
+Modeling Working Group, and adopted and developed under ARPA-E funding
+by Woodruff and colleagues in the pyFECONS code.
+\textsc{1costingfe}'s principal contribution is rebuilding the cost
+accounts most sensitive to fuel cycle and confinement family, namely
+buildings, magnets, drivers, direct energy converters, isotope
+separation, and staffing, from current procurement data, vendor
+pricing, and cross-industry benchmarks, in place of the heritage
+scaling that dominates these accounts in prior fusion cost models.
+Accounts that are largely fuel- and concept-agnostic inherit prior
+conventions where appropriate.
+Defaults represent Nth-of-a-kind costs after learning-curve effects
+are applied; first-of-a-kind treatment is supported.
+The framework spans the four candidate fuel cycles (D-T, D-D,
+D-${}^3$He, p-${}^{11}$B) and the principal confinement families
+(tokamak, stellarator, mirror, field-reversed configuration, laser
+and Z-pinch inertial systems, and magneto-inertial concepts).
+It is implemented in JAX with reverse-mode automatic differentiation,
+exposing exact LCOE gradients to support sensitivity analysis,
+Monte Carlo uncertainty propagation, and identification of
+technological corridors compatible with a 1~cent/kWh LCOE target.
+The economics, physics, and cost-account methodology are described
+in turn, and the framework is exercised against two reference designs,
+ARC and ARIES-AT, as a calibration cross-check, with divergences
+attributed to specific accounts where procurement data departs
+from heritage scaling.
 \end{abstract}
 
 \keywords{fusion energy \and LCOE \and cost estimation \and automatic differentiation \and JAX}
