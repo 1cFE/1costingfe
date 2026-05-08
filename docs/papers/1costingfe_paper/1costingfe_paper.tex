@@ -1611,6 +1611,17 @@ every 3.7~years.  The annualized replacement cost is computed as a
 present-value sum of discrete replacements over the plant lifetime,
 discounted at the project interest rate.
 
+\subsubsection{Source provenance.}
+The steady-state MFE figure draws partly on the ARIES-CS
+\citep{najmabadi2008stellarator} power-supply scope, which is a
+systems study rather than a procurement reference. The capacitor-bank
+\$/J basis used for pulsed concepts is procurement-grounded
+(commercial high-voltage capacitor pricing). Substituting a
+procurement reference for the steady-state MFE figure is left to
+follow-on work; users with a vendor quote should override
+\texttt{cost\_overrides=\{"C220107": <value>\}} until that
+substitution lands.
+
 %% ------------------------------------------------------------
 \subsection{CAS22.01.09: Direct Energy Converter (electrostatic)}
 \label{sec:cas2209}
@@ -1920,6 +1931,15 @@ independent of plant size, fuel type, or number of modules.  The estimate
 is sourced from NtTau Digital LTD (in-house assessment for the pyFECONS
 framework \citep{woodruff2026}), consistent with industrial digital twin
 deployments for large thermal plants (\$2--10M).
+
+The \$5\,M figure is sourced from a single pyFECONS internal note;
+no independent benchmark has yet been adopted. CAS28 is therefore
+the lowest-information account in the framework and the figure is
+treated as a placeholder with wide uncertainty. Closing this gap
+requires sourcing one or more independent quotes for plant digital
+twin integration; users wishing to vary the figure should override
+\texttt{cost\_overrides=\{"CAS28": <value>\}} until that work
+completes.
 
 
 %% ------------------------------------------------------------
