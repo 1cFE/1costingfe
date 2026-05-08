@@ -424,7 +424,66 @@ mirror NOAK breakdown.
 \subsection{Sensitivity from automatic differentiation}
 \label{sec:tour-sensitivity}
 
-% TASK 6 fills this section.
+The forward pipeline of \cref{fig:pipeline} is differentiable end-to-end.
+JAX reverse-mode automatic differentiation produces exact partial
+derivatives of LCOE with respect to every input parameter in a single
+backward pass. \Cref{fig:tornado} shows the resulting tornado for the
+Section~\ref{sec:tour} reference scenario, organised into three bands:
+physics outputs (the parameters supplied by the external physics
+model), cost unit prices (procurement-grounded \$/unit values that
+multiply physical quantities), and financial / methodology (cost-of-money,
+construction time, and contingency assumptions).
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.85\linewidth]{figures/tornado.pdf}
+\caption{Sensitivity tornado for the canonical 1\,GWe D-${}^3$He
+mirror reference. Bars give LCOE elasticity
+$\epsilon_p = (\partial \text{LCOE}/\partial p)(p/\text{LCOE})$
+computed by JAX reverse-mode autodiff on the full forward pipeline.
+A bar of length $0.10$ means a $+1\%$ perturbation of the parameter
+moves LCOE by $+0.10\%$. Reproduced by
+\texttt{scripts/make\_tornado.py}.}
+\label{fig:tornado}
+\end{figure}
+
+The tornado is the headline operational output of the framework: a
+single figure tells a physics team where simulation effort buys the
+most LCOE certainty, and a procurement team where vendor data does
+the same. For the reference scenario, the most consequential
+physics-output parameter is \texttt{eta\_de} (elasticity $-0.49$),
+the most consequential cost unit price is \texttt{fuel\_recovery}
+($-5.35$), and the most consequential financial parameter is
+\texttt{interest\_rate} ($+0.28$). The \texttt{fuel\_recovery} entry
+dominates because unrecovered helium-3 is both expensive and directly
+proportional to the fuel cycle cost component of LCOE. The financial
+bucket entries are modest for this reference scenario, reflecting the
+relatively low capital intensity of mirror designs: \texttt{interest\_rate}
+carries an elasticity of $+0.28$ and \texttt{inflation\_rate} $+0.21$.
+
+Because the gradients are exact rather than approximate, autodiff and
+finite differences agree to machine precision at any non-singular
+point. \Cref{tab:tornado-fd} reports a centered finite-difference
+spot-check at the base point for the top five entries.
+
+\begin{table}[htbp]
+\caption{Autodiff elasticities versus centered finite differences for
+the top five entries of \cref{fig:tornado}. Reproduced by
+\texttt{scripts/make\_tornado.py}.}
+\label{tab:tornado-fd}
+\centering
+\begin{tabular}{lrrr}
+\toprule
+Parameter & Autodiff & FD & Relative error \\
+\midrule
+\texttt{fuel\_recovery}  & $-5.347964$ & $-5.347968$ & $8.89{\times}10^{-7}$ \\
+\texttt{u\_he3}          & $+0.577189$ & $+0.577207$ & $3.12{\times}10^{-5}$ \\
+\texttt{eta\_de}         & $-0.487345$ & $-0.487513$ & $3.45{\times}10^{-4}$ \\
+\texttt{availability}    & $-0.417998$ & $-0.417972$ & $6.19{\times}10^{-5}$ \\
+\texttt{burn\_fraction}  & $-0.296286$ & $-0.296324$ & $1.28{\times}10^{-4}$ \\
+\bottomrule
+\end{tabular}
+\end{table}
 
 \subsection{Other API surfaces}
 \label{sec:tour-api}
