@@ -17,6 +17,7 @@
 \usepackage[numbers]{natbib}
 \usepackage{doi}
 \usepackage{tikz}
+\usetikzlibrary{arrows.meta}
 \usepackage{xcolor}
 \usepackage{listings}
 \lstset{
@@ -274,7 +275,59 @@ the accounts for which independent justification studies have been completed.
 \subsection{Pipeline overview}
 \label{sec:tour-pipeline}
 
-% TASK 4 fills this section.
+\textsc{1costingfe} is a thin physics layer over a thick costing
+layer. Users supply whichever physics outputs they have for whichever
+confinement concept; the framework backs out the rest from defaults
+and sizes the cost stack accordingly. Vendor quotes or known costs
+enter through CAS-level overrides without re-running the physics.
+
+\Cref{fig:pipeline} sketches the dataflow. Inputs on the left
+column are physics-output engineering parameters: geometry,
+$n_e$, $T_e$ (or $T_i$), magnetic field configuration,
+$\eta_{\text{th}}$, and (where applicable) $\eta_{\text{de}}$,
+$f_{\text{dec}}$, secondary burn fractions for catalyzed cycles.
+Costing parameters (WACC, $T_c$, NOAK switch, conductor cost per
+kA-m, ${}^3$He market price, etc.) feed the right-hand columns.
+The included 0D models (\cref{sec:tokamak-model} for tokamaks) are
+convenience layers for users without an external physics model in
+hand and are not required.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+  x=1.0cm, y=1.0cm,
+  box/.style={draw=lightfg, thick, rounded corners=2pt,
+              minimum width=2.7cm, minimum height=1.4cm,
+              align=center, font=\small},
+  arrow/.style={-{Stealth}, thick, color=lightfg},
+  side/.style={-{Stealth}, thick, color=blue!70!black, dashed},
+]
+  \node[box] (phys)   at (0,0)  {External\\physics model};
+  \node[box] (mod)    at (3.6,0) {1costingfe\\physics module};
+  \node[box] (eng)    at (7.2,0) {Engineering\\sizing};
+  \node[box] (cas)    at (10.8,0) {CAS\\accounts};
+  \node[box] (lcoe)   at (14.4,0) {LCOE\\(\$/MWh)};
+
+  \draw[arrow] (phys) -- (mod);
+  \draw[arrow] (mod)  -- (eng);
+  \draw[arrow] (eng)  -- (cas);
+  \draw[arrow] (cas)  -- (lcoe);
+
+  \node[align=center, font=\scriptsize, color=lightfg]
+    at (1.8,-1.6) {$P_{\text{fus}}$, geometry,\\$n_e, T_e, B,
+                   \eta_{\text{th}}, \eta_{\text{de}}$};
+
+  \node[align=center, font=\scriptsize, color=blue!70!black]
+    at (10.8,-2.4) {Vendor quotes\\(\texttt{cost\_overrides})};
+  \draw[side] (10.8,-1.8) -- (cas);
+\end{tikzpicture}
+\caption{Pipeline from external physics outputs to LCOE. Solid path:
+forward computation. Dashed path: known-cost overrides bypass the
+parametric estimate at any CAS account. The included 0D models
+(Appendix~A) substitute for the leftmost box when the user has no
+external physics in hand.}
+\label{fig:pipeline}
+\end{figure}
 
 \subsection{Forward call from physics outputs}
 \label{sec:tour-forward}
