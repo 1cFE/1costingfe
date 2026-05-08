@@ -138,6 +138,9 @@ conventions where appropriate.
 It is implemented in JAX with reverse-mode automatic differentiation,
 exposing exact LCOE gradients to support sensitivity analysis,
 and Monte Carlo uncertainty propagation.
+A worked tour from physics outputs to LCOE, including JAX-derived
+sensitivities across physics, cost, and financial parameters, is
+presented as the canonical use case (\cref{sec:tour}).
 The economics, physics, and cost-account methodology are described
 in turn, and the framework is exercised against two reference designs,
 ARC and ARIES-AT, as a calibration cross-check, with divergences
@@ -266,6 +269,14 @@ The remainder of this paper is organized as follows.
 \Cref{sec:cas} the cost account structure, with detailed treatment of
 the accounts for which independent justification studies have been completed.
 \Cref{sec:tokamak-model} presents the 0D tokamak model.
+
+The worked tour in \cref{sec:tour} is the headline operational
+example: a single concept handed off from an external physics model
+into the costing pipeline, with a sensitivity tornado over the
+combined parameter set. Concept-agnosticism is exercised by running
+the tour on a non-tokamak case (a D-${}^3$He mirror with
+venetian-blind direct energy conversion); the included 0D models in
+the appendix are convenience layers and are not required.
 
 
 %% ============================================================
@@ -603,6 +614,12 @@ which revenue from electricity sales and annual operating expenditure
   costs.}
 \label{fig:cashflow}
 \end{figure}
+
+Defaults throughout this section are NOAK; the financial knobs
+$(i, T_c, n)$ that appear among the dominant entries of the
+Section~\ref{sec:tour-sensitivity} sensitivity tornado are defined
+in the subsections that follow, with reference values stated
+inline.
 
 \subsection{Capital Recovery Factor}
 
@@ -2625,10 +2642,6 @@ are planned but not yet exercised in this paper. Calibration cross-checks
 against the ARC and ARIES-AT reference designs are presented in
 \cref{sec:benchmark}; cross-validation against pyFECONS reference cases
 at the per-account level is left to future work.
-Gradient-enabled use cases (sensitivity tornados, target-driven inverse
-design) are supported by the framework but are not fully demonstrated
-in the present text.
-
 %% ============================================================
 \section*{Acknowledgments}
 
