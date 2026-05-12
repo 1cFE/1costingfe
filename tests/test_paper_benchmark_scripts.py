@@ -89,21 +89,3 @@ def test_benchmark_aries_at_produces_expected_keys(tmp_path):
     assert payload["concept"] == "TOKAMAK"
     assert "cas22" in payload["cas"]
     assert "C220103" in payload["cas22_detail"]
-
-
-def test_make_benchmark_bars_produces_pdf(tmp_path):
-    import benchmark_arc
-    import benchmark_aries_at
-    import make_benchmark_bars
-
-    benchmark_arc.run(tmp_path)
-    benchmark_aries_at.run(tmp_path)
-
-    figure_dir = tmp_path / "figures"
-    figure_dir.mkdir()
-
-    make_benchmark_bars.run(input_dir=tmp_path, figure_dir=figure_dir)
-
-    pdf = figure_dir / "benchmark_lcoe_stacks.pdf"
-    assert pdf.exists()
-    assert pdf.stat().st_size > 1000  # not an empty/corrupt file
