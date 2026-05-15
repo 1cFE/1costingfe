@@ -181,6 +181,7 @@ The path to 1-cent fusion energy does not run through direct energy conversion a
 ## Acknowledgements
 
 Thanks to Ian Ochs, Elijah Kolmes, and Ryan Weed for their comments.
+This piece was updated on 13 May adding to MHD section. Thanks to Robert Campbell for the additional input.
 
 ## References
 

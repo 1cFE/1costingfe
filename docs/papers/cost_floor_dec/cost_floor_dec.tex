@@ -55,7 +55,7 @@ balance-of-plant equipment, operations and maintenance, and financing.
 Within the open-source \texttt{1costingfe} model, this floor is
 governed primarily by fuel choice rather than by plant design. A
 deuterium-tritium plant exhibits a baseline floor of \$29/MWh at
-1\,GWe, falling to \$9.6/MWh only at an extreme limit of 5\,GWe
+1\,GWe, falling to \$9.5/MWh only at an extreme limit of 5\,GWe
 with maximally favorable financing; a proton-boron-11 plant
 attains \$17/MWh at baseline and \$5.0/MWh at the same extreme
 limit, leaving meaningful budget for the fusion core itself. Two
@@ -180,7 +180,7 @@ fusion plant with sCO\textsubscript{2} Brayton cycle (2024 USD).}
 \toprule
 Component & Cost & Description \\
 \midrule
-Turbine and generator & \$180M & sCO\textsubscript{2}
+Turbine and generator & \$181M & sCO\textsubscript{2}
 turbomachinery, comparable to gas plant hardware \\
 Electrical plant & \$98M & Switchgear, transformers, grid
 connection \\
@@ -188,7 +188,7 @@ Miscellaneous equipment & \$60M & Cranes, compressed air, fire
 protection \\
 Heat rejection & \$55M & Cooling towers, circulating water \\
 \midrule
-\textbf{Subtotal} & \textbf{\$390M} & \\
+\textbf{Subtotal} & \textbf{\$393M} & \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -205,9 +205,9 @@ fuel cycles. The other half varies with the radiation and tritium
 hazards of the chosen fuel.
 
 A D-T plant requires biological shielding within the reactor
-building, a hot cell for remote handling of activated components
-(\$90M alone), tritium containment barriers, and nuclear-grade HVAC
-with HEPA filtration. A D-He3 plant retains some radiation shielding
+building, a hot cell for remote handling of activated components,
+tritium containment barriers, and nuclear-grade HVAC with HEPA
+filtration. A D-He3 plant retains some radiation shielding
 and tritium monitoring (owing to D-D side reactions), but at reduced
 scope. An aneutronic p-B11 plant requires none of the above: the
 reactor building is a standard heavy industrial crane hall, no hot
@@ -219,7 +219,7 @@ cell is required, and HVAC is conventional. Building costs at
 \label{sec:dt}
 
 Combining BOP, buildings, indirect costs (engineering and project
-management, 20\% of direct costs), owner's costs,
+management), owner's costs,
 supplementary costs (shipping, spares, insurance, decommissioning
 provisions), and financing charges (interest during construction)
 yields a total capital cost of \$1{,}700M for a 1\,GWe D-T plant
@@ -238,13 +238,13 @@ two-thirds of this. The remaining third (the floor characterized
 here) already exceeds the one-cent target, so no improvement to the
 core can close a gap that lies outside it.
 
-The parameters that lower the floor without reducing core cost are
+The parameters that lower the floor are
 plant scale (which spreads fixed costs over more megawatt-hours),
 availability, weighted average cost of capital (WACC), construction
 duration (which determines interest during construction), plant
 lifetime, and staffing. Pushing each parameter toward favorable but
 plausible values (Table~\ref{tab:dt-sweep}) reduces the D-T floor to
-\$9.6/MWh only at the extreme limit: 5\,GWe net
+\$9.5/MWh only at the extreme limit: 5\,GWe net
 output, 95\% availability, 2\% WACC, 50-year lifetime, and 3-year
 construction. Even at this limit, the budget remaining for the
 fusion core is \$0.4/MWh, equivalent to roughly \$40/kW of
@@ -255,21 +255,21 @@ within the parameter space considered.
 
 \begin{table}[htbp]
 \caption{D-T floor LCOE and overnight capital cost as a function of
-plant scale and financial parameters, with a free fusion core.}
+plant scale and financial parameters, with a free fusion core. Core
+budget = \$10/MWh target minus floor; negative values indicate the
+floor alone exceeds the one-cent target.}
 \label{tab:dt-sweep}
 \centering
 \begin{tabular}{lrrr}
 \toprule
 Scenario (D-T) & Floor (\$/MWh) & Overnight (\$/kW) & Core
-budget (\$/MWh)\footnote{Core budget = \$10/MWh target minus floor;
-negative values indicate the floor alone exceeds the one-cent
-target.} \\
+budget (\$/MWh) \\
 \midrule
-Baseline: 1\,GWe, 85\%, 7\%, 30\,yr, 6\,yr & 29 & 1{,}720 & $-19$ \\
-2\,GWe, 85\%, 7\%, 30\,yr, 6\,yr & 24 & 1{,}500 & $-14$ \\
-2\,GWe, 95\%, 3\%, 50\,yr, 3\,yr & 14 & 1{,}210 & $-3.7$ \\
-3\,GWe, 95\%, 3\%, 50\,yr, 3\,yr & 12 & 1{,}150 & $-2.0$ \\
-5\,GWe, 95\%, 2\%, 50\,yr, 3\,yr & 9.6 & 1{,}090 & $+0.4$ \\
+Baseline: 1\,GWe, 85\%, 7\%, 30\,yr, 6\,yr & 29 & 1{,}723 & $-19$ \\
+2\,GWe, 85\%, 7\%, 30\,yr, 6\,yr & 24 & 1{,}505 & $-14$ \\
+2\,GWe, 95\%, 3\%, 50\,yr, 3\,yr & 14 & 1{,}213 & $-3.6$ \\
+3\,GWe, 95\%, 3\%, 50\,yr, 3\,yr & 12 & 1{,}153 & $-1.9$ \\
+5\,GWe, 95\%, 2\%, 50\,yr, 3\,yr & 9.5 & 1{,}094 & $+0.5$ \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -303,7 +303,7 @@ produced at commercial scale, and breeding it would likely require
 a separate D-D fusion source.
 
 Proton-boron-11 (p-B11) is aneutronic: 99.8\% of the
-primary-reaction energy emerges as charged alpha particles.
+fusion energy emerges as charged alpha particles.
 Buildings are constructed to conventional industrial standards,
 yielding \$359M at 1\,GWe and a BOP-only floor of \$17/MWh.
 Staffing requirements correspond to those of a conventional thermal
@@ -362,8 +362,8 @@ levels. Baseline assumes 1\,GWe, 85\% availability, 7\% WACC,
 \label{sec:staffing}
 
 Operations and maintenance costs are dominated by staffing. At the
-aggressive 5\,GWe D-T limit, O\&M contributes \$5.2/MWh of the
-\$9.6/MWh floor; the capital-only component is \$4.3/MWh.
+extreme limit (5\,GWe D-T), O\&M contributes \$5.2/MWh of the
+\$9.5/MWh floor; the capital-only component is \$4.3/MWh.
 Halving D-T staffing from 78 to 39 FTE through SCADA-automated grid
 dispatch, reduced shift coverage, and streamlined radiation
 protection procedures (each realistic with current industrial
@@ -378,10 +378,10 @@ extends to a data-center-like operating model that strips both
 staffing and the buildings supporting human occupancy. Together,
 near-zero staffing and the associated building scope reduction
 lower the 2\,GWe aggressive p-B11 floor from \$7.1/MWh to
-approximately \$4.2/MWh, widening the available budget for the
-costed core to \$5.8/MWh.
+approximately \$4.3/MWh, widening the available budget for the
+costed core to \$5.7/MWh.
 
-\subsection{Floor Findings}
+\subsection{Implications of the Industrial Cost Floor}
 \label{sec:floor-findings}
 
 Four conclusions follow from this section.
@@ -403,21 +403,30 @@ parameter, owing to the sublinear scaling of staffing with capacity.
 \end{itemize}
 
 The preceding analysis assumed a thermal energy conversion cycle.
-For aneutronic fuels, this assumption is optional: the
-charged-particle component of the fusion energy can in principle be
-converted directly to electricity without intermediate heat
-transfer. The remainder of this paper examines whether this
-alternative architecture lowers the floor characterized in
-Section~\ref{sec:floor}, and where its leverage lies if not.
+An alternative is direct energy conversion (DEC), a class of conversion mechanisms
+which is less mature but has some enticing potential advantages.
+The remainder of
+this paper examines whether that alternative actually lowers the
+floor characterized in Section~\ref{sec:floor}, and where its
+leverage lies if not.
 
 \section{Direct Energy Conversion Architectures}
 \label{sec:dec}
 
-The energetic charged particles produced by fusion may be converted
-directly to electricity without an intermediate heat-engine cycle.
-The thermodynamic motivation is straightforward: charged particles
-emerge from fusion plasmas at $10^8$--$10^9$\,K, so the Carnot
-ceiling
+Direct energy conversion (DEC) is used here as an umbrella term for
+any architecture that bypasses the thermal cycle, the turbine, or
+both. The thermal default has two drawbacks: physics caps its
+efficiency through the Carnot limit imposed by first-wall and
+blanket material temperature constraints, and its hardware is expensive.
+Magnetohydrodynamic (MHD) generators bypass the turbine but retain
+the heat cycle; charged-particle DEC bypasses both, converting the
+kinetic energy of plasma particles directly to current by
+decelerating them against an electrostatic potential or by inducing
+current in surrounding coils as the plasma expands.
+
+The thermodynamic motivation for charged-particle DEC follows from
+the first drawback: charged particles emerge from fusion plasmas at
+$10^8$--$10^9$\,K, so the Carnot ceiling
 \[
   \eta \leq 1 - T_\mathrm{cold}/T_\mathrm{hot}
 \]
@@ -443,15 +452,40 @@ photovoltaic conversion of bremsstrahlung \citep{Binderbauer2018}
 remains untested. DEC therefore favors fuel cycles with a small
 neutron fraction.
 
-The energy split among neutrons, charged particles, and
-bremsstrahlung depends on fuel choice and operating point
-(Figure~\ref{fig:channels}). For p-B11, the high plasma
-temperature ($>$100\,keV) and Z=5 boron drive intense bremsstrahlung:
+The energy leaving the fusing plasma partitions among three channels:
+neutrons, charged particles, and photons. The nuclear reaction itself
+partitions output between charged products (alphas, protons) and
+neutrons by reaction kinematics: D-T deposits
+80\% of its energy in 14.1\,MeV neutrons; p-B11 is
+aneutronic. Separately, photon emission is determined by 
+plasma dynamics: bremsstrahlung from electrons scattering
+off ions and synchrotron emission from electrons spiraling in a magnetic
+field. The bulk of photon energy is bremsstrahlung, which scales with
+electron temperature and with the square of the ion charge. Fuel
+choice and operating point together determine the resulting
+three-way split among neutrons, charged particles, and
+bremsstrahlung (Figure~\ref{fig:channels}).
+
+For p-B11, the high plasma temperature ($>$100\,keV) and Z=5 
+boron drive intense bremsstrahlung:
 roughly 97\% of fusion power in a thermonuclear plasma, leaving a
 3\% margin in the charged-particle channel \citep{Putvinski2019}.
 Driving the plasma out of equilibrium widens the margin to
 17\% \citep{Ochs2022}, but bremsstrahlung still
 carries 83\% of the fusion power and deposits as heat on the walls.
+D-He3 sits between the two: a nuclear-aneutronic primary reaction
+with a few-percent neutron channel from D-D side reactions, and
+bremsstrahlung at Z=2 carrying a share that depends on the D/He-3
+mix and operating point. Two representative cases are shown in
+Figure~\ref{fig:channels}. A 50/50 D/He-3 steady-state plasma at
+$T = 70$\,keV (the canonical magnetic-confinement reference) holds
+the bred tritium long enough to fuse with deuterium, opening a
+14\,MeV-neutron channel that adds to the D-D neutron loss. A
+deuterium-rich pulsed plasmoid ($n_D/n_\mathrm{He3} = 3.2$ at
+$T = 100$\,keV; the Helion-like operating point) confines the
+plasma too briefly for the secondary D-T reaction, exhausts the
+unburned tritium, and eliminates the 14\,MeV channel, routing 81\%
+of the fusion energy into charged particles.
 Power flow for a thermal-only p-B11 mirror is summarized in
 Figure~\ref{fig:pB11-thermal}.
 
@@ -484,22 +518,19 @@ acts at most as a small bottoming overlay on the alpha channel. D-T
 also carries the radioactivity burden absent from p-B11: neutron
 activation of structural materials, lithium breeding blankets, and
 tritium inventory handling all increase plant cost without altering
-the DEC arithmetic. D-T is therefore treated as a thermal fuel in
+the DEC arithmetic. The 14.1\,MeV neutron flux additionally damages
+any charged-particle DEC hardware in its line of sight: high-voltage
+metallic grids (such as the venetian-blind collector) and the
+associated electronics are far less neutron-tolerant than a turbine,
+further weakening the DEC case for D-T. D-T is therefore treated as a thermal fuel in
 this analysis and is not considered further in this section.
 
-D-He3 is the most favorable charged-particle DEC fuel. The primary
-D-He3 reaction is aneutronic; D-D side reactions produce neutrons
-and tritium, with the split depending on temperature, the
-$n_D/n_{\mathrm{He3}}$ ratio, and confinement time. In a
-steady-state plasma at 50/50 mix and $T = 70$\,keV, the bred
-tritium fuses with deuterium and adds 14\,MeV neutrons
-\citep{Wesson2004}. A
-magneto-inertial plasmoid confines the plasma too briefly for the
-secondary D-T reaction; the unburned tritium is exhausted, and the
-14\,MeV neutron channel is eliminated. The mix can then be optimized
-to minimize bremsstrahlung. A deuterium-rich operating point
-($n_D/n_{\mathrm{He3}} = 3.2$ at $T = 100$\,keV) routes 81\% of
-fusion energy into the charged-particle channel.
+D-He3 is the most favorable charged-particle DEC fuel: the energy
+split described above leaves up to 81\% of the fusion energy in the
+charged-particle channel at the deuterium-rich pulsed operating
+point \citep{Wesson2004}, and the modest neutron fraction from D-D
+side reactions does not impose the activation, damage, and
+tritium-handling burden of D-T.
 
 \subsection{p-B11's Bremsstrahlung Constraint}
 \label{sec:brem}
@@ -736,17 +767,18 @@ does not imply clearing the second.
 A third conversion path, not modeled in the framework above but
 worth noting, is the magnetohydrodynamic (MHD) generator: a
 transverse magnetic field drives current through electrodes via the
-Lorentz force on a conducting fluid, with no moving parts. MHD is
-not a charged-particle DEC: it replaces the Brayton turbine, not
-the heat cycle, and remains Carnot-limited. For aneutronic fuels it
-could handle the bremsstrahlung fraction that charged-particle DEC
-cannot touch. Coal-combustion MHD reached TRL 5--6 through national
-programs in the 1960s--1990s; liquid-metal MHD (LMMHD) has
-separately shown $>$71\% efficiency at small scale
-\citep{Fabris1981}, and projected efficiency for LMMHD on fusion
-coolants exceeds 60\% \citep{Smolentsev2022}.
+Lorentz force on a conducting fluid, with no moving parts. The MHD
+generator is not a charged-particle DEC: it replaces the Brayton
+turbine, not the heat cycle, and remains Carnot-limited. For
+aneutronic fuels it could handle the bremsstrahlung fraction that
+charged-particle DEC cannot touch. Coal-combustion MHD generators
+reached TRL 5--6 through national programs in the 1960s--1990s;
+liquid-metal MHD generators (LMMHD) have separately shown $>$71\%
+efficiency at small scale \citep{Fabris1981}, and projected
+efficiency for LMMHD on fusion coolants exceeds 60\%
+\citep{Smolentsev2022}.
 
-Fusion MHD has a costed paper-design heritage. The Compact Fusion
+Fusion-coupled MHD generators have a costed paper-design heritage. The Compact Fusion
 Advanced Rankine (CFAR) concept developed in the late 1980s by an
 LLNL/Kyoto/TIT collaboration
 \citep{HoffmanCampbellLogan1989,Logan1993} pairs a high-temperature
@@ -779,8 +811,8 @@ intrinsically expensive, so drastically shrinking the BOP is the
 path to competitiveness, not a marginal optimization on an
 already-competitive plant.
 
-The remaining obstacle is that no fusion-MHD system has ever been
-built. The electrode-erosion problem that ended the coal programs
+The remaining obstacle is that no fusion-coupled MHD generator has
+ever been built. The electrode-erosion problem that ended the coal programs
 does not apply to clean fusion coolants. For LMMHD integrated into
 a breeding blanket \citep{Smolentsev2022}, the pressure drop of
 liquid metal flowing through fusion-scale magnetic fields
@@ -789,9 +821,9 @@ reactor scale. CFAR avoids this by topology: the disk generator
 sits outside the toroidal field coils in a region where the field
 has dropped off rapidly, with dedicated ring magnets, and the 1989
 design study \citep{HoffmanCampbellLogan1989} reported cycle
-efficiency insensitive to blanket pressure drops up to 50\%. MHD
-therefore remains a what-if at the hardware level (no operational
-fusion demonstration).
+efficiency insensitive to blanket pressure drops up to 50\%.
+Fusion-coupled MHD generators therefore remain a what-if at the
+hardware level (no operational demonstration).
 
 \subsection{The Industrial Floor Persists}
 \label{sec:converge}
@@ -808,16 +840,16 @@ the pulsed-power chain is more expensive than the turbine.
 
 \begin{table}[htbp]
 \caption{Conversion architectures under the aggressive scenario
-(see Section~\ref{sec:dt}).}
+(see Section~\ref{sec:dt}). Aggressive financing reduces the
+BOP-floor contribution; the helium-3 fuel cost at \$2M/kg is
+independent of plant financing.}
 \label{tab:agg}
 \centering
 \begin{tabular}{lrrr}
 \toprule
-Approach & p-B11 & D-He3 (\$2M/kg) & D-He3 (self-bred) \\
+Approach & p-B11 (\$/MWh) & D-He3, \$2M/kg (\$/MWh) & D-He3, self-bred (\$/MWh) \\
 \midrule
-Thermal only (sCO\textsubscript{2}, 47\%) & 7.1 & 82\footnote{Aggressive
-financing reduces the BOP-floor contribution; the helium-3 fuel
-cost at \$2M/kg is independent of plant financing.} & 8 \\
+Thermal only (sCO\textsubscript{2}, 47\%) & 7.1 & 82 & 8 \\
 VB DEC 60\% + thermal (hybrid) & 7.3 & 82 & 9 \\
 Pulsed inductive (85\%, no turbine) & n/a & 55 & 14 \\
 \bottomrule
@@ -913,16 +945,36 @@ assumes the \$0.50/J n-th-of-a-kind capacitor target.}
 \section{Discussion}
 \label{sec:discuss}
 
-The cost of fusion electricity is set primarily by the industrial
-fabric around the core (buildings, balance-of-plant, staffing, and
-financing). The leverage of DEC is exerted on the costed core and
-on the fuel bill rather than on the floor: for p-B11,
-bremsstrahlung dominates the energy split and the venetian-blind
-hybrid neither lowers nor meaningfully increases the floor relative
-to thermal-only; for D-He3, the inductive scheme reduces the fusion
-power and helium-3 burn rate but substitutes a pulsed-power chain
-that costs more than a turbine. Three experimental milestones would
-convert this opportunity into evidence.
+The floor of fusion electricity cost, computed with the core
+assigned zero capital cost, is itself substantial. It is set by the
+industrial fabric around the core (buildings, balance-of-plant,
+staffing, and financing) and ranges from \$17/MWh (p-B11) to
+\$29/MWh (D-T) at baseline; the fusion core adds further capital
+cost on top. Within the floor, fuel choice dominates. BOP
+equipment is essentially fuel-invariant (\$386--393M across all
+three fuels when DEC is excluded), while buildings and staffing
+carry the radioactivity and tritium-handling load. The \$215M
+buildings gap between D-T and p-B11 at 1\,GWe exceeds most
+published core-cost-reduction scenarios, and it propagates to a
+\$5--8/MWh floor difference that compounds with financing
+assumptions. Only p-B11, at aggressive scale and financing,
+leaves meaningful budget for the costed fusion core within the
+one-cent target.
+
+Under current cost assumptions, direct energy conversion does not
+lower this floor. For p-B11,
+bremsstrahlung carries 83\% of the fusion power; even an efficient
+venetian-blind DEC captures only the charged-particle margin and
+adds hardware cost comparable to the turbine savings, leaving the
+floor unchanged. For D-He3, an inductive scheme can route 81\% of
+fusion energy through the recovery coils and reduce both required
+fusion power and external helium-3 burn, but the pulsed-power chain
+that replaces the turbine costs more than a turbine, so the BOP
+floor rises. DEC's economic leverage is therefore exerted on the
+costed core (via smaller required fusion power) and on the fuel
+bill (via reduced helium-3 burn for D-He3), not on the industrial
+floor. Three experimental milestones would convert this opportunity
+into evidence.
 
 \section{Future Directions}
 \label{sec:future}
@@ -942,7 +994,7 @@ but DEC retains cost-down headroom in directions the thermal path
 lacks.
 
 \section*{Acknowledgements}
-The authors thank Mallory Snowden, Ian Ochs, Elijah Kolmes, and
+The authors thank Robert Campbell, Mallory Snowden, Ian Ochs, Elijah Kolmes, and
 Ryan Weed for useful discussions.
 
 \bibliographystyle{unsrtnat}
