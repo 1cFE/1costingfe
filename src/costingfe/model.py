@@ -649,7 +649,7 @@ class CostModel:
             equipment_keys = _PER_MODULE_KEYS - {"C220111"}
             per_module_equipment = sum(c22_detail[k] for k in equipment_keys)
             labor = c22_detail["C220111"] * (
-                1.0 + (n_mod - 1) * self.cc.multi_unit_labor_factor
+                1.0 + (n_mod - 1) * cc.multi_unit_labor_factor
             )
             plant_wide = sum(c22_detail[k] for k in _PLANT_WIDE_KEYS)
             c22_detail["C220000"] = per_module_equipment * n_mod + labor + plant_wide
