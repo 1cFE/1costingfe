@@ -44,3 +44,7 @@ dhe3_f_T: 0.5
 dhe3_f_He3: 0.1
 pb11_f_alpha_n: 0.0
 pb11_f_p_n: 0.0
+
+# Blanket configuration (aneutronic-oriented concept: no breeding blanket)
+blanket_form: none
+blanket_fill: none

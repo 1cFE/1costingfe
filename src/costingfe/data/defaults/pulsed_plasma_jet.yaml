@@ -35,3 +35,7 @@ dhe3_f_T: 0.5
 dhe3_f_He3: 0.1
 pb11_f_alpha_n: 0.0
 pb11_f_p_n: 0.0
+
+# Blanket configuration
+blanket_form: liquid_metal
+blanket_fill: pbli
