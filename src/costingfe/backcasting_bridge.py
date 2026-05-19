@@ -18,6 +18,7 @@ Usage:
 from costingfe.model import CostModel
 from costingfe.types import (
     CONCEPT_TO_FAMILY,
+    BlanketForm,
     CoilMaterial,
     ConfinementConcept,
     ConfinementFamily,
@@ -104,6 +105,7 @@ def generate_subsystems(
         b_max=params["b_max"],
         r_coil=params["r_coil"],
         coil_material=CoilMaterial(params.get("coil_material", "rebco_hts")),
+        blanket_form=BlanketForm(params["blanket_form"]),
         p_nbi=params.get("p_nbi", 0.0),
         p_icrf=params.get("p_icrf", 0.0),
         p_ecrh=params.get("p_ecrh", 0.0),

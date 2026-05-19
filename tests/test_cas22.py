@@ -1,7 +1,15 @@
+import pytest
+
 from costingfe.defaults import load_costing_constants
 from costingfe.layers.cas22 import cas22_reactor_plant_equipment
 from costingfe.layers.geometry import RadialBuild, compute_geometry
-from costingfe.types import CoilMaterial, ConfinementConcept, ConfinementFamily, Fuel
+from costingfe.types import (
+    BlanketForm,
+    CoilMaterial,
+    ConfinementConcept,
+    ConfinementFamily,
+    Fuel,
+)
 
 CC = load_costing_constants()
 
@@ -37,6 +45,7 @@ def _make_cas22(fuel=Fuel.DT, n_mod=1, blanket_t=0.70):
         b_max=12.0,
         r_coil=1.85,
         coil_material=CoilMaterial.REBCO_HTS,
+        blanket_form=BlanketForm.LIQUID_METAL,
         p_nbi=50.0,
         p_icrf=0.0,
         p_ecrh=0.0,
@@ -82,6 +91,88 @@ def test_cas22_scales_with_n_mod():
     single = _make_cas22(n_mod=1)
     double = _make_cas22(n_mod=2)
     assert double["C220000"] > single["C220000"]
+
+
+def test_cas22_multi_unit_labor_discount():
+    """Installation labor (C220111) for unit 2+ at the same site is discounted
+    by cc.multi_unit_labor_factor. Equipment (C220101..C220110) is not
+    discounted: each module is still a manufactured copy. The per-module
+    sub-account values returned in the dict are unchanged; the discount
+    shows up in the C220000 rollup."""
+    single = _make_cas22(n_mod=1)
+    double = _make_cas22(n_mod=2)
+
+    # Per-module values returned for C220101 and C220111 are unchanged
+    assert double["C220101"] == single["C220101"]
+    assert double["C220111"] == single["C220111"]
+
+    # Difference between n_mod=1 and n_mod=2 totals = one extra module,
+    # equipment at full price + labor at multi_unit_labor_factor of full,
+    # plus the increase in plant-wide accounts (which use total power).
+    # The labor saving at n_mod=2 vs naive 2x: c220111 * (1 - factor)
+    naive_double = 2.0 * (
+        single["C220101"]
+        + single["C220102"]
+        + single["C220103"]
+        + single["C220104"]
+        + single["C220105"]
+        + single["C220106"]
+        + single["C220107"]
+        + single["C220108"]
+        + single["C220109"]
+        + single["C220110"]
+        + single["C220111"]
+        + single["C220112"]
+    ) + (
+        double["C220200"]
+        + double["C220300"]
+        + double["C220400"]
+        + double["C220500"]
+        + double["C220600"]
+        + double["C220700"]
+    )
+    expected_labor_saving = single["C220111"] * (1.0 - CC.multi_unit_labor_factor)
+    assert double["C220000"] == pytest.approx(
+        naive_double - expected_labor_saving, rel=1e-5
+    )
+
+
+def test_cas22_n_mod_one_unchanged_by_multi_unit_factor():
+    """At n_mod=1, the multi-unit labor factor must have no effect: there
+    are no 'subsequent units' to discount."""
+    cc_aggressive = CC.replace(multi_unit_labor_factor=0.50)
+    rb = RadialBuild(R0=6.2, plasma_t=2.0, elon=1.7, blanket_t=0.70)
+    geo = compute_geometry(rb, ConfinementConcept.TOKAMAK)
+    base_kwargs = dict(
+        p_net=1000.0,
+        p_th=2500.0,
+        p_et=1100.0,
+        p_fus=2300.0,
+        p_cryo=0.5,
+        n_mod=1,
+        fuel=Fuel.DT,
+        noak=True,
+        blanket_vol=geo.firstwall_vol + geo.blanket_vol + geo.reflector_vol,
+        shield_vol=geo.ht_shield_vol + geo.lt_shield_vol,
+        structure_vol=geo.structure_vol,
+        vessel_vol=geo.vessel_vol,
+        family=ConfinementFamily.STEADY_STATE,
+        concept=ConfinementConcept.TOKAMAK,
+        b_max=12.0,
+        r_coil=1.85,
+        coil_material=CoilMaterial.REBCO_HTS,
+        blanket_form=BlanketForm.LIQUID_METAL,
+        p_nbi=50.0,
+        p_icrf=0.0,
+        p_ecrh=0.0,
+        p_lhcd=0.0,
+        p_driver=0.0,
+        f_dec=0.0,
+        p_dee=0.0,
+    )
+    base = cas22_reactor_plant_equipment(CC, **base_kwargs)
+    aggr = cas22_reactor_plant_equipment(cc_aggressive, **base_kwargs)
+    assert base["C220000"] == aggr["C220000"]
 
 
 def test_cas22_all_subaccounts_present():
@@ -161,6 +252,7 @@ def _make_cas22_with_family(family=ConfinementFamily.STEADY_STATE):
         b_max=12.0,
         r_coil=1.85,
         coil_material=CoilMaterial.REBCO_HTS,
+        blanket_form=BlanketForm.LIQUID_METAL,
         p_nbi=50.0,
         p_icrf=0.0,
         p_ecrh=0.0,
@@ -252,6 +344,7 @@ def _make_cas22_coil(
         b_max=b_max,
         r_coil=r_coil,
         coil_material=coil_material,
+        blanket_form=BlanketForm.LIQUID_METAL,
         p_nbi=50.0,
         p_icrf=0.0,
         p_ecrh=0.0,
@@ -340,6 +433,7 @@ def _make_cas22_heating(p_nbi=50.0, p_icrf=0.0, p_ecrh=0.0, p_lhcd=0.0):
         b_max=12.0,
         r_coil=1.85,
         coil_material=CoilMaterial.REBCO_HTS,
+        blanket_form=BlanketForm.LIQUID_METAL,
         p_nbi=p_nbi,
         p_icrf=p_icrf,
         p_ecrh=p_ecrh,
@@ -420,6 +514,7 @@ def test_cas220110_concept_scales():
         b_max=12.0,
         r_coil=1.85,
         coil_material=CoilMaterial.REBCO_HTS,
+        blanket_form=BlanketForm.LIQUID_METAL,
         p_nbi=50.0,
         p_icrf=0.0,
         p_ecrh=0.0,
@@ -447,6 +542,7 @@ def test_cas220110_concept_scales():
         b_max=12.0,
         r_coil=1.85,
         coil_material=CoilMaterial.REBCO_HTS,
+        blanket_form=BlanketForm.LIQUID_METAL,
         p_nbi=50.0,
         p_icrf=0.0,
         p_ecrh=0.0,
@@ -484,6 +580,7 @@ def _make_cas22_dec(f_dec=0.3, p_dee=300.0):
         b_max=12.0,
         r_coil=1.85,
         coil_material=CoilMaterial.REBCO_HTS,
+        blanket_form=BlanketForm.LIQUID_METAL,
         p_nbi=50.0,
         p_icrf=0.0,
         p_ecrh=0.0,

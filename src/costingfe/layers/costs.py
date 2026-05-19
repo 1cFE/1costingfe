@@ -141,16 +141,16 @@ def cas26_heat_rejection(cc, p_th, n_mod):
     return n_mod * p_th * cc.heat_rej_per_mw
 
 
-def cas27_special_materials(cc, p_net, fuel):
-    """CAS27: Special materials — initial reactor material inventory. Returns M$.
+def cas27_special_materials(cc, p_net, fuel, blanket_fill):
+    """CAS27: Special materials, initial reactor material inventory. Returns M$.
 
     Covers non-fuel reactor materials: breeding blanket fill (PbLi, Li, FLiBe),
     neutron multiplier (Be if HCPB concept), and other special inventory.
     CAS220101 covers the blanket *structure*; CAS27 covers the *material fill*.
 
-    Default assumes PbLi blanket concept for DT. For HCPB concepts with
-    beryllium pebbles (~300 tonnes × $600/kg = $180M), override via
-    cost_overrides["CAS27"].
+    The per-fuel base sets the baseline (PbLi-style assumption); blanket_fill
+    scales by fill_factor to capture alternative chemistries (HCPB Be, FLiBe,
+    pure Li, ceramic-only, none).
 
     See docs/account_justification/CAS27_special_materials.md
     """
@@ -160,7 +160,7 @@ def cas27_special_materials(cc, p_net, fuel):
         Fuel.DHE3: cc.special_materials_dhe3,
         Fuel.PB11: cc.special_materials_pb11,
     }
-    return base[fuel] * (p_net / 1000.0)
+    return base[fuel] * blanket_fill.fill_factor * (p_net / 1000.0)
 
 
 def cas28_digital_twin(cc):

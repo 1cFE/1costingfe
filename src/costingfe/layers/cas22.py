@@ -19,6 +19,7 @@ import jax.numpy as jnp
 
 from costingfe.defaults import CostingConstants
 from costingfe.types import (
+    BlanketForm,
     CoilMaterial,
     ConfinementConcept,
     ConfinementFamily,
@@ -100,6 +101,7 @@ def cas22_reactor_plant_equipment(
     b_max: float,
     r_coil: float,
     coil_material: CoilMaterial,
+    blanket_form: BlanketForm,
     p_nbi: float,
     p_icrf: float,
     p_ecrh: float,
@@ -142,7 +144,12 @@ def cas22_reactor_plant_equipment(
     # TODO: incorporate wall_material cost multiplier into C220101
     # (W tiles vs flowing Li systems vs SiC composites have very different
     # fabrication costs — requires dedicated research)
-    c220101 = blanket_unit[fuel] * blanket_vol * (p_th / P_TH_REF) ** 0.6
+    c220101 = (
+        blanket_unit[fuel]
+        * blanket_form.structure_factor
+        * blanket_vol
+        * (p_th / P_TH_REF) ** 0.6
+    )
 
     # -----------------------------------------------------------------------
     # 220102: Shield (HT + LT + Bioshield)
@@ -386,7 +393,7 @@ def cas22_reactor_plant_equipment(
     # -----------------------------------------------------------------------
     # Total CAS22 (per module, then multiply)
     # -----------------------------------------------------------------------
-    per_module = (
+    per_module_equipment = (
         c220101
         + c220102
         + c220103
@@ -397,11 +404,14 @@ def cas22_reactor_plant_equipment(
         + c220108
         + c220109
         + c220110
-        + c220111
         + c220112
     )
+    # Multi-unit labor: unit 1 at full c220111, each subsequent unit
+    # discounted by cc.multi_unit_labor_factor (default 0.92, fission norm).
+    # Equipment is not discounted — each module is still a manufactured copy.
+    total_labor = c220111 * (1.0 + (n_mod - 1) * cc.multi_unit_labor_factor)
     plant_wide = c220200 + c220300 + c220400 + c220500 + c220600 + c220700
-    c220000 = per_module * n_mod + plant_wide
+    c220000 = per_module_equipment * n_mod + total_labor + plant_wide
 
     return {
         "C220101": c220101,
