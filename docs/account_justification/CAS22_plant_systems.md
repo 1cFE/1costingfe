@@ -91,7 +91,8 @@ and concept-dependent (0.55× for mirror geometry).
 
 ### C220111: Installation Labor
 
-    C220111 = 14% × reactor_subtotal (C220101 through C220110)
+    C220111 (per module, unit 1) = 14% × reactor_subtotal (C220101 through C220110)
+    Total labor at site = C220111 × (1 + (n_mod − 1) × multi_unit_labor_factor)
 
 Covers on-site labor for reactor plant installation: rigging, welding,
 alignment, connection, testing, and commissioning of all reactor
@@ -108,6 +109,48 @@ World Nuclear Association data: ~80% of overnight cost is EPC, with
 ~70% of EPC being direct costs (equipment + labor).  For a $2.8B
 reactor plant, $286M installation labor (10% of total CAS22) is
 consistent.
+
+**Multi-unit labor factor (twin/triplet co-location effect):**
+For multi-unit sites (`n_mod` > 1), the installation labor on the
+*second and subsequent* units at the same site is discounted by
+`multi_unit_labor_factor` (default 0.92, i.e. 8% off per subsequent
+unit).  Equipment costs (C220101–C220110) are not discounted: each
+module is still a manufactured copy and incurs full equipment cost.
+
+The discount captures the documented "twin unit" effect in fission EPC,
+where the construction crew, supervision, tooling, and procedures are
+re-used between adjacent units at one site.  Empirical anchors:
+
+- **Vogtle 3 → 4** (US AP1000): roughly 20–30% labor reduction on the
+  second unit, attributed to crew learning and reduced rework.
+- **Korean APR-1400 batches** (Shin-Kori, Barakah): 10–15% labor
+  reduction across same-site batch builds, sustained across units 2–4.
+- **Chinese AP1000 pairs** (Sanmen, Haiyang): modest positive learning
+  on the second unit, smaller than Vogtle but consistently > 0.
+- **EPR experience** (Olkiluoto, Flamanville, Hinkley): no clear
+  twin-unit effect in available public data; FOAK/regulatory churn
+  dominated.
+
+Empirical range across these anchors: 5–15% off the labor of each
+subsequent unit at the same site.  Default of 8% (factor 0.92) sits
+just below the middle of that range to be conservative.
+
+**What this is NOT:** the multi-unit factor is *not* a Wright's-Law
+learning curve.  Wright's Law applies to fleet-cumulative manufactured
+production (typically requiring fleet sizes in the hundreds to
+thousands), and the empirical fission literature on cross-program
+deployment (Grubler 2010; Lovering, Yip, Nordhaus 2016; Eash-Gates
+et al. 2020) actually finds *negative* learning at the program level
+for US/French nuclear.  Applying a 0.20-class Wright exponent at
+n_mod = 2–6 would substantially over-credit the co-location effect.
+Cross-fleet learning, if added, belongs at a separate parameter that
+represents cumulative units of a given concept built worldwide — not
+on `n_mod`, which represents units at one site.
+
+Plant-wide accounts (C220200–C220700) are unaffected by this factor:
+they already use total plant power (`n_mod × p_th` / `n_mod × p_net`)
+and inherit shared-infrastructure economies via their power-law
+scaling exponents.
 
 ### C220112: Isotope Separation Plant
 

@@ -120,8 +120,11 @@ by Woodruff and colleagues in the pyFECONS code.
 The framework covers D-T, p-${}^{11}$B, and D-D and D-${}^3$He
 cycles across the uncatalyzed, semi-catalyzed, and fully catalyzed
 regimes, with tritium and ${}^3$He burn-up fractions exposed as
-independent parameters. It spans the several confinement families
-across magnetic, inertial, and magneto-inertial confinement schemes.
+independent parameters. \texttt{1costingfe} is a costing
+framework rather than a physics code: any reactor concept that
+supplies the required physics outputs can be costed within the
+same account structure, whether magnetic, inertial, or
+magneto-inertial.
 \texttt{1costingfe} is developed to assist in the identification 
 of technological corridors compatible with an aspirational 1~cent/kWh 
 LCOE target. A plant competitive at this level would displace incumbent 
@@ -134,9 +137,9 @@ separation, and staffing, from current procurement data, vendor
 pricing, and cross-industry benchmarks, in place of the heritage
 scaling that dominates these accounts in prior fusion cost models.
 Accounts that are largely fuel- and concept-agnostic inherit prior
-conventions. The framework is implemented in JAX with reverse-mode
-automatic differentiation, exposing exact LCOE gradients for
-sensitivity analysis and Monte Carlo uncertainty propagation. A
+conventions. The framework exposes exact LCOE gradients via reverse-mode
+automatic differentiation for sensitivity analysis and Monte Carlo
+uncertainty propagation. A
 worked tour from physics outputs to LCOE is included as a use case,
 and the framework is calibrated against the ARC and ARIES-AT
 reference designs, with divergences attributed to specific accounts
@@ -150,11 +153,18 @@ where procurement data departs from heritage scaling.
 \section{Introduction}
 \label{sec:intro}
 
-Fusion energy promises abundant, low-carbon baseload power, but its economic
-viability remains an open question. Credible cost estimates are essential for
-guiding R\&D investment, comparing confinement concepts, and identifying the
-design parameters with the greatest leverage on the levelized cost of
-electricity (LCOE).
+Fusion energy promises abundant, low-carbon baseload power. The field is
+entering a phase in which fusion power plants are being designed, not only
+experiments meant to determine the plasma physics and demonstrate
+scientific breakeven. Commercial viability is a question of economics, which is
+why credible cost estimates are essential for guiding R\&D investment,
+comparing confinement concepts, and identifying the design parameters
+with the greatest leverage on the levelized cost of electricity (LCOE). 
+In addition to the physics and
+engineering parameters that determine the plant's performance, the
+economic parameters (construction time, economic plant lifetime, capital
+cost and operating costs, and the cost of capital, to name a few) become
+critical components in the calculation.
 
 The most widely used costing methodology for fusion power plants is the
 Code of Accounts Structure (CAS) developed by Schulte et~al.\
@@ -165,6 +175,19 @@ hierarchical accounts covering pre-construction, direct capital, indirect
 services, financial charges, and annual operating costs. The pyFECONS
 code \citep{woodruff2026, woodruff2026b} provides a Python implementation of this
 methodology.
+
+Most open-source fusion costing frameworks are either
+\begin{enumerate}
+\item physics-agnostic, accepting user inputs for many, if not all, cost
+  accounts, or
+\item applicable to a single, relatively mature confinement family and fuel
+  cycle (e.g.\ D-T tokamaks), using reduced-order plasma models to
+  determine fusion power from the coils and geometry and to size subsystems
+  such as neutral beam injectors and blankets.
+\end{enumerate}
+Individual companies often maintain proprietary models that are unavailable
+to the public, as they contain sensitive information about their design and
+its maturity.
 
 Power plant costing estimates are challenging even for mature technologies
 with extensive historical data, with fission plants exhibiting significant
@@ -180,41 +203,23 @@ framework to fusion introduces two further challenges:
   changes will affect the actual costs of the finalized designs.
 \end{enumerate}
 
-To pursue this search systematically, \texttt{1costingfe} is under active development as a
-costing framework built on JAX that computes LCOE from customer-level
-requirements across all major confinement families and fuel cycles. The
-choice of JAX as the computational backend provides automatic
-differentiation - exact partial derivatives of LCOE with respect to every
-input parameter in a single backward pass - and vectorized evaluation over
-parameter sweeps and Monte Carlo samples. These capabilities transform
-sensitivity analysis from a computational bottleneck into a routine
-operation, enabling rapid identification of the design levers with the
-greatest leverage on cost.
-\texttt{1costingfe} is the cost-accounting layer of a broader fusion
+These challenges cannot be resolved in software. Instead, we
+built \texttt{1costingfe} as a flexible costing framework that
+computes LCOE from customer-level requirements across all fuel
+cycles, structured to cost any reactor concept, conventional
+or otherwise. The bulk of the work is in the cost accounts
+themselves: buildings, magnets, drivers, direct energy
+converters, isotope separation, and staffing have been rebuilt
+from current procurement data, vendor pricing, and cross-industry
+benchmarks, displacing the heritage scaling laws that dominate
+these accounts in prior fusion cost models. The framework also
+exposes exact LCOE gradients via reverse-mode automatic
+differentiation, making sensitivity sweeps and Monte Carlo
+uncertainty propagation routine.
+\texttt{1costingfe} is the deterministic cost-accounting layer of a broader fusion
 techno-economic analysis pipeline; the upstream concept-ingestion,
 SysML, and code-generation stages are developed separately in the
 \texttt{fusion-tea} repository family.
-
-The field is entering a phase in which fusion power plants are being designed,
-not only experiments meant to determine the plasma physics and demonstrate scientific breakeven.
-A commercially viable fusion power plant must be designed with its economics in mind, which introduces
-additional parameters and constraints that must be added to the optimization loop.
-The economic parameters (construction time, economic plant lifetime, capital cost and operating costs,
-and the cost of capital, to name a few) become critical components in the calculation, in addition to the
-particular plasma physics, nuclear engineering, and traditional engineering parameters.
-
-Most open-source fusion costing frameworks are either
-\begin{enumerate}
-\item physics-agnostic, accepting user inputs for many, if not all, cost
-  accounts, or
-\item applicable to a single, relatively mature confinement family and fuel
-  cycle (e.g.\ D-T tokamaks), using reduced-order plasma models to
-  determine fusion power from the coils and geometry and to size subsystems
-  such as neutral beam injectors and blankets.
-\end{enumerate}
-Individual companies often maintain proprietary models that are unavailable
-to the public, as they contain sensitive information about their design and
-its maturity.
 
 Certain inputs to the cost model are well constrained regardless of design
 choice. The fuel nuclear physics: cross sections, energy per reaction, and
@@ -233,8 +238,10 @@ expense of higher operating costs.
 The \textsc{1cfe} initiative to search for corridors through which fusion energy can reach the
 optimistic price target of 1~cent/kWh must balance technological optimism regarding the
 potential of medium-to-high Technology Readiness Level (TRL) concepts with healthy skepticism
-regarding very early stage physics. As an example, untested direct energy conversion methods are
-not specifically considered at this stage, but the potential for their development and deployment is not ruled out.
+regarding very early stage physics. As an example, direct energy conversion (DEC) methods are included across the
+TRL range, from the demonstrated venetian-blind grid through pulsed-inductive
+DEC and MHD on fusion coolants; their cost contributions are computed but
+flagged as TRL-conditional.
 
 Data availability for fusion power plant costs is low: no commercial plant
 has been built, and the few large-scale projects (ITER, NIF) are research
@@ -428,7 +435,7 @@ CAS90 (M\$/yr)         & 285.9 \\
 \label{sec:tour-sensitivity}
 
 The forward pipeline of \cref{fig:pipeline} is differentiable end-to-end.
-JAX reverse-mode automatic differentiation produces exact partial
+Reverse-mode automatic differentiation produces exact partial
 derivatives of LCOE with respect to every input parameter in a single
 backward pass. \Cref{fig:tornado} shows the resulting tornado for the
 Section~\ref{sec:tour} reference scenario, organised into three bands:
@@ -443,7 +450,7 @@ construction time, and contingency assumptions).
 \caption{Sensitivity tornado for the 1\,GWe D-${}^3$He
 mirror reference scenario. Bars give LCOE elasticity
 $\epsilon_p = (\partial \text{LCOE}/\partial p)(p/\text{LCOE})$
-computed by JAX reverse-mode autodiff on the full forward pipeline.
+computed by reverse-mode autodiff on the full forward pipeline.
 A bar of length $0.10$ means a $+1\%$ perturbation of the parameter
 moves LCOE by $+0.10\%$. Reproduced by
 \texttt{scripts/make\_tornado.py}.}
@@ -487,7 +494,7 @@ Downstream rollups (CAS22, total capital, LCOE) recompute
 automatically. Mirror coils are typically smaller absolute cost than
 tokamak TF/CS/PF systems, reflecting the simpler solenoid topology.
 
-\paragraph{Batch sweeps.} Vectorised over JAX \texttt{vmap},
+\paragraph{Batch sweeps.} Vectorised via \texttt{vmap},
 suitable for uncertainty-band propagation and Monte Carlo:
 
 \begin{lstlisting}
@@ -1248,7 +1255,7 @@ CAS & Description & Disposition & Method \\
 21$^\dagger$ & Buildings \& structures & Replaced & Per-building, per-fuel, industrial-grade (18 buildings) \\
 22$^\dagger$ & Reactor plant equipment & -- & Component-level parametric (18 sub-accounts) \\
 \multicolumn{4}{l}{\textit{Per-module accounts (×\,$n_{\text{mod}}$):}} \\
-\hspace{1em}22.01.01 & First wall + blanket & Inherited & Volume $\times$ thermal intensity, fuel-dependent \\
+\hspace{1em}22.01.01$^\dagger$ & First wall + blanket & Extended & Volume $\times$ thermal intensity $\times$ fuel $\times$ blanket-form structural complexity factor \\
 \hspace{1em}22.01.02 & Shield & Inherited & Volume $\times$ fuel-dependent neutron scale \\
 \hspace{1em}22.01.03$^\dagger$ & Coils (magnets) & Replaced & Conductor kAm $\times$ \$/kAm $\times$ markup; \$0 for IFE \\
 \hspace{1em}22.01.04$^\dagger$ & Heating (MFE) / driver (pulsed) & Extended & Per-MW linear; concept-specific driver capital for pulsed \\
@@ -1271,7 +1278,7 @@ CAS & Description & Disposition & Method \\
 24$^\dagger$ & Electric plant equipment & Replaced & Linear scaling on gross electric (NETL-calibrated) \\
 25$^\dagger$ & Miscellaneous plant equip.\ & Replaced & Linear scaling on gross electric (NETL-calibrated) \\
 26$^\dagger$ & Heat rejection systems & Replaced & Linear scaling on total thermal $P_{\text{th}}$ (NETL-calibrated) \\
-27$^\dagger$ & Special materials & Extended & Fuel-dependent blanket fill inventory \\
+27$^\dagger$ & Special materials & Extended & Fuel-dependent base $\times$ blanket-fill chemistry factor (PbLi / Li / FLiBe / Be ceramic / ceramic only / none) \\
 28$^\dagger$ & Digital twin & Replaced & Fixed cost (\$5M) \\
 29$^\dagger$ & Contingency on direct costs & Inherited & 10\% FOAK, 0\% NOAK (Gen-IV EMWG) \\
 30$^\dagger$ & Indirect service costs & Replaced & Fraction of CAS20, construction-time scaled \\
@@ -1436,13 +1443,73 @@ breakthrough2022}, superseding ARIES/pyFECONS values.
 \subsection{Inherited Sub-Accounts}
 \label{sec:cas22-inherited}
 
-Sub-accounts CAS22.01.01 (first wall + blanket), 22.01.02 (shield),
-22.01.05 (primary structure), 22.01.06 (vacuum system), 22.01.08
-(divertor), and 22.01.11 (installation labor) inherit the methodology
-of the pyFECONS implementation \citep{woodruff2026} unchanged: hybrid
-volume + thermal-intensity scaling for component accounts and
+Sub-accounts CAS22.01.02 (shield), 22.01.05 (primary structure),
+22.01.06 (vacuum system), 22.01.08 (divertor), and 22.01.11
+(installation labor) inherit the methodology of the pyFECONS
+implementation \citep{woodruff2026} unchanged: hybrid volume +
+thermal-intensity scaling for component accounts and
 percentage-of-subtotal for installation labor. They are not
 re-derived here.
+
+Sub-account CAS22.01.01 (first wall + blanket) inherits the pyFECONS
+volume $\times$ thermal-intensity $\times$ fuel-dependent unit cost,
+extended with a blanket-form structural complexity factor
+$s(\mathrm{form}) \in \{1.0, 1.3, 1.2, 0.0\}$ for liquid-metal,
+molten-salt, solid-breeder, and no-blanket architectures respectively:
+\begin{equation}
+\label{eq:cas2201}
+C_{22.01.01} = c_{\text{blk}}(f) \cdot s(\mathrm{form}) \cdot V_{\text{blk}} \cdot \left( \frac{P_{\text{th}}}{P_{\text{th,ref}}} \right)^{0.6}
+\end{equation}
+The structural factor captures the cassette/canister fabrication
+premium for molten-salt designs (Hastelloy-N corrosion liner on
+FLiBe-wetted surfaces) and solid-breeder designs (pebble-bed canisters
+with separate breeder and multiplier zones), all relative to the
+PbLi-style flow-channel baseline. The fill material chemistry is costed
+separately under CAS27 (Section~\ref{sec:cas27}).
+
+\subsubsection*{Multi-Unit Labor Factor for $n_{\rm mod}>1$}
+\label{sec:multi-unit-labor}
+
+Per-module installation labor (CAS22.01.11) is computed at the
+inherited 14\% of reactor subtotal for the first unit at a site.  For
+a multi-module site, the on-site labor for each subsequent unit is
+discounted by a fixed factor $\phi_{\rm lab}$:
+\begin{equation}
+\label{eq:multi-unit-labor}
+C_{220111}^{\rm site}
+  = C_{220111}^{\rm unit\,1}
+    \times \bigl(1 + (n_{\rm mod}-1)\,\phi_{\rm lab}\bigr),
+\qquad \phi_{\rm lab} = 0.92~\text{(default)}.
+\end{equation}
+Equipment costs (CAS22.01.01--22.01.10) are \emph{not} discounted:
+each module is a separate manufactured copy and incurs full equipment
+cost.  Plant-wide accounts (CAS22.02--22.07) already use total plant
+power $n_{\rm mod}\,P$ with sub-linear scaling exponents and capture
+the shared-infrastructure economy through that channel.
+
+The factor $\phi_{\rm lab}$ represents the documented twin/triplet
+unit co-location effect in fission EPC: re-use of construction crew,
+supervision, tooling, procedures, and engineering deliverables
+between adjacent units at a single site.  The empirical anchors are
+roughly 20--30\% labor reduction for Vogtle 3$\rightarrow$4 (US
+AP1000), 10--15\% across Korean APR-1400 batches (Shin-Kori,
+Barakah), and a smaller but positive effect on the Chinese AP1000
+pairs (Sanmen, Haiyang).  The European EPR pairs (Olkiluoto,
+Flamanville, Hinkley Point~C) show no clear twin-unit effect in
+public data, with FOAK and regulatory churn dominating.  The 8\%
+default sits below the middle of the 5--15\% empirical range.
+
+This factor is deliberately \emph{not} a Wright's-Law learning curve.
+Wright-style cost reductions apply to fleet-cumulative manufactured
+production (typically requiring fleet sizes in the hundreds to
+thousands), and the empirical fission literature on cross-program
+deployment finds no positive cross-program learning, with some
+analyses identifying \emph{negative} learning at the program level
+for US and French nuclear \citep{grubler2010,lovering2016,
+eashgates2020}.  Cross-fleet learning, if introduced in future work,
+belongs at a separate parameter representing cumulative units of a
+given concept built worldwide, not on $n_{\rm mod}$, which represents
+units at a single site.
 
 %% ------------------------------------------------------------
 \subsection{CAS22.01.03: Superconducting Coils}
@@ -1904,28 +1971,54 @@ using conventional, non-nuclear-grade BOP equipment.
 \label{sec:cas27}
 
 CAS27 covers the initial inventory of non-fuel reactor materials:
-breeding blanket fill (PbLi, Li, FLiBe), neutron multiplier (Be), and
-other special inventory.  CAS22.01.01 covers the blanket \textit{structure};
-CAS27 covers the \textit{material that fills it}.
-
+breeding blanket fill, neutron multiplier, and other special inventory.
+CAS22.01.01 covers the blanket \textit{structure}; CAS27 covers the
+\textit{material that fills it}. The cost is a per-fuel base scaled
+linearly with net electric power and multiplied by a chemistry factor
+$\phi(\mathrm{fill}) \in \{0.0, 1.0, 2.0, 3.0, 5.0, 13.0\}$ selected by
+the blanket fill chemistry:
 \begin{equation}
 \label{eq:cas27}
-C_{27} = C_{\text{mat,base}}(f) \times \frac{P_{\text{net}}}{1000}
+C_{27} = C_{\text{mat,base}}(f) \cdot \phi(\mathrm{fill}) \cdot \frac{P_{\text{net}}}{1000}
 \end{equation}
 
-The default assumes a PbLi blanket concept for D-T: 4{,}000 tonnes
-of Pb-17Li eutectic at \$3/kg plus enriched lithium premium,
-totaling \$15M at 1\,GWe.  This is small relative to CAS22
-(\$2.7B) because PbLi is an inexpensive commodity (mostly lead).
+The blanket configuration is specified as an orthogonal pair: a
+\texttt{BlanketForm} (structural architecture, driving
+$s(\mathrm{form})$ in CAS22.01.01) and a \texttt{BlanketFill} (bulk
+material chemistry, driving $\phi(\mathrm{fill})$ here). Compatibility
+between form and fill is enforced at validation time.
 
-\textbf{Design-dependent override:} The Helium-Cooled Pebble Bed (HCPB)
-blanket concept requires 300--490 tonnes of beryllium pebbles
-(\$500--800/kg), costing \$180--300M.  FLiBe molten-salt blankets
-cost \$25--300M depending on isotopic requirements.  These cases should
-override CAS27 directly.
+Table~\ref{tab:cas27_fills} lists the chemistry factors and their cost
+basis, calibrated relative to the D-T PbLi baseline (4{,}000 tonnes of
+Pb-17Li eutectic at \$3/kg plus enriched lithium premium, totaling
+\$15M at 1\,GWe).
 
-Non-D-T fuels have minimal or zero special materials: no breeding
-blanket fill, no neutron multiplier, conventional coolants.
+\begin{table}[h]
+\centering
+\caption{CAS27 fill chemistry factors $\phi(\mathrm{fill})$ relative to the D-T PbLi baseline (\$15M at 1\,GWe).}
+\label{tab:cas27_fills}
+\begin{tabular}{lrl}
+\toprule
+Fill chemistry & $\phi(\mathrm{fill})$ & Cost basis \\
+\midrule
+\texttt{pbli} (PbLi eutectic)        & 1.0  & Baseline: 4{,}000 t at \$3/kg + Li-6 premium \\
+\texttt{li} (self-cooled Li)         & 2.0  & ~300 t at \$300--1000/kg enriched, center \$30M \\
+\texttt{flibe} (2LiF-BeF$_2$)        & 5.0  & ~1{,}000 t at \$50--150/kg with Li-7 enrichment, ~\$75M \\
+\texttt{be\_ceramic} (HCPB)          & 13.0 & ~300 t Be at \$500--800/kg + Li-ceramic pebbles, ~\$200M \\
+\texttt{ceramic\_only} (WCCB)        & 3.0  & Li-ceramic pebbles without Be multiplier, ~\$45M \\
+\texttt{none}                        & 0.0  & Aneutronic, no breeder \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The HCPB (\texttt{be\_ceramic}) factor of 13.0 is driven by global
+beryllium supply: world production is ~300 tonnes/yr, so a single
+DEMO-scale plant consumes the entire annual supply, which makes the
+beryllium cost the largest known discriminator in the EUROfusion
+blanket selection process.
+
+Aneutronic fuels (D-He3, p-B11) typically use \texttt{none/none} (no
+breeding blanket), recovering minimal special-material inventory.
 
 
 %% ------------------------------------------------------------
@@ -2622,7 +2715,7 @@ The framework spans the four candidate fuel cycles and the principal
 confinement families through a common power-balance and cost-account
 backbone, with each account justified independently from procurement
 and benchmark data rather than from heritage scaling factors alone.
-The use of JAX as the computational backend exposes exact gradients
+The differentiable backend exposes exact gradients
 and supports vectorised sensitivity sweeps, making LCOE-driven design
 exploration tractable.
 
@@ -2675,7 +2768,7 @@ The power balance of the physics module accepts fusion power
 $P_{\text{fus}}$ as an input. To derive $P_{\text{fus}}$ from machine
 geometry and plasma parameters for a tokamak, the framework implements a
 zero-dimensional (0D) equilibrium model that chains standard scaling
-laws. The model is fully JAX-differentiable, enabling gradient-based
+laws. The model is fully differentiable, enabling gradient-based
 sensitivity analysis of LCOE with respect to machine-level design
 choices ($R$, $a$, $B$, $q_{95}$, etc.).
 
@@ -2946,18 +3039,27 @@ and it works uniformly across thermal and DEC conversion pathways without
 requiring concept-dependent parameterization.
 
 \subsubsection{Pulsed Thermal Conversion}
-For laser IFE and Z-pinch concepts the driver energy thermalises into
-the blanket alongside neutron and radiation power.  The thermal pool
-is:
-\begin{equation}
-P_{\text{th}} = M_n P_n + P_{\text{cp}} + P_{\text{drv}} + \eta_p \, P_{\text{pump}}
-\end{equation}
-where $M_n$ is the neutron energy multiplier and $\eta_p$ is the
-pump-power thermalisation fraction (matching the steady-state
-convention of \cref{eq:p-thermal}).  All electrical output
-comes from the thermal cycle at efficiency $\eta_{\text{th}}$, and
-the full driver draw $P_{\text{drv}}/\eta_{\text{pin}}$ enters the
-recirculating load.
+For laser IFE, Z-pinch, mag-target, and other pulsed concepts whose
+driver energy thermalises in the blanket, the model supports an
+optional partial direct charged-particle capture path that mirrors
+the steady-state hybrid balance of \cref{eq:p-thermal}.  A fraction
+$f_{\text{dec}} \in [0, 1]$ of the non-radiated charged-particle
+power $P_{\text{ch,net}} = (1 - f_{\text{rad}})\,P_{\text{cp}}$ is
+collected at efficiency $\eta_{\text{de}}$; the remainder of the ash
+and all of the radiation thermalise into the blanket alongside the
+driver and pump loads:
+\begin{align}
+P_{\text{th}} &= M_n P_n + (1 - f_{\text{dec}})\,P_{\text{ch,net}}
+  + P_{\text{rad}} + P_{\text{drv}} + \eta_p \, P_{\text{pump}}, \\
+P_{\text{dee}} &= f_{\text{dec}}\,\eta_{\text{de}}\,P_{\text{ch,net}}, \\
+P_{\text{et}} &= \eta_{\text{th}} P_{\text{th}} + P_{\text{dee}}.
+\end{align}
+Setting $f_{\text{dec}} = 0$ recovers the pure-thermal limit in which
+all ash thermalises; setting it close to unity (with a low neutron
+fraction, e.g.\ p-B11) approaches the aneutronic DEC limit.
+The full driver draw $P_{\text{drv}}/\eta_{\text{pin}}$ still enters
+the recirculating load --- unlike the inductive case below, the
+thermal-mode driver charge is not recovered.
 
 \subsubsection{Pulsed Inductive DEC Conversion}
 For inductive recovery concepts (e.g.\ pulsed FRCs with capacitor-bank-driven compression), the driver
