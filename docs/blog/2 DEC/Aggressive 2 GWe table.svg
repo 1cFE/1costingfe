@@ -16,10 +16,10 @@
 <line class="t-line" x1="0" y1="112" x2="720" y2="112"/>
 
 <g class="t-text t-header">
-  <text x="16" y="26">Approach (2 GWe, free core, aggressive)</text>
+  <text x="16" y="26">Approach</text>
   <text x="394" y="26" text-anchor="end">p-B11 ($/MWh)</text>
-  <text x="574" y="26" text-anchor="end">D-He3, He-3 at $2M/kg</text>
-  <text x="704" y="26" text-anchor="end">D-He3, self-bred</text>
+  <text x="574" y="26" text-anchor="end">$2M/kg He-3</text>
+  <text x="704" y="26" text-anchor="end">self-bred</text>
 </g>
 
 <g class="t-text">

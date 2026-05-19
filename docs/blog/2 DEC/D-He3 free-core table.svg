@@ -15,9 +15,9 @@
 <line class="t-line" x1="0" y1="76" x2="720" y2="76"/>
 
 <g class="t-text t-header">
-  <text x="16" y="26">Configuration (1 GWe, D-He3, free core)</text>
-  <text x="424" y="26" text-anchor="end">BOP floor ($/MWh)</text>
-  <text x="564" y="26" text-anchor="end">He-3 fuel ($/MWh)</text>
+  <text x="16" y="26">Configuration</text>
+  <text x="424" y="26" text-anchor="end">BOP floor</text>
+  <text x="564" y="26" text-anchor="end">He-3 fuel</text>
   <text x="704" y="26" text-anchor="end">Total ($/MWh)</text>
 </g>
 

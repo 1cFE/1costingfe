@@ -19,7 +19,7 @@
   <text x="16" y="26">Configuration</text>
   <text x="474" y="26" text-anchor="end">LCOE ($/MWh)</text>
   <text x="584" y="26" text-anchor="end">Core cost</text>
-  <text x="704" y="26" text-anchor="end">He-3 fuel ($/MWh)</text>
+  <text x="704" y="26" text-anchor="end">He-3 ($/MWh)</text>
 </g>
 
 <g class="t-text">
