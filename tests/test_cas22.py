@@ -626,3 +626,67 @@ def test_c220109_included_in_total():
     diff = with_dec["C220000"] - without_dec["C220000"]
     # Difference should include C220109 plus its share of installation labor
     assert diff > with_dec["C220109"]
+
+
+def test_multi_unit_labor_discount_in_normal_path():
+    """Normal path: C220000 at n_mod=2 applies the 0.92 labor discount.
+
+    cas22_reactor_plant_equipment returns per-module equipment values and
+    folds the discounted labor into C220000.
+    Formula: C220000(n=2) = equip_sum*2 + labor*(1 + 0.92) + plant_wide_n2
+    """
+    _equipment_keys = (
+        "C220101",
+        "C220102",
+        "C220103",
+        "C220104",
+        "C220105",
+        "C220106",
+        "C220107",
+        "C220108",
+        "C220109",
+        "C220110",
+        "C220112",
+    )
+    _plant_wide_keys = (
+        "C220200",
+        "C220300",
+        "C220400",
+        "C220500",
+        "C220600",
+        "C220700",
+    )
+
+    one = _make_cas22(fuel=Fuel.DT, n_mod=1)
+    two = _make_cas22(fuel=Fuel.DT, n_mod=2)
+
+    # Equipment keys are per-module values — unchanged by n_mod
+    assert float(two["C220101"]) == pytest.approx(float(one["C220101"]), rel=1e-9)
+
+    # Reconstruct expected C220000(n=2) from n=1 per-module values + n=2 plant_wide
+    equip_sum = sum(float(one[k]) for k in _equipment_keys)
+    labor = float(one["C220111"])
+    plant_wide_2 = sum(float(two[k]) for k in _plant_wide_keys)
+    expected = equip_sum * 2 + labor * (1.0 + 0.92) + plant_wide_2
+    assert float(two["C220000"]) == pytest.approx(expected, rel=1e-6)
+
+
+def test_multi_unit_labor_discount_in_override_path():
+    """Override path applies the same labor discount as the normal path.
+
+    A user overriding C220101 should still see total CAS22 reflect the
+    labor discount on units 2+, not full-cost labor per module.
+    """
+    from costingfe import ConfinementConcept, CostModel, Fuel
+
+    model = CostModel(concept=ConfinementConcept.TOKAMAK, fuel=Fuel.DT)
+    common = dict(net_electric_mw=1000.0, availability=0.85, lifetime_yr=30, n_mod=2)
+    base = model.forward(**common)
+    overridden = model.forward(
+        **common, cost_overrides={"C220101": float(base.cas22_detail["C220101"])}
+    )
+
+    # Override echoes the same value → C220000 should match
+    assert float(overridden.cas22_detail["C220000"]) == pytest.approx(
+        float(base.cas22_detail["C220000"]), rel=1e-6
+    )
