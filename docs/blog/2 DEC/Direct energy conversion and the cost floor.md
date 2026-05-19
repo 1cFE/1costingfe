@@ -124,7 +124,7 @@ Pushing every parameter to aggressive limits (2 GWe, 95% availability, 3% WACC, 
 
 ![LCOE under aggressive conditions (2 GWe, 95% availability, 3% WACC, 50-year life, 3-year construction) for p-B11, D-He3 with purchased He-3, and D-He3 with self-bred He-3.](<Aggressive 2 GWe table.svg>)
 
-For p-B11, hybrid DEC and thermal land within $0.2/MWh: the DEC overlay costs about as much as the thermal hardware it partially replaces. (Pulsed inductive is not viable for p-B11: wasting 83% of fusion energy as bremsstrahlung without a thermal cycle requires an enormous core that more than offsets the turbine savings.) For D-He3, He-3 fuel at $2M/kg dominates everything else; self-breeding closes that gap and pulsed inductive then ends up $6/MWh higher than thermal because the pulsed-power chain is more expensive than the turbine.
+For p-B11, hybrid DEC and thermal land within $0.2/MWh: the DEC overlay costs about as much as the thermal hardware it partially replaces. (Pulsed inductive is not viable for p-B11: wasting 83% of fusion energy as bremsstrahlung without a thermal cycle requires an enormous core that more than offsets the turbine savings.) For D-He3, He-3 fuel at $2M/kg dominates everything else; self-breeding closes that gap and pulsed inductive then ends up roughly $2/MWh higher than thermal because the pulsed-power chain is more expensive than the turbine.
 
 The floor is set by the industrial cost of building, staffing, and financing a large power plant, not by the power conversion choice. DEC's value, if any, has to show up on the costed core or the fuel bill.
 
