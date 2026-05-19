@@ -24,12 +24,12 @@
 <g class="t-text">
   <text x="16" y="63">Thermal only (sCO2 Brayton, 47%)</text>
   <text x="424" y="63" text-anchor="end">18</text>
-  <text x="564" y="63" text-anchor="end">74</text>
-  <text x="704" y="63" text-anchor="end">92</text>
+  <text x="564" y="63" text-anchor="end">45</text>
+  <text x="704" y="63" text-anchor="end">63</text>
 
   <text x="16" y="99">Pulsed inductive (85% η, no turbine)</text>
-  <text x="424" y="99" text-anchor="end">24</text>
-  <text x="564" y="99" text-anchor="end">36</text>
-  <text x="704" y="99" text-anchor="end">59</text>
+  <text x="424" y="99" text-anchor="end">23</text>
+  <text x="564" y="99" text-anchor="end">22</text>
+  <text x="704" y="99" text-anchor="end">45</text>
 </g>
 </svg>

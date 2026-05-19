@@ -18,8 +18,8 @@ Section: Pulsed Inductive (D-He3).
 
 | Configuration (1 GWe, D-He3, free core) | BOP floor ($/MWh) | He-3 fuel ($/MWh) | Total ($/MWh) |
 | --- | --- | --- | --- |
-| Thermal only (sCO2 Brayton, 47%) | 18 | 74 | 92 |
-| Pulsed inductive (85% η, no turbine) | 24 | 36 | 59 |
+| Thermal only (sCO2 Brayton, 47%) | 18 | 45 | 63 |
+| Pulsed inductive (85% η, no turbine) | 23 | 22 | 45 |
 
 ## Aggressive conditions, 2 GWe
 
@@ -29,9 +29,9 @@ Aggressive parameters: 2 GWe net, 95% availability, 3% WACC, 50-year life, 3-yea
 
 | Approach (2 GWe, free core, aggressive) | p-B11 ($/MWh) | D-He3, He-3 at $2M/kg | D-He3, self-bred |
 | --- | --- | --- | --- |
-| Thermal only (sCO2 Brayton, 47%) | 7.1 | 92 | 8 |
-| VB DEC 60% + thermal (hybrid) | 7.3 | 85 | 9 |
-| Pulsed inductive (85%, no turbine) | not viable | 55 | 14 |
+| Thermal only (sCO2 Brayton, 47%) | 7.1 | 59 | 7.4 |
+| VB DEC 60% + thermal (hybrid) | 7.3 | 54 | 7.7 |
+| Pulsed inductive (85%, no turbine) | not viable | 35 | 9.7 |
 
 ## Fully-costed D-He3, 1 GWe baseline
 
@@ -39,6 +39,6 @@ Section: D-He3: a fuel lever. Includes core cost (no longer free).
 
 | Configuration | LCOE ($/MWh) | Core cost | He-3 fuel ($/MWh) |
 | --- | --- | --- | --- |
-| Thermal only magnetic mirror (47%) | 119 | $1,654M | 74 |
-| Magnetic mirror with VB DEC 60% (hybrid-thermal) | 109 | $1,676M | 67 |
-| Pulsed inductive (85%) | 81 | $2,033M | 36 |
+| Thermal only magnetic mirror (47%) | 90 | $1,654M | 45 |
+| Magnetic mirror with VB DEC 60% (hybrid-thermal) | 83 | $1,676M | 41 |
+| Pulsed inductive (85%) | 67 | $2,033M | 22 |

@@ -157,7 +157,7 @@ well-characterized pricing and negligible learning rate.
 For a 1\,GWe plant equipped with a supercritical CO\textsubscript{2}
 Brayton cycle (the lowest-floor option among Rankine,
 sCO\textsubscript{2}, and combined-cycle alternatives), the BOP
-equipment subtotal is \$390M
+equipment subtotal is \$393M
 (Table~\ref{tab:bop}). Equipment unit costs are derived from the
 NETL Cost and Performance Baseline for Fossil Energy Plants
 \citep{NETL2022} and the ARIES cost account documentation
@@ -247,7 +247,7 @@ plausible values (Table~\ref{tab:dt-sweep}) reduces the D-T floor to
 \$9.5/MWh only at the extreme limit: 5\,GWe net
 output, 95\% availability, 2\% WACC, 50-year lifetime, and 3-year
 construction. Even at this limit, the budget remaining for the
-fusion core is \$0.4/MWh, equivalent to roughly \$40/kW of
+fusion core is \$0.5/MWh, equivalent to roughly \$40/kW of
 overnight capital for the entire core, less than the cost of a
 single large superconducting magnet. The D-T floor cannot be
 lowered sufficiently to leave material budget for the costed core
@@ -297,8 +297,8 @@ D-D side reactions, requiring some shielding and modest tritium
 monitoring; buildings amount to \$417M and the BOP-only floor at
 1\,GWe is \$19/MWh. The D-He3 plant carries a separate burden:
 at an optimistic helium-3 price of \$2M/kg, fuel contributes
-\$74/MWh to LCOE \citep{Shea2010}; the DOE-allocated price of
-approximately \$4.5M/kg doubles this. Helium-3 is not
+\$48/MWh to LCOE \citep{Shea2010}; the DOE-allocated price of
+approximately \$4.5M/kg more than doubles this. Helium-3 is not
 produced at commercial scale, and breeding it would likely require
 a separate D-D fusion source.
 
@@ -336,7 +336,7 @@ the calculation.
 
 For p-B11 under the aggressive scenario, the floor falls to
 \$7.1/MWh, leaving \$2.9/MWh for the fusion core (approximately
-\$1{,}145/kW of overnight capital). This figure sits squarely
+\$1{,}112/kW of overnight capital). This figure sits squarely
 inside the overnight cost of a natural gas combined-cycle plant
 (\$900--1{,}200/kW), with the difference that the fusion core
 lacks the deployment scale and manufacturing maturity of
@@ -364,12 +364,12 @@ levels. Baseline assumes 1\,GWe, 85\% availability, 7\% WACC,
 Operations and maintenance costs are dominated by staffing. At the
 extreme limit (5\,GWe D-T), O\&M contributes \$5.2/MWh of the
 \$9.5/MWh floor; the capital-only component is \$4.3/MWh.
-Halving D-T staffing from 78 to 39 FTE through SCADA-automated grid
-dispatch, reduced shift coverage, and streamlined radiation
-protection procedures (each realistic with current industrial
-automation) lowers the 2\,GWe aggressive D-T floor to
-\$10/MWh, although still leaving negligible budget for the costed
-core. Lights-out operation, in the sense of a near-zero-FTE plant,
+Reducing D-T staffing from 78 to roughly 42 FTE (54\% of current
+levels) through SCADA-automated grid dispatch, reduced shift
+coverage, and streamlined radiation protection procedures (each
+realistic with current industrial automation) lowers the 2\,GWe
+aggressive D-T floor to \$10/MWh, although still leaving
+negligible budget for the costed core. Lights-out operation, in the sense of a near-zero-FTE plant,
 is constrained more by regulatory accountability than by technical
 capability for the parameter ranges considered.
 
@@ -715,31 +715,31 @@ core. Helium-3 fuel cost assumed \$2M/kg.}
 Configuration & BOP floor (\$/MWh) & He-3 fuel (\$/MWh) & Total
 (\$/MWh) \\
 \midrule
-Thermal only (sCO\textsubscript{2} Brayton, 47\%) & 18 & 74 & 92 \\
-Pulsed inductive (85\% $\eta$, no turbine) & 24 & 36 & 59 \\
+Thermal only (sCO\textsubscript{2} Brayton, 47\%) & 18 & 45 & 63 \\
+Pulsed inductive (85\% $\eta$, no turbine) & 23 & 22 & 45 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-The BOP floor is \$6/MWh higher than the thermal baseline
+The BOP floor is \$5/MWh higher than the thermal baseline
 (Table~\ref{tab:pulsed}). The turbine island is not the dominant
 cost in the thermal plant; buildings (\$417M), the electrical
 plant (\$96M), the operations and maintenance budget
-(\$31M per year), and financing charges together exceed it.
+(\$35M per year), and financing charges together exceed it.
 Eliminating the turbine and synchronous generator removes
-\$186M of overnight capital, but the \$593M
+\$149M of overnight capital, but the \$593M
 pulsed-power chain that replaces it more than offsets the savings.
 
 The fuel cost is a separate concern. At \$2M/kg, helium-3
-contributes \$36/MWh to LCOE for the inductive architecture; at
-the DOE-allocated price of \$4.5M/kg, this doubles.
+contributes \$22/MWh to LCOE for the inductive architecture; at
+the DOE-allocated price of \$4.5M/kg, this more than doubles.
 The deuterium-rich operating mix maximizes D-D-bred helium-3 and
 recovers it between shots at an assumed 99\% efficiency, lowering
 external helium-3 demand by approximately a quarter relative to the
 50/50 reference. Mix selection saves \$20/MWh of LCOE,
 almost entirely through reduced helium-3 burn. Even if external
 fuel cost is driven to zero (self-bred), the BOP floor remains
-\$24/MWh, still above the thermal baseline (\$18/MWh) and above
+\$23/MWh, still above the thermal baseline (\$18/MWh) and above
 the one-cent target.
 
 The plasma-present round-trip efficiency is the primary open
@@ -835,7 +835,7 @@ as much as the thermal hardware it partially replaces. Pulsed inductive is not v
 rejecting 83\% of fusion energy as bremsstrahlung requires a much
 larger core. For D-He3, helium-3 fuel at \$2M/kg dominates
 everything else; self-breeding closes the fuel gap, and the
-inductive scheme then ends up \$6/MWh higher than thermal because
+inductive scheme then ends up roughly \$2/MWh higher than thermal because
 the pulsed-power chain is more expensive than the turbine.
 
 \begin{table}[htbp]
@@ -849,9 +849,9 @@ independent of plant financing.}
 \toprule
 Approach & p-B11 (\$/MWh) & D-He3, \$2M/kg (\$/MWh) & D-He3, self-bred (\$/MWh) \\
 \midrule
-Thermal only (sCO\textsubscript{2}, 47\%) & 7.1 & 82 & 8 \\
-VB DEC 60\% + thermal (hybrid) & 7.3 & 82 & 9 \\
-Pulsed inductive (85\%, no turbine) & n/a & 55 & 14 \\
+Thermal only (sCO\textsubscript{2}, 47\%) & 7.1 & 59 & 7.4 \\
+VB DEC 60\% + thermal (hybrid) & 7.3 & 54 & 7.7 \\
+Pulsed inductive (85\%, no turbine) & n/a & 35 & 9.7 \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -872,9 +872,9 @@ capital; and for expensive fuels, the lower fusion power also
 reduces the fuel bill. The two fuel cycles respond differently.
 
 For D-He3 at 1\,GWe baseline, the venetian-blind hybrid lowers
-LCOE from \$119/MWh to \$109/MWh, with a modest \$22M
+LCOE from \$90/MWh to \$83/MWh, with a modest \$22M
 increase in core cost partially offset by reduced heating-system
-capacity. The pulsed inductive scheme lowers LCOE to \$81/MWh,
+capacity. The pulsed inductive scheme lowers LCOE to \$67/MWh,
 with the savings driven primarily by fuel rather than by hardware:
 higher conversion efficiency, the deuterium-rich operating mix, and
 inter-shot helium-3 recovery together reduce external helium-3

@@ -24,18 +24,18 @@
 
 <g class="t-text">
   <text x="16" y="63">Thermal only magnetic mirror (47%)</text>
-  <text x="474" y="63" text-anchor="end">119</text>
+  <text x="474" y="63" text-anchor="end">90</text>
   <text x="584" y="63" text-anchor="end">$1,654M</text>
-  <text x="704" y="63" text-anchor="end">74</text>
+  <text x="704" y="63" text-anchor="end">45</text>
 
   <text x="16" y="99">Magnetic mirror with VB DEC 60% (hybrid-thermal)</text>
-  <text x="474" y="99" text-anchor="end">109</text>
+  <text x="474" y="99" text-anchor="end">83</text>
   <text x="584" y="99" text-anchor="end">$1,676M</text>
-  <text x="704" y="99" text-anchor="end">67</text>
+  <text x="704" y="99" text-anchor="end">41</text>
 
   <text x="16" y="135">Pulsed inductive (85%)</text>
-  <text x="474" y="135" text-anchor="end">81</text>
+  <text x="474" y="135" text-anchor="end">67</text>
   <text x="584" y="135" text-anchor="end">$2,033M</text>
-  <text x="704" y="135" text-anchor="end">36</text>
+  <text x="704" y="135" text-anchor="end">22</text>
 </g>
 </svg>

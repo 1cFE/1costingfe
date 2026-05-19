@@ -25,17 +25,17 @@
 <g class="t-text">
   <text x="16" y="63">Thermal only (sCO2 Brayton, 47%)</text>
   <text x="394" y="63" text-anchor="end">7.1</text>
-  <text x="574" y="63" text-anchor="end">92</text>
-  <text x="704" y="63" text-anchor="end">8</text>
+  <text x="574" y="63" text-anchor="end">59</text>
+  <text x="704" y="63" text-anchor="end">7.4</text>
 
   <text x="16" y="99">VB DEC 60% + thermal (hybrid)</text>
   <text x="394" y="99" text-anchor="end">7.3</text>
-  <text x="574" y="99" text-anchor="end">85</text>
-  <text x="704" y="99" text-anchor="end">9</text>
+  <text x="574" y="99" text-anchor="end">54</text>
+  <text x="704" y="99" text-anchor="end">7.7</text>
 
   <text x="16" y="135">Pulsed inductive (85%, no turbine)</text>
   <text x="394" y="135" text-anchor="end">not viable</text>
-  <text x="574" y="135" text-anchor="end">55</text>
-  <text x="704" y="135" text-anchor="end">14</text>
+  <text x="574" y="135" text-anchor="end">35</text>
+  <text x="704" y="135" text-anchor="end">9.7</text>
 </g>
 </svg>
