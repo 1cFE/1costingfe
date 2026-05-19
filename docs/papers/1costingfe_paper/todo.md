@@ -4,19 +4,7 @@ Items flagged by peer review that require new analysis, code runs, or new figure
 
 ## Figures to add
 
-- **Pipeline / dataflow figure**: customer requirements -> physics module -> CAS accounts -> LCOE. Currently the only figure is a schematic cash-flow diagram. *(Done: added in restructure Task 5.)*
-- **Sample LCOE breakdown bar chart** for a reference plant (e.g. ARIES-AT D-T tokamak), broken out by CAS account. *(Done: benchmark stacked-bar figure `benchmark_lcoe_stacks.pdf` covers this role; added in restructure Task 6.)*
-- **Power-balance Sankey** for a representative configuration. *(Still TBD.)*
-
-## Differentiability demonstration
-
-*(Done: gradient tornado plot added in restructure Task 4; see Section "Sensitivity and Gradient Extraction" in `1costingfe_paper.tex`.)*
-
-## Validation against prior tools
-
-Done as of 2026-05-06: see Section 5 ("Benchmarking and Cross-Validation") in `1costingfe_paper.tex`, with reproducible scripts under `scripts/` and the figure produced by `make_benchmark_bars.py` in `figures/`. ARIES-AT cross-walk is at top-level rollups only (Direct/Owner's/Total/LCOE) because Najmabadi 2006 publishes that granularity, not per-CAS-account detail. Per-account cross-walk against pyFECONS is left as future work.
-
-Discussion paragraphs finalised in restructure Task 12.
+- **Power-balance Sankey** for a representative configuration.
 
 ## Stub appendices for non-tokamak plasma models
 
@@ -27,11 +15,7 @@ The abstract claims coverage of "all major confinement families and fuel cycles"
 
 ## Stub paragraphs for skipped CAS22 sub-accounts
 
-Section 4 jumps from CAS22.01.03 to .04, .07, .09, .10, .12, skipping .01, .02, .05, .06, .08, .11. Add a one-line stub for each skipped account, or a paragraph noting "these accounts use the methodology of Woodruff (2026) unmodified".
-
-## CAS28 cost basis
-
-Digital twin cost ($5M) is sourced from a pyFECONS internal note. Per project rules, pyFECONS is the least-trusted source. Either find an independent benchmark or annotate as "lowest-information account, ± wide uncertainty".
+Section 4 still skips CAS22.01.02 (shield), .05 (primary structure), .06 (vacuum system), and .08 (divertor). These are bundled into the "Inherited Sub-Accounts" paragraph as pyFECONS-unmodified. Add a one-line stub for each, or expand the inherited paragraph to call out each by name.
 
 ## CAS22 vendor-system audit
 
