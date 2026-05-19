@@ -7,7 +7,7 @@ from pydantic import ValidationError
 
 from costingfe.adapter import FusionTeaInput, run_costing
 from costingfe.model import CostModel
-from costingfe.types import ConfinementConcept, Fuel
+from costingfe.types import BlanketFill, BlanketForm, ConfinementConcept, Fuel
 from costingfe.validation import CostingInput
 
 
@@ -399,3 +399,68 @@ class TestAdapterIntegration:
         )
         output = run_costing(inp)
         assert output.lcoe > 0
+
+
+def test_blanket_fill_must_match_form():
+    """Schema check: solid_breeder cannot use pbli fill."""
+    with pytest.raises(ValidationError, match="not valid for blanket_form"):
+        CostingInput(
+            concept=ConfinementConcept.TOKAMAK,
+            fuel=Fuel.DT,
+            net_electric_mw=1000.0,
+            blanket_form=BlanketForm.SOLID_BREEDER,
+            blanket_fill=BlanketFill.PBLI,
+        )
+
+
+def test_dt_requires_breeding_blanket():
+    """Physics check: DT without breeding blanket raises."""
+    with pytest.raises(ValidationError, match="DT fuel requires a breeding blanket"):
+        CostingInput(
+            concept=ConfinementConcept.TOKAMAK,
+            fuel=Fuel.DT,
+            net_electric_mw=1000.0,
+            blanket_form=BlanketForm.NONE,
+            blanket_fill=BlanketFill.NONE,
+        )
+
+
+def test_dt_requires_non_none_fill():
+    """Schema check: NONE fill not in valid_fills for LIQUID_METAL raises."""
+    with pytest.raises(ValidationError, match="not valid for blanket_form"):
+        CostingInput(
+            concept=ConfinementConcept.TOKAMAK,
+            fuel=Fuel.DT,
+            net_electric_mw=1000.0,
+            blanket_form=BlanketForm.LIQUID_METAL,
+            blanket_fill=BlanketFill.NONE,
+        )
+
+
+def test_aneutronic_with_blanket_warns():
+    """Economics check: p-B11 with non-none blanket emits UserWarning."""
+    with pytest.warns(
+        UserWarning, match="aneutronic fuels do not need a breeding blanket"
+    ):
+        CostingInput(
+            concept=ConfinementConcept.TOKAMAK,
+            fuel=Fuel.PB11,
+            net_electric_mw=1000.0,
+            blanket_form=BlanketForm.LIQUID_METAL,
+            blanket_fill=BlanketFill.PBLI,
+        )
+
+
+def test_all_valid_form_fill_pairs_accepted_for_dt():
+    """Every valid pair (except NONE/NONE which DT rejects) is accepted."""
+    for form in BlanketForm:
+        if form == BlanketForm.NONE:
+            continue
+        for fill in form.valid_fills:
+            CostingInput(
+                concept=ConfinementConcept.TOKAMAK,
+                fuel=Fuel.DT,
+                net_electric_mw=1000.0,
+                blanket_form=form,
+                blanket_fill=fill,
+            )
