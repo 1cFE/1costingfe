@@ -110,6 +110,24 @@ class BlanketForm(Enum):
         """Multiplier on the per-fuel blanket_unit_cost_<fuel> in CAS22.01."""
         return _BLANKET_STRUCTURE_FACTOR[self]
 
+    @property
+    def valid_fills(self) -> set["BlanketFill"]:
+        """Set of BlanketFill values physically compatible with this form."""
+        return _BLANKET_FORM_VALID_FILLS[self]
+
+    @property
+    def default_fill(self) -> "BlanketFill":
+        """The default BlanketFill to use when only the form is specified."""
+        return _BLANKET_FORM_DEFAULT_FILL[self]
+
+
+_BLANKET_STRUCTURE_FACTOR = {
+    BlanketForm.LIQUID_METAL: 1.0,
+    BlanketForm.MOLTEN_SALT: 1.3,
+    BlanketForm.SOLID_BREEDER: 1.2,
+    BlanketForm.NONE: 0.0,
+}
+
 
 class BlanketFill(Enum):
     PBLI = "pbli"
@@ -124,13 +142,6 @@ class BlanketFill(Enum):
         """Multiplier on the per-fuel special_materials_<fuel> in CAS27."""
         return _BLANKET_FILL_FACTOR[self]
 
-
-_BLANKET_STRUCTURE_FACTOR = {
-    BlanketForm.LIQUID_METAL: 1.0,
-    BlanketForm.MOLTEN_SALT: 1.3,
-    BlanketForm.SOLID_BREEDER: 1.2,
-    BlanketForm.NONE: 0.0,
-}
 
 _BLANKET_FILL_FACTOR = {
     BlanketFill.PBLI: 1.0,

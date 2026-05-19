@@ -1,8 +1,6 @@
 """Tests for BlanketForm and BlanketFill enums and their cost wiring."""
 
 from costingfe.types import (
-    _BLANKET_FORM_DEFAULT_FILL,
-    _BLANKET_FORM_VALID_FILLS,
     BlanketFill,
     BlanketForm,
 )
@@ -28,23 +26,21 @@ def test_blanket_fill_factors():
 
 def test_blanket_form_valid_fills():
     """Compatibility table: only physical pairs allowed."""
-    assert _BLANKET_FORM_VALID_FILLS[BlanketForm.LIQUID_METAL] == {
+    assert BlanketForm.LIQUID_METAL.valid_fills == {
         BlanketFill.PBLI,
         BlanketFill.LI,
     }
-    assert _BLANKET_FORM_VALID_FILLS[BlanketForm.MOLTEN_SALT] == {BlanketFill.FLIBE}
-    assert _BLANKET_FORM_VALID_FILLS[BlanketForm.SOLID_BREEDER] == {
+    assert BlanketForm.MOLTEN_SALT.valid_fills == {BlanketFill.FLIBE}
+    assert BlanketForm.SOLID_BREEDER.valid_fills == {
         BlanketFill.BE_CERAMIC,
         BlanketFill.CERAMIC_ONLY,
     }
-    assert _BLANKET_FORM_VALID_FILLS[BlanketForm.NONE] == {BlanketFill.NONE}
+    assert BlanketForm.NONE.valid_fills == {BlanketFill.NONE}
 
 
 def test_blanket_form_default_fills():
     """Each form has exactly one default fill."""
-    assert _BLANKET_FORM_DEFAULT_FILL[BlanketForm.LIQUID_METAL] == BlanketFill.PBLI
-    assert _BLANKET_FORM_DEFAULT_FILL[BlanketForm.MOLTEN_SALT] == BlanketFill.FLIBE
-    assert (
-        _BLANKET_FORM_DEFAULT_FILL[BlanketForm.SOLID_BREEDER] == BlanketFill.BE_CERAMIC
-    )
-    assert _BLANKET_FORM_DEFAULT_FILL[BlanketForm.NONE] == BlanketFill.NONE
+    assert BlanketForm.LIQUID_METAL.default_fill == BlanketFill.PBLI
+    assert BlanketForm.MOLTEN_SALT.default_fill == BlanketFill.FLIBE
+    assert BlanketForm.SOLID_BREEDER.default_fill == BlanketFill.BE_CERAMIC
+    assert BlanketForm.NONE.default_fill == BlanketFill.NONE
