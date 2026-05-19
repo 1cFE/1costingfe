@@ -30,7 +30,7 @@ from costingfe.layers.physics import (
     Q_DT,
     Q_PB11,
 )
-from costingfe.types import ConfinementConcept, Fuel, PulsedConversion
+from costingfe.types import BlanketFill, ConfinementConcept, Fuel, PulsedConversion
 
 
 def _total_project_time(cc, construction_time, fuel, noak):
@@ -141,7 +141,7 @@ def cas26_heat_rejection(cc, p_th, n_mod):
     return n_mod * p_th * cc.heat_rej_per_mw
 
 
-def cas27_special_materials(cc, p_net, fuel, blanket_fill):
+def cas27_special_materials(cc, p_net, fuel, blanket_fill: BlanketFill):
     """CAS27: Special materials, initial reactor material inventory. Returns M$.
 
     Covers non-fuel reactor materials: breeding blanket fill (PbLi, Li, FLiBe),
