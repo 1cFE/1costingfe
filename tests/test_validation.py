@@ -425,8 +425,8 @@ def test_dt_requires_breeding_blanket():
         )
 
 
-def test_dt_requires_non_none_fill():
-    """Schema check: NONE fill not in valid_fills for LIQUID_METAL raises."""
+def test_liquid_metal_with_none_fill_rejected():
+    """Schema check: NONE fill is not in LIQUID_METAL.valid_fills (form-fill rule)."""
     with pytest.raises(ValidationError, match="not valid for blanket_form"):
         CostingInput(
             concept=ConfinementConcept.TOKAMAK,
