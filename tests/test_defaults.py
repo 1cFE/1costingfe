@@ -1,7 +1,13 @@
+from pathlib import Path
+
+import pytest
+import yaml
+
 from costingfe.defaults import (
     load_costing_constants,
     load_engineering_defaults,
 )
+from costingfe.types import BlanketFill, BlanketForm
 
 
 def test_load_costing_constants():
@@ -57,3 +63,25 @@ def test_dec_grid_lifetime_accessor():
     assert cc.dec_grid_lifetime(Fuel.DD) == 3.0
     assert cc.dec_grid_lifetime(Fuel.DHE3) == 4.0
     assert cc.dec_grid_lifetime(Fuel.PB11) == 3.0
+
+
+_DEFAULTS_DIR = Path(__file__).parent.parent / "src" / "costingfe" / "data" / "defaults"
+_CONCEPT_YAMLS = sorted(
+    p for p in _DEFAULTS_DIR.glob("*.yaml") if p.name != "costing_constants.yaml"
+)
+
+
+@pytest.mark.parametrize("yaml_path", _CONCEPT_YAMLS, ids=lambda p: p.stem)
+def test_every_concept_yaml_declares_blanket(yaml_path):
+    """Every concept YAML must declare blanket_form and blanket_fill, and the
+    pair must be valid per BlanketForm.valid_fills."""
+    data = yaml.safe_load(yaml_path.read_text())
+    assert "blanket_form" in data, f"{yaml_path.name} missing blanket_form"
+    assert "blanket_fill" in data, f"{yaml_path.name} missing blanket_fill"
+
+    form = BlanketForm(data["blanket_form"])
+    fill = BlanketFill(data["blanket_fill"])
+    assert fill in form.valid_fills, (
+        f"{yaml_path.name}: blanket_fill={fill.value!r} not valid for "
+        f"blanket_form={form.value!r}"
+    )

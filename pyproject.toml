@@ -29,6 +29,9 @@ packages = ["src/costingfe"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+filterwarnings = [
+    "ignore:.*aneutronic fuels do not need a breeding blanket.*:UserWarning",
+]
 
 [tool.ruff]
 line-length = 88

@@ -12,6 +12,8 @@ from pydantic import BaseModel, Field, model_validator
 
 from costingfe.types import (
     CONCEPT_TO_FAMILY,
+    BlanketFill,
+    BlanketForm,
     ConfinementConcept,
     ConfinementFamily,
     Fuel,
@@ -143,6 +145,10 @@ class CostingInput(BaseModel):
     M_ion: float | None = None
     lambda_q: float | None = None
 
+    # Blanket configuration (YAML-driven, validated below)
+    blanket_form: BlanketForm | None = None
+    blanket_fill: BlanketFill | None = None
+
     # --- Tier 2: family-required parameter lists ---
     _COMMON_REQUIRED = [
         "mn",
@@ -259,6 +265,48 @@ class CostingInput(BaseModel):
             self._check_mfe_physics()
         elif family == ConfinementFamily.PULSED:
             self._check_pulsed_physics()
+
+        return self
+
+    @model_validator(mode="after")
+    def check_blanket_compatibility(self):
+        """Tier 3: blanket form/fill compatibility and fuel-physics coupling.
+
+        Errors:
+          - blanket_fill must be in blanket_form.valid_fills
+          - DT fuel with blanket_form=NONE or blanket_fill=NONE is unphysical
+        Warnings:
+          - Aneutronic fuels (DHe3, pB11) with non-none blanket are wasteful
+        """
+        if self.blanket_form is None or self.blanket_fill is None:
+            return self  # presence is enforced at the materialization point
+
+        if self.blanket_fill not in self.blanket_form.valid_fills:
+            raise ValueError(
+                f"blanket_fill={self.blanket_fill.value!r} not valid for "
+                f"blanket_form={self.blanket_form.value!r}. "
+                f"Valid: {sorted(f.value for f in self.blanket_form.valid_fills)}"
+            )
+
+        if self.fuel == Fuel.DT and (
+            self.blanket_form == BlanketForm.NONE
+            or self.blanket_fill == BlanketFill.NONE
+        ):
+            raise ValueError(
+                "DT fuel requires a breeding blanket "
+                f"(got blanket_form={self.blanket_form.value!r}, "
+                f"blanket_fill={self.blanket_fill.value!r})."
+            )
+
+        if (
+            self.fuel in (Fuel.DHE3, Fuel.PB11)
+            and self.blanket_form != BlanketForm.NONE
+        ):
+            warnings.warn(
+                f"{self.fuel.value} with blanket_form={self.blanket_form.value!r}: "
+                "aneutronic fuels do not need a breeding blanket.",
+                stacklevel=2,
+            )
 
         return self
 

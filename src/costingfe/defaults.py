@@ -132,6 +132,17 @@ class CostingConstants:
     # 220111: Installation labor (fraction of reactor subtotal)
     installation_frac: float = 0.14
 
+    # 220111: Multi-unit labor factor — labor cost of each module beyond
+    # the first, as a fraction of the first module's labor. Captures the
+    # "twin/triplet unit" co-location effect documented in fission EPC:
+    # Vogtle 3->4 ~20-30% labor reduction, Korean APR-1400 batches ~10-15%,
+    # Chinese AP1000 pairs (Sanmen, Haiyang) modest. Empirical range 5-15%
+    # off subsequent units; default 8% (factor 0.92). NOT a Wright's-Law
+    # learning curve — that belongs at fleet-cumulative scale, not at
+    # n_mod=2-6 on one site. Equipment cost (C220101-C220110) is unchanged;
+    # only the on-site labor portion (C220111) is discounted.
+    multi_unit_labor_factor: float = 0.92
+
     # Core component lifetime (FPY — full power years between replacements)
     # Source: 20260208-fusion-reactor-subsystems-by-fuel-type.md
     core_lifetime_dt: float = 5.0  # 5-10 FPY, ~20 dpa/yr

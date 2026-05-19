@@ -99,6 +99,74 @@ _COIL_MATERIAL_COST = {
 }
 
 
+class BlanketForm(Enum):
+    LIQUID_METAL = "liquid_metal"
+    MOLTEN_SALT = "molten_salt"
+    SOLID_BREEDER = "solid_breeder"
+    NONE = "none"
+
+    @property
+    def structure_factor(self) -> float:
+        """Multiplier on the per-fuel blanket_unit_cost_<fuel> in CAS22.01."""
+        return _BLANKET_STRUCTURE_FACTOR[self]
+
+    @property
+    def valid_fills(self) -> set["BlanketFill"]:
+        """Set of BlanketFill values physically compatible with this form."""
+        return _BLANKET_FORM_VALID_FILLS[self]
+
+    @property
+    def default_fill(self) -> "BlanketFill":
+        """The default BlanketFill to use when only the form is specified."""
+        return _BLANKET_FORM_DEFAULT_FILL[self]
+
+
+_BLANKET_STRUCTURE_FACTOR = {
+    BlanketForm.LIQUID_METAL: 1.0,
+    BlanketForm.MOLTEN_SALT: 1.3,
+    BlanketForm.SOLID_BREEDER: 1.2,
+    BlanketForm.NONE: 0.0,
+}
+
+
+class BlanketFill(Enum):
+    PBLI = "pbli"
+    LI = "li"
+    FLIBE = "flibe"
+    BE_CERAMIC = "be_ceramic"
+    CERAMIC_ONLY = "ceramic_only"
+    NONE = "none"
+
+    @property
+    def fill_factor(self) -> float:
+        """Multiplier on the per-fuel special_materials_<fuel> in CAS27."""
+        return _BLANKET_FILL_FACTOR[self]
+
+
+_BLANKET_FILL_FACTOR = {
+    BlanketFill.PBLI: 1.0,
+    BlanketFill.LI: 2.0,
+    BlanketFill.FLIBE: 5.0,
+    BlanketFill.BE_CERAMIC: 13.0,
+    BlanketFill.CERAMIC_ONLY: 3.0,
+    BlanketFill.NONE: 0.0,
+}
+
+_BLANKET_FORM_VALID_FILLS = {
+    BlanketForm.LIQUID_METAL: {BlanketFill.PBLI, BlanketFill.LI},
+    BlanketForm.MOLTEN_SALT: {BlanketFill.FLIBE},
+    BlanketForm.SOLID_BREEDER: {BlanketFill.BE_CERAMIC, BlanketFill.CERAMIC_ONLY},
+    BlanketForm.NONE: {BlanketFill.NONE},
+}
+
+_BLANKET_FORM_DEFAULT_FILL = {
+    BlanketForm.LIQUID_METAL: BlanketFill.PBLI,
+    BlanketForm.MOLTEN_SALT: BlanketFill.FLIBE,
+    BlanketForm.SOLID_BREEDER: BlanketFill.BE_CERAMIC,
+    BlanketForm.NONE: BlanketFill.NONE,
+}
+
+
 class PowerCycle(Enum):
     RANKINE = "rankine"
     BRAYTON_SCO2 = "brayton_sco2"

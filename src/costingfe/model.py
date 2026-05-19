@@ -51,6 +51,8 @@ from costingfe.layers.tokamak import (
 from costingfe.types import (
     CONCEPT_DEFAULT_CONVERSION,
     CONCEPT_TO_FAMILY,
+    BlanketFill,
+    BlanketForm,
     CoilMaterial,
     ConfinementConcept,
     ConfinementFamily,
@@ -561,6 +563,8 @@ class CostModel:
         b_max = params.get("b_max", 12.0)
         coil_material = CoilMaterial(params.get("coil_material", "rebco_hts"))
         n_coils = params.get("n_coils", None)
+        blanket_form = BlanketForm(params["blanket_form"])
+        blanket_fill = BlanketFill(params["blanket_fill"])
 
         # Heating mix: use explicit breakdown if provided, else default
         # all p_input to NBI (backward-compatible).
@@ -598,6 +602,7 @@ class CostModel:
             b_max=b_max,
             r_coil=r_coil,
             coil_material=coil_material,
+            blanket_form=blanket_form,
             n_coils=n_coils,
             p_nbi=p_nbi,
             p_ecrh=p_ecrh,
@@ -640,9 +645,14 @@ class CostModel:
                 c22_detail[key] = co[key]
                 overridden.append(key)
         if any(k in co for k in (_PER_MODULE_KEYS | _PLANT_WIDE_KEYS)):
-            per_module = sum(c22_detail[k] for k in _PER_MODULE_KEYS)
+            # C220111 (labor) gets the multi-unit discount; equipment keys do not.
+            equipment_keys = _PER_MODULE_KEYS - {"C220111"}
+            per_module_equipment = sum(c22_detail[k] for k in equipment_keys)
+            labor = c22_detail["C220111"] * (
+                1.0 + (n_mod - 1) * cc.multi_unit_labor_factor
+            )
             plant_wide = sum(c22_detail[k] for k in _PLANT_WIDE_KEYS)
-            c22_detail["C220000"] = per_module * n_mod + plant_wide
+            c22_detail["C220000"] = per_module_equipment * n_mod + labor + plant_wide
 
         c22 = co.get("CAS22", c22_detail["C220000"])
         if "CAS22" in co:
@@ -672,7 +682,10 @@ class CostModel:
         if "CAS26" in co:
             overridden.append("CAS26")
 
-        c27 = co.get("CAS27", cas27_special_materials(cc, pt.p_net, self.fuel))
+        c27 = co.get(
+            "CAS27",
+            cas27_special_materials(cc, pt.p_net, self.fuel, blanket_fill),
+        )
         if "CAS27" in co:
             overridden.append("CAS27")
 

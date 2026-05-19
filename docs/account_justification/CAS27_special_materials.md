@@ -112,3 +112,38 @@ by Li-6 in non-breeding applications) and beryllium fluoride content.
   Pearson_resource-availability-and-supply_presentation.pdf
 - INEEL, "FLiBe Use in Fusion Reactors — An Initial Safety Assessment,"
   INEEL/EXT-99-00331, 1999.
+
+## Blanket configuration multipliers (added 2026-05-17)
+
+CAS27 is now multiplied by `BlanketFill.fill_factor`, and CAS22.01 is multiplied
+by `BlanketForm.structure_factor`. Both factors are relative to the existing
+DT/PbLi baseline (which keeps factor 1.0 x 1.0 = unchanged).
+
+### `BlanketFill.fill_factor` (CAS27)
+
+| BlanketFill | fill_factor | Source / rationale |
+|---|---:|---|
+| `pbli` | 1.0 | Baseline. $12M PbLi + $3M Li-6 premium, as documented above. |
+| `li` | 2.0 | Self-cooled Li, ~300 t inventory at $300-1000/kg enriched. Center ~$30M. |
+| `flibe` | 5.0 | 2LiF-BeF2 melt at $50-150/kg with Li-7 enrichment. ~$75M. See FLiBe section above. |
+| `be_ceramic` | 13.0 | HCPB. ~300 t Be at $600/kg + Li-ceramic pebbles. ~$200M. See "HCPB Beryllium Override" section. |
+| `ceramic_only` | 3.0 | WCCB. Li-ceramic pebbles without Be multiplier. ~$45M for 300 t at $150/kg synthesis. |
+| `none` | 0.0 | Aneutronic, no breeder. |
+
+### `BlanketForm.structure_factor` (CAS22.01)
+
+| BlanketForm | structure_factor | Source / rationale |
+|---|---:|---|
+| `liquid_metal` | 1.0 | Baseline. RAFM steel flow channels + W FW armor. |
+| `molten_salt` | 1.3 | Hastelloy-N corrosion liner on FLiBe-wetted surfaces. Source: INEEL/EXT-99-00331. |
+| `solid_breeder` | 1.2 | Pebble-bed canisters: separate breeder/multiplier zones, He coolant manifolds. Source: EUROfusion HCPB cost basis. |
+| `none` | 0.0 | No blanket structure. |
+
+### Calibration caveat
+
+These are first-pass values calibrated against limited public data. Spread is
+wide for some entries (e.g., `li` 0.8-10x, `flibe` 2-20x) driven by enrichment
+choices and supply assumptions. Users should override the multipliers via
+`cost_overrides={"CAS27": ...}` for project-specific sensitivity analyses, the
+same way they would for any other coefficient with a documented uncertainty
+band.

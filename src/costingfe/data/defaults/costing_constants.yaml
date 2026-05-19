@@ -66,7 +66,8 @@ remote_handling_dhe3_base: 30.0
 remote_handling_pb11_base: 20.0
 
 # 220111: Installation labor
-installation_frac: 0.14      # Fraction of reactor subtotal
+installation_frac: 0.14         # Fraction of reactor subtotal
+multi_unit_labor_factor: 0.92   # Each module beyond unit 1 costs 92% of unit 1 labor (8% co-location discount, fission empirical 5-15%)
 
 # Core component lifetime (FPY — full power years between replacements)
 # Source: 20260208-fusion-reactor-subsystems-by-fuel-type.md
