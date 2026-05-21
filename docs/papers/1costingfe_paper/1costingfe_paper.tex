@@ -271,12 +271,17 @@ represents physics outputs supplied externally (geometry, $n_e$,
 $T_e$ or $T_i$, magnetic field configuration, $\eta_{\text{th}}$,
 and where applicable $\eta_{\text{de}}$, $f_{\text{dec}}$, and
 secondary burn fractions for catalyzed cycles); these feed the
-1costingfe physics module. Costing parameters (WACC, $T_c$, NOAK
-switch, conductor cost per kA-m, ${}^3$He market price, etc.) enter
-at the engineering-sizing and CAS-account stages.
+1costingfe physics module. Costing parameters (WACC, $T_c$, the
+FOAK/NOAK (First-/Nth-of-a-Kind) switch, conductor cost per kA-m,
+${}^3$He market price, etc.) enter at the engineering-sizing and
+CAS-account stages.
 The included 0D models (\cref{sec:tokamak-model} for tokamaks) are
 convenience layers for users without an external physics model in
 hand and are not required.
+
+Throughout the paper, monospace identifiers in parentheses (e.g.,
+\texttt{burn\_fraction}) name the corresponding configuration
+parameter exposed by the framework.
 
 \begin{figure}[htbp]
 \centering
@@ -745,7 +750,7 @@ recirculating power.
 
 Many concepts will deviate significantly from the defaults; a non-Maxwellian
 deuterium plasma may alter the burn rates of the secondary D-D reactions,
-or a doped plasma may alter the radiation losses or the plasma optical thickness
+or a plasma with seeded impurities may alter the radiation losses or the plasma optical thickness
 \citep{frank2022}. These and other coefficients are therefore exposed as
 first-class parameters amenable to sensitivity analysis via automatic differentiation.
 
@@ -765,18 +770,21 @@ IFE, Z-pinch, and pulsed inductive concepts.
 \label{sec:fusion-power-split}
 
 Operating the power plant requires collecting the power leaving the
-plasma and converting it to electricity. The total power exiting the
-plasma is the fusion power $P_{\text{fus}}$ plus the external heating
-power $P_{\text{in}}$ required to sustain the burn. This power leaves
-in three forms: charged particles, neutrons, and photon
-radiation. Neutrons deposit their energy volumetrically in the blanket
-and shielding; charged particles and photons are absorbed by
-plasma-facing surfaces. Most of this energy is converted to electricity
-via a thermal cycle, though a fraction of the charged-particle energy
-may be recovered directly via direct energy conversion (DEC).
+plasma and converting it to electricity. The fusion reaction releases
+energy as charged particles and neutrons; the split between these two
+channels is set by the nuclear physics of the fuel cycle. Neutrons
+deposit their energy volumetrically in the blanket and shielding. The
+charged-particle energy leaves the plasma through two channels: photon
+emission (bremsstrahlung, synchrotron, and line radiation), governed
+by plasma physics rather than nuclear kinematics and treated
+separately in \cref{sec:steady-balance}; and direct charged-particle
+transport to plasma-facing surfaces. Most of this energy is converted
+to electricity via a thermal cycle, though a fraction of the
+charged-particle transport loss may be recovered directly via direct
+energy conversion (DEC).
 
-The purpose of this calculation is to determine the power in each of
-these channels, which depends on the nuclear physics of the fuel burn.
+The purpose of this calculation is to determine the charged-particle
+and neutron power split.
 The neutron energy fraction
 $f_n \equiv E_n / Q$, where $Q$ is the total energy released by the
 primary reaction and $E_n$ is the portion carried by neutrons.
@@ -812,7 +820,7 @@ Unburned fuel is exhausted, separated, and recycled with efficiency
 $f_r$ (\texttt{fuel\_recovery}); the resulting cumulative fusion
 probability of an injected atom is $f_b / [1 - f_r(1-f_b)]$,
 approaching 1 as $f_r \to 1$. Both $f_b$ and $f_r$ are used in CAS80
-(\cref{sec:cas80}). The NOAK defaults are $f_b = 0.05$ and $f_r = 0.99$,
+(\cref{sec:cas80}). The defaults are $f_b = 0.05$ and $f_r = 0.99$,
 which are MFE-centric: pulsed-compression and ICF concepts achieve much
 higher single-pass burnup (10--40\%+), and recovery efficiency depends on
 how mature the plant's fuel-cycle infrastructure is. Concept-specific
@@ -833,18 +841,19 @@ either tritium and a proton (branch~1) or ${}^3$He and a neutron (branch~2).
 The tritium and ${}^3$He products are themselves fusion fuels that react
 with the majority species of deuterium in the plasma. The deuterium-tritium
 (D-T) reaction has a much higher cross section than the D-D reaction, so the tritium
-from branch~1 undergoes secondary D-T fusion with a burn fraction $f_T$ that
-approaches 1 at typical D-D burn temperatures. The D-${}^3$He reaction
-has a cross section comparable to D-D, so the ${}^3$He product
-from branch~2 undergoes secondary D-${}^3$He fusion with a burn fraction 
-$f_{{}^3\text{He}}$ that is typically lower than $f_T$.
+from branch~1 undergoes secondary D-T fusion with a burn fraction $f_T$
+(\texttt{dd\_f\_T}) that approaches 1 at typical D-D burn
+temperatures. The D-${}^3$He reaction has a cross section comparable
+to D-D, so the ${}^3$He product from branch~2 undergoes secondary
+D-${}^3$He fusion with a burn fraction $f_{{}^3\text{He}}$
+(\texttt{dd\_f\_He3}) that is typically lower than $f_T$.
 
 The effective energy per D-D event, and the split between charged particles and neutrons,
 is determined by the burn fractions of these secondary reactions. 
 The burn fractions depend on the plasma conditions and confinement time, and are
 currently treated as free parameters in the framework, with default values
 informed by typical D-D burn conditions in the literature \citep{huba2016}.
-A detailed plasma model could be added to compute these burn fractions from plasma parameters.
+A detailed plasma model could be added to compute these burn fractions from plasma parameters and replace the defaults.
 The effective energy per D-D event, averaged over the two primary branches, becomes:
 
 \begin{equation}
@@ -880,11 +889,12 @@ neutron energy fraction $\bar{E}_n / \bar{E}_{\text{total}}$ increases from
 The D-${}^3$He fuel cycle is the most complex of the four considered
 here: the primary reaction is aneutronic ($Q = 18.3$~MeV), but at the
 required temperatures ($T_i = 60$--$100$~keV) a fraction
-$f_{\text{DD}}$ of fusion events are D-D side reactions, which
-themselves carry the D-T and D-${}^3$He secondaries described in the
-D-D section above. The D-D events produce tritium (via D(d,p)T) that
-re-burns in D-T fusion at burn fraction $f_T^*$, introducing 14.1~MeV
-neutrons into an otherwise neutron-free system. They also produce
+$f_{\text{DD}}$ (\texttt{dhe3\_dd\_frac}) of fusion events are D-D
+side reactions, which themselves carry the D-T and D-${}^3$He
+secondaries described in the D-D section above. The D-D events
+produce tritium (via D(d,p)T) that re-burns in D-T fusion at a
+concept-specific burn fraction $f_T^*$ (\texttt{dhe3\_f\_T}),
+introducing 14.1~MeV neutrons into an otherwise neutron-free system. They also produce
 ${}^3$He (via D(d,n)${}^3$He) that re-burns in D-${}^3$He fusion at
 burn fraction $f_{{}^3\text{He}}^*$, releasing additional
 charged-particle energy and reducing the external ${}^3$He demand
@@ -915,12 +925,11 @@ and $\bar{E}_{n,\text{DD}}$ follows \cref{eq:dd-eneutron}: only the
 D-T secondary burn contributes neutrons, since the secondary
 D-${}^3$He reaction is aneutronic.
 
-The bred-tritium burn fraction $f_T^*$ is a design choice (burn for
-energy or exhaust to keep the design neutron-averse), kept separate
-from the D-D fuel cycle's burn fractions and concept-specific. Mirror
-plants without active tritium discharge let bred T burn at
+The bred-tritium burn fraction $f_T^*$ is a design choice: burn for
+energy or exhaust to reduce the neutron load. Mirror plants without
+active tritium discharge let bred T burn at
 $f_T^* \approx 0.5$ (single-pass thermal burn); pulsed FRC
-architectures designed to be neutron-averse exhaust (or hold for
+architectures designed for low neutron load exhaust (or hold for
 decay) bred tritium, giving $f_T^* \approx 0$.
 
 The bred-${}^3$He utilization $f_{{}^3\text{He}}^*$ is not a free
@@ -934,7 +943,7 @@ f_{{}^3\text{He}}^* = \frac{f_b}{1 - f_r (1 - f_b)},
 where $f_b$ is the single-pass burn fraction (\texttt{burn\_fraction})
 and $f_r$ the fuel recovery (\texttt{fuel\_recovery}), both introduced
 in \cref{sec:cas80}. The framework computes it automatically. With
-NOAK defaults $f_b = 0.05$ and $f_r = 0.99$, $f_{{}^3\text{He}}^*
+defaults $f_b = 0.05$ and $f_r = 0.99$, $f_{{}^3\text{He}}^*
 \approx 0.84$.
 
 Per primary D-${}^3$He event, the deuteron
@@ -946,7 +955,7 @@ the latter accounting for D-D-bred ${}^3$He that re-burns in place
 of an external atom.
 For the steady-state mirror concept evaluated at $f_{\text{DD}} =
 0.131$ (50/50 D/${}^3$He mix at $T_i = 70$~keV with Bosch-Hale cross
-sections \citep{boschhale1992}), $f_T^* = 0.5$, and the NOAK-default
+sections \citep{boschhale1992}), $f_T^* = 0.5$, and the default
 $f_{{}^3\text{He}}^* \approx 0.84$ (from \cref{eq:dhe3-fhe3-star}),
 the effective neutron energy fraction $\bar{E}_n / \bar{E}_{\text{total}}$
 is approximately 3\%, small but nonzero, and consequential for
@@ -1013,7 +1022,7 @@ purely aneutronic.
 
 The steady-state balance applies to confinement concepts with
 continuous heating power and continuous fusion output (tokamaks,
-stellarators, mirrors). It converts the fusion-power split of
+stellarators, mirrors, levitated dipoles, polywells). It converts the fusion-power split of
 \cref{sec:fusion-power-split} into net electric power via the thermal
 and electric conversion stack and the recirculating-power accounting.
 
