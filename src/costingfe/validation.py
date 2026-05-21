@@ -108,6 +108,8 @@ class CostingInput(BaseModel):
     structure_t: float | None = None
     vessel_t: float | None = None
     plasma_t: float | None = None
+    burn_fraction: float | None = Field(default=None, gt=0, le=1)
+    fuel_recovery: float | None = Field(default=None, gt=0, le=1)
 
     # MFE only
     p_input: float | None = None
@@ -162,6 +164,8 @@ class CostingInput(BaseModel):
         "structure_t",
         "vessel_t",
         "plasma_t",
+        "burn_fraction",
+        "fuel_recovery",
     ]
     _MFE_REQUIRED = [
         "p_input",
