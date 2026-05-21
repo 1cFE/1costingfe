@@ -85,3 +85,23 @@ def test_every_concept_yaml_declares_blanket(yaml_path):
         f"{yaml_path.name}: blanket_fill={fill.value!r} not valid for "
         f"blanket_form={form.value!r}"
     )
+
+
+@pytest.mark.parametrize("yaml_path", _CONCEPT_YAMLS, ids=lambda p: p.stem)
+def test_every_concept_yaml_declares_burn_fraction_and_fuel_recovery(yaml_path):
+    """Every concept YAML must declare burn_fraction and fuel_recovery; both
+    must lie in (0, 1].
+
+    Background: these two physics knobs used to live in costing_constants.yaml
+    as global defaults but are concept-specific (burn_fraction) or declared
+    per-concept by policy (fuel_recovery). See
+    docs/plans/2026-05-21-burn-fraction-by-concept-design.md.
+    """
+    data = yaml.safe_load(yaml_path.read_text())
+    for key in ("burn_fraction", "fuel_recovery"):
+        assert key in data, f"{yaml_path.name} missing {key}"
+        value = data[key]
+        assert isinstance(value, int | float), (
+            f"{yaml_path.name}: {key}={value!r} is not numeric"
+        )
+        assert 0 < value <= 1, f"{yaml_path.name}: {key}={value} is outside (0, 1]"
