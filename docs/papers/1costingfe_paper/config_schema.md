@@ -166,6 +166,8 @@ Activated when `use_0d_model: true` (tokamak only).
 
 | Column | Description | Default |
 |---|---|---|
+| **burn_fraction** | Single-pass burn fraction. Per concept; MFE 0.05, ICF 0.25-0.30, magneto-inertial 0.01-0.15. | per-concept |
+| **fuel_recovery** | Fraction of unburned fuel recovered and recycled (NOAK). | 0.99 |
 | **dd_f_T** | DD branch: tritium-bearing fraction. | 0.969 |
 | **dd_f_He3** | DD branch: He-3 fraction. | 0.689 |
 | **dhe3_dd_frac** | D-He3: parasitic DD reaction fraction. | 0.131 |
@@ -284,8 +286,6 @@ Categorized by CAS account. Every field is overridable.
 | Field | Description | Default |
 |---|---|---|
 | `u_deuterium` · `u_li6` · `u_he3` · `u_protium` · `u_b11` (FOAK) · `u_b11_noak` | Isotope unit cost ($/kg). | 2 175 · 1 000 · 2 000 000 · 5 · 10 000 · 75 |
-| `burn_fraction` | Fraction of injected fuel that fuses per pass. | 0.05 |
-| `fuel_recovery` | Fraction of unburned fuel recycled. | 0.99 |
 
 ---
 

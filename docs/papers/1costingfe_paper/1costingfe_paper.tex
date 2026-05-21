@@ -945,8 +945,9 @@ f_{{}^3\text{He}}^* = \frac{f_b}{1 - f_r (1 - f_b)},
 where $f_b$ is the single-pass burn fraction (\texttt{burn\_fraction})
 and $f_r$ the fuel recovery (\texttt{fuel\_recovery}), both introduced
 in \cref{sec:cas80}. The framework computes it automatically. With
-defaults $f_b = 0.05$ and $f_r = 0.99$, $f_{{}^3\text{He}}^*
-\approx 0.84$.
+representative MFE-class values $f_b = 0.05$ and $f_r = 0.99$,
+$f_{{}^3\text{He}}^* \approx 0.84$; concept-specific values flow
+through from the per-concept YAMLs.
 
 Per primary D-${}^3$He event, the deuteron
 consumption is $1 + f_{\text{DD}} (1 + \tfrac{1}{2} f_T^*
@@ -2659,12 +2660,14 @@ the effective fuel cost is $1.45\times$ the full-burn estimate;
 at $\beta_{\text{burn}} = 0.05$ and $\eta_{\text{rec}} = 0.90$,
 it rises to $2.9\times$.
 
-Default values are $\beta_{\text{burn}} = 0.05$ and
-$\eta_{\text{rec}} = 0.99$, reflecting typical MCF plasma
+Values are declared per concept. The MFE regime default is
+$\beta_{\text{burn}} = 0.05$, reflecting typical MCF plasma
 conditions where single-pass burn fractions of 1--10\% are
-expected and modern exhaust fuel processing achieves high
-recovery rates. At the default values the multiplier is
-$1 + 19 \times 0.01 = 1.19$.
+expected; inertial and magneto-inertial concepts use individual
+values in the 0.01--0.30 range. $\eta_{\text{rec}} = 0.99$ is
+uniform across concepts, reflecting modern exhaust fuel processing.
+At the MFE-class values the multiplier is $1 + 19 \times 0.01 =
+1.19$.
 
 \subsubsection{Levelization}
 CAS80 is levelized using the same growing-annuity procedure as
