@@ -11,18 +11,12 @@ Architecture:
 """
 
 from costingfe import CostModel, Fuel
-from costingfe.defaults import load_costing_constants
 from costingfe.types import ConfinementConcept, PulsedConversion
 
-cc = load_costing_constants().replace(
-    burn_fraction=0.10,
-    fuel_recovery=0.95,
-)
 model = CostModel(
     concept=ConfinementConcept.MAG_TARGET,
     fuel=Fuel.DHE3,
     pulsed_conversion=PulsedConversion.INDUCTIVE_DEC,
-    costing_constants=cc,
 )
 
 N_MODULES = 20
@@ -37,6 +31,9 @@ result = model.forward(
     interest_rate=0.07,
     inflation_rate=0.02,
     noak=True,
+    # Fuel-cycle overrides (concept YAML defaults are MAG_TARGET-class)
+    burn_fraction=0.10,
+    fuel_recovery=0.95,
     # Pulsed parameters
     q_sci=5.0,
     f_rep=1.0,

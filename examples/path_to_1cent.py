@@ -548,13 +548,7 @@ print(
     f"  eta_eff ≈ {effective_eta(f_n_dhe3):.0%} (only ~5% neutrons, mostly EM recovery)"
 )
 
-cc_frc = load_costing_constants().replace(
-    burn_fraction=0.10,
-    fuel_recovery=0.95,
-)
-frc_model = CostModel(
-    ConfinementConcept.MAG_TARGET, Fuel.DHE3, costing_constants=cc_frc
-)
+frc_model = CostModel(ConfinementConcept.MAG_TARGET, Fuel.DHE3)
 
 # DHe3 FRC: eta_th=0.86 (corrected for ~5% neutron fraction)
 eta_dhe3_frc = effective_eta(f_n_dhe3)
@@ -568,6 +562,8 @@ frc_kwargs = dict(
     interest_rate=0.07,
     inflation_rate=0.02,
     noak=True,
+    burn_fraction=0.10,
+    fuel_recovery=0.95,
     p_driver=12.0,
     mn=1.0,
     eta_th=eta_dhe3_frc,
@@ -605,11 +601,7 @@ print(f"  {'He-3 $/kg':>12} {'LCOE':>8} {'¢/kWh':>7} {'CAS80':>8} {'Capital':>8
 print("  " + "-" * 52)
 
 for he3_price in [2_000_000, 500_000, 200_000, 100_000, 50_000, 20_000, 10_000, 5_000]:
-    cc_v = load_costing_constants().replace(
-        burn_fraction=0.10,
-        fuel_recovery=0.95,
-        u_he3=float(he3_price),
-    )
+    cc_v = load_costing_constants().replace(u_he3=float(he3_price))
     m_v = CostModel(ConfinementConcept.MAG_TARGET, Fuel.DHE3, costing_constants=cc_v)
     kw = {**frc_kwargs, "interest_rate": 0.03, "lifetime_yr": 50}
     r = m_v.forward(**kw)
@@ -637,11 +629,7 @@ print("  Uses only deuterium ($2,175/kg, commodity from D2O plants)")
 eta_dd_with_steam = effective_eta(f_n_dd)
 eta_dd_no_steam = (1 - f_n_dd) * 0.90
 
-cc_dd = load_costing_constants().replace(
-    burn_fraction=0.10,
-    fuel_recovery=0.95,
-)
-dd_model = CostModel(ConfinementConcept.MAG_TARGET, Fuel.DD, costing_constants=cc_dd)
+dd_model = CostModel(ConfinementConcept.MAG_TARGET, Fuel.DD)
 
 # DD FRC with small steam bottoming cycle for neutron heat
 dd_kwargs = dict(
@@ -653,6 +641,8 @@ dd_kwargs = dict(
     interest_rate=0.07,
     inflation_rate=0.02,
     noak=True,
+    burn_fraction=0.10,
+    fuel_recovery=0.95,
     p_driver=12.0,
     mn=1.0,
     eta_th=eta_dd_with_steam,
@@ -771,11 +761,7 @@ print(
 )
 
 # DHe3 FRC with cheap He-3
-cc_cheaphe3 = load_costing_constants().replace(
-    burn_fraction=0.10,
-    fuel_recovery=0.95,
-    u_he3=20_000.0,
-)
+cc_cheaphe3 = load_costing_constants().replace(u_he3=20_000.0)
 m_cheaphe3 = CostModel(
     ConfinementConcept.MAG_TARGET, Fuel.DHE3, costing_constants=cc_cheaphe3
 )
