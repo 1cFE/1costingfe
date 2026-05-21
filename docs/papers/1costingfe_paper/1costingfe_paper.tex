@@ -820,12 +820,14 @@ Unburned fuel is exhausted, separated, and recycled with efficiency
 $f_r$ (\texttt{fuel\_recovery}); the resulting cumulative fusion
 probability of an injected atom is $f_b / [1 - f_r(1-f_b)]$,
 approaching 1 as $f_r \to 1$. Both $f_b$ and $f_r$ are used in CAS80
-(\cref{sec:cas80}). The defaults are $f_b = 0.05$ and $f_r = 0.99$,
-which are MFE-centric: pulsed-compression and ICF concepts achieve much
-higher single-pass burnup (10--40\%+), and recovery efficiency depends on
-how mature the plant's fuel-cycle infrastructure is. Concept-specific
-values should be supplied for those families when concept-resolved
-comparisons are made.
+(\cref{sec:cas80}). Values are declared per-concept in the engineering
+YAMLs rather than as global defaults. Steady-state MFE concepts share a
+regime default $f_b = 0.05$; inertial concepts use 0.25--0.30; the
+heterogeneous magneto-inertial bucket uses concept-specific values
+ranging from 0.01 (dense plasma focus) to 0.30 (heavy-ion fusion). The
+NOAK $f_r = 0.99$ value is uniform across concepts but declared
+per-concept by policy. Per-concept values and provenance are documented
+in \texttt{docs/account\_justification/burn\_fraction.md}.
 
 \subsubsection{Deuterium-tritium (D-T)}
 The D-T reaction is the simplest case: each fusion event releases a
