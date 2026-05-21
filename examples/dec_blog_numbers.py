@@ -54,6 +54,10 @@ BASE_KW = dict(
     lifetime_yr=30,
     interest_rate=0.07,
     construction_time_yr=6.0,
+    # p-B11 and D-3He are aneutronic primary; no breeding blanket needed.
+    blanket_form="none",
+    blanket_fill="none",
+    mn=1.0,
 )
 
 configs_vb = [
@@ -208,6 +212,10 @@ AGG_KW = dict(
     lifetime_yr=50,
     interest_rate=0.03,
     construction_time_yr=3.0,
+    # p-B11 and D-3He are aneutronic primary; no breeding blanket needed.
+    blanket_form="none",
+    blanket_fill="none",
+    mn=1.0,
 )
 
 print(f"  {'Approach':<45} {'Floor':>6} {'O/N':>7} {'Budget':>8}")
@@ -265,7 +273,6 @@ r_dhe3_vb = m_dhe3.forward(**BASE_KW, inflation_rate=INFLATION, f_dec=0.9, eta_d
 #     heat from bremsstrahlung and DEC waste is dumped to cooling.
 PI_BURN = dict(
     dhe3_f_T=0.0,
-    dhe3_f_He3=0.99,
     dhe3_dd_frac=0.314,
     f_rad_fus=0.163,  # bypass cc.f_rad_fus_dhe3 (which doesn't propagate)
     eta_th=0.0,
