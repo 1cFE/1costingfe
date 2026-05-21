@@ -777,8 +777,8 @@ class CostModel:
             dhe3_dd_frac=params["dhe3_dd_frac"],
             dhe3_f_T=params["dhe3_f_T"],
             dhe3_f_He3=self._dhe3_f_He3_eff(params),
-            burn_fraction=params.get("burn_fraction"),
-            fuel_recovery=params.get("fuel_recovery"),
+            burn_fraction=params["burn_fraction"],
+            fuel_recovery=params["fuel_recovery"],
         )
         lcoe = compute_lcoe(c90, c70, c80, pt.p_net, n_mod, avail_eff)
         overnight = total_capital * 1e6 / (pt.p_net * n_mod * 1e3)  # $/kW
