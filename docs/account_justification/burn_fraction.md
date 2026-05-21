@@ -16,15 +16,15 @@ gives the cumulative fusion probability of an injected atom as
 CAS80 fuel-cost accounting.
 
 The value is bounded above by physics (kinematic and confinement) and
-chosen by design (operating-point selection). Values below are reactor-
-target (NOAK) design points, not experimental records.
+chosen by design (operating-point selection). Values below are
+reactor-target (NOAK) design points, not experimental records.
 
 ## Steady-state MFE (regime default 0.05)
 
 The MFE concepts (tokamak, stellarator, mirror, orbitron, polywell) all
 operate at moderate n·τ confinement and share the same single-pass burnup
-regime. Range across designs: 0.03-0.10. Standard reactor-target value:
-0.05.
+regime. Range across designs: 0.02-0.10 (including legacy mirror studies
+at the low end). Standard reactor-target value: 0.05.
 
 - **tokamak: 0.05** - ARIES-AT, ITER-class operating point. Sourcing
   pending detailed citation.
@@ -90,17 +90,18 @@ Sources reviewed (none quote a burn fraction directly):
 - **theta_pinch: 0.05** - Faster expansion than Z-pinch; closer to MFE
   bound. Range: 0.03-0.08. Sourcing pending.
 - **dense_plasma_focus: 0.01** - LPP Focus Fusion projections;
-  sub-microsecond pinch lifetime is the binding constraint. **Genuinely
-  low**, drives LCOE materially for DPF comparisons. Sourcing pending.
+  sub-microsecond pinch lifetime is the binding constraint. Range:
+  0.005-0.02. **Genuinely low**, drives LCOE materially for DPF
+  comparisons. Sourcing pending.
 
 ## fuel_recovery: 0.99 (uniform across all concepts)
 
 NOAK fuel-cycle recycling efficiency. ITER targets 99% for tritium and
-serves as the mature reference. Within-concept architectural spread (gas-
-phase exhaust vs. target-factory residue) is at most 5 percentage points
-at NOAK; sensitivity to `fuel_recovery` is highest at low `burn_fraction`,
-exactly where concepts are most architecturally similar (all gas-phase
-MFE). A single uniform value is therefore defensible.
+serves as the mature reference. Within-concept architectural spread
+(gas-phase exhaust vs. target-factory residue) is at most 5 percentage
+points at NOAK; sensitivity to `fuel_recovery` is highest at low
+`burn_fraction`, exactly where concepts are most architecturally similar
+(all gas-phase MFE). A single uniform value is therefore defensible.
 
 A future refinement would treat `fuel_recovery` as FOAK/NOAK-toggled
 (e.g., FOAK 0.95, NOAK 0.99). Out of scope for this iteration.
