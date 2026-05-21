@@ -40,6 +40,11 @@ BASELINE_KW = dict(
     # follow-on dispatch.
 )
 
+# Aneutronic kwargs: silence the "aneutronic fuels do not need a breeding
+# blanket" pydantic warning by overriding the blanket defaults. D-T must
+# NOT pass these (it uses a breeding blanket).
+ANEUTRONIC_KW = dict(blanket_form="none", blanket_fill="none", mn=1.0)
+
 TARGET = 10.0
 
 # ══════════════════════════════════════════════════════════════════════
@@ -56,6 +61,7 @@ r = m_pb11.forward(
     inflation_rate=INFLATION,
     f_dec=0.0,
     cost_overrides=FREE_CORE,
+    **ANEUTRONIC_KW,
 )
 c = r.costs
 bop = c.cas23 + c.cas24 + c.cas25 + c.cas26
@@ -164,8 +170,10 @@ fuels = [
 print(f"  {'Fuel':<6} {'Bldg':>7} {'BOP floor':>10} {'Fuel cost':>10} {'CAS71':>10}")
 print("-" * 50)
 for label, model in fuels:
-    full = model.forward(**BASELINE_KW)
-    free = model.forward(**BASELINE_KW, cost_overrides=FREE_CORE)
+    # D-T uses a breeding blanket; aneutronic fuels do not.
+    extra = {} if label == "DT" else ANEUTRONIC_KW
+    full = model.forward(**BASELINE_KW, **extra)
+    free = model.forward(**BASELINE_KW, cost_overrides=FREE_CORE, **extra)
     energy = 8760 * 1000 * 0.85
     bop_lcoe = (free.costs.cas90 + free.costs.cas70) * 1e6 / energy
     fuel_lcoe = free.costs.cas80 * 1e6 / energy
@@ -178,8 +186,8 @@ for label, model in fuels:
 
 # DHe3 detail
 print()
-dhe3_free = m_dhe3.forward(**BASELINE_KW, cost_overrides=FREE_CORE)
-dhe3_full = m_dhe3.forward(**BASELINE_KW)
+dhe3_free = m_dhe3.forward(**BASELINE_KW, cost_overrides=FREE_CORE, **ANEUTRONIC_KW)
+dhe3_full = m_dhe3.forward(**BASELINE_KW, **ANEUTRONIC_KW)
 energy = 8760 * 1000 * 0.85
 dhe3_fuel = dhe3_free.costs.cas80 * 1e6 / energy
 dhe3_bop = (dhe3_free.costs.cas90 + dhe3_free.costs.cas70) * 1e6 / energy
@@ -200,7 +208,9 @@ print("=" * 70)
 print(f"  {'Scenario':<42} {'Floor':>6} {'O/N':>7} {'Budget':>8}")
 print("-" * 70)
 for label, kw in scenarios:
-    r = m_pb11.forward(**kw, inflation_rate=INFLATION, cost_overrides=FREE_CORE)
+    r = m_pb11.forward(
+        **kw, inflation_rate=INFLATION, cost_overrides=FREE_CORE, **ANEUTRONIC_KW
+    )
     budget = TARGET - r.costs.lcoe
     print(
         f"  {label:<42} {r.costs.lcoe:>5.1f} {r.costs.overnight_cost:>7.0f}"
@@ -224,8 +234,8 @@ agg_kw = dict(
     construction_time_yr=3.0,
     f_dec=0.0,
 )
-free_agg = m_pb11.forward(**agg_kw, cost_overrides=FREE_CORE)
-full_agg = m_pb11.forward(**agg_kw)
+free_agg = m_pb11.forward(**agg_kw, cost_overrides=FREE_CORE, **ANEUTRONIC_KW)
+full_agg = m_pb11.forward(**agg_kw, **ANEUTRONIC_KW)
 core_budget_kw = full_agg.costs.overnight_cost - free_agg.costs.overnight_cost
 
 print(f"  Free-core floor:        ${free_agg.costs.lcoe:.1f}/MWh")
@@ -300,7 +310,8 @@ print("\n  2 GWe, 95%, 3% WACC, 50yr, 3yr:")
 print(f"  {'Fuel':<12} {'Floor':>7} {'Capital':>8} {'O&M':>7} {'Threshold':>12}")
 print("-" * 52)
 for label, model in [("DT", m_dt), ("pB11", m_pb11)]:
-    r = model.forward(**threshold_kw, cost_overrides=FREE_CORE)
+    extra = {} if label == "DT" else ANEUTRONIC_KW
+    r = model.forward(**threshold_kw, cost_overrides=FREE_CORE, **extra)
     om = r.costs.cas70 * 1e6 / energy_thr
     cap = r.costs.lcoe - om
     staff = r.costs.cas71 * 1e6 / energy_thr
@@ -330,7 +341,8 @@ print("\n  5 GWe, 95%, 2% WACC, 50yr, 3yr:")
 print(f"  {'Fuel':<12} {'Floor':>7} {'Capital':>8} {'O&M':>7} {'Threshold':>12}")
 print("-" * 52)
 for label, model in [("DT", m_dt), ("pB11", m_pb11)]:
-    r = model.forward(**threshold_mega, cost_overrides=FREE_CORE)
+    extra = {} if label == "DT" else ANEUTRONIC_KW
+    r = model.forward(**threshold_mega, cost_overrides=FREE_CORE, **extra)
     om = r.costs.cas70 * 1e6 / energy_mega
     cap = r.costs.lcoe - om
     staff = r.costs.cas71 * 1e6 / energy_mega
@@ -372,6 +384,7 @@ free_base = m_pb11.forward(
     inflation_rate=INFLATION,
     f_dec=0.0,
     cost_overrides=FREE_CORE,
+    **ANEUTRONIC_KW,
 )
 full_base = m_pb11.forward(
     net_electric_mw=1000.0,
@@ -379,6 +392,7 @@ full_base = m_pb11.forward(
     lifetime_yr=30,
     inflation_rate=INFLATION,
     f_dec=0.0,
+    **ANEUTRONIC_KW,
 )
 
 print(f"  Free-core LCOE floor:   ${free_base.costs.lcoe:.1f}/MWh")
@@ -411,6 +425,7 @@ for cycle in [PowerCycle.RANKINE, PowerCycle.BRAYTON_SCO2, PowerCycle.COMBINED]:
         inflation_rate=INFLATION,
         f_dec=0.0,
         cost_overrides=FREE_CORE,
+        **ANEUTRONIC_KW,
     )
     print(
         f"  {cycle.value:<15} {r.params['eta_th']:>6.2f}"
