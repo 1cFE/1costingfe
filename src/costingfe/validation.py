@@ -50,7 +50,9 @@ _VALIDATION_PHYSICS = dict(
     dd_f_He3=0.689,
     dhe3_dd_frac=0.131,
     dhe3_f_T=0.5,
-    dhe3_f_He3=0.84,  # bf=0.05, fr=0.99 -> q = bf/(1-fr(1-bf)) ~ 0.84
+    # representative MFE-class value (bf=0.05, fr=0.99); concept-specific
+    # values flow through compute()
+    dhe3_f_He3=0.84,
     pb11_f_alpha_n=0.0,
     pb11_f_p_n=0.0,
     wall_material=None,
