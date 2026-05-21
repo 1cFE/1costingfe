@@ -24,3 +24,15 @@ Per project rules, vendor systems should use procurement data (not material buil
 - CAS22.01.04 uses ITER procurement contracts: correct.
 - CAS22.01.07 uses an ARIES-CS-derived figure: borderline (ARIES is not procurement). Reconcile.
 - Walk the rest.
+
+## Concept-specific defaults for `burn_fraction` and `fuel_recovery`
+
+`burn_fraction` (single-pass burnup) and `fuel_recovery` are currently single globals in `costing_constants.yaml` (`burn_fraction=0.05`, `fuel_recovery=0.99`). These are MFE-centric. Physically:
+
+- Steady-state MFE (tokamak, stellarator, mirror): 1–10% burnup per pass.
+- Pulsed compression / inductive (FRC, MTF, Z-pinch): 10–30%+ per cycle (compression boosts $n\tau$ within the pulse).
+- ICF/IFE: capsules typically designed for 20–40%+ burnup per shot.
+
+Recovery efficiency also varies: ITER-class tritium plants target ~99% recycling, but a first-generation pulsed plant without a mature recovery loop will be lower.
+
+Move both fields into concept YAMLs (parallel to `blanket_form`/`blanket_fill`) with per-concept literature support, instead of relying on a single global default. Until then, the paper carries a caveat sentence flagging the MFE-centric values.

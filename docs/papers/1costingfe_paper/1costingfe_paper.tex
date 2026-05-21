@@ -140,7 +140,7 @@ Accounts that are largely fuel- and concept-agnostic inherit prior
 conventions. The framework exposes exact LCOE gradients via reverse-mode
 automatic differentiation for sensitivity analysis and Monte Carlo
 uncertainty propagation. A
-worked tour from physics outputs to LCOE is included as a use case,
+walkthrough from physics outputs to LCOE is included as a use case,
 and the framework is calibrated against the ARC and ARIES-AT
 reference designs, with divergences attributed to specific accounts
 where procurement data departs from heritage scaling.
@@ -159,11 +159,13 @@ experiments meant to determine the plasma physics and demonstrate
 scientific breakeven. Commercial viability is a question of economics, which is
 why credible cost estimates are essential for guiding R\&D investment,
 comparing confinement concepts, and identifying the design parameters
-with the greatest leverage on the levelized cost of electricity (LCOE). 
+with the greatest leverage on the levelized cost of electricity
+(LCOE), the breakeven electricity price (formally defined in
+\cref{sec:lcoe}).
 In addition to the physics and
-engineering parameters that determine the plant's performance, the
-economic parameters (construction time, economic plant lifetime, capital
-cost and operating costs, and the cost of capital, to name a few) become
+engineering parameters that determine the plant's performance,
+economic parameters (construction time, economic plant lifetime,
+capacity factor, and the cost of capital, to name a few) become
 critical components in the calculation.
 
 The most widely used costing methodology for fusion power plants is the
@@ -230,38 +232,10 @@ Materials science for fusion-specific alloys is expected to lag behind deploymen
 owing to the current lack of testing facilities for neutron irradiation and high heat fluxes,
 but a learning curve is expected as demand for high-performance materials grows.
 
-On the economics side, the cost of capital is a market condition rather
-than a design parameter, and a high cost of capital strongly incentivizes
-designs with lower capital costs and faster construction, even at the
-expense of higher operating costs.
-
-The \textsc{1cfe} initiative to search for corridors through which fusion energy can reach the
-optimistic price target of 1~cent/kWh must balance technological optimism regarding the
-potential of medium-to-high Technology Readiness Level (TRL) concepts with healthy skepticism
-regarding very early stage physics. As an example, direct energy conversion (DEC) methods are included across the
-TRL range, from the demonstrated venetian-blind grid through pulsed-inductive
-DEC and MHD on fusion coolants; their cost contributions are computed but
-flagged as TRL-conditional.
-
-Data availability for fusion power plant costs is low: no commercial plant
-has been built, and the few large-scale projects (ITER, NIF) are research
-facilities with non-representative cost structures. In this regime, a model
-with too many free parameters risks overfitting to sparse calibration points
-and misrepresenting the accuracy of its estimates. The framework is therefore
-built bottom-up with deliberate parsimony: each cost account is independently
-justified from literature and first principles, parameters are introduced
-only when supported by data or physical reasoning, and methodology choices
-are documented in per-account documentation.
-The computation flows from customer requirements (net electric
-power, availability, plant lifetime) through power balance, engineering
-sizing, per-account costing, and financial aggregation to a single LCOE
-figure, supporting cost overrides at any account level to accommodate
-concept-specific engineering detail as it becomes available.
-
-The framework is designed to integrate with other tools in the 1cfe ecosystem,
-including \textsc{Fusion-TEA}, a SysML~v2 power plant model that can override
-costing parameters for specific implementations, and a backcasting dashboard
-for target-driven design exploration.
+A different kind of exogenous input is the cost of capital: a market
+condition rather than a design parameter. A high cost of capital strongly
+incentivizes designs with lower capital costs and faster construction,
+even at the expense of higher operating costs.
 
 The remainder of this paper is organized as follows.
 \Cref{sec:lcoe} presents the economics module,
@@ -270,17 +244,17 @@ The remainder of this paper is organized as follows.
 the accounts for which independent justification studies have been completed.
 \Cref{sec:tokamak-model} presents the 0D tokamak model.
 
-The worked tour in \cref{sec:tour} presents a representative
+The walkthrough in \cref{sec:tour} presents a representative
 example: a single concept handed off from an external physics model
 into the costing pipeline, with a sensitivity tornado over the
 combined parameter set. Concept-agnosticism is exercised by running
-the tour on a non-tokamak case (a D-${}^3$He mirror with
+the walkthrough on a non-tokamak case (a D-${}^3$He mirror with
 venetian-blind direct energy conversion); the included 0D models in
 the appendix are convenience layers and are not required.
 
 
 %% ============================================================
-\section{From Customer Requirements to LCOE: A Worked Tour}
+\section{Using the Framework}
 \label{sec:tour}
 
 \subsection{Pipeline Overview}
@@ -292,13 +266,14 @@ confinement concept; the framework backs out the rest from defaults
 and sizes the cost stack accordingly. Vendor quotes or known costs
 enter through CAS-level overrides without re-running the physics.
 
-\Cref{fig:pipeline} sketches the dataflow. Inputs on the left
-column are physics-output engineering parameters: geometry,
-$n_e$, $T_e$ (or $T_i$), magnetic field configuration,
-$\eta_{\text{th}}$, and (where applicable) $\eta_{\text{de}}$,
-$f_{\text{dec}}$, secondary burn fractions for catalyzed cycles.
-Costing parameters (WACC, $T_c$, NOAK switch, conductor cost per
-kA-m, ${}^3$He market price, etc.) feed the right-hand columns.
+\Cref{fig:pipeline} sketches the dataflow. The leftmost box
+represents physics outputs supplied externally (geometry, $n_e$,
+$T_e$ or $T_i$, magnetic field configuration, $\eta_{\text{th}}$,
+and where applicable $\eta_{\text{de}}$, $f_{\text{dec}}$, and
+secondary burn fractions for catalyzed cycles); these feed the
+1costingfe physics module. Costing parameters (WACC, $T_c$, NOAK
+switch, conductor cost per kA-m, ${}^3$He market price, etc.) enter
+at the engineering-sizing and CAS-account stages.
 The included 0D models (\cref{sec:tokamak-model} for tokamaks) are
 convenience layers for users without an external physics model in
 hand and are not required.
@@ -348,13 +323,14 @@ external model and producing a complete CAS-account rollup and LCOE.
 This subsection presents one such handoff for a 1\,GWe D-${}^3$He steady-state
 mirror with venetian-blind direct energy conversion. Numbers are
 illustrative; the reference script is
-\texttt{examples/external\_physics\_handoff.py}.
+\texttt{examples/external\_physics\_handoff.py}, recorded in
+\cref{sec:appendix-handoff-script}.
 
 The physics outputs supplied as forward arguments are summarised in
 \cref{tab:tour-inputs}.
 
 \begin{table}[htbp]
-\caption{Physics outputs handed to \texttt{1costingfe} for the
+\caption{Inputs handed to \texttt{1costingfe} for the
 Section~\ref{sec:tour} reference scenario.}
 \label{tab:tour-inputs}
 \centering
@@ -364,66 +340,83 @@ Quantity & Value & Notes \\
 \midrule
 Concept       & Mirror              & linear, tandem-style \\
 Fuel          & D-${}^3$He          & aneutronic primary; D-D side reactions \\
+Power cycle   & Rankine             & preset supplies $\eta_{\text{th}} = 0.40$ and BOP coefficients \\
+Blanket form  & None                & D-${}^3$He: no breeding blanket required \\
+$M_n$         & 1.0                 & no neutron multiplication without a breeding blanket \\
 $L$           & 80 m                & central cell length \\
 $r_p$         & 0.4 m               & plasma radius at midplane \\
 $B_{\max}$    & 12 T                & peak field on conductor \\
 $T_e$         & 70 keV              & per Section~3.1.3 example \\
 $n_e$         & $3.3 \times 10^{19}$ m${}^{-3}$ & per Section~3.1.3 example \\
-$\eta_{\text{th}}$ & 0.40           & thermal cycle for residual neutrons + bremsstrahlung \\
 $\eta_{\text{de}}$ & 0.70           & venetian-blind direct conversion (single-pass; \texttt{eta\_de}) \\
 $f_{\text{dec}}$ & 0.90             & charged-particle collection fraction (\texttt{f\_dec}) \\
 $f_T^*$       & 0.5                 & secondary D-T burn (\texttt{dhe3\_f\_T}) \\
-$f_{{}^3\text{He}}^*$ & 0.1         & secondary D-${}^3$He burn (\texttt{dhe3\_f\_He3}) \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 The forward call is:
 
+\begin{minipage}{\linewidth}
 \begin{lstlisting}
-from costingfe import ConfinementConcept, CostModel, Fuel
-model  = CostModel(concept=ConfinementConcept.MIRROR, fuel=Fuel.DHE3)
+from costingfe import ConfinementConcept, CostModel, Fuel, PowerCycle
+model  = CostModel(
+    concept=ConfinementConcept.MIRROR, fuel=Fuel.DHE3,
+    power_cycle=PowerCycle.RANKINE,
+)
 result = model.forward(
     net_electric_mw=1000.0, availability=0.87, lifetime_yr=30,
     chamber_length=80.0, plasma_t=0.4, b_max=12.0,
     T_e=70.0, n_e=3.3e19,
-    eta_th=0.40, eta_de=0.70, f_dec=0.90,
-    dhe3_f_T=0.5, dhe3_f_He3=0.1,
+    blanket_form="none", blanket_fill="none", mn=1.0,
+    eta_de=0.70, f_dec=0.90,
+    dhe3_f_T=0.5,
 )
 \end{lstlisting}
+\end{minipage}
 
 The fusion power is derived by inverse power balance from the
 target net electric output, not supplied as an input; for the inputs
 above the framework returns $P_{\text{fus}} \approx$ 1880\,MW. The
-group-level cost rollup is shown in \cref{tab:tour-rollup}.
+group-level cost rollup is shown in \cref{tab:tour-rollup}. The CAS
+account structure (Schulte~et~al.\ \citep{schulte1978}) groups plant
+costs into pre-construction (CAS10), direct capital (CAS20 = sum of
+CAS21--29: buildings, reactor plant, balance of plant, special
+materials, digital twin, and contingency), capitalized indirect
+services (CAS30), owner's costs (CAS40), supplementary costs (CAS50),
+and interest during construction (CAS60). Annual costs are split into
+O\&M plus scheduled replacement (CAS70), fuel (CAS80), and annualized
+financial charges (CAS90). LCOE is computed from these in
+\cref{sec:lcoe}; a full per-sub-account breakdown is given in
+\cref{tab:cas-overview}.
 
 \begin{table}[htbp]
 \caption{CAS-account rollup for the Section~\ref{sec:tour} reference
-scenario, in 2025\,USD. Reproduced by
+scenario, in 2025\,USD. Recorded by
 \texttt{examples/external\_physics\_handoff.py}.}
 \label{tab:tour-rollup}
 \centering
-\begin{tabular}{lr}
+\begin{tabular}{llr}
 \toprule
-Group & M\$ \\
+CAS account & Description & M\$ \\
 \midrule
-CAS10                  & 14.5 \\
-CAS21                  & 323.3 \\
-CAS22                  & 1739.8 \\
-CAS23--26              & 231.6 \\
-CAS27--30              & 466.1 \\
-CAS40                  & 23.0 \\
-CAS50                  & 177.5 \\
-CAS60                  & 572.0 \\
+CAS10        & Pre-construction (land, permits, licensing)  & 14.5 \\
+CAS21        & Buildings \& structures                      & 323.2 \\
+CAS22        & Reactor plant equipment                      & 1730.7 \\
+CAS23--29    & Other direct (BOP, special materials, contingency) & 235.9 \\
+CAS30        & Capitalized indirect services                & 458.0 \\
+CAS40        & Owner's costs                                & 23.0 \\
+CAS50        & Supplementary costs                          & 177.0 \\
+CAS60        & Interest during construction                 & 569.4 \\
 \midrule
-Total overnight        & 3547.8 \\
-Overnight specific cost (\$/kW) & 3548 \\
+\multicolumn{2}{l}{Total overnight}                          & 3531.7 \\
+\multicolumn{2}{l}{Overnight specific cost (\$/kW)}          & 3532 \\
 \midrule
-CAS70 (M\$/yr)         & 34.5 \\
-CAS80 (M\$/yr)         & 267.5 \\
-CAS90 (M\$/yr)         & 285.9 \\
+CAS70 (M\$/yr) & O\&M and scheduled replacement             & 34.5 \\
+CAS80 (M\$/yr) & Fuel                                       & 256.4 \\
+CAS90 (M\$/yr) & Annualized financial (CRF $\times$ capital) & 284.6 \\
 \midrule
-\textbf{LCOE (\$/MWh)} & \textbf{77.1} \\
+\multicolumn{2}{l}{\textbf{LCOE (\$/MWh)}}                  & \textbf{75.5} \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -452,24 +445,24 @@ mirror reference scenario. Bars give LCOE elasticity
 $\epsilon_p = (\partial \text{LCOE}/\partial p)(p/\text{LCOE})$
 computed by reverse-mode autodiff on the full forward pipeline.
 A bar of length $0.10$ means a $+1\%$ perturbation of the parameter
-moves LCOE by $+0.10\%$. Reproduced by
+moves LCOE by $+0.10\%$. Recorded by
 \texttt{scripts/make\_tornado.py}.}
 \label{fig:tornado}
 \end{figure}
 
-The tornado identifies, in a single figure, the parameters whose uncertainty
-dominates LCOE: those with long bars indicate where simulation effort or
-vendor data reduces cost uncertainty most efficiently. For the reference scenario, the most consequential
+The tornado shows the sensitivity (LCOE elasticity) of each parameter.
+Parameters with the longest bars (highest elasticity) are the most
+influential in driving LCOE variations. For the reference scenario, the most consequential
 physics-output parameter is \texttt{availability} (elasticity $-0.54$),
 the most consequential cost unit price is \texttt{fuel\_recovery}
 ($-7.19$), and the most consequential financial parameter is
-\texttt{interest\_rate} ($+0.38$). The unusually large
-\texttt{fuel\_recovery} elasticity reflects proximity to a physical
-limit: at the NOAK default of 0.99 the residual loss fraction
-$(1 - f_r) = 0.01$ is small in absolute terms, so a one-percentage-point
-absolute improvement halves it, and for a D-${}^3$He plant where the
-helium-3 market price is itself a major cost-side lever this propagates
-strongly to LCOE. The financial bucket entries are modest for this
+\texttt{interest\_rate} ($+0.38$). \texttt{fuel\_recovery} controls the fraction of unburnt fusion fuel
+recirculated from the exhaust; its default value is 0.99. Operating
+near this limit means the residual loss fraction
+$(1 - \texttt{fuel\_recovery}) = 0.01$ is small, so a 1\% relative
+improvement in \texttt{fuel\_recovery} cuts fresh ${}^3$He purchases
+sharply. Combined with the high ${}^3$He price, this explains the
+unusually large elasticity. The financial bucket entries are modest for this
 reference scenario, reflecting the relatively low capital intensity of
 mirror designs: \texttt{interest\_rate} carries an elasticity of $+0.38$
 and \texttt{inflation\_rate} $+0.17$.
@@ -483,34 +476,43 @@ point. Three additional API surfaces address common variants.
 \paragraph{Cost overrides.} A vendor quote may replace a parametric
 estimate without re-running the physics:
 
+\begin{minipage}{\linewidth}
 \begin{lstlisting}
 result = model.forward(
     net_electric_mw=1000.0, availability=0.87, lifetime_yr=30,
     cost_overrides={"C220103": 436.0},  # M$, mirror coil quote
 )
 \end{lstlisting}
+\end{minipage}
 
 Downstream rollups (CAS22, total capital, LCOE) recompute
 automatically. Mirror coils are typically smaller absolute cost than
 tokamak TF/CS/PF systems, reflecting the simpler solenoid topology.
 
-\paragraph{Batch sweeps.} Vectorised via \texttt{vmap},
-suitable for uncertainty-band propagation and Monte Carlo:
+\paragraph{Batch sweeps.} \texttt{batch\_lcoe} computes LCOE for many
+values of one or more parameters in a single call, returning a list of
+LCOE figures (in \$/MWh) aligned with the input grid. Vectorised via
+\texttt{vmap}, it is suitable for uncertainty-band propagation and
+Monte Carlo:
 
+\begin{minipage}{\linewidth}
 \begin{lstlisting}
 lcoes = model.batch_lcoe(
     {"dhe3_f_T": [0.3, 0.4, 0.5, 0.6, 0.7]},
     params=result.params,
 )
 \end{lstlisting}
+\end{minipage}
 
-The swept parameter here is the secondary D-T burn fraction, which
-controls how much of the D-${}^3$He plant's neutron load comes from
-D-D-bred tritium.
+The swept parameter here is the secondary D-T burn fraction, i.e.\
+the fraction of D-D-bred tritium that goes on to fuse with deuterium.
+Higher values add fusion power but also raise the 14.1\,MeV neutron
+load.
 
 \paragraph{Backcasting.} Solves the inverse problem: which value of a
 single parameter hits a target LCOE, given everything else fixed.
 
+\begin{minipage}{\linewidth}
 \begin{lstlisting}
 from costingfe.analysis.backcast import backcast_single
 eta_de_target = backcast_single(
@@ -518,9 +520,18 @@ eta_de_target = backcast_single(
     param_range=(0.50, 0.85), base_params=result.params,
 )
 \end{lstlisting}
+\end{minipage}
 
 This example determines the venetian-blind efficiency required to bring the
 mirror reference plant to a 60\,\$/MWh LCOE.
+
+The remainder of this paper is a detailed report of the calculation
+that is being executed by the code. \Cref{sec:lcoe} formalises how
+annualized capital and operating costs combine into LCOE,
+\cref{sec:physics-module} covers the power balance and radiation
+physics that determine plant size and recirculating power, and
+\cref{sec:cas} describes the per-account costing methods that produce
+the rollup of \cref{tab:tour-rollup}.
 
 %% ============================================================
 \section{Economics Module}
@@ -612,12 +623,6 @@ which revenue from electricity sales and annual operating expenditure
 \label{fig:cashflow}
 \end{figure}
 
-Defaults throughout this section are NOAK; the financial knobs
-$(i, T_c, n)$ that appear among the dominant entries of the
-Section~\ref{sec:tour-sensitivity} sensitivity tornado are defined
-in the subsections that follow, with reference values stated
-inline.
-
 \subsection{Capital Recovery Factor}
 
 The Capital Recovery Factor (CRF) converts a present-value capital
@@ -679,12 +684,12 @@ base-year dollars but escalate at the inflation rate $g$ in nominal
 terms over the plant lifetime. The levelized annual cost accounts for
 this growth using a three-step procedure.
 
-First, the base-year annual cost $C_0$ is inflated to
+First, the base-year annual operating cost $M_0$ is inflated to
 first-year-of-operation dollars:
 
 \begin{equation}
 \label{eq:inflate}
-A_1 = C_0 \, (1 + g)^{T_c}
+A_1 = M_0 \, (1 + g)^{T_c}
 \end{equation}
 
 \noindent where $T_c$ is the construction time (or total project time
@@ -707,12 +712,10 @@ Third, the levelized annual cost is obtained by applying the CRF:
 
 \begin{equation}
 \label{eq:levelized}
-C_{\text{level}} = \text{CRF}(i, n) \times \text{PV}
+M_{\text{annual}} = \text{CRF}(i, n) \times \text{PV}
 \end{equation}
 
-\noindent The $i = g$ case follows from L'H\^{o}pital's rule and is
-implemented using \texttt{jnp.where} for JAX traceability.
-For example, at $C_0 = \pgfmathprintnumber[precision=0]{\refCbase}$~M\$,
+\noindent For example, at $M_0 = \pgfmathprintnumber[precision=0]{\refCbase}$~M\$,
 $i = \refWACC$, $g = \refG$,
 $n = \pgfmathprintnumber[precision=0]{\refN}$~yr,
 $T_c = \pgfmathprintnumber[precision=0]{\refTc}$~yr, the levelized
@@ -746,22 +749,20 @@ or a doped plasma may alter the radiation losses or the plasma optical thickness
 \citep{frank2022}. These and other coefficients are therefore exposed as
 first-class parameters amenable to sensitivity analysis via automatic differentiation.
 
-The power balance above is concept-agnostic: given $P_{\text{fus}}$
-and the engineering coefficients, it produces $P_{\text{net}}$
-regardless of confinement scheme. To close the loop and determine
-$P_{\text{fus}}$ from reactor geometry and plasma parameters, a
-concept-specific physics model is required.
-\Cref{sec:tokamak-model} (appendix) describes the zero-dimensional tokamak
-equilibrium model included as the first such layer; models for other
-confinement families will follow the same pattern.
+The power balance is concept-agnostic given $P_{\text{fus}}$: it
+produces $P_{\text{net}}$ regardless of confinement scheme.
+Determining $P_{\text{fus}}$ from reactor geometry and plasma
+parameters requires a separate concept-specific physics model,
+typically supplied externally by the user.
 
-The power balance described next applies to steady-state confinement
-systems (tokamaks, stellarators, mirrors). Pulsed confinement
-systems (laser IFE, Z-pinch, and inductive-recovery concepts such as
-field-reversed configurations) use a separate per-pulse energy
-framework described in \cref{sec:pulsed-balance}.
+The fusion-power split (\cref{sec:fusion-power-split}) is upstream of
+both regimes. \Cref{sec:steady-balance} covers the steady-state
+balance used for tokamaks, stellarators, and mirrors;
+\cref{sec:pulsed-balance} covers the per-pulse balance used for laser
+IFE, Z-pinch, and pulsed inductive concepts.
 
 \subsection{Fusion Power Split}
+\label{sec:fusion-power-split}
 
 Operating the power plant requires collecting the power leaving the
 plasma and converting it to electricity. The total power exiting the
@@ -802,6 +803,22 @@ p-${}^{11}$B  & 8.7   & 0.0  & 3${}^4$He \\
 \end{tabular}
 \end{table}
 
+A complementary fuel-cycle quantity is the \emph{single-pass burn
+fraction} $f_b$ (\texttt{burn\_fraction}; sometimes called injection
+burnup): the fraction of fuel atoms injected into the plasma that
+undergo fusion before being exhausted. For magnetic confinement at
+reactor-relevant densities and confinement times, $f_b \sim 1$--$10\%$.
+Unburned fuel is exhausted, separated, and recycled with efficiency
+$f_r$ (\texttt{fuel\_recovery}); the resulting cumulative fusion
+probability of an injected atom is $f_b / [1 - f_r(1-f_b)]$,
+approaching 1 as $f_r \to 1$. Both $f_b$ and $f_r$ are used in CAS80
+(\cref{sec:cas80}). The NOAK defaults are $f_b = 0.05$ and $f_r = 0.99$,
+which are MFE-centric: pulsed-compression and ICF concepts achieve much
+higher single-pass burnup (10--40\%+), and recovery efficiency depends on
+how mature the plant's fuel-cycle infrastructure is. Concept-specific
+values should be supplied for those families when concept-resolved
+comparisons are made.
+
 \subsubsection{Deuterium-tritium (D-T)}
 The D-T reaction is the simplest case: each fusion event releases a
 fixed $Q = 17.6$~MeV, split by momentum conservation into a 3.5~MeV
@@ -810,8 +827,8 @@ alpha particle and a 14.1~MeV neutron ($f_n = 0.80$). The alpha ash
 power split is fully determined by the primary kinematics.
 
 \subsubsection{Deuterium-deuterium (D-D)}
-The D-D fuel cycle is the most complex fuel cycle. The primary reaction
-branches into two channels with approximately equal probability, producing
+The D-D fuel cycle branches into two channels with approximately equal
+probability, producing
 either tritium and a proton (branch~1) or ${}^3$He and a neutron (branch~2).
 The tritium and ${}^3$He products are themselves fusion fuels that react
 with the majority species of deuterium in the plasma. The deuterium-tritium
@@ -860,15 +877,16 @@ neutron energy fraction $\bar{E}_n / \bar{E}_{\text{total}}$ increases from
 0.33 to approximately 0.44 due to the secondary D-T neutrons.
 
 \subsubsection{\texorpdfstring{Deuterium-helium 3 (D-${}^3$He)}{Deuterium-helium 3 (D-3He)}}
-The primary D-${}^3$He reaction produces only charged particles
-($Q = 18.3$~MeV). At the temperatures required for D-${}^3$He fusion
-($T_i = 60$--$100$~keV), a fraction $f_{\text{DD}}$ of fusion events
-are D-D side reactions. The D-D events produce tritium (via
-D(d,p)T) that re-burns in D-T fusion at burn fraction
-$f_T^*$, introducing 14.1~MeV neutrons into an
-otherwise neutron-free system. They also produce ${}^3$He
-(via D(d,n)${}^3$He) that re-burns in D-${}^3$He fusion at burn
-fraction $f_{{}^3\text{He}}^*$, releasing additional
+The D-${}^3$He fuel cycle is the most complex of the four considered
+here: the primary reaction is aneutronic ($Q = 18.3$~MeV), but at the
+required temperatures ($T_i = 60$--$100$~keV) a fraction
+$f_{\text{DD}}$ of fusion events are D-D side reactions, which
+themselves carry the D-T and D-${}^3$He secondaries described in the
+D-D section above. The D-D events produce tritium (via D(d,p)T) that
+re-burns in D-T fusion at burn fraction $f_T^*$, introducing 14.1~MeV
+neutrons into an otherwise neutron-free system. They also produce
+${}^3$He (via D(d,n)${}^3$He) that re-burns in D-${}^3$He fusion at
+burn fraction $f_{{}^3\text{He}}^*$, releasing additional
 charged-particle energy and reducing the external ${}^3$He demand
 of the plant.
 
@@ -895,27 +913,30 @@ of \cref{eq:dd-etotal} including both secondary burns:
 \end{equation*}
 and $\bar{E}_{n,\text{DD}}$ follows \cref{eq:dd-eneutron}: only the
 D-T secondary burn contributes neutrons, since the secondary
-D-${}^3$He reaction is aneutronic. The burn-fraction parameters
-$f_T^*$ and $f_{{}^3\text{He}}^*$
-are kept separate from the D-D fuel cycle's burn fractions and are
-concept-specific. The single-pass burn fraction in a thermal plasma
-is set by $f_X = n_D \langle\sigma v\rangle_X \tau_p / (1 + n_D
-\langle\sigma v\rangle_X \tau_p)$ where $\tau_p$ is the species
-particle confinement time; for a steady-state mirror at $T_i = 70$~keV
-with $n_D = 3.3 \times 10^{19}$~m${}^{-3}$ and $\tau_p \approx 30$~s,
-$f_T^* \approx 0.5$ and $f_{{}^3\text{He}}^* \approx 0.1$, with the latter
-smaller because $\langle\sigma v\rangle_{\text{D}{}^3\text{He}}$ is
-approximately 13$\times$ smaller than $\langle\sigma v\rangle_{\text{DT}}$ at this
-temperature (see
-\texttt{examples/dhe3\_burn\_fractions.py}). Pulsed-FRC architectures
-with active inter-shot ${}^3$He recovery reach the
-asymptotic limit set by the recovery efficiency: at 99\% recovery
-per cycle, $f_{{}^3\text{He}}^* \approx 0.99$. Tritium in such a
-plant is exhausted (or held until decay) to keep the design
-neutron-averse, so $f_T^* \approx 0$. Default values are therefore
-concept-specific: steady-state mirror uses $f_T^* = 0.5$,
-$f_{{}^3\text{He}}^* = 0.1$; pulsed FRC uses $f_T^* = 0$,
-$f_{{}^3\text{He}}^* = 0.99$.
+D-${}^3$He reaction is aneutronic.
+
+The bred-tritium burn fraction $f_T^*$ is a design choice (burn for
+energy or exhaust to keep the design neutron-averse), kept separate
+from the D-D fuel cycle's burn fractions and concept-specific. Mirror
+plants without active tritium discharge let bred T burn at
+$f_T^* \approx 0.5$ (single-pass thermal burn); pulsed FRC
+architectures designed to be neutron-averse exhaust (or hold for
+decay) bred tritium, giving $f_T^* \approx 0$.
+
+The bred-${}^3$He utilization $f_{{}^3\text{He}}^*$ is not a free
+parameter: bred ${}^3$He is chemically identical to primary
+${}^3$He and enters the same exhaust/recovery loop. Its cumulative
+fusion probability equals that of primary ${}^3$He,
+\begin{equation}
+\label{eq:dhe3-fhe3-star}
+f_{{}^3\text{He}}^* = \frac{f_b}{1 - f_r (1 - f_b)},
+\end{equation}
+where $f_b$ is the single-pass burn fraction (\texttt{burn\_fraction})
+and $f_r$ the fuel recovery (\texttt{fuel\_recovery}), both introduced
+in \cref{sec:cas80}. The framework computes it automatically. With
+NOAK defaults $f_b = 0.05$ and $f_r = 0.99$, $f_{{}^3\text{He}}^*
+\approx 0.84$.
+
 Per primary D-${}^3$He event, the deuteron
 consumption is $1 + f_{\text{DD}} (1 + \tfrac{1}{2} f_T^*
 + \tfrac{1}{2} f_{{}^3\text{He}}^*)$ and the
@@ -923,16 +944,23 @@ external ${}^3$He consumption is $(1 - f_{\text{DD}})
 - \tfrac{1}{2} f_{\text{DD}} f_{{}^3\text{He}}^*$,
 the latter accounting for D-D-bred ${}^3$He that re-burns in place
 of an external atom.
-For the steady-state mirror concept evaluated at the default
-$f_{\text{DD}} = 0.131$ (corresponding to a 50/50 D/${}^3$He mix at
-$T_i = 70$~keV with Bosch-Hale cross sections \citep{boschhale1992}),
-together with the steady-state default $f_T^* = 0.5$ and
-$f_{{}^3\text{He}}^* = 0.1$, the effective neutron energy fraction
-$\bar{E}_n / \bar{E}_{\text{total}}$ is approximately 6\%, small but
-nonzero, and consequential for shielding, activation, and tritium
-breeding requirements. See \texttt{examples/dhe3\_mix\_optimization.py}
-for the self-consistent calculation that links $f_{\text{DD}}$ to the
-plasma D/${}^3$He density ratio and operating temperature.
+For the steady-state mirror concept evaluated at $f_{\text{DD}} =
+0.131$ (50/50 D/${}^3$He mix at $T_i = 70$~keV with Bosch-Hale cross
+sections \citep{boschhale1992}), $f_T^* = 0.5$, and the NOAK-default
+$f_{{}^3\text{He}}^* \approx 0.84$ (from \cref{eq:dhe3-fhe3-star}),
+the effective neutron energy fraction $\bar{E}_n / \bar{E}_{\text{total}}$
+is approximately 3\%, small but nonzero, and consequential for
+shielding, activation, and tritium breeding requirements. The link between $f_{\text{DD}}$, the
+D/${}^3$He density ratio, and operating temperature follows from the
+reaction-rate ratio:
+\begin{equation}
+\label{eq:dhe3-fdd}
+f_{\text{DD}} = \frac{\langle\sigma v\rangle_{\text{DD}}(T_i)}
+  {\langle\sigma v\rangle_{\text{DD}}(T_i)
+   + 2\,(n_{{}^3\text{He}}/n_D)\,\langle\sigma v\rangle_{\text{D}{}^3\text{He}}(T_i)},
+\end{equation}
+where the factor of 2 accounts for the identical-particle reduction of
+the D-D rate.
 
 \subsubsection{\texorpdfstring{Proton-boron 11 (p-${}^{11}$B)}{Proton-boron 11 (p-11B)}}
 The primary p-${}^{11}$B reaction produces three alpha particles
@@ -980,7 +1008,16 @@ suppresses the dominant ${}^{11}$B($\alpha$,n)${}^{14}$N channel
 \citep{hora2021}. At the default values, p-${}^{11}$B is treated as
 purely aneutronic.
 
-\subsection{Thermal and Electric Power}
+\subsection{Steady-State Power Balance}
+\label{sec:steady-balance}
+
+The steady-state balance applies to confinement concepts with
+continuous heating power and continuous fusion output (tokamaks,
+stellarators, mirrors). It converts the fusion-power split of
+\cref{sec:fusion-power-split} into net electric power via the thermal
+and electric conversion stack and the recirculating-power accounting.
+
+\subsubsection{Thermal and Electric Power}
 
 The power deposited in the plasma (charged-particle fusion products
 $P_{\text{cp}}$ plus external heating $P_{\text{in}}$) exits as
@@ -1042,7 +1079,7 @@ such regimes a radiation power override informed by kinetic
 Fokker--Planck modeling should be supplied in place of the
 Albajar formula.
 
-\subsubsection{Impurity Line Radiation}
+\paragraph{Impurity Line Radiation.}
 In MFE plasmas, line radiation from partially ionized impurities is
 often the dominant radiation loss channel. The framework models this
 via a steady-state sputtering--transport chain connecting the
@@ -1107,7 +1144,7 @@ seeded impurities), preserving backward compatibility: when no wall
 material is specified, $P_{\text{line}} = 0$ and the radiation model
 reduces to bremsstrahlung plus synchrotron as before.
 
-\subsubsection{Plasma Energy Balance}
+\paragraph{Plasma Energy Balance.}
 
 The total radiated power is
 $P_{\text{rad}} = P_{\text{brem}} + P_{\text{sync}} + P_{\text{line}}$,
@@ -1147,7 +1184,7 @@ engineering~$Q$. For example, a p-${}^{11}$B mirror at
 $T_e = 150$~keV requires $P_{\text{in,eff}} \gg P_{\text{in}}$ due to
 synchrotron losses, driving the LCOE well above D-T levels.
 
-\subsubsection{Thermal and Electric Conversion}
+\paragraph{Thermal and Electric Conversion.}
 
 Neutron power is absorbed in the breeding blanket, where nuclear
 reactions (primarily ${}^6$Li(n,$\alpha$)T) release additional energy
@@ -1185,7 +1222,7 @@ $P_{\text{et}} = \eta_{\text{th}} P_{\text{th}} +
 DEC is disabled by default ($f_{\text{dec}} = 0$) pending further
 technology maturation.
 
-\subsection{Recirculating Power and Net Electric Output}
+\subsubsection{Recirculating Power and Net Electric Output}
 
 A fraction of the gross electric power $P_{\text{et}}$ is recirculated
 to sustain the plant:
@@ -1218,9 +1255,124 @@ $1/Q_{\text{eng}}$ is a key figure of merit: lower recirculating
 fractions leave more power for sale and directly reduce the LCOE
 denominator.
 
-Pulsed concepts (laser IFE, Z-pinch, inductive recovery) and the
-inverse-balance solver used by the costing model are presented in
-\cref{sec:pulsed-and-inverse-balance}.
+The inverse-balance solver used by the costing model is presented in
+\cref{sec:inverse-balance}.
+
+\subsection{Pulsed Power Balance}
+\label{sec:pulsed-balance}
+
+Pulsed confinement concepts (laser IFE, Z-pinch, and inductive
+recovery schemes) differ from the steady-state balance above in two
+respects: (i)~energy is delivered in discrete pulses rather than as
+continuous heating, and (ii)~charged-particle energy may be recovered
+electromagnetically rather than thermally. \texttt{1costingfe}
+provides two pulsed power balance variants, selected by the
+\texttt{PulsedConversion} parameter.
+
+\subsubsection{Per-Pulse Energy Framework}
+The user specifies three primary inputs: the target net electric power
+$P_{\text{net}}^*$, the engineering gain $Q_{\text{eng}} = P_{\text{et}}
+/ P_{\text{recirc}}$, and the repetition rate $f_{\text{rep}}$ (Hz).
+From these, the model derives the required driver energy per pulse
+$E_{\text{drv}}$ (MJ), the average driver power
+$P_{\text{drv}} = E_{\text{drv}} \, f_{\text{rep}}$, and the fusion
+power $P_{\text{fus}}$.  The scientific gain
+$Q_{\text{sci}} = P_{\text{fus}} / P_{\text{drv}}$ falls out as a
+derived quantity.  The driver wall-plug efficiency $\eta_{\text{pin}}$
+relates stored energy to delivered energy:
+$E_{\text{stored}} = E_{\text{drv}} / \eta_{\text{pin}}$.
+Here $\eta_{\text{pin}}$ characterises pulsed-driver hardware (laser, ion
+beam, capacitor bank) and is distinct from the steady-state auxiliary
+heating efficiency $\eta_{\text{aux}}$ used in \cref{eq:p-recirc}.
+The charged-particle fraction $f_{\text{cp}}$ is derived from the fuel
+type and determines the ash--neutron split, while
+$f_{\text{rad}}$ is the fraction of ash power radiated during the burn,
+so $P_{\text{rad}} = f_{\text{rad}} \, P_{\text{cp}}$. This single
+parameter replaces the mechanistic bremsstrahlung, synchrotron, and
+impurity-line radiation calculation used in the steady-state balance
+(\cref{sec:steady-balance}); pulsed plasmas have rapidly evolving
+density and temperature profiles that make the steady-state formulas
+inapplicable.
+
+$Q_{\text{eng}}$ is preferred over $Q_{\text{sci}}$ as the primary input
+because it directly determines economic viability ($Q_{\text{eng}} \le 1$
+means no net power; $Q_{\text{eng}} \approx 2$ means 50\% recirculation),
+and it works uniformly across thermal and DEC conversion pathways without
+requiring concept-dependent parameterization.
+
+\subsubsection{Pulsed Thermal Conversion}
+For laser IFE, Z-pinch, mag-target, and other pulsed concepts whose
+driver energy thermalises in the blanket, the model supports an
+optional partial direct charged-particle capture path that mirrors
+the steady-state hybrid balance of \cref{eq:p-thermal}.  A fraction
+$f_{\text{dec}} \in [0, 1]$ of the non-radiated charged-particle
+power $P_{\text{ch,net}} = (1 - f_{\text{rad}})\,P_{\text{cp}}$ is
+collected at efficiency $\eta_{\text{de}}$; the remainder of the ash
+and all of the radiation thermalise into the blanket alongside the
+driver and pump loads:
+\begin{align}
+P_{\text{th}} &= M_n P_n + (1 - f_{\text{dec}})\,P_{\text{ch,net}}
+  + P_{\text{rad}} + P_{\text{drv}} + \eta_p \, P_{\text{pump}}, \\
+P_{\text{dee}} &= f_{\text{dec}}\,\eta_{\text{de}}\,P_{\text{ch,net}}, \\
+P_{\text{et}} &= \eta_{\text{th}} P_{\text{th}} + P_{\text{dee}}.
+\end{align}
+Setting $f_{\text{dec}} = 0$ recovers the pure-thermal limit in which
+all ash thermalises; setting it close to unity (with a low neutron
+fraction, e.g.\ p-B11) approaches the aneutronic DEC limit.
+The full driver draw $P_{\text{drv}}/\eta_{\text{pin}}$ still enters
+the recirculating load --- unlike the inductive case below, the
+thermal-mode driver charge is not recovered.
+
+\subsubsection{Pulsed Inductive DEC Conversion}
+For inductive recovery concepts (e.g.\ pulsed FRCs with capacitor-bank-driven compression), the driver
+energy circulates in an electromagnetic loop: capacitor bank $\to$
+compression coils $\to$ plasma $\to$ coils $\to$ capacitor bank.
+Charged-particle energy does PdV work on the expanding plasmoid,
+which is recovered inductively.  The fraction of net charged-particle
+power that couples as PdV work is
+\begin{equation}
+f_{\text{pdv}} = 1 - \left(\frac{r_{\min}}{r_{\max}}\right)^{\!2(\gamma-1)}
+\end{equation}
+with $\gamma = 5/3$ for an ideal monatomic plasma.  The recovered and
+net DEC powers are then
+\begin{align}
+P_{\text{recovered}} &= \eta_{\text{dec}} \bigl(P_{\text{drv}}
+  + f_{\text{pdv}} \, P_{\text{ch,net}}\bigr), \\
+P_{\text{dee}} &= P_{\text{recovered}} - P_{\text{drv}},
+\end{align}
+where $P_{\text{ch,net}} = (1 - f_{\text{rad}})\,P_{\text{cp}}$
+and $\eta_{\text{dec}}$ is the round-trip efficiency of the
+inductive recovery circuit.
+
+A key distinction from the steady-state balance is the recirculating
+load: because the capacitor bank energy goes out and comes back each
+cycle, only the charging \emph{losses}
+$P_{\text{drv}}\,(1/\eta_{\text{pin}} - 1)$ are drawn from the grid,
+not the full $P_{\text{drv}}/\eta_{\text{pin}}$.
+
+Neutrons, bremsstrahlung, and undirected charged particles still enter
+a thermal blanket.  When $\eta_{\text{th}} > 0$ a conventional thermal
+cycle runs in parallel with the DEC, and the total gross electric is
+$P_{\text{et}} = P_{\text{dee}} + P_{\text{the}}$.  When
+$\eta_{\text{th}} = 0$ the concept is purely inductive and all
+thermal loads (pumps, balance of plant (BOP)) are zeroed automatically.
+
+For inductive DEC, the capacitor bank is costed on a \$/J stored-energy
+basis (Account~22.01.07, \cref{sec:cas2207}): $C_{220107} = c_{\text{cap}}
+\times E_{\text{stored}}$, where $c_{\text{cap}}$ is the all-in installed
+cost per joule.  The NOAK default and its justification are discussed in
+\cref{sec:cas2207}.
+
+For the DEC inverse, the model takes the scientific gain $Q_{\text{sci}}$
+as input and derives the required stored energy per pulse:
+\begin{equation}
+E_{\text{stored}} = \frac{P_{\text{net}}}{f_{\text{rep}} \bigl(
+  \eta_{\text{eff}}\,(1 + Q_{\text{sci}}\,f_{\text{cp}}) - 1 \bigr)
+  \,\eta_{\text{pin}}}
+\end{equation}
+where $\eta_{\text{eff}}$ combines the DEC and thermal conversion
+efficiencies.  This ensures that higher DEC efficiency correctly reduces
+the required capacitor bank size rather than inflating it.
 
 
 %% ------------------------------------------------------------
@@ -1435,8 +1587,8 @@ The fusion p-${}^{11}$B figure of 384~\$/kW sits at roughly
 1.7$\times$ CCGT, and the D-T figure of 626~\$/kW at roughly
 3.0$\times$ CCGT.
 The values are derived from-scratch using industrial construction
-benchmarks \citep{cushman_wakefield_2025, netl2022, nrel_atb2024,
-breakthrough2022}, superseding ARIES/pyFECONS values.
+benchmarks \citep{cushman_wakefield_2025, netl2022, nrel_atb2024},
+superseding ARIES/pyFECONS values.
 
 
 %% ------------------------------------------------------------
@@ -2747,11 +2899,11 @@ page is available at \url{https://1cf.energy/}. The framework targets
 Python~3.11 or later and depends on JAX. Reproduction of most figures
 and account-level cost tables in this paper requires only the example
 scripts shipped in the \texttt{examples/} directory; the benchmarking
-results in \cref{sec:benchmark} are reproduced by the scripts
+results in \cref{sec:benchmark} are recorded by the scripts
 \texttt{benchmark\_arc.py}, \texttt{benchmark\_aries\_at.py}, and
 \texttt{make\_benchmark\_bars.py}, located in
 \texttt{docs/papers/1costingfe\_paper/scripts/}.
-The Section~\ref{sec:tour} worked tour is reproduced by
+The Section~\ref{sec:tour} walkthrough is recorded by
 \texttt{examples/external\_physics\_handoff.py} (the rollup table)
 and \texttt{docs/papers/1costingfe\_paper/scripts/make\_tornado.py}
 (the sensitivity tornado figure).
@@ -2999,127 +3151,14 @@ for tokamaks) to account for radiation escaping through the open ends.
 
 
 %% ============================================================
-\section{Pulsed and inverse power balances}
-\label{sec:pulsed-and-inverse-balance}
-
-\subsection{Pulsed Power Balance}
-\label{sec:pulsed-balance}
-
-Pulsed confinement concepts (laser IFE, Z-pinch, and inductive
-recovery schemes) differ from the steady-state balance above in two
-respects: (i)~energy is delivered in discrete pulses rather than as
-continuous heating, and (ii)~charged-particle energy may be recovered
-electromagnetically rather than thermally. \texttt{1costingfe}
-provides two pulsed power balance variants, selected by the
-\texttt{PulsedConversion} parameter.
-
-\subsubsection{Per-Pulse Energy Framework}
-The user specifies three primary inputs: the target net electric power
-$P_{\text{net}}^*$, the engineering gain $Q_{\text{eng}} = P_{\text{et}}
-/ P_{\text{recirc}}$, and the repetition rate $f_{\text{rep}}$ (Hz).
-From these, the model derives the required driver energy per pulse
-$E_{\text{drv}}$ (MJ), the average driver power
-$P_{\text{drv}} = E_{\text{drv}} \, f_{\text{rep}}$, and the fusion
-power $P_{\text{fus}}$.  The scientific gain
-$Q_{\text{sci}} = P_{\text{fus}} / P_{\text{drv}}$ falls out as a
-derived quantity.  The driver wall-plug efficiency $\eta_{\text{pin}}$
-relates stored energy to delivered energy:
-$E_{\text{stored}} = E_{\text{drv}} / \eta_{\text{pin}}$.
-Here $\eta_{\text{pin}}$ characterises pulsed-driver hardware (laser, ion
-beam, capacitor bank) and is distinct from the steady-state auxiliary
-heating efficiency $\eta_{\text{aux}}$ used in \cref{eq:p-recirc}.
-The charged-particle fraction $f_{\text{cp}}$ is derived from the fuel
-type and determines the ash--neutron split, while
-$f_{\text{rad}}$ is the fraction of ash power radiated during the burn.
-
-$Q_{\text{eng}}$ is preferred over $Q_{\text{sci}}$ as the primary input
-because it directly determines economic viability ($Q_{\text{eng}} \le 1$
-means no net power; $Q_{\text{eng}} \approx 2$ means 50\% recirculation),
-and it works uniformly across thermal and DEC conversion pathways without
-requiring concept-dependent parameterization.
-
-\subsubsection{Pulsed Thermal Conversion}
-For laser IFE, Z-pinch, mag-target, and other pulsed concepts whose
-driver energy thermalises in the blanket, the model supports an
-optional partial direct charged-particle capture path that mirrors
-the steady-state hybrid balance of \cref{eq:p-thermal}.  A fraction
-$f_{\text{dec}} \in [0, 1]$ of the non-radiated charged-particle
-power $P_{\text{ch,net}} = (1 - f_{\text{rad}})\,P_{\text{cp}}$ is
-collected at efficiency $\eta_{\text{de}}$; the remainder of the ash
-and all of the radiation thermalise into the blanket alongside the
-driver and pump loads:
-\begin{align}
-P_{\text{th}} &= M_n P_n + (1 - f_{\text{dec}})\,P_{\text{ch,net}}
-  + P_{\text{rad}} + P_{\text{drv}} + \eta_p \, P_{\text{pump}}, \\
-P_{\text{dee}} &= f_{\text{dec}}\,\eta_{\text{de}}\,P_{\text{ch,net}}, \\
-P_{\text{et}} &= \eta_{\text{th}} P_{\text{th}} + P_{\text{dee}}.
-\end{align}
-Setting $f_{\text{dec}} = 0$ recovers the pure-thermal limit in which
-all ash thermalises; setting it close to unity (with a low neutron
-fraction, e.g.\ p-B11) approaches the aneutronic DEC limit.
-The full driver draw $P_{\text{drv}}/\eta_{\text{pin}}$ still enters
-the recirculating load --- unlike the inductive case below, the
-thermal-mode driver charge is not recovered.
-
-\subsubsection{Pulsed Inductive DEC Conversion}
-For inductive recovery concepts (e.g.\ pulsed FRCs with capacitor-bank-driven compression), the driver
-energy circulates in an electromagnetic loop: capacitor bank $\to$
-compression coils $\to$ plasma $\to$ coils $\to$ capacitor bank.
-Charged-particle energy does PdV work on the expanding plasmoid,
-which is recovered inductively.  The fraction of net charged-particle
-power that couples as PdV work is
-\begin{equation}
-f_{\text{pdv}} = 1 - \left(\frac{r_{\min}}{r_{\max}}\right)^{\!2(\gamma-1)}
-\end{equation}
-with $\gamma = 5/3$ for an ideal monatomic plasma.  The recovered and
-net DEC powers are then
-\begin{align}
-P_{\text{recovered}} &= \eta_{\text{dec}} \bigl(P_{\text{drv}}
-  + f_{\text{pdv}} \, P_{\text{ch,net}}\bigr), \\
-P_{\text{dee}} &= P_{\text{recovered}} - P_{\text{drv}},
-\end{align}
-where $P_{\text{ch,net}} = (1 - f_{\text{rad}})\,P_{\text{cp}}$
-and $\eta_{\text{dec}}$ is the round-trip efficiency of the
-inductive recovery circuit.
-
-A key distinction from the steady-state balance is the recirculating
-load: because the capacitor bank energy goes out and comes back each
-cycle, only the charging \emph{losses}
-$P_{\text{drv}}\,(1/\eta_{\text{pin}} - 1)$ are drawn from the grid,
-not the full $P_{\text{drv}}/\eta_{\text{pin}}$.
-
-Neutrons, bremsstrahlung, and undirected charged particles still enter
-a thermal blanket.  When $\eta_{\text{th}} > 0$ a conventional thermal
-cycle runs in parallel with the DEC, and the total gross electric is
-$P_{\text{et}} = P_{\text{dee}} + P_{\text{the}}$.  When
-$\eta_{\text{th}} = 0$ the concept is purely inductive and all
-thermal loads (pumps, balance of plant (BOP)) are zeroed automatically.
-
-For inductive DEC, the capacitor bank is costed on a \$/J stored-energy
-basis (Account~22.01.07, \cref{sec:cas2207}): $C_{220107} = c_{\text{cap}}
-\times E_{\text{stored}}$, where $c_{\text{cap}}$ is the all-in installed
-cost per joule.  The NOAK default and its justification are discussed in
-\cref{sec:cas2207}.
-
-For the DEC inverse, the model takes the scientific gain $Q_{\text{sci}}$
-as input and derives the required stored energy per pulse:
-\begin{equation}
-E_{\text{stored}} = \frac{P_{\text{net}}}{f_{\text{rep}} \bigl(
-  \eta_{\text{eff}}\,(1 + Q_{\text{sci}}\,f_{\text{cp}}) - 1 \bigr)
-  \,\eta_{\text{pin}}}
-\end{equation}
-where $\eta_{\text{eff}}$ combines the DEC and thermal conversion
-efficiencies.  This ensures that higher DEC efficiency correctly reduces
-the required capacitor bank size rather than inflating it.
-
-\subsection{Inverse Power Balance}
+\section{Inverse Power Balance}
 \label{sec:inverse-balance}
 
 The costing model operates in ``inverse'' mode: given a target net
 electric output $P_{\text{net}}^*$, determine the required fusion power
 $P_{\text{fus}}$.
 
-\subsubsection{Pulsed Inverse}
+\subsection{Pulsed Inverse}
 For pulsed concepts, $Q_{\text{eng}}$ determines the gross electric and
 recirculating powers directly:
 \begin{align}
@@ -3137,7 +3176,9 @@ $P_{\text{fus}}$ is obtained from the forward energy balance
 with the derived $E_{\text{drv}}$.  The inversion is closed-form
 (linear in $P_{\text{drv}}$ and $P_{\text{fus}}$).
 
-\subsubsection{Steady-State Inverse}  Substituting the forward power balance into
+\subsection{Steady-State Inverse}
+
+Substituting the forward power balance into
 \cref{eq:p-net} gives $P_{\text{net}}(P_{\text{fus}})$; the inverse
 problem is to find the root
 $P_{\text{net}}(P_{\text{fus}}) = P_{\text{net}}^*$.
@@ -3177,6 +3218,20 @@ P_{\text{fus}}^{(k+1)} = P_{\text{fus}}^{(k)}
 \noindent where the derivative is computed analytically for each regime
 rather than via automatic differentiation, avoiding nested
 differentiation during sensitivity analysis.
+
+
+%% ============================================================
+\section{Reference Walkthrough Script}
+\label{sec:appendix-handoff-script}
+
+The full reference script for the Section~\ref{sec:tour} walkthrough is
+reproduced below. It is the canonical 1\,GWe D-${}^3$He steady-state
+mirror reference cited in \cref{tab:tour-inputs,tab:tour-rollup}, and
+lives in the repository at
+\texttt{examples/external\_physics\_handoff.py}.
+
+\lstinputlisting[language=Python]{../../../examples/external_physics_handoff.py}
+
 
 \bibliographystyle{unsrtnat}
 \bibliography{references}

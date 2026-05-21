@@ -12,11 +12,15 @@ target, the model finds the required fusion power and derives all costs.
 Numbers are illustrative; the point is the handoff pattern, not the design.
 """
 
-from costingfe import ConfinementConcept, CostModel, Fuel
+from costingfe import ConfinementConcept, CostModel, Fuel, PowerCycle
 
 
 def main() -> None:
-    model = CostModel(concept=ConfinementConcept.MIRROR, fuel=Fuel.DHE3)
+    model = CostModel(
+        concept=ConfinementConcept.MIRROR,
+        fuel=Fuel.DHE3,
+        power_cycle=PowerCycle.RANKINE,
+    )
 
     result = model.forward(
         # Customer parameters
@@ -49,10 +53,12 @@ def main() -> None:
         p_house=4.0,  # MW
         p_cryo=1.0,  # MW
         f_sub=0.03,  # BOP subsystem fraction
-        # Blanket / neutronics
-        mn=1.05,  # neutron multiplier (D-3He: few neutrons)
+        # Blanket / neutronics: D-3He is aneutronic primary, no blanket needed
+        blanket_form="none",
+        blanket_fill="none",
+        mn=1.0,  # no neutron multiplication without a breeding blanket
         # Conversion: venetian-blind DEC on end-loss ions + thermal
-        eta_th=0.40,  # thermal cycle efficiency (steam)
+        # (eta_th supplied by the RANKINE preset on CostModel)
         eta_de=0.70,  # venetian-blind DEC efficiency on end-loss ions
         f_dec=0.90,  # fraction of transport power routed to DEC
         # Plasma parameters for radiation calculation (Section 2.2 Table)
@@ -62,11 +68,10 @@ def main() -> None:
         B=3.0,  # T, central-cell field
         plasma_volume=400.0,  # m^3 (pi * plasma_t^2 * chamber_length)
         T_edge=0.20,  # keV, edge temperature (open field lines)
-        tau_ratio=3.0,
+        tau_ratio=3.0,  # impurity confinement time / energy confinement time
         R_w=0.4,  # wall reflectivity (lower for open ends)
         # D-3He secondary burn fractions (Section 2.2 Table)
         dhe3_f_T=0.5,  # secondary D-T burn fraction
-        dhe3_f_He3=0.1,  # secondary D-3He re-burn fraction
         dhe3_dd_frac=0.131,  # D-D side-reaction fraction
         dd_f_T=0.969,
         dd_f_He3=0.689,
@@ -76,12 +81,22 @@ def main() -> None:
     pt = result.power_table
 
     # Group-level rollup (matches paper Section 2.2 table)
+    # CAS20 = sum of CAS21-29 (direct capital); CAS30 is indirect, shown separately.
+    cas23_29 = (
+        costs.cas23
+        + costs.cas24
+        + costs.cas25
+        + costs.cas26
+        + costs.cas27
+        + costs.cas28
+        + costs.cas29
+    )
     rows = [
         ("CAS10", costs.cas10),
         ("CAS21", costs.cas21),
         ("CAS22", costs.cas22),
-        ("CAS23-26", costs.cas23 + costs.cas24 + costs.cas25 + costs.cas26),
-        ("CAS27-30", costs.cas27 + costs.cas28 + costs.cas29 + costs.cas30),
+        ("CAS23-29", cas23_29),
+        ("CAS30", costs.cas30),
         ("CAS40", costs.cas40),
         ("CAS50", costs.cas50),
         ("CAS60", costs.cas60),

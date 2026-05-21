@@ -88,6 +88,18 @@ class CostModel:
             f"{self.family.value}_{concept.value}"
         )
 
+    @staticmethod
+    def _dhe3_f_He3_eff(params):
+        """Cumulative bred-He3 fusion fraction given burn-per-pass and recovery.
+
+        Bred He-3 from D-D side reactions enters the same exhaust/recovery
+        loop as primary He-3, so its cumulative fusion probability equals
+        bf / (1 - fr (1 - bf)) where bf = burn_fraction and fr = fuel_recovery.
+        """
+        bf = params["burn_fraction"]
+        fr = params["fuel_recovery"]
+        return bf / (1.0 - fr * (1.0 - bf))
+
     def _power_balance(self, params, n_mod):
         """Dispatch power balance based on confinement family."""
         p_net_per_mod = params["net_electric_mw"] / n_mod
@@ -142,7 +154,7 @@ class CostModel:
                 dd_f_He3=params["dd_f_He3"],
                 dhe3_dd_frac=params["dhe3_dd_frac"],
                 dhe3_f_T=params["dhe3_f_T"],
-                dhe3_f_He3=params["dhe3_f_He3"],
+                dhe3_f_He3=self._dhe3_f_He3_eff(params),
                 pb11_f_alpha_n=params["pb11_f_alpha_n"],
                 pb11_f_p_n=params["pb11_f_p_n"],
             )
@@ -198,7 +210,7 @@ class CostModel:
                 dd_f_He3=params["dd_f_He3"],
                 dhe3_dd_frac=params["dhe3_dd_frac"],
                 dhe3_f_T=params["dhe3_f_T"],
-                dhe3_f_He3=params["dhe3_f_He3"],
+                dhe3_f_He3=self._dhe3_f_He3_eff(params),
                 pb11_f_alpha_n=params["pb11_f_alpha_n"],
                 pb11_f_p_n=params["pb11_f_p_n"],
             )
@@ -294,7 +306,7 @@ class CostModel:
             dd_f_He3=params["dd_f_He3"],
             dhe3_dd_frac=params["dhe3_dd_frac"],
             dhe3_f_T=params["dhe3_f_T"],
-            dhe3_f_He3=params["dhe3_f_He3"],
+            dhe3_f_He3=self._dhe3_f_He3_eff(params),
             pb11_f_alpha_n=params["pb11_f_alpha_n"],
             pb11_f_p_n=params["pb11_f_p_n"],
         )
@@ -764,7 +776,7 @@ class CostModel:
             dd_f_He3=params["dd_f_He3"],
             dhe3_dd_frac=params["dhe3_dd_frac"],
             dhe3_f_T=params["dhe3_f_T"],
-            dhe3_f_He3=params["dhe3_f_He3"],
+            dhe3_f_He3=self._dhe3_f_He3_eff(params),
             burn_fraction=params.get("burn_fraction"),
             fuel_recovery=params.get("fuel_recovery"),
         )
@@ -899,7 +911,6 @@ class CostModel:
             "dd_f_He3",
             "dhe3_dd_frac",
             "dhe3_f_T",
-            "dhe3_f_He3",
             "pb11_f_alpha_n",
             "pb11_f_p_n",
         ]

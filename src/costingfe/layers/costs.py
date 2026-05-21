@@ -392,8 +392,12 @@ def cas80_fuel(
         #   (1 - dhe3_dd_frac) are D-He-3 events:  1 D + 1 He-3 -> Q_DHE3
         #   dhe3_dd_frac are D-D events:           2 D, 50/50 D(d,p)T and D(d,n)He-3
         #     T burnup (dhe3_f_T) consumes another D in D-T -> Q_DT
-        #     He-3 burnup (dhe3_f_He3) consumes another D in D-He-3 -> Q_DHE3
-        #     and saves an external He-3 atom.
+        #     He-3 burnup (dhe3_f_He3) consumes another D in D-He-3 -> Q_DHE3.
+        # Bred He-3 enters the same recovery loop as primary He-3, so its
+        # cumulative fusion probability equals that of primary He-3; the
+        # external-He-3 credit cancels exactly in the steady-state balance
+        # and only the primary need remains in he3_per_event. The cost-side
+        # fuel_recovery multiplier below handles all He-3 recovery losses.
         f_dhe3 = 1.0 - dhe3_dd_frac
         q_dd_avg = 0.5 * Q_DD_PT + 0.5 * Q_DD_NHE3
         q_eff = f_dhe3 * Q_DHE3 + dhe3_dd_frac * (
@@ -402,7 +406,7 @@ def cas80_fuel(
         d_per_event = (
             f_dhe3 + 2.0 * dhe3_dd_frac + dhe3_dd_frac * 0.5 * (dhe3_f_T + dhe3_f_He3)
         )
-        he3_per_event = f_dhe3 - dhe3_dd_frac * 0.5 * dhe3_f_He3
+        he3_per_event = f_dhe3
         cost_per_rxn = (
             d_per_event * M_DEUTERIUM_KG * cc.u_deuterium
             + he3_per_event * M_HE3_KG * cc.u_he3
