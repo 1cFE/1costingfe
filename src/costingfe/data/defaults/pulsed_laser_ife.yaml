@@ -28,6 +28,8 @@ vessel_t: 0.10       # Vacuum vessel
 construction_time_yr: 5.0  # Years (no magnets, simpler)
 
 # Fuel burn fraction defaults (physics.py ash_neutron_split)
+burn_fraction: 0.25      # Single-pass burn fraction (inertial; reactor-target value, NIF shots get 2-4%)
+fuel_recovery: 0.99         # Fraction of unburned fuel recovered and recycled (NOAK)
 dd_f_T: 0.969
 dd_f_He3: 0.689
 dhe3_dd_frac: 0.131

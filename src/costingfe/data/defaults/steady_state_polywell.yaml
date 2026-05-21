@@ -56,6 +56,8 @@ seeded_impurities: {}
 R_w: 0.3
 
 # Fuel burn fraction defaults
+burn_fraction: 0.05      # Single-pass burn fraction (MFE-class placeholder)
+fuel_recovery: 0.99         # Fraction of unburned fuel recovered and recycled (NOAK)
 dd_f_T: 0.969
 dd_f_He3: 0.689
 dhe3_dd_frac: 0.131

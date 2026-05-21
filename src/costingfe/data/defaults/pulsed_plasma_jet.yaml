@@ -28,6 +28,8 @@ vessel_t: 0.10       # Vacuum vessel
 construction_time_yr: 4.0  # Years (compact pulsed system)
 
 # Fuel burn fraction defaults (physics.py ash_neutron_split)
+burn_fraction: 0.10      # Single-pass burn fraction (PJMIF MHD simulations, Witherspoon, Hsu)
+fuel_recovery: 0.99         # Fraction of unburned fuel recovered and recycled (NOAK)
 dd_f_T: 0.969
 dd_f_He3: 0.689
 dhe3_dd_frac: 0.131

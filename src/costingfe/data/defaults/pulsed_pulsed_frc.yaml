@@ -39,6 +39,8 @@ vessel_t: 0.10       # Vacuum vessel
 construction_time_yr: 4.0  # Factory-built modular assembly
 
 # Fuel burn fraction defaults
+burn_fraction: 0.15      # Single-pass burn fraction (Helion-class staged-compression FRC; MIF literature regime midpoint, vendor publishes Q, not burnup)
+fuel_recovery: 0.99         # Fraction of unburned fuel recovered and recycled (NOAK)
 dd_f_T: 0.969
 dd_f_He3: 0.689
 dhe3_dd_frac: 0.131

@@ -65,6 +65,8 @@ M_ion: 2.5           # Average ion mass [AMU]
 lambda_q: 0.002      # SOL power width at midplane [m]
 
 # Fuel burn fraction defaults (physics.py ash_neutron_split)
+burn_fraction: 0.05      # Single-pass burn fraction (MFE-class)
+fuel_recovery: 0.99         # Fraction of unburned fuel recovered and recycled (NOAK)
 dd_f_T: 0.969
 dd_f_He3: 0.689
 dhe3_dd_frac: 0.131
