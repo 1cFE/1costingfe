@@ -907,6 +907,8 @@ class CostModel:
             "vessel_t",
             "plasma_t",
             # Fuel burn fractions (physics model)
+            "burn_fraction",
+            "fuel_recovery",
             "dd_f_T",
             "dd_f_He3",
             "dhe3_dd_frac",
