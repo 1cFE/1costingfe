@@ -95,7 +95,7 @@ Unchanged. The existing `model.py:433–439` flow — `params = self._eng_defaul
   - [Hybrid simulations of FRC merging and compression (arxiv 2501.03425)](https://arxiv.org/pdf/2501.03425)
   - [Quasi-static magnetic compression of FRC (arxiv 2204.07978)](https://arxiv.org/pdf/2204.07978)
   - Note: vendor publishes Q, not burn fraction; 0.15 is a MIF literature regime midpoint.
-- Expanding the per-concept sourcing for the other 14 concepts is tracked as a follow-up task (Task #9 in the brainstorming session, to be re-created when implementation lands).
+- Expanding the per-concept sourcing for the other 14 concepts is a follow-up; see the Follow-ups section below.
 
 ## Tests, validation, and other touch points
 
