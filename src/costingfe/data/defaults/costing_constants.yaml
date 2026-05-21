@@ -196,10 +196,6 @@ u_protium: 5.0               # $/kg, commodity H2
 u_b11: 10000.0               # $/kg, FOAK enriched B-11 (no industrial supply)
 u_b11_noak: 75.0             # $/kg, NOAK B-11 (industrial chemical exchange distillation)
 
-# CAS80 — fuel utilization
-burn_fraction: 0.05          # Fraction of injected fuel that undergoes fusion per pass
-fuel_recovery: 0.99          # Fraction of unburned fuel recovered and recycled (NOAK; mature fuel-cycle recycling, ITER tritium plants target ~99%)
-
 # Pulsed inductive DEC — driver cost basis
 c_cap_allin_per_joule: 0.5   # $/J_stored, NOAK all-in (caps+switches+charging+buswork)
                               # Sensitivity range: 0.5-4.0

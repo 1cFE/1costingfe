@@ -364,8 +364,9 @@ def cas80_fuel(
     dhe3_dd_frac=0.131,
     dhe3_f_T=0.5,
     dhe3_f_He3=0.1,
-    burn_fraction=None,
-    fuel_recovery=None,
+    *,
+    burn_fraction,
+    fuel_recovery,
 ):
     """CAS80: Annualized fuel cost. Fuel-specific consumable costs.
 
@@ -430,9 +431,7 @@ def cas80_fuel(
 
     # Burn-fraction correction: unburned fuel not recovered must be repurchased.
     # multiplier = 1 + (1 - burn_fraction) / burn_fraction * (1 - fuel_recovery)
-    bf = burn_fraction if burn_fraction is not None else cc.burn_fraction
-    fr = fuel_recovery if fuel_recovery is not None else cc.fuel_recovery
-    fuel_loss = (1.0 - bf) / bf * (1.0 - fr)
+    fuel_loss = (1.0 - burn_fraction) / burn_fraction * (1.0 - fuel_recovery)
     annual_musd = annual_musd * (1.0 + fuel_loss)
 
     t_project = _total_project_time(cc, construction_time, fuel, noak)
