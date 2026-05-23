@@ -310,7 +310,13 @@ def cas70_om(
     MAX_REP = 20
     pv = 0.0
     for k in range(1, MAX_REP + 1):
-        discount = (1 + interest_rate) ** (k * core_lifetime_cal)
+        # Clamp exponent to 0 for inactive iterations (k > n_rep) to prevent
+        # float32 overflow in the backward pass.  jnp.where evaluates both
+        # branches, so a large exponent k*core_lifetime_cal for dead iterations
+        # produces inf, and inf*0 = NaN in the VJP.  With a clamped exponent
+        # the discount is 1.0 for inactive slots, keeping gradients finite.
+        safe_exp = jnp.where(k <= n_rep, k * core_lifetime_cal, 0.0)
+        discount = (1 + interest_rate) ** safe_exp
         pv = pv + jnp.where(k <= n_rep, cost_per_event / discount, 0.0)
     crf = compute_crf(interest_rate, lifetime_yr)
     cas72 = pv * crf
@@ -329,7 +335,8 @@ def cas70_om(
     dec_cost = dec_grid * n_mod
     pv_dec = 0.0
     for k in range(1, MAX_REP + 1):
-        discount = (1 + interest_rate) ** (k * dec_grid_life_cal)
+        safe_exp_dec = jnp.where(k <= n_rep_dec, k * dec_grid_life_cal, 0.0)
+        discount = (1 + interest_rate) ** safe_exp_dec
         pv_dec = pv_dec + jnp.where(k <= n_rep_dec, dec_cost / discount, 0.0)
     cas72 = cas72 + pv_dec * crf
 
@@ -341,7 +348,8 @@ def cas70_om(
         cap_cost = cas22_detail.get("C220107", 0.0) * n_mod
         pv_cap = 0.0
         for k in range(1, MAX_REP + 1):
-            discount = (1 + interest_rate) ** (k * t_replace_cap)
+            safe_exp_cap = jnp.where(k <= n_rep_cap, k * t_replace_cap, 0.0)
+            discount = (1 + interest_rate) ** safe_exp_cap
             pv_cap = pv_cap + jnp.where(k <= n_rep_cap, cap_cost / discount, 0.0)
         cas72 = cas72 + pv_cap * crf
 
