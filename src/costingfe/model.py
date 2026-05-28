@@ -817,7 +817,14 @@ class CostModel:
             plasma_state=self._plasma_state,
         )
 
-    # Map from cost_overrides keys to CostResult attribute names.
+    # Map from cost_overrides keys to CostResult attribute names, used by
+    # _scale_overrides() to scale an override by the account's value ratio
+    # across plant sizes. Restricted to the direct-capital accounts forward()
+    # actually applies (CAS10, CAS21-CAS28); CAS22 sub-accounts are scaled
+    # separately via cas22_detail. Downstream accounts (CAS29/30/60 aggregates,
+    # CAS70/71/72 O&M, CAS80 fuel, CAS90 financial) are computed, not
+    # overridable, so they must not appear here — scaling a value forward()
+    # never reads would be dead.
     _OVERRIDE_TO_ATTR = {
         "CAS10": "cas10",
         "CAS21": "cas21",
@@ -828,11 +835,6 @@ class CostModel:
         "CAS26": "cas26",
         "CAS27": "cas27",
         "CAS28": "cas28",
-        "CAS30": "cas30",
-        "CAS40": "cas40",
-        "CAS50": "cas50",
-        "CAS70": "cas70",
-        "CAS80": "cas80",
     }
 
     def _scale_overrides(

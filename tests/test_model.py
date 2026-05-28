@@ -187,6 +187,30 @@ def test_cost_override_overridden_list():
     assert set(result.overridden) == {"CAS10", "CAS21", "C220103"}
 
 
+def test_override_to_attr_keys_all_take_effect():
+    """Every key in _OVERRIDE_TO_ATTR must actually be applied by forward().
+
+    The map is consumed only by _scale_overrides(), which scales an override
+    by the account's value ratio across plant sizes. A key that forward() never
+    reads from cost_overrides is dead: its override is silently scaled yet never
+    affects output. Overriding any mapped key must set costs.<attr> to that value.
+    """
+    model = CostModel(concept=ConfinementConcept.TOKAMAK, fuel=Fuel.DT)
+    sentinel = 1234.5
+    for key, attr in model._OVERRIDE_TO_ATTR.items():
+        result = model.forward(
+            net_electric_mw=1000.0,
+            availability=0.85,
+            lifetime_yr=30,
+            cost_overrides={key: sentinel},
+        )
+        assert getattr(result.costs, attr) == sentinel, (
+            f"{key} is in _OVERRIDE_TO_ATTR but forward() does not apply it "
+            f"(costs.{attr}={getattr(result.costs, attr)}, expected {sentinel})"
+        )
+        assert key in result.overridden, f"{key} applied but not tracked in overridden"
+
+
 def test_cas22_detail_in_result():
     """ForwardResult should include CAS22 sub-account detail."""
     model = CostModel(concept=ConfinementConcept.TOKAMAK, fuel=Fuel.DT)
