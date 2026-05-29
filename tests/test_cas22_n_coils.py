@@ -68,6 +68,24 @@ def test_n_coils_negative_raises():
         model.forward(n_coils=-1, **_base_kwargs())
 
 
+def test_dipole_stationary_coil_count_default():
+    """DIPOLE's _COIL_DEFAULTS n_coils is the STATIONARY levitation coil set,
+    which is >=2 (the levitated coil itself is costed as a separate term)."""
+    from costingfe.layers.cas22 import _COIL_DEFAULTS
+
+    assert _COIL_DEFAULTS[ConfinementConcept.DIPOLE]["n_coils"] >= 2
+
+
+def test_dipole_levitated_coil_cryostat_additive():
+    """The levitated coil's integral cryostat cost enters C220103 additively and
+    independently of the stationary coils, so a delta flows straight through."""
+    model = CostModel(concept=ConfinementConcept.DIPOLE, fuel=Fuel.DT)
+    base = model.forward(lev_coil_cryostat_cost=50.0, **_base_kwargs())
+    more = model.forward(lev_coil_cryostat_cost=150.0, **_base_kwargs())
+    delta = float(more.cas22_detail["C220103"]) - float(base.cas22_detail["C220103"])
+    assert abs(delta - 100.0) < 0.5, f"expected +100 M$, got {delta}"
+
+
 def test_n_coils_ignored_for_stellarator():
     """STELLARATOR uses path_factor for G; n_coils kwarg must be a no-op."""
     model = CostModel(concept=ConfinementConcept.STELLARATOR, fuel=Fuel.DT)

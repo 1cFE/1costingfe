@@ -1,0 +1,107 @@
+# Default engineering parameters for a levitated dipole (OpenStar, LDX-style).
+# A superconducting field-shaping coil is levitated inside a large vacuum
+# vessel; the plasma surrounds the floating coil. Steady-state (quasi-steady,
+# ~90% duty cycle), high beta, ICRH-heated.
+#
+# Grounded in Simpson et al. 2026, "Deuterium-Tritium Levitated Dipole Fusion
+# Power Plants" (arXiv 2602.20564), the OpenStar Reactor A design point
+# (667 MW fusion -> 208 MWe net). These are GENERIC class defaults; a specific
+# machine (e.g. OpenStar) should override plant scale and cost via the concept
+# catalog, not by editing this file.
+#
+# FIRST-CUT MODEL CAVEATS:
+#  - The concept rides the generic steady-state power balance and the torus
+#    radial-build geometry as an approximation (true topology is a ring threaded
+#    by plasma in a roughly spherical vessel, not a torus). Faithful capital
+#    costing of the Li2O blanket / W shield / HTS coil is mass-based and belongs
+#    in per-instance cost_overrides (see Simpson et al. Table 5), NOT in this
+#    volume-based template.
+#  - The floating coil is costed as a separate additive term in C220103
+#    (lev_coil_markup + lev_coil_cryostat_cost), distinct from the stationary
+#    levitation coils (n_coils in _COIL_DEFAULTS). It is a unique piece of tech:
+#    23 T REBCO CICC carrying persistent current via an on-board flux pump while
+#    electrically disconnected, held cold by the latent heat of NEON SLUSH at
+#    24.6 K (semi-solid; ~45 min float time between docking/recool cycles).
+#  - (DT) The outer ~20% of the coil is UNSHIELDED and sacrificial: it reaches
+#    ~1 MW-yr/m^2 neutron fluence in ~1 year and is replaced annually, while the
+#    inner ~80% lasts a decade+. This recurring per-component replacement is
+#    deferred to the per-component replacement-interval enhancement (issue #13);
+#    it is NOT modeled via the global single core_lifetime / replaceable_accounts
+#    machinery.
+
+p_input: 44.5       # Heating power [MW] (Reactor A; ICRH)
+
+# Heating mix for CAS22 costing (must sum to p_input). ICRH is selected over
+# ECRH for ~70% wall-plug vs 30-40% for gyrotrons (Simpson et al. 2.2.7).
+p_nbi: 0.0          # NBI heating [MW]
+p_ecrh: 0.0         # ECRH heating [MW]
+p_icrf: 44.5        # ICRH heating [MW] (primary heating for dipole)
+p_lhcd: 0.0         # LHCD heating [MW]
+
+mn: 1.053           # Neutron energy multiplier (Li2O + W; M_blanket in analysis)
+eta_p: 0.5          # Pumping efficiency
+eta_pin: 0.70       # ICRH wall-plug efficiency
+eta_de: 0.0         # No direct energy conversion (closed dipole field)
+f_sub: 0.03         # Subsystem power fraction
+f_dec: 0.0          # No end-loss DEC (unlike a mirror)
+p_coils: 3.0        # Levitation-control / stationary-coil power [MW]
+p_cool: 15.0        # Cooling power [MW]
+p_pump: 1.0         # Pumping power [MW]
+p_trit: 10.0        # Tritium processing power [MW] (zeroed for non-DT fuels)
+p_house: 4.0        # Housekeeping power [MW]
+p_cryo: 1.31        # Cryogenic wall-plug power [MW] (neon slush at 24.6 K,
+                    # eta_cryo ~1.25%; Reactor A Table 9)
+
+# Coil parameters. b_max / r_coil / coil_material describe the SC magnets;
+# the stationary levitation coils (n_coils, _COIL_DEFAULTS) and the levitated
+# coil both scale off these in this first cut.
+coil_material: rebco_hts  # OpenStar floating coil is HTS REBCO
+b_max: 23.0          # Peak field on conductor [T] (Reactor A, Table 7)
+r_coil: 1.0          # Floating-coil characteristic radius [m]
+
+# Levitated-coil-specific cost terms (added to C220103, see cas22 DIPOLE branch)
+lev_coil_markup: 8.0          # Float / energize / no-access engineering markup
+lev_coil_cryostat_cost: 100.0 # Integral neon-slush cryostat + flux pump +
+                              # levitation control [M$] -- FIRST-CUT placeholder
+
+# Radial build geometry [m] -- torus approximation of a roughly spherical
+# plasma region (outer radius ~7 m, 2 m Li2O blanket shell; Simpson et al.)
+R0: 5.0              # Major radius to the plasma region
+plasma_t: 2.0        # Plasma minor extent
+elon: 1.0
+blanket_t: 2.00      # Thick Li2O breeding shell (DT)
+ht_shield_t: 0.50    # W-B4C-W neutron shield
+structure_t: 0.20    # Primary structure
+vessel_t: 0.20       # Large vacuum vessel
+
+# Construction
+construction_time_yr: 6.0  # Years
+
+# Impurity model
+wall_material: W       # Wall material: W, C, Be, Mo, SiC, Li
+T_edge: 0.8            # Edge ion temperature at wall [keV] (800 eV upper bound)
+tau_ratio: 3.0         # Impurity confinement time / energy confinement time
+seeded_impurities: {}  # Deliberate impurities, e.g. {Ar: 0.002}
+R_w: 0.4               # Wall reflectivity for synchrotron
+
+# Plasma parameters for radiation calculation (Reactor A)
+n_e: 1.95e+20       # Electron density [m^-3]
+T_e: 10.9           # Electron temperature [keV] (peak ion temp; lower than tokamak)
+Z_eff: 1.5          # Effective charge
+plasma_volume: 200.0 # Plasma volume [m^3]
+B: 2.0              # Characteristic plasma-region field [T] (falls off from coil)
+
+# Fuel burn fraction defaults (physics.py ash_neutron_split)
+burn_fraction: 0.05      # Single-pass burn fraction (MFE-class)
+fuel_recovery: 0.99         # Fraction of unburned fuel recovered and recycled (NOAK)
+dd_f_T: 0.969
+dd_f_He3: 0.689
+dhe3_dd_frac: 0.131
+dhe3_f_T: 0.5
+pb11_f_alpha_n: 0.0
+pb11_f_p_n: 0.0
+
+# Blanket configuration: Li2O solid ceramic, natural lithium (TBR 1.1 via W
+# neutron multiplication; no Li-6 enrichment).
+blanket_form: solid_breeder
+blanket_fill: ceramic_only

@@ -42,6 +42,13 @@ _COIL_DEFAULTS = {
     # solenoid coils discretizing the 50 m central cell. Simple-mirror devices
     # (WHAM/BEAM/Anvil) would use n_coils ≈ 4.
     ConfinementConcept.MIRROR: {"markup": 2.5, "path_factor": 1.0, "n_coils": 10},
+    # DIPOLE n_coils is the STATIONARY levitation/support coil set only (>=2):
+    # the external SC coils that produce the field holding the floating coil up.
+    # The levitated coil itself is NOT in this count — it is costed as a separate
+    # additive term in C220103 (lev_coil_markup + integral cryostat), because it
+    # is a distinct piece of tech (cooled mid-plasma, persistent current while
+    # disconnected, unshielded). See cas22 DIPOLE branch below.
+    ConfinementConcept.DIPOLE: {"markup": 3.0, "path_factor": 1.0, "n_coils": 2},
     ConfinementConcept.PULSED_FRC: {"markup": 1.5, "path_factor": 1.0, "n_coils": 0},
     ConfinementConcept.THETA_PINCH: {"markup": 1.5, "path_factor": 1.0, "n_coils": 0},
     ConfinementConcept.ORBITRON: {"markup": 1.5, "path_factor": 1.0, "n_coils": 0},
@@ -72,9 +79,11 @@ def _compute_geometry_factor(
 
     Tokamak: G = 4pi^2 — empirical total-system (TF+CS+PF) scaling.
     Mirror:  G = n_coils * 4*pi — sum over independent solenoid coils.
+    Dipole:  G = n_coils * 4*pi — sum over the stationary levitation coils
+             (the levitated coil is costed separately, not via this factor).
     Stellarator: G = 4*pi^2 * path_factor — 3D coil paths ~2x longer.
     """
-    if concept == ConfinementConcept.MIRROR:
+    if concept in (ConfinementConcept.MIRROR, ConfinementConcept.DIPOLE):
         return n_coils * 4 * math.pi
     elif concept == ConfinementConcept.STELLARATOR:
         return 4 * math.pi**2 * path_factor
@@ -118,6 +127,8 @@ def cas22_reactor_plant_equipment(
     f_ch: float = 0.0,
     eta_dec: float = 0.0,
     n_coils: int | None = None,
+    lev_coil_markup: float | None = None,
+    lev_coil_cryostat_cost: float | None = None,
 ) -> dict[str, float]:
     """Compute all CAS22 sub-accounts. Returns dict of account_code -> M$.
 
@@ -191,6 +202,18 @@ def cas22_reactor_plant_equipment(
         conductor_cost = total_kAm * coil_material.default_cost_per_kAm / 1e6
         c220103 = conductor_cost * coil_markup
 
+    # Levitated dipole: the floating field coil is a distinct cost object, not
+    # another entry in the stationary-coil sum. It is a single HTS ring (G=4*pi)
+    # carrying persistent current with an integral onboard cryostat (cooled
+    # mid-plasma, electrically disconnected). lev_coil_markup captures the
+    # float/energize/no-access engineering; lev_coil_cryostat_cost is the
+    # integral cryoplant + levitation control, added on top of the stationary
+    # levitation coils already in c220103 above.
+    if concept == ConfinementConcept.DIPOLE:
+        lev_kAm = 4 * math.pi * b_max * r_coil**2 / (_MU0 * 1000)
+        lev_conductor = lev_kAm * coil_material.default_cost_per_kAm / 1e6
+        c220103 = c220103 + lev_conductor * lev_coil_markup + lev_coil_cryostat_cost
+
     # -----------------------------------------------------------------------
     # 220104: Supplementary Heating (MFE) or Primary Driver (pulsed)
     # MFE: per-MW linear costs calibrated to ITER procurement (FOAK→NOAK)
@@ -206,17 +229,20 @@ def cas22_reactor_plant_equipment(
             + cc.heating_lhcd_per_mw * p_lhcd
         )
     else:
-        # Lasers and accelerators: capital is set by per-pulse energy, not rep
-        # rate, so cost on $/J of E_driver (rep-rate-independent).
+        # Lasers, accelerators, and electromagnetic guns: capital is set by
+        # per-pulse energy (aperture/diode count, ring charge, coaxial-gun size and
+        # peak current), not rep rate, so cost on $/J of E_driver. STAGED_ZPINCH is
+        # the sheared-flow coaxial gun + gas injection; its cap bank is in C220107.
         _DRIVER_COST_PER_MJ = {
             ConfinementConcept.LASER_IFE: cc.driver_laser_per_mj,
             ConfinementConcept.HEAVY_ION: cc.driver_heavy_ion_per_mj,
+            ConfinementConcept.PLASMA_JET: cc.driver_plasma_jet_per_mj,
+            ConfinementConcept.STAGED_ZPINCH: cc.driver_staged_zpinch_per_mj,
         }
-        # Mechanical injectors accelerate mass each shot, so average power
-        # (throughput) is the defensible basis.
+        # Pneumatic/mechanical injectors accelerate mass each shot, so average
+        # power (throughput) is the defensible basis.
         _DRIVER_COST_PER_MW = {
             ConfinementConcept.MAG_TARGET: cc.driver_mag_target_per_mw,
-            ConfinementConcept.PLASMA_JET: cc.driver_plasma_jet_per_mw,
         }
         # MAGLIF is in neither map: its main driver is electrical (C220107). Only
         # laser preheat lands here, costed per joule of preheat pulse energy, so a

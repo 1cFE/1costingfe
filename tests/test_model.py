@@ -211,6 +211,18 @@ def test_override_to_attr_keys_all_take_effect():
         assert key in result.overridden, f"{key} applied but not tracked in overridden"
 
 
+def test_dipole_concept_runs():
+    """DIPOLE (levitated dipole) is a steady-state concept that runs end-to-end,
+    with the floating superconducting coil as a nonzero signature cost."""
+    model = CostModel(concept=ConfinementConcept.DIPOLE, fuel=Fuel.DT)
+    result = model.forward(net_electric_mw=1000.0, availability=0.85, lifetime_yr=30)
+    assert result.costs.lcoe > 0
+    assert result.power_table.p_net > 0
+    # The floating superconducting dipole coil dominates dipole capital — it must
+    # not cost zero (the failure mode if DIPOLE is absent from _COIL_DEFAULTS).
+    assert result.cas22_detail["C220103"] > 0
+
+
 def test_cas22_detail_in_result():
     """ForwardResult should include CAS22 sub-account detail."""
     model = CostModel(concept=ConfinementConcept.TOKAMAK, fuel=Fuel.DT)

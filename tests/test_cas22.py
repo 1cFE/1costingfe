@@ -690,3 +690,65 @@ def test_multi_unit_labor_discount_in_override_path():
     assert float(overridden.cas22_detail["C220000"]) == pytest.approx(
         float(base.cas22_detail["C220000"]), rel=1e-6
     )
+
+
+# ---------------------------------------------------------------------------
+# C220104 pulsed driver dispatch: per-MJ (laser/accelerator/EM-gun) vs per-MW
+# (mechanical). EM-gun formation hardware (sheared-flow Z-pinch, plasma jet) is
+# costed per joule of pulse energy, so cost tracks e_driver_mj, not average power.
+# ---------------------------------------------------------------------------
+def _make_cas22_pulsed(concept, e_driver_mj=0.0, p_driver=0.0):
+    """Helper to compute CAS22 for a pulsed concept (driver dispatch tests)."""
+    return cas22_reactor_plant_equipment(
+        CC,
+        p_net=1000.0,
+        p_th=2500.0,
+        p_et=1100.0,
+        p_fus=2300.0,
+        p_cryo=0.5,
+        n_mod=1,
+        fuel=Fuel.DT,
+        noak=True,
+        blanket_vol=BLANKET_VOL,
+        shield_vol=SHIELD_VOL,
+        structure_vol=STRUCTURE_VOL,
+        vessel_vol=VESSEL_VOL,
+        family=ConfinementFamily.PULSED,
+        concept=concept,
+        b_max=12.0,
+        r_coil=1.85,
+        coil_material=CoilMaterial.REBCO_HTS,
+        blanket_form=BlanketForm.LIQUID_METAL,
+        p_nbi=0.0,
+        p_icrf=0.0,
+        p_ecrh=0.0,
+        p_lhcd=0.0,
+        p_driver=p_driver,
+        e_driver_mj=e_driver_mj,
+        f_dec=0.0,
+        p_dee=0.0,
+    )
+
+
+def test_cas22_staged_zpinch_shear_flow_drive_per_mj():
+    # Sheared-flow Z-pinch: coaxial gun + gas injection costed per MJ of pulse
+    # energy. p_driver deliberately differs from e_driver_mj to prove the cost
+    # tracks pulse energy (gun size/current), not rep-rate-scaled average power.
+    r = _make_cas22_pulsed(
+        ConfinementConcept.STAGED_ZPINCH, e_driver_mj=100.0, p_driver=50.0
+    )
+    assert r["C220104"] == pytest.approx(1.5 * 100.0)  # driver_staged_zpinch_per_mj
+
+
+def test_cas22_bare_zpinch_has_no_c220104_driver():
+    # Bare Z-pinch is purely electrical (driver in C220107), no C220104 hardware.
+    r = _make_cas22_pulsed(ConfinementConcept.ZPINCH, e_driver_mj=100.0, p_driver=50.0)
+    assert r["C220104"] == 0.0
+
+
+def test_cas22_plasma_jet_driver_rep_rate_independent():
+    # PLASMA_JET gun costed per MJ of pulse energy: tracks e_driver_mj, not p_driver.
+    r = _make_cas22_pulsed(
+        ConfinementConcept.PLASMA_JET, e_driver_mj=100.0, p_driver=50.0
+    )
+    assert r["C220104"] == pytest.approx(4.0 * 100.0)  # driver_plasma_jet_per_mj

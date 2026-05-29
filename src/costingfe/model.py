@@ -621,6 +621,8 @@ class CostModel:
             coil_material=coil_material,
             blanket_form=blanket_form,
             n_coils=n_coils,
+            lev_coil_markup=params.get("lev_coil_markup"),
+            lev_coil_cryostat_cost=params.get("lev_coil_cryostat_cost"),
             p_nbi=p_nbi,
             p_ecrh=p_ecrh,
             p_icrf=p_icrf,

@@ -1,5 +1,8 @@
+import pytest
+
 from costingfe.defaults import load_costing_constants
 from costingfe.layers.costs import (
+    _total_project_time,
     cas10_preconstruction,
     cas21_buildings,
     cas23_turbine,
@@ -12,8 +15,8 @@ from costingfe.layers.costs import (
     cas80_fuel,
     cas90_financial,
 )
-from costingfe.layers.economics import compute_crf
-from costingfe.types import Fuel
+from costingfe.layers.economics import compute_crf, levelized_annual_cost
+from costingfe.types import ConfinementConcept, Fuel
 
 CC = load_costing_constants()
 
@@ -633,3 +636,58 @@ def test_cas72_no_dec_grid_when_p_dee_zero():
         noak=True,
     )
     assert cas72_a == cas72_b, "CAS72 should be identical when p_dee=0 vs not provided"
+
+
+# ---------------------------------------------------------------------------
+# Formation-electrode replacement O&M (CAS72): plasma-facing coaxial-gun
+# electrodes on the EM-gun concepts (sheared-flow Z-pinch, plasma jet) erode and
+# are periodically replaced. Modeled as a levelized annual recurring cost.
+# ---------------------------------------------------------------------------
+_ELEC_KWARGS = dict(
+    cas22_detail={"C220101": 100.0, "C220104": 132.3, "C220108": 0.0},
+    replaceable_accounts=CC.replaceable_accounts,
+    n_mod=1,
+    p_net=1000.0,
+    availability=0.85,
+    inflation_rate=0.02,
+    interest_rate=0.07,
+    lifetime_yr=30,
+    core_lifetime=CC.core_lifetime(Fuel.DT),
+    construction_time=6,
+    fuel=Fuel.DT,
+    noak=True,
+    f_rep=1.0,
+)
+
+
+def test_cas72_staged_zpinch_has_electrode_replacement():
+    """Sheared-flow gun electrodes erode -> extra CAS72 vs a bare Z-pinch."""
+    _, _, cas72_gun = cas70_om(
+        CC, concept=ConfinementConcept.STAGED_ZPINCH, **_ELEC_KWARGS
+    )
+    _, _, cas72_bare = cas70_om(CC, concept=ConfinementConcept.ZPINCH, **_ELEC_KWARGS)
+    assert cas72_gun > cas72_bare
+
+
+def test_cas72_plasma_jet_has_electrode_replacement():
+    """Plasma-gun electrodes erode too -> extra CAS72 vs a non-gun concept."""
+    _, _, cas72_gun = cas70_om(
+        CC, concept=ConfinementConcept.PLASMA_JET, **_ELEC_KWARGS
+    )
+    _, _, cas72_non = cas70_om(CC, concept=ConfinementConcept.LASER_IFE, **_ELEC_KWARGS)
+    assert cas72_gun > cas72_non
+
+
+def test_cas72_electrode_replacement_magnitude():
+    """Electrode O&M = levelized(replace_frac * C220104 * shots/yr / shot_life)."""
+    _, _, cas72_gun = cas70_om(
+        CC, concept=ConfinementConcept.STAGED_ZPINCH, **_ELEC_KWARGS
+    )
+    _, _, cas72_bare = cas70_om(CC, concept=ConfinementConcept.ZPINCH, **_ELEC_KWARGS)
+    n_shots = 1.0 * 8760.0 * 3600.0 * 0.85
+    annual = (
+        0.5 * 132.3 * 1 * n_shots / 1.0e8
+    )  # electrode_replace_frac, electrode_shot_lifetime
+    t_project = _total_project_time(CC, 6, Fuel.DT, True)
+    expected = levelized_annual_cost(annual, 0.07, 0.02, 30, t_project)
+    assert (cas72_gun - cas72_bare) == pytest.approx(expected)

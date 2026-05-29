@@ -54,17 +54,22 @@ class CostingConstants:
     heating_ecrh_per_mw: float = 5.0  # Electron Cyclotron Resonance Heating (gyrotrons)
     heating_lhcd_per_mw: float = 4.0  # Lower Hybrid Current Drive (klystrons)
     # 220104: Pulsed driver capital, concept-dispatched in cas22.py C220104.
-    # Lasers and accelerators are costed per joule of pulse energy: their capital
-    # is set by pulse energy (aperture, amplifier/diode count, ring charge), not by
-    # how often the driver fires, so the basis is rep-rate-independent. The per-MJ
-    # values reproduce the prior $/W NOAK figures at their reference rep rates
+    # Lasers, accelerators, and electromagnetic guns are costed per joule of pulse
+    # energy: their capital is set by pulse energy (laser aperture / diode count,
+    # ring charge, coaxial-gun size and peak current), not by how often the driver
+    # fires, so the basis is rep-rate-independent. The laser/heavy-ion values
+    # reproduce the prior $/W NOAK figures at their reference rep rates
     # (laser $8/W x 10 Hz = 80 M$/MJ; heavy-ion $12/W x 5 Hz = 60 M$/MJ) without the
-    # spurious rep-rate scaling. Mechanical injectors accelerate mass each shot, so
-    # they keep an average-power (throughput) basis (M$/MW, 2023$).
+    # spurious rep-rate scaling. Pneumatic/mechanical injectors (mag-target) keep an
+    # average-power (throughput) basis because they accelerate mass each shot and
+    # their handling/recirculation plant scales with throughput (M$/MW, 2023$).
     driver_laser_per_mj: float = 80.0  # M$/MJ DPSSL pulse energy (was $8/W at 10 Hz)
     driver_heavy_ion_per_mj: float = 60.0  # M$/MJ beam energy (was $12/W at 5 Hz)
+    driver_plasma_jet_per_mj: float = 4.0  # M$/MJ EM plasma-gun pulse energy
+    driver_staged_zpinch_per_mj: float = (
+        1.5  # M$/MJ sheared-flow coaxial gun + gas inj.
+    )
     driver_mag_target_per_mw: float = 3.0  # M$/MW avg power, pneumatic pistons
-    driver_plasma_jet_per_mw: float = 4.0  # M$/MW avg power, plasma gun array
     # MAGLIF's main driver is the electrical Z-pinch, costed in C220107 on a $/J
     # basis. Its C220104 carries only laser preheat, costed per joule of preheat
     # pulse energy (same DPSSL class as the IFE driver). Concepts that magnetize and
@@ -109,6 +114,14 @@ class CostingConstants:
 
     # Pulsed inductive DEC — CAS72 cap replacement
     cap_shot_lifetime: float = 1.0e8  # Shots, NOAK baseline. Range: 1e7-1e9
+
+    # CAS72 formation-electrode replacement (EM-gun concepts: staged_zpinch,
+    # plasma_jet). Plasma-facing coaxial-gun electrodes erode under high current
+    # density. High uncertainty, no NOAK data.
+    electrode_shot_lifetime: float = 1.0e8  # Shots before replacement. Range: 1e7-1e9
+    electrode_replace_frac: float = (
+        0.5  # Consumable-electrode share of C220104. Range 0.25-0.75
+    )
 
     # Pulsed radiation fraction defaults (fraction of charged-particle energy)
     f_rad_dt: float = 0.10
