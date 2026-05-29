@@ -66,9 +66,7 @@ class CostingConstants:
     driver_laser_per_mj: float = 80.0  # M$/MJ DPSSL pulse energy (was $8/W at 10 Hz)
     driver_heavy_ion_per_mj: float = 60.0  # M$/MJ beam energy (was $12/W at 5 Hz)
     driver_plasma_jet_per_mj: float = 4.0  # M$/MJ EM plasma-gun pulse energy
-    driver_staged_zpinch_per_mj: float = (
-        1.5  # M$/MJ sheared-flow coaxial gun + gas inj.
-    )
+    driver_staged_zpinch_per_mj: float = 1.5  # M$/MJ sheared-flow gun + gas inj.
     driver_mag_target_per_mw: float = 3.0  # M$/MW avg power, pneumatic pistons
     # MAGLIF's main driver is the electrical Z-pinch, costed in C220107 on a $/J
     # basis. Its C220104 carries only laser preheat, costed per joule of preheat
@@ -119,9 +117,7 @@ class CostingConstants:
     # plasma_jet). Plasma-facing coaxial-gun electrodes erode under high current
     # density. High uncertainty, no NOAK data.
     electrode_shot_lifetime: float = 1.0e8  # Shots before replacement. Range: 1e7-1e9
-    electrode_replace_frac: float = (
-        0.5  # Consumable-electrode share of C220104. Range 0.25-0.75
-    )
+    electrode_replace_frac: float = 0.5  # Consumable share of C220104. Range 0.25-0.75
 
     # Pulsed radiation fraction defaults (fraction of charged-particle energy)
     f_rad_dt: float = 0.10

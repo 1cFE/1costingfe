@@ -353,6 +353,28 @@ def cas70_om(
             pv_cap = pv_cap + jnp.where(k <= n_rep_cap, cap_cost / discount, 0.0)
         cas72 = cas72 + pv_cap * crf
 
+    # Formation-electrode scheduled replacement (EM-gun concepts).
+    # Plasma-facing coaxial-gun electrodes (sheared-flow Z-pinch, plasma jet) erode
+    # under high current density and are periodically replaced. The replacement
+    # interval can be sub-annual, which the discrete MAX_REP loop above would
+    # truncate, so this is modeled as a levelized annual recurring cost.
+    if (
+        concept in (ConfinementConcept.STAGED_ZPINCH, ConfinementConcept.PLASMA_JET)
+        and f_rep > 0
+        and cc.electrode_shot_lifetime > 0
+    ):
+        n_shots_per_year = f_rep * 8760.0 * 3600.0 * availability
+        annual_electrode = (
+            cc.electrode_replace_frac
+            * cas22_detail.get("C220104", 0.0)
+            * n_mod
+            * n_shots_per_year
+            / cc.electrode_shot_lifetime
+        )
+        cas72 = cas72 + levelized_annual_cost(
+            annual_electrode, interest_rate, inflation_rate, lifetime_yr, t_project
+        )
+
     return cas71 + cas72, cas71, cas72
 
 

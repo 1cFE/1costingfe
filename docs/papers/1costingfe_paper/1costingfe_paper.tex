@@ -1774,29 +1774,34 @@ the hardware that compresses or ignites the target.  This is the pulsed
 analog of the magnet system (CAS22.01.03): the mechanism that provides
 confinement.  The cost basis depends on the driver type.
 
-Lasers and accelerators are costed per joule of pulse energy.  Their
-capital is set by the per-pulse energy (laser aperture, amplifier and
-pump-diode count, accelerator beam energy and storage-ring charge) and not
-by how often the driver fires.  Repetition rate adds cooling and consumable
-replacement, which are sub-dominant capital and operating costs rather than
-a multiplier on the driver hardware itself.  Costing on average power
-$E_{\text{drv}} f_{\text{rep}}$ would instead price one physical laser
-across the $0.1$ to $15$~Hz range concepts run at as though it were a
-hundred different machines.  Hence
+Lasers, accelerators, and electromagnetic guns are costed per joule of pulse
+energy.  Their capital is set by the per-pulse energy (laser aperture,
+amplifier and pump-diode count, accelerator beam energy and storage-ring
+charge, coaxial-gun size and peak current) and not by how often the driver
+fires.  Repetition rate adds cooling and consumable replacement, which are
+sub-dominant capital and operating costs rather than a multiplier on the
+driver hardware itself.  Costing on average power $E_{\text{drv}}
+f_{\text{rep}}$ would instead price one physical laser across the $0.1$ to
+$15$~Hz range concepts run at as though it were a hundred different machines.
+Hence
 \begin{equation}
 C_{220104} = c^{E}_{\text{drv}} \times E_{\text{drv}} \quad [\text{M\$}]
 \end{equation}
-with $c^{E}_{\text{drv}}$ in M\$/MJ.  Mechanical injectors instead
-accelerate target mass on every shot, so throughput (average power) drives
-their hardware count and wear, and they retain an average-power basis with
-$P_{\text{drv}} = E_{\text{drv}} \, f_{\text{rep}}$:
+with $c^{E}_{\text{drv}}$ in M\$/MJ.  Pneumatic and mechanical injectors
+(mag-target) instead accelerate target mass on every shot, so throughput
+(average power) drives their hardware count, handling, and recirculation
+plant, and they retain an average-power basis with $P_{\text{drv}} =
+E_{\text{drv}} \, f_{\text{rep}}$:
 \begin{equation}
 C_{220104} = c^{P}_{\text{drv}} \times P_{\text{drv}} \quad [\text{M\$}]
 \end{equation}
-The per-joule coefficients reproduce the underlying \$/W NOAK projections at
-each driver's reference repetition rate (laser $\$8$/W at $10$~Hz gives
-$80$~M\$/MJ; heavy ion $\$12$/W at $5$~Hz gives $60$~M\$/MJ) and then hold
-constant away from that reference.
+The laser and heavy-ion per-joule coefficients reproduce the underlying \$/W
+NOAK projections at each driver's reference repetition rate (laser $\$8$/W at
+$10$~Hz gives $80$~M\$/MJ; heavy ion $\$12$/W at $5$~Hz gives $60$~M\$/MJ) and
+then hold constant away from that reference.  The plasma-jet gun and the
+sheared-flow Z-pinch's coaxial gun follow the same per-pulse logic; the
+single sheared-flow gun assembly is cheaper per joule ($1.5$~M\$/MJ) than the
+plasma-gun array ($4$~M\$/MJ).
 
 \begin{table}[htbp]
 \caption{CAS22.01.04 driver cost coefficients by pulsed concept.}
@@ -1808,11 +1813,12 @@ Concept & Basis & Coeff. & Hardware \\
 \midrule
 Laser IFE   & M\$/MJ & 80 & Diode-pumped solid-state laser \\
 Heavy ion   & M\$/MJ & 60 & RF linac + storage rings \\
+Plasma jet  & M\$/MJ &  4 & Plasma gun array \\
+Staged Z-pinch & M\$/MJ & 1.5 & Coaxial gun + gas injection \\
 MagLIF      & M\$/MJ & 80 & Laser preheat; main driver in CAS22.01.07 \\
 Mag.\ target & M\$/MW &  3 & Pneumatic pistons, liquid metal loop \\
-Plasma jet  & M\$/MW &  4 & Plasma gun array \\
 \midrule
-Z-pinch, DPF, Staged Z-pinch & n/a & 0 & Driver is electrical (CAS22.01.07) \\
+Z-pinch, DPF & n/a & 0 & Driver is electrical (CAS22.01.07) \\
 Pulsed FRC, Theta pinch       & n/a & 0 & Driver is coils (CAS22.01.03) \\
 \bottomrule
 \end{tabular}
@@ -2549,7 +2555,13 @@ CAS70 comprises two sub-accounts:
   each replacement event and annualized via the CRF.  For pulsed
   inductive DEC concepts, CAS72 includes capacitor bank scheduled
   replacement, whose lifetime is derived from cycle count and
-  repetition rate.
+  repetition rate.  For the electromagnetic-gun concepts (sheared-flow
+  Z-pinch and plasma jet), CAS72 also includes formation-electrode
+  replacement: the plasma-facing coaxial-gun electrodes erode under high
+  current density.  Because their shot lifetime can imply sub-annual
+  replacement, this term is taken as a levelized annual recurring cost,
+  $c_{\text{rep}}\,C_{220104}\,N_{\text{shots/yr}}/N_{\text{life}}$, rather
+  than as discrete events.
 \end{itemize}
 
 \subsubsection{CAS71: Staffing-Based O\&M}

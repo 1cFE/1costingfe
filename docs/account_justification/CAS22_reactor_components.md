@@ -228,27 +228,33 @@ laser IFE confines with a laser driver.  The electrical infrastructure
 
 The cost basis differs by driver type:
 
-- **Lasers and accelerators** are costed per joule of pulse energy:
+- **Lasers, accelerators, and electromagnetic guns** are costed per joule of pulse
+  energy:
 
       C220104 = driver_cost_per_MJ × E_driver
 
   Their capital is set by pulse energy (laser aperture, amplifier and pump-diode
-  count, accelerator beam energy, storage-ring charge), not by how often the
-  driver fires.  Rep rate adds cooling and shortens consumable lifetime, but those
-  are sub-dominant capital and O&M, not a linear multiplier on the driver itself.
-  An average-power basis (E_driver × f_rep) would price the *same* laser 100× apart
-  across the 0.1–15 Hz range concepts actually run at, which is unphysical.
+  count, accelerator beam energy and storage-ring charge, coaxial-gun size and
+  peak current), not by how often the driver fires.  Rep rate adds cooling and
+  shortens consumable lifetime, but those are sub-dominant capital and O&M, not a
+  linear multiplier on the driver itself.  An average-power basis (E_driver ×
+  f_rep) would price the *same* laser 100× apart across the 0.1–15 Hz range
+  concepts actually run at, which is unphysical.  A plasma-jet gun and a
+  sheared-flow Z-pinch's coaxial gun follow the same logic: a single gun assembly
+  is sized by its current and pulse energy, not its firing frequency.
 
-- **Mechanical injectors** keep an average-power basis:
+- **Pneumatic and mechanical injectors** (mag-target) keep an average-power basis:
 
       C220104 = driver_cost_per_MW × P_driver,  P_driver = E_driver × f_rep
 
-  because they accelerate target mass on every shot, so throughput (average power)
-  genuinely drives the hardware count and wear.
+  because they accelerate target mass on every shot, and the handling and
+  liquid-metal recirculation plant genuinely scales with throughput (average
+  power), not just per-pulse energy.
 
-The per-MJ figures reproduce the prior $/W NOAK projections at each driver's
-reference rep rate, then hold constant off-reference: laser $8/W × 10 Hz = 80
-M$/MJ; heavy-ion $12/W × 5 Hz = 60 M$/MJ.
+The laser and heavy-ion per-MJ figures reproduce the prior $/W NOAK projections
+at each driver's reference rep rate, then hold constant off-reference: laser
+$8/W × 10 Hz = 80 M$/MJ; heavy-ion $12/W × 5 Hz = 60 M$/MJ.  The plasma-jet
+coefficient (4 M$/MJ) likewise preserves its reference point (f_rep = 1 Hz).
 
 #### Driver costs
 
@@ -257,9 +263,10 @@ M$/MJ; heavy-ion $12/W × 5 Hz = 60 M$/MJ.
 | Laser IFE | $/MJ | 80 | Diode-pumped solid-state laser | NIF-heritage optics at NOAK volume. Current DPSSL $20–50/W; NOAK target $8/W. Costed on pulse energy. |
 | Heavy ion | $/MJ | 60 | RF linac + storage rings | Accelerator capital scales with per-pulse beam energy and ring charge. Higher than laser due to ring infrastructure. |
 | MagLIF | $/MJ (preheat only) | 80 | Laser preheat system | Main driver is the electrical Z-pinch (C220107). C220104 carries only the preheat laser, costed per joule of preheat pulse energy (`e_preheat_mj`); same DPSSL class as the IFE driver. Set `e_preheat_mj = 0` for no-preheat magnetized compression (e.g. Pacific Fusion). |
-| Mag. target | $/MW | 3 | Pneumatic pistons, liquid metal loop | Mechanical compression hardware. Mature industrial technology (pneumatics, hydraulics). |
-| Plasma jet | $/MW | 4 | Plasma gun array | Electromagnetic plasma guns. More complex than pneumatics, simpler than lasers. |
-| Z-pinch, DPF, Staged Z-pinch | — | 0 | — | Driver is purely electrical (capacitor bank), costed in C220107. |
+| Plasma jet | $/MJ | 4 | Plasma gun array | Electromagnetic plasma guns, sized by per-pulse energy and current. More complex than pneumatics, simpler than lasers. |
+| Staged Z-pinch | $/MJ | 1.5 | Coaxial gun + gas injection | Sheared-flow stabilization hardware: coaxial accelerator electrodes plus neutral-gas puff valves and fast pumping. Single, simpler coaxial assembly, so cheaper per MJ than the plasma-jet array. The Z-pinch cap bank itself is in C220107. |
+| Mag. target | $/MW | 3 | Pneumatic pistons, liquid metal loop | Mechanical compression hardware. Throughput-scaled (mass moved each shot), so kept on average power deliberately. Mature industrial technology. |
+| Z-pinch, DPF | — | 0 | — | Driver is purely electrical (capacitor bank), costed in C220107. No flow-formation gun (cf. staged Z-pinch). |
 | Pulsed FRC, Theta pinch | — | 0 | — | Driver is magnetic coils, costed in C220103. |
 
 #### Design rationale: avoiding double-counting
@@ -273,6 +280,24 @@ infrastructure) avoids double-counting:
   generators, transmission lines, on $/J basis)
 - **Mag target**: C220104 = pneumatic compression hardware; C220107 =
   capacitor bank for guide-field pulsing (on $/J basis)
+- **Staged Z-pinch**: C220104 = coaxial gun + gas injection; C220107 =
+  full pulsed power system (on $/J basis)
+
+#### Formation-electrode replacement (CAS72 O&M)
+
+The plasma-facing coaxial-gun electrodes of the electromagnetic-gun concepts
+(staged Z-pinch, plasma jet) erode under high current density and are replaced
+periodically. This recurring cost is carried in CAS72 (scheduled replacement),
+not in the C220104 capital line. Because the replacement interval can be
+sub-annual, it is modeled as a levelized annual recurring cost rather than
+discrete replacement events:
+
+    annual = electrode_replace_frac × C220104 × n_shots_per_year / electrode_shot_lifetime
+
+with `electrode_replace_frac = 0.5` (consumable-electrode share of the C220104
+flow-drive capital; range 0.25 to 0.75) and `electrode_shot_lifetime = 1e8` shots
+(high uncertainty, no NOAK data; range 1e7 to 1e9). At the reference staged
+Z-pinch this is about $25M/yr levelized.
 
 ---
 

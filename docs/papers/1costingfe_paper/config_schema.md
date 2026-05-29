@@ -206,8 +206,8 @@ Categorized by CAS account. Every field is overridable.
 | `blanket_unit_cost_<fuel>` | Blanket M$/m^3. | dt 0.60 · dd 0.30 · dhe3 0.08 · pb11 0.05 |
 | `shield_unit_cost` | Shield M$/m^3. | 0.74 |
 | `heating_nbi_per_mw` · `heating_icrf_per_mw` · `heating_ecrh_per_mw` · `heating_lhcd_per_mw` | M$/MW of aux heating. | 7.06 · 4.15 · 5.0 · 4.0 |
-| `driver_laser_per_mj` · `driver_heavy_ion_per_mj` | Laser/accelerator driver M$/MJ of pulse energy (rep-rate-independent). | 80 / 60 |
-| `driver_mag_target_per_mw` · `driver_plasma_jet_per_mw` | Mechanical-injector driver M$/MW of average power. | 3 / 4 |
+| `driver_laser_per_mj` · `driver_heavy_ion_per_mj` · `driver_plasma_jet_per_mj` · `driver_staged_zpinch_per_mj` | Laser / accelerator / EM-gun driver M$/MJ of pulse energy (rep-rate-independent). | 80 / 60 / 4 / 1.5 |
+| `driver_mag_target_per_mw` | Mechanical-injector driver M$/MW of average power (throughput-scaled). | 3 |
 | `laser_preheat_per_mj` | Laser preheat add-on M$/MJ of preheat pulse energy (MagLIF; scaled by per-concept `e_preheat_mj`). | 80 |
 | `structure_unit_cost` · `vessel_unit_cost` | M$/m^3. | 0.15 · 0.72 |
 | `power_supplies_base` · `divertor_base` · `target_factory_base` | Base capital (M$ at 1 GWe). | 80 · 60 · 244 |
@@ -216,6 +216,7 @@ Categorized by CAS account. Every field is overridable.
 | `c_cap_allin_per_joule` | Pulsed cap bank $/J_stored. | 0.5 |
 | `markup_switch_bidir` · `markup_controls` · `c_inv_per_kw_net` | Inductive-DEC markups + inverter $/kW. | 0.06 · 0.04 · 150 |
 | `cap_shot_lifetime` | Capacitor shot life. | 1e8 |
+| `electrode_shot_lifetime` · `electrode_replace_frac` | EM-gun electrode shot life and consumable share of C220104 (CAS72 replacement, staged Z-pinch / plasma jet). | 1e8 / 0.5 |
 | `remote_handling_<fuel>_base` | Remote handling (M$ at 1 GWe). | dt 150 · dd 100 · dhe3 30 · pb11 20 |
 | `installation_frac` | C220111 labor as fraction of subtotal. | 0.14 |
 | `multi_unit_labor_factor` | Labor cost of module N beyond #1. | 0.92 |
