@@ -109,6 +109,8 @@ def cas22_reactor_plant_equipment(
     p_driver: float,
     f_dec: float,
     p_dee: float,
+    e_driver_mj: float = 0.0,  # Per-pulse driver energy [MJ]; $/J laser/accel basis
+    e_preheat_mj: float = 0.0,  # Per-pulse preheat laser energy [MJ]; 0 = no preheat
     # Pulsed DEC parameters
     pulsed_conversion=None,
     e_stored_mj: float = 0.0,
@@ -204,15 +206,26 @@ def cas22_reactor_plant_equipment(
             + cc.heating_lhcd_per_mw * p_lhcd
         )
     else:
+        # Lasers and accelerators: capital is set by per-pulse energy, not rep
+        # rate, so cost on $/J of E_driver (rep-rate-independent).
+        _DRIVER_COST_PER_MJ = {
+            ConfinementConcept.LASER_IFE: cc.driver_laser_per_mj,
+            ConfinementConcept.HEAVY_ION: cc.driver_heavy_ion_per_mj,
+        }
+        # Mechanical injectors accelerate mass each shot, so average power
+        # (throughput) is the defensible basis.
         _DRIVER_COST_PER_MW = {
-            ConfinementConcept.LASER_IFE: cc.driver_laser_per_mw,
-            ConfinementConcept.HEAVY_ION: cc.driver_heavy_ion_per_mw,
             ConfinementConcept.MAG_TARGET: cc.driver_mag_target_per_mw,
             ConfinementConcept.PLASMA_JET: cc.driver_plasma_jet_per_mw,
-            ConfinementConcept.MAGLIF: cc.driver_maglif_per_mw,
         }
-        driver_per_mw = _DRIVER_COST_PER_MW.get(concept, 0.0)
-        c220104 = driver_per_mw * p_driver
+        # MAGLIF is in neither map: its main driver is electrical (C220107). Only
+        # laser preheat lands here, costed per joule of preheat pulse energy, so a
+        # magnetized-compression concept with e_preheat_mj=0 pays nothing.
+        c220104 = (
+            _DRIVER_COST_PER_MJ.get(concept, 0.0) * e_driver_mj
+            + _DRIVER_COST_PER_MW.get(concept, 0.0) * p_driver
+            + cc.laser_preheat_per_mj * e_preheat_mj
+        )
 
     # -----------------------------------------------------------------------
     # 220105: Primary Structure — gravity supports, thermal shields,

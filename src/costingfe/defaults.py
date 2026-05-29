@@ -53,13 +53,24 @@ class CostingConstants:
     heating_icrf_per_mw: float = 4.1494  # Ion Cyclotron Resonance Frequency
     heating_ecrh_per_mw: float = 5.0  # Electron Cyclotron Resonance Heating (gyrotrons)
     heating_lhcd_per_mw: float = 4.0  # Lower Hybrid Current Drive (klystrons)
-    # 220104: Pulsed driver capital — per-MW linear costs (M$/MW, 2023$)
-    # Used when family == PULSED; concept-dispatched in cas22.py C220104
-    driver_laser_per_mw: float = 8.0  # Diode-pumped solid-state laser (NOAK)
-    driver_heavy_ion_per_mw: float = 12.0  # RF linac + storage rings
-    driver_mag_target_per_mw: float = 3.0  # Pneumatic pistons, liquid metal loop
-    driver_plasma_jet_per_mw: float = 4.0  # Plasma gun array
-    driver_maglif_per_mw: float = 6.0  # Laser preheat (Z-pinch electrical in C220107)
+    # 220104: Pulsed driver capital, concept-dispatched in cas22.py C220104.
+    # Lasers and accelerators are costed per joule of pulse energy: their capital
+    # is set by pulse energy (aperture, amplifier/diode count, ring charge), not by
+    # how often the driver fires, so the basis is rep-rate-independent. The per-MJ
+    # values reproduce the prior $/W NOAK figures at their reference rep rates
+    # (laser $8/W x 10 Hz = 80 M$/MJ; heavy-ion $12/W x 5 Hz = 60 M$/MJ) without the
+    # spurious rep-rate scaling. Mechanical injectors accelerate mass each shot, so
+    # they keep an average-power (throughput) basis (M$/MW, 2023$).
+    driver_laser_per_mj: float = 80.0  # M$/MJ DPSSL pulse energy (was $8/W at 10 Hz)
+    driver_heavy_ion_per_mj: float = 60.0  # M$/MJ beam energy (was $12/W at 5 Hz)
+    driver_mag_target_per_mw: float = 3.0  # M$/MW avg power, pneumatic pistons
+    driver_plasma_jet_per_mw: float = 4.0  # M$/MW avg power, plasma gun array
+    # MAGLIF's main driver is the electrical Z-pinch, costed in C220107 on a $/J
+    # basis. Its C220104 carries only laser preheat, costed per joule of preheat
+    # pulse energy (same DPSSL class as the IFE driver). Concepts that magnetize and
+    # compress without a preheat laser (e.g. Pacific Fusion) set e_preheat_mj=0 and
+    # incur no preheat cost.
+    laser_preheat_per_mj: float = 80.0  # M$/MJ preheat laser energy (DPSSL class)
     # 220105: Primary Structure — volume-based (M$/m³)
     structure_unit_cost: float = 0.15  # Calibrated at ~208 m³
     # 220106: Vacuum System — volume-based (M$/m³)

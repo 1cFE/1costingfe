@@ -221,26 +221,46 @@ Our $5M/MW is mid-range.
 
 ### Pulsed concepts: Primary Driver Capital
 
-    C220104 = driver_cost_per_MW × P_driver
-
-where P_driver = E_driver × f_rep (average driver power in MW).
-
 This is the pulsed analog of the magnet system (C220103) — the
 hardware that provides confinement.  A tokamak confines with magnets;
 laser IFE confines with a laser driver.  The electrical infrastructure
 (capacitor banks, switches, charging circuits) is in C220107.
 
-#### Per-MW driver costs (M$/MW, 2023$)
+The cost basis differs by driver type:
 
-| Concept | $/MW | Hardware | Rationale |
-|---------|-----:|----------|-----------|
-| Laser IFE | 8 | Diode-pumped solid-state laser | NIF-heritage optics at NOAK volume. Current DPSSL: $20–50/W; NOAK target: $8/W with diode cost reduction. |
-| Heavy ion | 12 | RF linac + storage rings | Accelerator cost scales ~linearly with beam power. Higher than laser due to ring infrastructure. |
-| MagLIF | 6 | Laser preheat system | Smaller laser than IFE (preheat only, not full driver). Z-pinch electrical driver is in C220107. |
-| Mag. target | 3 | Pneumatic pistons, liquid metal loop | Mechanical compression hardware. Mature industrial technology (pneumatics, hydraulics). |
-| Plasma jet | 4 | Plasma gun array | Electromagnetic plasma guns. More complex than pneumatics, simpler than lasers. |
-| Z-pinch, DPF, Staged Z-pinch | 0 | — | Driver is purely electrical (capacitor bank), costed in C220107. |
-| Pulsed FRC, Theta pinch | 0 | — | Driver is magnetic coils, costed in C220103. |
+- **Lasers and accelerators** are costed per joule of pulse energy:
+
+      C220104 = driver_cost_per_MJ × E_driver
+
+  Their capital is set by pulse energy (laser aperture, amplifier and pump-diode
+  count, accelerator beam energy, storage-ring charge), not by how often the
+  driver fires.  Rep rate adds cooling and shortens consumable lifetime, but those
+  are sub-dominant capital and O&M, not a linear multiplier on the driver itself.
+  An average-power basis (E_driver × f_rep) would price the *same* laser 100× apart
+  across the 0.1–15 Hz range concepts actually run at, which is unphysical.
+
+- **Mechanical injectors** keep an average-power basis:
+
+      C220104 = driver_cost_per_MW × P_driver,  P_driver = E_driver × f_rep
+
+  because they accelerate target mass on every shot, so throughput (average power)
+  genuinely drives the hardware count and wear.
+
+The per-MJ figures reproduce the prior $/W NOAK projections at each driver's
+reference rep rate, then hold constant off-reference: laser $8/W × 10 Hz = 80
+M$/MJ; heavy-ion $12/W × 5 Hz = 60 M$/MJ.
+
+#### Driver costs
+
+| Concept | Basis | Coefficient | Hardware | Rationale |
+|---------|-------|------------:|----------|-----------|
+| Laser IFE | $/MJ | 80 | Diode-pumped solid-state laser | NIF-heritage optics at NOAK volume. Current DPSSL $20–50/W; NOAK target $8/W. Costed on pulse energy. |
+| Heavy ion | $/MJ | 60 | RF linac + storage rings | Accelerator capital scales with per-pulse beam energy and ring charge. Higher than laser due to ring infrastructure. |
+| MagLIF | $/MJ (preheat only) | 80 | Laser preheat system | Main driver is the electrical Z-pinch (C220107). C220104 carries only the preheat laser, costed per joule of preheat pulse energy (`e_preheat_mj`); same DPSSL class as the IFE driver. Set `e_preheat_mj = 0` for no-preheat magnetized compression (e.g. Pacific Fusion). |
+| Mag. target | $/MW | 3 | Pneumatic pistons, liquid metal loop | Mechanical compression hardware. Mature industrial technology (pneumatics, hydraulics). |
+| Plasma jet | $/MW | 4 | Plasma gun array | Electromagnetic plasma guns. More complex than pneumatics, simpler than lasers. |
+| Z-pinch, DPF, Staged Z-pinch | — | 0 | — | Driver is purely electrical (capacitor bank), costed in C220107. |
+| Pulsed FRC, Theta pinch | — | 0 | — | Driver is magnetic coils, costed in C220103. |
 
 #### Design rationale: avoiding double-counting
 

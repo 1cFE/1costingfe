@@ -206,7 +206,9 @@ Categorized by CAS account. Every field is overridable.
 | `blanket_unit_cost_<fuel>` | Blanket M$/m^3. | dt 0.60 · dd 0.30 · dhe3 0.08 · pb11 0.05 |
 | `shield_unit_cost` | Shield M$/m^3. | 0.74 |
 | `heating_nbi_per_mw` · `heating_icrf_per_mw` · `heating_ecrh_per_mw` · `heating_lhcd_per_mw` | M$/MW of aux heating. | 7.06 · 4.15 · 5.0 · 4.0 |
-| `driver_<type>_per_mw` | Pulsed driver M$/MW (`laser`, `heavy_ion`, `mag_target`, `plasma_jet`, `maglif`). | 8 / 12 / 3 / 4 / 6 |
+| `driver_laser_per_mj` · `driver_heavy_ion_per_mj` | Laser/accelerator driver M$/MJ of pulse energy (rep-rate-independent). | 80 / 60 |
+| `driver_mag_target_per_mw` · `driver_plasma_jet_per_mw` | Mechanical-injector driver M$/MW of average power. | 3 / 4 |
+| `laser_preheat_per_mj` | Laser preheat add-on M$/MJ of preheat pulse energy (MagLIF; scaled by per-concept `e_preheat_mj`). | 80 |
 | `structure_unit_cost` · `vessel_unit_cost` | M$/m^3. | 0.15 · 0.72 |
 | `power_supplies_base` · `divertor_base` · `target_factory_base` | Base capital (M$ at 1 GWe). | 80 · 60 · 244 |
 | `dec_base` · `dec_grid_cost` | DEC base + grid module cost (M$). | 125 · 12 |

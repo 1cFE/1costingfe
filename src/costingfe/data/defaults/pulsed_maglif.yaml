@@ -5,6 +5,7 @@ q_eng: 3.0               # Engineering gain target (P_et / P_recirc)
 
 # Pulsed parameters
 f_rep: 0.1               # Repetition rate [Hz] (limited by liner fabrication)
+e_preheat_mj: 0.006      # Per-pulse laser preheat energy [MJ] (Sandia Z-Beamlet 2-6 kJ; Slutz 2010 / Knapp 2019). Set 0 for no-preheat magnetized compression (e.g. Pacific Fusion).
 pulsed_conversion: thermal
 f_rad: 0.10
 eta_pin: 0.15            # Z-pinch pulsed power wall-plug efficiency

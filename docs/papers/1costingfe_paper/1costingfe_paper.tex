@@ -1422,7 +1422,7 @@ CAS & Description & Disposition & Method \\
 \hspace{1em}22.01.01$^\dagger$ & First wall + blanket & Extended & Volume $\times$ thermal intensity $\times$ fuel $\times$ blanket-form structural complexity factor \\
 \hspace{1em}22.01.02 & Shield & Inherited & Volume $\times$ fuel-dependent neutron scale \\
 \hspace{1em}22.01.03$^\dagger$ & Coils (magnets) & Replaced & Conductor kAm $\times$ \$/kAm $\times$ markup; \$0 for IFE \\
-\hspace{1em}22.01.04$^\dagger$ & Heating (MFE) / driver (pulsed) & Extended & Per-MW linear; concept-specific driver capital for pulsed \\
+\hspace{1em}22.01.04$^\dagger$ & Heating (MFE) / driver (pulsed) & Extended & Per-MW heating; pulsed driver per-MJ (laser/accelerator) or per-MW (mechanical) \\
 \hspace{1em}22.01.05 & Primary structure & Inherited & Volume $\times$ power scale \\
 \hspace{1em}22.01.06 & Vacuum system & Inherited & Volume $\times$ power scale \\
 \hspace{1em}22.01.07$^\dagger$ & Power supplies & Replaced & Power-scaled (MFE); \$/J stored basis for all pulsed \\
@@ -1772,31 +1772,59 @@ adjusted from FOAK to NOAK.
 For pulsed concepts, the account covers the primary driver capital, namely
 the hardware that compresses or ignites the target.  This is the pulsed
 analog of the magnet system (CAS22.01.03): the mechanism that provides
-confinement.  Cost scales linearly with average driver power
+confinement.  The cost basis depends on the driver type.
+
+Lasers and accelerators are costed per joule of pulse energy.  Their
+capital is set by the per-pulse energy (laser aperture, amplifier and
+pump-diode count, accelerator beam energy and storage-ring charge) and not
+by how often the driver fires.  Repetition rate adds cooling and consumable
+replacement, which are sub-dominant capital and operating costs rather than
+a multiplier on the driver hardware itself.  Costing on average power
+$E_{\text{drv}} f_{\text{rep}}$ would instead price one physical laser
+across the $0.1$ to $15$~Hz range concepts run at as though it were a
+hundred different machines.  Hence
+\begin{equation}
+C_{220104} = c^{E}_{\text{drv}} \times E_{\text{drv}} \quad [\text{M\$}]
+\end{equation}
+with $c^{E}_{\text{drv}}$ in M\$/MJ.  Mechanical injectors instead
+accelerate target mass on every shot, so throughput (average power) drives
+their hardware count and wear, and they retain an average-power basis with
 $P_{\text{drv}} = E_{\text{drv}} \, f_{\text{rep}}$:
 \begin{equation}
-C_{220104} = c_{\text{drv}} \times P_{\text{drv}} \quad [\text{M\$}]
+C_{220104} = c^{P}_{\text{drv}} \times P_{\text{drv}} \quad [\text{M\$}]
 \end{equation}
+The per-joule coefficients reproduce the underlying \$/W NOAK projections at
+each driver's reference repetition rate (laser $\$8$/W at $10$~Hz gives
+$80$~M\$/MJ; heavy ion $\$12$/W at $5$~Hz gives $60$~M\$/MJ) and then hold
+constant away from that reference.
 
 \begin{table}[htbp]
-\caption{CAS22.01.04 driver \$/MW coefficients by pulsed concept.}
+\caption{CAS22.01.04 driver cost coefficients by pulsed concept.}
 \label{tab:cas2204-driver}
 \centering
-\begin{tabular}{lrl}
+\begin{tabular}{llrl}
 \toprule
-Concept & \$/MW & Hardware \\
+Concept & Basis & Coeff. & Hardware \\
 \midrule
-Laser IFE   &  8 & Diode-pumped solid-state laser \\
-Heavy ion   & 12 & RF linac + storage rings \\
-MagLIF      &  6 & Laser preheat system \\
-Mag.\ target &  3 & Pneumatic pistons, liquid metal loop \\
-Plasma jet  &  4 & Plasma gun array \\
+Laser IFE   & M\$/MJ & 80 & Diode-pumped solid-state laser \\
+Heavy ion   & M\$/MJ & 60 & RF linac + storage rings \\
+MagLIF      & M\$/MJ & 80 & Laser preheat; main driver in CAS22.01.07 \\
+Mag.\ target & M\$/MW &  3 & Pneumatic pistons, liquid metal loop \\
+Plasma jet  & M\$/MW &  4 & Plasma gun array \\
 \midrule
-Z-pinch, DPF, Staged Z-pinch & 0 & Driver is electrical (CAS22.01.07) \\
-Pulsed FRC, Theta pinch       & 0 & Driver is coils (CAS22.01.03) \\
+Z-pinch, DPF, Staged Z-pinch & n/a & 0 & Driver is electrical (CAS22.01.07) \\
+Pulsed FRC, Theta pinch       & n/a & 0 & Driver is coils (CAS22.01.03) \\
 \bottomrule
 \end{tabular}
 \end{table}
+
+For MagLIF the main driver is the electrical Z-pinch, costed in
+CAS22.01.07; the only CAS22.01.04 contribution is an optional laser
+preheat, costed per joule of preheat pulse energy
+$c_{\text{pre}} E_{\text{pre}}$ on the same diode-pumped solid-state laser
+basis as the IFE driver.  Magnetized-compression concepts that omit the
+preheat laser set $E_{\text{pre}} = 0$ and incur no preheat cost, while the
+coefficient remains available for those that include one.
 
 Concepts whose driver is purely electrical (pulsed power / capacitor
 bank) have their driver capital captured entirely in CAS22.01.07 on a
