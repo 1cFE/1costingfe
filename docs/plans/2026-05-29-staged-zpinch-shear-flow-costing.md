@@ -92,9 +92,18 @@ constants are anchored with sensitivity ranges in the justification writeup.
 4. `docs/account_justification/CAS22_reactor_components.md`: add the
    STAGED_ZPINCH row, update the PLASMA_JET row to $/MJ, add the MAG_TARGET
    "kept on average power" rationale, and an electrode-erosion O&M note.
-5. `docs/papers/1costingfe_paper/config_schema.md` and `1costingfe_paper.tex`:
-   add the new coefficients to the schema and the CAS22.01.04 driver table.
-6. Tests (`tests/test_cas22.py`, `tests/test_economics.py` or
+5. `docs/papers/1costingfe_paper/config_schema.md`: add `driver_staged_zpinch_per_mj`,
+   `driver_plasma_jet_per_mj` (replacing the per-MW entry), `electrode_shot_lifetime`,
+   and `electrode_replace_frac` to the schema table with defaults.
+6. `docs/papers/1costingfe_paper/1costingfe_paper.tex`: reflect the change in the
+   manuscript (current-methodology framing only, no history). In the CAS22.01.04
+   driver table (`tab:cas2204-driver`), add a STAGED_ZPINCH row (M$/MJ, 1.5) and
+   move PLASMA_JET to the $/MJ basis (4.0), updating the surrounding prose so the
+   per-MJ set reads laser / heavy-ion / staged-zpinch / plasma-jet and the
+   average-power set reads mag-target only. In the CAS70 / O&M section, add a
+   sentence on formation-electrode scheduled replacement for the EM-gun concepts.
+   Recompile to confirm it still builds.
+7. Tests (`tests/test_cas22.py`, `tests/test_economics.py` or
    `tests/test_costs.py`): STAGED_ZPINCH C220104 equals
    `driver_staged_zpinch_per_mj x e_driver_mj` and is > 0; bare ZPINCH C220104
    stays 0; PLASMA_JET C220104 unchanged at the default point after migration;
