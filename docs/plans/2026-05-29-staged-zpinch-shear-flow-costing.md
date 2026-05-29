@@ -9,67 +9,100 @@ Date: 2026-05-29
 `C220104 = 0`. The coaxial gun and gas-injection hardware that establishes the
 stabilizing velocity shear is not costed in any account; only the capacitor bank
 (C220107) and the vessel/structure are captured. This understates a sheared-flow
-Z-pinch relative to a bare `ZPINCH`, which physically lacks that hardware, so the
-two concepts are currently costed almost identically apart from their power
-balance.
+Z-pinch relative to a bare `ZPINCH`, which physically lacks that hardware.
+
+The same root cause touches a sibling: `PLASMA_JET`, an electromagnetic gun
+formation driver, is still costed on rep-rate-scaled average power (M$/MW), the
+basis issue #15 corrected for lasers and accelerators. And a defining recurring
+cost of any plasma-facing gun, electrode erosion, is not modeled at all.
 
 ## Scope
 
-Add a C220104 shear-flow drive line for `STAGED_ZPINCH` covering the full flow
-formation mechanism:
+Three changes, one root cause (electromagnetic-gun formation hardware was either
+uncosted or costed on a rep-rate-scaled basis):
 
-- Coaxial accelerator/gun electrode assembly: inner and outer electrodes,
-  acceleration region, and assembly region.
-- Neutral-gas injection system: fast puff valves, gas plenum/manifold, and the
-  fast differential pumping needed to clear neutral gas between shots.
+1. **STAGED_ZPINCH shear-flow drive (C220104, new).** Coaxial gun electrode
+   assembly (inner/outer electrodes, acceleration + assembly regions) plus the
+   neutral-gas injection system (fast puff valves, plenum, fast differential
+   pumping). The capacitor bank that drives the current stays in C220107. Per-MJ
+   basis.
+2. **PLASMA_JET basis migration (C220104).** Move from $/MW to $/MJ; the
+   per-pulse-capital logic that applies to the sheared-flow gun applies equally
+   to a plasma-gun. Reference-point cost preserved exactly.
+3. **Formation-electrode replacement O&M (CAS72).** Plasma-facing gun electrodes
+   on `STAGED_ZPINCH` and `PLASMA_JET` erode and are periodically replaced.
 
-The capacitor bank that drives the current stays in C220107 (avoids
-double-counting the pulsed power). The vessel and primary structure stay in
-C220106/C220105.
+`MAG_TARGET` deliberately stays on $/MW: pneumatic pistons plus liquid-metal
+liner recirculation physically move mass on every shot, so the handling and
+recirculation plant genuinely scales with throughput (average power). This
+rationale will be written into the justification doc rather than left implicit.
 
 ## Cost model
 
-Basis: per joule of pulse energy, `C220104 = driver_staged_zpinch_per_mj x e_driver_mj`.
+### C220104 per-MJ drivers
 
-Rationale (consistent with issue #15): the coaxial gun's capital is set by its
-physical size and peak current, which are fixed by the per-pulse energetics, not
-by how often it fires. Higher repetition rate adds cooling and accelerates
-electrode erosion (replacement = O&M), but the dominant electrode assembly is
-unchanged. The fast-valve gas hardware is likewise per-pulse; only the
-differential-pumping increment is throughput-scaled, and it is secondary. A
-single coaxial gun is not an array whose count scales with throughput, so the
-average-power story that keeps PLASMA_JET and MAG_TARGET on $/MW does not apply
-here.
+Both move into the `_DRIVER_COST_PER_MJ` dispatch map (cost = coefficient x
+`e_driver_mj`, rep-rate-independent):
 
-New constant: `driver_staged_zpinch_per_mj = 1.5` (M$/MJ).
+- `driver_staged_zpinch_per_mj = 1.5` (M$/MJ). About $132M at the default
+  `e_driver_mj` = 88 MJ, roughly 14% of the $913M plant. Cheaper per MJ than the
+  PLASMA_JET array (about 4 M$/MJ implied) since it is a single, simpler coaxial
+  assembly. Sensitivity 0.75 to 3.0 M$/MJ; no hard public source.
+- `driver_plasma_jet_per_mj = 4.0` (M$/MJ), replacing `driver_plasma_jet_per_mw`.
+  PLASMA_JET runs at f_rep = 1.0 Hz, so this preserves its current C220104
+  ($436.6M at `e_driver_mj` = 109 MJ) exactly while removing the rep-rate
+  scaling.
 
-- Cheaper per MJ than the PLASMA_JET gun *array* (about 4 M$/MJ implied,
-  $437M / 109 MJ), since this is a single, simpler coaxial assembly.
-- At the default operating point (`e_driver_mj` = 88 MJ) this gives
-  `C220104` of about $132M, roughly 14% of the $913M plant, consistent with the
-  low-cost-pulsed-power premise of the concept.
-- No hard public source for the coefficient; sensitivity range 0.75 to 3.0
-  M$/MJ (0.5x to 2x), to be stated in the justification writeup.
+### Electrode-replacement O&M (CAS72)
+
+Modeled as a levelized annual recurring cost, not discrete replacement events:
+electrode lifetime can be sub-multi-year, and the existing discrete-event PV loop
+in `cas70` caps at `MAX_REP = 20`, which would truncate a frequently-replaced
+consumable. A continuous annual rate is the robust representation.
+
+    n_shots_per_year = f_rep * 8760 * 3600 * availability
+    annual_electrode  = electrode_replace_frac * C220104 * n_mod
+                        * n_shots_per_year / electrode_shot_lifetime
+
+This is levelized like CAS71 and added to CAS72. It applies only to the
+eroding-electrode EM guns, `{STAGED_ZPINCH, PLASMA_JET}`.
+
+New constants:
+
+- `electrode_shot_lifetime = 1.0e8` (shots before electrode-assembly
+  replacement; plasma-facing erosion, high uncertainty; range 1e7 to 1e9, same
+  order as `cap_shot_lifetime`).
+- `electrode_replace_frac = 0.5` (consumable-electrode share of the C220104
+  flow-drive capital; the gas valves, plenum, and pumping are the non-consumable
+  remainder; range 0.25 to 0.75).
+
+At the STAGED_ZPINCH default point this is about $18M/yr
+(0.5 x $132M x 2.68e7 shots/yr / 1e8). The magnitude is an estimate; both
+constants are anchored with sensitivity ranges in the justification writeup.
 
 ## Implementation
 
-1. `src/costingfe/defaults.py`: add `driver_staged_zpinch_per_mj: float = 1.5`
-   in the C220104 pulsed-driver block, with a comment explaining the basis.
-2. `src/costingfe/layers/cas22.py`: add
-   `ConfinementConcept.STAGED_ZPINCH: cc.driver_staged_zpinch_per_mj` to the
-   `_DRIVER_COST_PER_MJ` map (the per-pulse-energy driver dispatch).
-3. `docs/account_justification/CAS22_reactor_components.md`: add a
-   `STAGED_ZPINCH` row to the driver table and a short rationale paragraph
-   (hardware scope, per-MJ basis, magnitude and sensitivity).
-4. `docs/papers/1costingfe_paper/config_schema.md` and
-   `1costingfe_paper.tex`: add the new coefficient to the schema row and the
-   CAS22.01.04 driver table.
-5. Tests (`tests/test_cas22.py`): assert `STAGED_ZPINCH` C220104 equals
-   `driver_staged_zpinch_per_mj x e_driver_mj` and is > 0, and that bare
-   `ZPINCH` C220104 stays 0.
+1. `src/costingfe/defaults.py`: add `driver_staged_zpinch_per_mj = 1.5`; replace
+   `driver_plasma_jet_per_mw` with `driver_plasma_jet_per_mj = 4.0`; add
+   `electrode_shot_lifetime = 1.0e8` and `electrode_replace_frac = 0.5`.
+2. `src/costingfe/layers/cas22.py`: add `STAGED_ZPINCH` and `PLASMA_JET` to
+   `_DRIVER_COST_PER_MJ`; remove `PLASMA_JET` from `_DRIVER_COST_PER_MW`.
+3. `src/costingfe/layers/costs.py` (`cas70`): add a formation-electrode annual
+   replacement term for `{STAGED_ZPINCH, PLASMA_JET}`, levelized into CAS72.
+4. `docs/account_justification/CAS22_reactor_components.md`: add the
+   STAGED_ZPINCH row, update the PLASMA_JET row to $/MJ, add the MAG_TARGET
+   "kept on average power" rationale, and an electrode-erosion O&M note.
+5. `docs/papers/1costingfe_paper/config_schema.md` and `1costingfe_paper.tex`:
+   add the new coefficients to the schema and the CAS22.01.04 driver table.
+6. Tests (`tests/test_cas22.py`, `tests/test_economics.py` or
+   `tests/test_costs.py`): STAGED_ZPINCH C220104 equals
+   `driver_staged_zpinch_per_mj x e_driver_mj` and is > 0; bare ZPINCH C220104
+   stays 0; PLASMA_JET C220104 unchanged at the default point after migration;
+   electrode O&M raises CAS72 for STAGED_ZPINCH and PLASMA_JET and is 0 for a
+   non-gun concept.
 
 ## Out of scope / follow-ups
 
-- Migrating PLASMA_JET and MAG_TARGET from $/MW to $/MJ for full
-  cross-driver consistency in C220104.
-- A dedicated electrode-replacement O&M line (CAS70-side).
+- Migrating `MAG_TARGET` to $/MJ (deliberately retained on average power as a
+  throughput-scaled mechanical driver).
+- Electrode-erosion O&M for any non-gun concept.
