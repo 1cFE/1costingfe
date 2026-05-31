@@ -49,6 +49,12 @@ _COIL_DEFAULTS = {
     # is a distinct piece of tech (cooled mid-plasma, persistent current while
     # disconnected, unshielded). See cas22 DIPOLE branch below.
     ConfinementConcept.DIPOLE: {"markup": 3.0, "path_factor": 1.0, "n_coils": 2},
+    # Steady-state FRC (beam-driven, e.g. TAE; RMF-driven PFRC) is a linear,
+    # open-field-line device like a mirror: external formation + mirror/end-plug
+    # coils discretized as independent solenoids (G = n_coils * 4*pi). The
+    # self-organized internal FRC field carries no coil cost. n_coils counts only
+    # the external coil set; resistive-magnet markup is lower than HTS mirrors.
+    ConfinementConcept.STEADY_FRC: {"markup": 2.0, "path_factor": 1.0, "n_coils": 4},
     ConfinementConcept.PULSED_FRC: {"markup": 1.5, "path_factor": 1.0, "n_coils": 0},
     ConfinementConcept.THETA_PINCH: {"markup": 1.5, "path_factor": 1.0, "n_coils": 0},
     ConfinementConcept.ORBITRON: {"markup": 1.5, "path_factor": 1.0, "n_coils": 0},
@@ -66,6 +72,7 @@ _COIL_DEFAULTS = {
 }
 
 _MU0 = 4 * math.pi * 1e-7  # Vacuum permeability (T·m/A)
+_RHO_CU = 8960.0  # Copper density (kg/m³), for resistive-coil mass build-up
 
 
 def _compute_geometry_factor(
@@ -79,11 +86,16 @@ def _compute_geometry_factor(
 
     Tokamak: G = 4pi^2 — empirical total-system (TF+CS+PF) scaling.
     Mirror:  G = n_coils * 4*pi — sum over independent solenoid coils.
+    Steady FRC: G = n_coils * 4*pi — linear device, same as mirror.
     Dipole:  G = n_coils * 4*pi — sum over the stationary levitation coils
              (the levitated coil is costed separately, not via this factor).
     Stellarator: G = 4*pi^2 * path_factor — 3D coil paths ~2x longer.
     """
-    if concept in (ConfinementConcept.MIRROR, ConfinementConcept.DIPOLE):
+    if concept in (
+        ConfinementConcept.MIRROR,
+        ConfinementConcept.STEADY_FRC,
+        ConfinementConcept.DIPOLE,
+    ):
         return n_coils * 4 * math.pi
     elif concept == ConfinementConcept.STELLARATOR:
         return 4 * math.pi**2 * path_factor
@@ -118,6 +130,8 @@ def cas22_reactor_plant_equipment(
     p_driver: float,
     f_dec: float,
     p_dee: float,
+    burn_fraction: float,
+    vac_op_pressure_pa: float,
     e_driver_mj: float = 0.0,  # Per-pulse driver energy [MJ]; $/J laser/accel basis
     e_preheat_mj: float = 0.0,  # Per-pulse preheat laser energy [MJ]; 0 = no preheat
     # Pulsed DEC parameters
@@ -135,6 +149,11 @@ def cas22_reactor_plant_equipment(
     Volume-based accounts use hybrid formula:
       cost = unit_cost * volume * (power / power_ref)^alpha
     This captures both reactor size (volume) and thermal intensity (power).
+
+    Sub-line convention: where one account aggregates components with distinct
+    cost bases, informational sub-lines keyed `<CODE>_<component>` are emitted
+    alongside the canonical total (e.g. C220106_vessel, C220106_pump). They are
+    excluded from all aggregation and exist for visibility / sensitivity only.
     """
     # Reference power levels at calibration geometry (1 GWe DT tokamak)
     P_TH_REF = 2500.0  # MW thermal
@@ -180,10 +199,17 @@ def cas22_reactor_plant_equipment(
     )
 
     # -----------------------------------------------------------------------
-    # 220103: Coils — conductor scaling law
-    # cost = total_kAm * $/kAm * markup / 1e6
-    # REBCO HTS default: $50/kAm (NOAK target; current market $150-300/kAm)
-    # Markup captures winding, insulation, quench protection, cryostat, testing
+    # 220103: Coils. Two cost regimes on the same ampere-meter quantity
+    # (total_kAm = G * b_max * r_coil^2 / mu0):
+    #   - Superconducting (HTS/LTS): cost = total_kAm * $/kAm * markup. The
+    #     expensive conductor dominates; REBCO $50/kAm (NOAK), markup captures
+    #     winding, quench protection, cryostat, testing.
+    #   - Resistive (copper): the conductor is cheap per kAm, so cost is set by
+    #     the bulk copper MASS plus structure and fabrication, not by $/kAm.
+    #     Re-price the same ampere-meters by mass: m_Cu = (rho_Cu / J) *
+    #     ampere_meters, add steel support, apply fabrication markups. This is
+    #     the right basis for low-field FRC/linear copper coils, where the
+    #     $/kAm path collapses to a near-zero, unphysical number.
     # See docs/account_justification/CAS22_reactor_components.md
     # -----------------------------------------------------------------------
     defaults = _COIL_DEFAULTS.get(concept)
@@ -199,8 +225,18 @@ def cas22_reactor_plant_equipment(
             raise ValueError(f"n_coils must be >= 0, got {n_coils_eff}")
         G = _compute_geometry_factor(concept, path_factor, n_coils_eff)
         total_kAm = G * b_max * r_coil**2 / (_MU0 * 1000)
-        conductor_cost = total_kAm * coil_material.default_cost_per_kAm / 1e6
-        c220103 = conductor_cost * coil_markup
+        if coil_material == CoilMaterial.COPPER:
+            ampere_meters = total_kAm * 1000.0
+            j_a_m2 = cc.coil_cu_current_density_a_mm2 * 1e6
+            m_cu = (_RHO_CU / j_a_m2) * ampere_meters
+            m_steel = cc.coil_struct_fraction * m_cu
+            c220103 = (
+                m_cu * cc.coil_cu_price_per_kg * cc.coil_cu_fab_markup
+                + m_steel * cc.coil_steel_price_per_kg * cc.coil_steel_fab_markup
+            ) / 1e6
+        else:
+            conductor_cost = total_kAm * coil_material.default_cost_per_kAm / 1e6
+            c220103 = conductor_cost * coil_markup
 
     # Levitated dipole: the floating field coil is a distinct cost object, not
     # another entry in the stationary-coil sum. It is a single HTS ring (G=4*pi)
@@ -261,11 +297,45 @@ def cas22_reactor_plant_equipment(
     c220105 = cc.structure_unit_cost * structure_vol * (p_et / P_ET_REF) ** 0.5
 
     # -----------------------------------------------------------------------
-    # 220106: Vacuum System — vessel (double-walled SS), port extensions,
-    # cryopumps, vacuum gauges, leak detection.
-    # See docs/account_justification/CAS22_reactor_components.md
+    # 220106: Vacuum System = vessel shell (volume-based) + gas-load pumping.
+    # Vessel: double-walled SS chamber, port extensions, gauges, leak detection.
+    # Pumping: installed speed S_req = Q_gas / P_op set by the gas throughput,
+    # NOT vessel volume. Q_gas = NBI neutral-gas load (beam particle rate / E_b)
+    # + fueling/exhaust throughput (fusion rate / burn_fraction). Outgassing
+    # (surface-area term) is negligible for a baked UHV system and is omitted.
+    # Applied uniformly to every concept; P_op (the plenum pressure at the pump
+    # throat) is the concept-specific knob that makes low-pressure devices
+    # (FRC, mirror) pump far more than a high-pressure tokamak divertor.
+    # See docs/account_justification/CAS220106_vacuum_pumping.md
     # -----------------------------------------------------------------------
-    c220106 = cc.vessel_unit_cost * vessel_vol * (p_et / P_ET_REF) ** 0.6
+    c220106_vessel = cc.vessel_unit_cost * vessel_vol * (p_et / P_ET_REF) ** 0.6
+
+    _KB = 1.380649e-23  # Boltzmann constant [J/K]
+    _QE = 1.602176634e-19  # elementary charge [J/eV]
+    kt_gas = _KB * cc.pump_gas_temp_k  # Pa·m³ per pumped particle (Q = N*kT)
+    e_fus_mev = {
+        Fuel.DT: cc.e_fus_mev_dt,
+        Fuel.DD: cc.e_fus_mev_dd,
+        Fuel.DHE3: cc.e_fus_mev_dhe3,
+        Fuel.PB11: cc.e_fus_mev_pb11,
+    }[fuel]
+    # NBI neutral-gas throughput [Pa·m³/s]: beam particle rate = p_nbi / E_b.
+    e_b_j = cc.nbi_beam_energy_kev * 1e3 * _QE
+    q_nbi = cc.pump_nbi_gas_amplification * (p_nbi * 1e6 / e_b_j) * kt_gas
+    # Fueling/exhaust throughput [Pa·m³/s]: fuel feed = reaction_rate / burn_fraction;
+    # the unburned fraction circulates through the pump each pass.
+    e_fus_j = e_fus_mev * 1e6 * _QE
+    reaction_rate = p_fus * 1e6 / e_fus_j  # reactions/s
+    q_fuel = (
+        cc.pump_ion_per_reaction
+        * (1.0 - burn_fraction)
+        / burn_fraction
+        * reaction_rate
+        * kt_gas
+    )
+    s_req = (q_nbi + q_fuel) / vac_op_pressure_pa  # required pumping speed [m³/s]
+    c220106_pump = cc.pump_unit_cost * s_req
+    c220106 = c220106_vessel + c220106_pump
 
     # -----------------------------------------------------------------------
     # 220107: Power Supplies — vendor-purchased (ABB, GE, Siemens)
@@ -459,6 +529,11 @@ def cas22_reactor_plant_equipment(
         "C220104": c220104,
         "C220105": c220105,
         "C220106": c220106,
+        # Informational split of C220106 (vessel shell vs gas-load pumping).
+        # Not aggregated: the canonical C220106 already carries the sum. These
+        # are for visibility and sensitivity tracing only.
+        "C220106_vessel": c220106_vessel,
+        "C220106_pump": c220106_pump,
         "C220107": c220107,
         "C220108": c220108,
         "C220109": c220109,

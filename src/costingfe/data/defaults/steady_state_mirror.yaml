@@ -35,6 +35,8 @@ blanket_t: 0.80      # Blanket thickness (DT breeding requirement)
 ht_shield_t: 0.20    # High-temperature shield
 structure_t: 0.15    # Primary structure
 vessel_t: 0.10       # Vacuum vessel
+vac_op_pressure_pa: 0.02  # Open-field-line device: low neutral pressure to limit
+                          # charge-exchange losses -> high pumping speed required
 
 # Construction
 construction_time_yr: 5.0  # Years (simpler geometry)

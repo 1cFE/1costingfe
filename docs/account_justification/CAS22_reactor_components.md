@@ -182,6 +182,44 @@ along the central cell. Simple-mirror devices (Anvil/WHAM/BEAM) use
 n_coils≈4. The value lives in `_COIL_DEFAULTS[MIRROR]` in
 `src/costingfe/layers/cas22.py`.
 
+### Resistive (copper) coil mass build-up
+
+The `$/kAm × markup` model is correct when an expensive superconductor
+dominates cost, which holds for high-field SC coils. For a low-field
+resistive copper coil (an FRC at near-unity beta runs external fields of
+order 0.1 to 1 T) the conductor is cheap per kAm, so the `$/kAm` path
+collapses to a near-zero, unphysical number while the machine still has
+tonnes of copper to wind and support. For copper coils the cost is
+therefore a **mass build-up**, re-pricing the same ampere-meters by mass:
+
+    ampere_meters = total_kAm × 1000
+    m_Cu    = (ρ_Cu / J) × ampere_meters          # J = current density
+    m_steel = f_struct × m_Cu
+    C220103 = (m_Cu × cu_$/kg × cu_markup
+               + m_steel × steel_$/kg × steel_markup) / 1e6
+
+| Parameter | Value | Basis |
+|---|---|---|
+| ρ_Cu | 8960 kg/m³ | physical |
+| J (current density) | 5 A/mm² | water-cooled copper practice |
+| cu_$/kg | 11 | LME 2026-class copper |
+| cu_markup | 3.5 | winding, insulation, cooling, jointing, test (ARIES/pyFECONS class) |
+| f_struct | 0.6 | steel support mass / copper mass |
+| steel_$/kg | 6 | fabricated structural steel |
+| steel_markup | 3.0 | coil-case / inter-coil support fabrication |
+
+Worked example (steady FRC, B=0.5 T, R=1.85 m, n_coils=4): total_kAm
+about 68,500, so ampere-meters about 6.85e7, m_Cu about 123 t, m_steel
+about 74 t, **C220103 about $6.0M** (sourced range $1.4 to 14M). The
+field model gave about $0.1M at the same field, which is unphysical.
+
+The branch is selected by `coil_material == COPPER`, so it applies
+uniformly to every copper concept (steady FRC, pulsed FRC, theta pinch,
+polywell, orbitron) and leaves superconducting concepts (tokamak,
+stellarator, mirror, dipole) on the `$/kAm` path unchanged. The mass
+build-up reuses the concept's geometry factor `G`, so no new geometry
+assumption is introduced.
+
 ---
 
 ## C220104: Supplementary Heating (MFE) / Primary Driver (pulsed)
@@ -196,6 +234,26 @@ target factory (IFE/MIF).
 
 These are **vendor-purchased turnkey systems**: the per-MW cost includes
 the vendor's engineering, manufacturing, testing, and margin.
+
+#### Power basis and the heating-split invariant
+
+C220104 is priced per MW of **injected heating power**. The split
+`{p_nbi, p_icrf, p_ecrh, p_lhcd}` is the same heating power the 0D power
+balance uses (`q_sci = p_fus / p_input`); the wall-plug draw
+`p_input / eta_pin` enters the recirculating power, not this capital line.
+To keep the costed MW identical to the power-balance MW, the split is
+treated as the heating **mix** and normalized so its total equals
+`p_input`. Overriding `p_input` without the split therefore rescales the
+split, and the costed heating always tracks the physics. A fully zero
+split (electrostatic concepts whose input power is not NBI/RF heating,
+e.g. orbitron, polywell) stays zero, so their NBI/RF capital is correctly
+$0.
+
+Pricing the supply-dominated NBI capital on wall-plug power
+(`p_input / eta_pin`), which would auto-elevate low-coupling concepts
+such as the FRC, is a deliberate further refinement that is not applied
+here; the driver's recirculating-power burden is already represented via
+`eta_pin` in the power balance.
 
 #### Per-MW costs (M$/MW, 2023$)
 
@@ -324,18 +382,33 @@ dominated by conventional heavy structural steelwork.
 
 ## C220106: Vacuum System
 
-### Costing model
+The account is a sum of two parts that scale on different drivers:
 
-    C220106 = vessel_unit_cost × V_vessel × (P_et / 1100)^0.6
+    C220106 = vessel_shell + pumping
 
-where `vessel_unit_cost = 0.72 M$/m³`.
+### Vessel shell (volume-based)
 
-This covers the vacuum vessel (double-walled, welded stainless steel),
-port extensions, cryopumps, vacuum gauges, and leak detection systems.
+    vessel_shell = vessel_unit_cost × V_vessel × (P_et / 1100)^0.6
+
+where `vessel_unit_cost = 0.72 M$/m³`. This covers the welded stainless
+chamber, port extensions, gauges, and leak detection, scaling with reactor
+size.
+
+### Pumping (gas-load-based)
+
+Installed pumping speed is set by gas throughput and operating pressure,
+`S_req = (Q_nbi + Q_fuel) / P_op`, costed at `pump_unit_cost` per (m³/s).
+NBI neutral-gas load scales as `p_nbi/E_b`; fueling/exhaust load scales as
+`(1-burn_fraction)/burn_fraction × p_fus/E_fus`. The per-concept operating
+pressure `vac_op_pressure_pa` is the key driver: high-pressure tokamak
+divertors pump cheaply, low-pressure linear devices (mirror, FRC) pump
+expensively. Full derivation, calibration, per-concept results, and
+uncertainties are in
+[CAS220106_vacuum_pumping.md](CAS220106_vacuum_pumping.md).
 
 ### Validation
 
-At reference ($151M): vessel volume ~210 m³.
+Vessel-shell at reference ($151M): vessel volume ~210 m³.
 
 ITER vacuum vessel: 5,200 tonnes, 9 sectors.  Assembly contract alone
 is $180M (Westinghouse, 2025).  Total ITER VV fabrication + assembly is

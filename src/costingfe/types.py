@@ -11,6 +11,7 @@ class ConfinementConcept(Enum):
     TOKAMAK = "tokamak"
     STELLARATOR = "stellarator"
     MIRROR = "mirror"
+    STEADY_FRC = "steady_frc"
     DIPOLE = "dipole"
     LASER_IFE = "laser_ife"
     ZPINCH = "zpinch"
@@ -35,6 +36,7 @@ CONCEPT_TO_FAMILY = {
     ConfinementConcept.TOKAMAK: ConfinementFamily.STEADY_STATE,
     ConfinementConcept.STELLARATOR: ConfinementFamily.STEADY_STATE,
     ConfinementConcept.MIRROR: ConfinementFamily.STEADY_STATE,
+    ConfinementConcept.STEADY_FRC: ConfinementFamily.STEADY_STATE,
     ConfinementConcept.DIPOLE: ConfinementFamily.STEADY_STATE,
     ConfinementConcept.LASER_IFE: ConfinementFamily.PULSED,
     ConfinementConcept.ZPINCH: ConfinementFamily.PULSED,

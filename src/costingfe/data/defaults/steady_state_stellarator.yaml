@@ -35,6 +35,7 @@ blanket_t: 0.80      # Blanket thickness (same TBR requirement as tokamak)
 ht_shield_t: 0.20    # High-temperature shield
 structure_t: 0.15    # Primary structure
 vessel_t: 0.10       # Vacuum vessel
+vac_op_pressure_pa: 3.0  # Island/divertor plenum pressure [Pa], tokamak-like
 
 # Construction
 construction_time_yr: 8.0  # Years (complex 3D coils, harder assembly)

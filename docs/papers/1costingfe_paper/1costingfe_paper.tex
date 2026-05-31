@@ -1424,7 +1424,7 @@ CAS & Description & Disposition & Method \\
 \hspace{1em}22.01.03$^\dagger$ & Coils (magnets) & Replaced & Conductor kAm $\times$ \$/kAm $\times$ markup; \$0 for IFE \\
 \hspace{1em}22.01.04$^\dagger$ & Heating (MFE) / driver (pulsed) & Extended & Per-MW heating; pulsed driver per-MJ (laser/accelerator) or per-MW (mechanical) \\
 \hspace{1em}22.01.05 & Primary structure & Inherited & Volume $\times$ power scale \\
-\hspace{1em}22.01.06 & Vacuum system & Inherited & Volume $\times$ power scale \\
+\hspace{1em}22.01.06$^\dagger$ & Vacuum system & Extended & Vessel volume scale + gas-load pumping ($S=Q/P_{\rm op}$) \\
 \hspace{1em}22.01.07$^\dagger$ & Power supplies & Replaced & Power-scaled (MFE); \$/J stored basis for all pulsed \\
 \hspace{1em}22.01.08 & Divertor / target factory & Inherited & Thermal-scaled (MFE) or power-scaled (IFE) \\
 \hspace{1em}22.01.09 & Direct energy converter & Replaced & Mirror/FRC override; circuit-derived markups for inductive DEC \\
@@ -1608,8 +1608,8 @@ superseding ARIES/pyFECONS values.
 \label{sec:cas22-inherited}
 
 Sub-accounts CAS22.01.02 (shield), 22.01.05 (primary structure),
-22.01.06 (vacuum system), 22.01.08 (divertor), and 22.01.11
-(installation labor) inherit the methodology of the pyFECONS
+22.01.08 (divertor), and 22.01.11 (installation labor) inherit the
+methodology of the pyFECONS
 implementation \citep{woodruff2026} unchanged: hybrid volume +
 thermal-intensity scaling for component accounts and
 percentage-of-subtotal for installation labor. They are not
@@ -1676,7 +1676,7 @@ given concept built worldwide, not on $n_{\rm mod}$, which represents
 units at a single site.
 
 %% ------------------------------------------------------------
-\subsection{CAS22.01.03: Superconducting Coils}
+\subsection{CAS22.01.03: Coils (Superconducting and Resistive)}
 \label{sec:cas2203}
 
 CAS22.01.03 covers the magnet system: toroidal field (TF), central
@@ -1748,6 +1748,32 @@ industrial supply chain requiring \$10{,}000/kg falling to \$75/kg), the
 REBCO cost trajectory is a manufacturing learning curve for an
 existing product, making the aggressive target more defensible.
 
+\subsubsection{Resistive Copper Coils}
+The \$/kA-m model is correct where an expensive superconductor dominates
+cost. For low-field resistive copper coils (an FRC at near-unity beta
+runs external fields of order $0.1$--$1$~T) the conductor is cheap per
+kA-m, so that path collapses to a near-zero, unphysical figure while the
+machine still has tonnes of copper to wind and support. When the
+conductor material is copper, the account is instead a \emph{mass
+build-up} that re-prices the same ampere-metres by mass:
+\begin{equation}
+  C_{220103} = \frac{1}{10^6}\left( m_{\text{Cu}}\, p_{\text{Cu}}\, k_{\text{Cu}}
+    + m_{\text{st}}\, p_{\text{st}}\, k_{\text{st}} \right),
+\end{equation}
+with $m_{\text{Cu}} = (\rho_{\text{Cu}}/J)\,(\text{ampere-metres})$,
+$\rho_{\text{Cu}} = 8960$~kg/m$^3$, current density $J = 5$~A/mm$^2$,
+copper price $p_{\text{Cu}} = 11$~\$/kg, fabrication markup
+$k_{\text{Cu}} = 3.5$, steel support mass $m_{\text{st}} = 0.6\,m_{\text{Cu}}$,
+$p_{\text{st}} = 6$~\$/kg, and $k_{\text{st}} = 3.0$. The ampere-metres
+are the same $G\,B_{\max}R_{\text{coil}}^2/\mu_0$ quantity as the
+superconducting path, so no new geometry assumption is introduced. The
+branch is selected by conductor material, so it applies to every copper
+concept (steady and pulsed FRC, theta pinch, polywell, orbitron) and
+leaves superconducting concepts on the \$/kA-m path. A steady FRC at
+$B = 0.5$~T, $R = 1.85$~m, $n_{\text{coils}} = 4$ carries about 123~t of
+copper and 74~t of steel, giving $C_{220103} \approx \$6$M, versus about
+\$0.1M from the \$/kA-m path at the same field.
+
 
 %% ------------------------------------------------------------
 \subsection{CAS22.01.04: Supplementary Heating / Primary Driver}
@@ -1767,6 +1793,22 @@ where $c_{\text{NBI}} = 7.06$, $c_{\text{ICRF}} = 4.15$,
 $c_{\text{ECRH}} = 5.00$, $c_{\text{LHCD}} = 4.00$ (all M\$/MW,
 2023\$).  The per-MW costs are calibrated to ITER procurement contracts,
 adjusted from FOAK to NOAK.
+
+The split $P_i$ is priced per MW of \emph{injected} heating power, the
+same $P_{\text{in}}$ the power balance uses ($q_{\text{sci}} =
+P_{\text{fus}}/P_{\text{in}}$); the wall-plug draw
+$P_{\text{in}}/\eta_{\text{pin}}$ enters the recirculating power, not this
+capital line. To keep the costed power identical to the power-balance
+power, the split is the heating \emph{mix} and is normalized so
+$\sum_i P_i = P_{\text{in}}$; overriding $P_{\text{in}}$ rescales the
+split, so the costed heating always tracks the physics. A fully zero
+split (electrostatic concepts whose input power is not NBI/RF heating,
+e.g.\ orbitron, polywell) stays zero, leaving their heating capital at
+\$0. Pricing the supply-dominated NBI capital on wall-plug power
+$P_{\text{in}}/\eta_{\text{pin}}$, which would auto-elevate low-coupling
+concepts such as the FRC, is a deliberate refinement not applied here;
+the driver's recirculating burden is already represented through
+$\eta_{\text{pin}}$.
 
 \subsubsection{Pulsed Concepts}
 For pulsed concepts, the account covers the primary driver capital, namely
@@ -1837,6 +1879,59 @@ bank) have their driver capital captured entirely in CAS22.01.07 on a
 \$/J stored basis, avoiding double-counting.  Similarly, concepts
 whose confinement is provided by coils (pulsed FRC, theta pinch) have
 that hardware in CAS22.01.03.
+
+%% ------------------------------------------------------------
+\subsection{CAS22.01.06: Vacuum System}
+\label{sec:cas2206}
+
+CAS22.01.06 is a sum of two parts with different cost drivers:
+\begin{equation}
+  C_{220106} = C_{\text{vessel}} + C_{\text{pump}}.
+\end{equation}
+The \emph{vessel shell} (welded stainless chamber, ports, gauges, leak
+detection) is volume-based, scaling with reactor size:
+\begin{equation}
+  C_{\text{vessel}} = c_{\text{ves}}\, V_{\text{ves}} \left( \frac{P_{\text{et}}}{1100} \right)^{0.6}, \qquad c_{\text{ves}} = 0.72~\text{M\$/m}^3.
+\end{equation}
+The \emph{pumping} system is sized by gas throughput, not vessel volume.
+A pump of speed $S$ removes a throughput $Q = S P$, so the installed
+speed required to hold an operating (plenum) pressure $P_{\text{op}}$ is
+$S_{\text{req}} = Q_{\text{gas}}/P_{\text{op}}$, costed at
+$c_{\text{pump}} = 0.015$~M\$ per (m$^3$/s) (commodity cryopump
+procurement, \$15/(L/s)). The gas load has two sources; wall outgassing
+scales with surface area but is negligible for a baked UHV system and is
+omitted:
+\begin{align}
+  Q_{\text{NBI}} &= g\, \frac{P_{\text{NBI}}}{E_b}\, k_B T, \\
+  Q_{\text{fuel}} &= n_{\text{ion}}\, \frac{1 - f_b}{f_b}\, \frac{P_{\text{fus}}}{E_{\text{fus}}}\, k_B T,
+\end{align}
+with $T = 300$~K, gas amplification $g = 1$ (gas particles pumped per
+beam particle, calibrated to the C-2W machine's roughly 2000~m$^3$/s
+divertor pumping), reference NBI energy $E_b = 120$~keV (the NBI gas
+load scales as $1/E_b$), $n_{\text{ion}} = 2$ ions consumed per
+reaction, and $E_{\text{fus}}$ the fuel-dependent energy per reaction.
+Then $C_{\text{pump}} = c_{\text{pump}}(Q_{\text{NBI}} + Q_{\text{fuel}})/P_{\text{op}}$.
+
+The operating pressure $P_{\text{op}}$ is the dominant, concept-specific
+driver, set per concept: a few~Pa for tokamak and stellarator divertor
+plenums (high-recycling regions designed to pump at high pressure),
+versus $0.02$--$0.05$~Pa for open-field-line linear devices (mirror,
+FRC) that must hold a low neutral pressure to limit charge-exchange
+losses. The same throughput therefore costs an FRC roughly $60\times$
+more to pump than a tokamak. The fueling term dominates over the NBI
+term at reactor beam energies; because aneutronic p-B$^{11}$ releases
+about half the energy per reaction of D-T, it runs about twice the
+reaction rate and pumps about twice the fuel throughput at equal fusion
+power. The pumping model applies uniformly to every concept, so these
+differences fall out of the inputs rather than per-concept hand-tuning.
+
+\paragraph{Reporting convention.} Where a single account aggregates
+components with distinct cost bases, the model emits informational
+sub-lines keyed \texttt{<CODE>\_<component>} (here
+\texttt{C220106\_vessel} and \texttt{C220106\_pump}) alongside the
+canonical total. These sub-lines are excluded from all aggregation and
+exist only for visibility and sensitivity tracing. CAS22.01.06 is
+currently the sole account that uses them.
 
 %% ------------------------------------------------------------
 \subsection{CAS22.01.07: Power Supplies}

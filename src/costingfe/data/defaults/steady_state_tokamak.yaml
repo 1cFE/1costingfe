@@ -33,6 +33,8 @@ blanket_t: 0.80      # Blanket thickness
 ht_shield_t: 0.20    # High-temperature shield
 structure_t: 0.20    # Primary structure
 vessel_t: 0.20       # Vacuum vessel
+vac_op_pressure_pa: 3.0  # Divertor plenum pressure [Pa]; high-recycling region
+                         # pumps at high pressure -> modest speed needed
 
 # Construction
 construction_time_yr: 6.0  # Years

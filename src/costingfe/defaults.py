@@ -47,6 +47,16 @@ class CostingConstants:
     shield_unit_cost: float = 0.74  # M$/m³, DT reference
 
     # 220103-220108: Reactor components
+    # 220103: Resistive (copper) coil mass build-up. Low-field resistive coils
+    # cost their bulk conductor mass + structure + fabrication, not the
+    # superconductor ampere-meter price. Superconducting coils keep the
+    # $/kAm path. See docs/account_justification/CAS22_reactor_components.md
+    coil_cu_current_density_a_mm2: float = 5.0  # water-cooled copper current density
+    coil_cu_price_per_kg: float = 11.0  # copper conductor, $/kg (LME 2026 class)
+    coil_cu_fab_markup: float = 3.5  # winding, insulation, cooling, jointing, test
+    coil_struct_fraction: float = 0.6  # steel support mass / copper mass
+    coil_steel_price_per_kg: float = 6.0  # fabricated structural steel, $/kg
+    coil_steel_fab_markup: float = 3.0  # coil-case / inter-coil support fabrication
     # 220104: Supplementary Heating — per-MW linear costs (M$/MW, 2023$)
     # Source: pyFECONs cas220104 / ARIES + ITER average costs
     heating_nbi_per_mw: float = 7.0642  # Neutral Beam Injection
@@ -76,8 +86,28 @@ class CostingConstants:
     laser_preheat_per_mj: float = 80.0  # M$/MJ preheat laser energy (DPSSL class)
     # 220105: Primary Structure — volume-based (M$/m³)
     structure_unit_cost: float = 0.15  # Calibrated at ~208 m³
-    # 220106: Vacuum System — volume-based (M$/m³)
-    vessel_unit_cost: float = 0.72  # Calibrated at ~148 m³
+    # 220106: Vacuum System — vessel (volume-based) + gas-load pumping.
+    # See docs/account_justification/CAS220106_vacuum_pumping.md
+    vessel_unit_cost: float = 0.72  # M$/m³ vessel shell, calibrated at ~148 m³
+    # Gas-load-driven pumping: S_req = Q_gas / P_op, cost = pump_unit_cost * S_req.
+    # Q_gas = NBI neutral-gas load + fueling/exhaust throughput (outgassing negligible).
+    pump_unit_cost: float = 0.015  # M$ per (m³/s) installed speed (= $15/(L/s))
+    pump_nbi_gas_amplification: float = 1.0  # gas particles pumped per beam particle
+    #   (un-trapped beam + neutralizer reflux); calibrated to C-2W ~2000 m³/s.
+    pump_gas_temp_k: float = 300.0  # pumped-gas temperature [K] for Q = N*kT
+    pump_ion_per_reaction: float = 2.0  # fuel ions consumed per fusion reaction
+    nbi_beam_energy_kev: float = 120.0  # reference reactor NBI energy [keV]; gas
+    #   load scales as 1/E_b (higher-energy beams inject fewer particles per MW).
+    # Operating (plenum) pressure at the pump throat [Pa]. THE sensitive knob:
+    # low-pressure concepts (FRC, mirror, open field lines) need far more speed for
+    # the same throughput than a tokamak divertor running at a few Pa. Global
+    # default here; overridden per concept in the concept YAMLs.
+    vac_op_pressure_pa: float = 1.0
+    # Fusion energy released per reaction [MeV], for the fueling-throughput term.
+    e_fus_mev_dt: float = 17.6
+    e_fus_mev_dd: float = 3.65  # branch-averaged
+    e_fus_mev_dhe3: float = 18.3
+    e_fus_mev_pb11: float = 8.7
     power_supplies_base: float = 80.0
     divertor_base: float = 60.0
     # IFE/MIF target factory capital (M$ at 1 GWe reference)

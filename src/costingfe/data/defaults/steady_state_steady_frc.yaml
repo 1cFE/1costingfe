@@ -1,0 +1,86 @@
+# Generic steady-state Field-Reversed Configuration (FRC).
+# Rebuilt from scratch from TAE/PFRC source materials, NOT derived from the
+# mirror template. The concept is:
+#   - GENERIC: covers TAE-style (neutral-beam-driven) and PFRC-style
+#     (RF / rotating-magnetic-field-driven) FRCs. The driver is just the
+#     heating split below (NBI default; set p_nbi=0 and p_icrf=p_input for RF).
+#   - FUEL-NEUTRAL: DT-capable defaults (mn, breeding blanket). Aneutronic
+#     developers (TAE p-B11, PFRC D-He3) override mn=1.0 and the blanket.
+# CAS22 specifics: coil_material=copper selects the resistive mass build-up for
+# C220103 (low-field FRC coils); vac_op_pressure_pa sets the gas-load pumping in
+# C220106; the heating split feeds C220104 and is normalized to p_input.
+
+p_input: 80.0       # Heating power into plasma [MW] (driver-sustained)
+
+# Heating / driver split for CAS22 (must sum to p_input). NBI is the TAE driver;
+# for a PFRC-style RF/RMF machine set p_nbi=0 and p_icrf=p_input.
+p_nbi: 80.0         # Neutral beam injection [MW]
+p_ecrh: 0.0         # ECRH [MW]
+p_icrf: 0.0         # ICRF / RMF-class RF current drive [MW]
+p_lhcd: 0.0         # LHCD [MW]
+
+mn: 1.1             # Neutron energy multiplier (DT default; aneutronic -> 1.0)
+eta_p: 0.5          # Pumping efficiency
+eta_pin: 0.5        # Heating wall-plug efficiency
+eta_de: 0.60        # DEC efficiency (only if direct conversion enabled via f_dec)
+f_sub: 0.03         # Subsystem power fraction
+f_dec: 0.0          # DEC fraction (thermal baseline; direct conversion is opt-in)
+p_coils: 3.0        # Coil power [MW] (low-field resistive formation/guide coils)
+p_cool: 20.0        # Cooling power [MW]
+p_pump: 1.5         # Pumping power [MW]
+p_trit: 10.0        # Tritium processing power [MW] (DT default; ~0 aneutronic)
+p_house: 4.0        # Housekeeping power [MW]
+p_cryo: 1.0         # Cryogenic power [MW]
+
+# Coil parameters. Near-unity FRC beta: the plasma's own current confines it, so
+# external coils run at low field (resistive copper, ~0.1-1 T) far below a
+# tokamak/mirror. coil_material=copper costs C220103 by copper mass build-up
+# (b_max/r_coil set the ampere-meters); see CAS22_reactor_components.md.
+b_max: 0.5
+r_coil: 1.85
+coil_material: copper  # resistive copper (near-unity beta, low external field)
+
+# Radial build geometry [m] (linear cylinder)
+R0: 0.0              # Not used for cylinder
+plasma_t: 1.5        # FRC separatrix (plasma column) radius
+elon: 1.0            # Circular cross-section
+chamber_length: 10.0 # Axial plasma length
+blanket_t: 0.80      # Blanket thickness (DT breeding default)
+ht_shield_t: 0.20    # High-temperature shield
+structure_t: 0.15    # Primary structure
+vessel_t: 0.10       # Vacuum vessel
+
+# Vacuum pumping: open-field-line linear device held at low neutral pressure to
+# limit charge-exchange losses, so it needs high pumping speed. See C220106.
+vac_op_pressure_pa: 0.05
+
+# Construction
+construction_time_yr: 6.0
+
+# Impurity model
+wall_material: W
+T_edge: 0.2
+tau_ratio: 3.0
+seeded_impurities: {}
+R_w: 0.4
+
+# Plasma parameters for radiation calculation
+n_e: 5.0e+19
+T_e: 20.0
+Z_eff: 1.2
+plasma_volume: 70.0  # pi * plasma_t^2 * chamber_length
+B: 0.5               # Central field [T] (low external field)
+
+# Fuel burn fraction defaults (physics.py ash_neutron_split)
+burn_fraction: 0.05
+fuel_recovery: 0.99
+dd_f_T: 0.969
+dd_f_He3: 0.689
+dhe3_dd_frac: 0.131
+dhe3_f_T: 0.5
+pb11_f_alpha_n: 0.0
+pb11_f_p_n: 0.0
+
+# Blanket configuration (DT default; aneutronic developers override)
+blanket_form: liquid_metal
+blanket_fill: pbli

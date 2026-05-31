@@ -118,9 +118,9 @@ def compute_geometry(rb: RadialBuild, concept: ConfinementConcept) -> Geometry:
     bioshield_or = lt_shield_or + rb.bioshield_t
 
     # Select volume function
-    if (
-        family == ConfinementFamily.STEADY_STATE
-        and concept == ConfinementConcept.MIRROR
+    if family == ConfinementFamily.STEADY_STATE and concept in (
+        ConfinementConcept.MIRROR,
+        ConfinementConcept.STEADY_FRC,
     ):
         h = rb.chamber_length
 

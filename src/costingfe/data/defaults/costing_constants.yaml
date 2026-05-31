@@ -32,7 +32,26 @@ shield_unit_cost: 0.74       # DT reference, apply fuel scale factor
 
 # 220103-220108: Reactor components
 structure_unit_cost: 0.15    # M$/m³ (volume-based)
-vessel_unit_cost: 0.72       # M$/m³ (volume-based)
+# 220103 resistive (copper) coil mass build-up. SC coils keep the $/kAm path.
+coil_cu_current_density_a_mm2: 5.0   # water-cooled copper current density
+coil_cu_price_per_kg: 11.0           # copper conductor $/kg (LME 2026 class)
+coil_cu_fab_markup: 3.5              # winding, insulation, cooling, jointing, test
+coil_struct_fraction: 0.6            # steel support mass / copper mass
+coil_steel_price_per_kg: 6.0         # fabricated structural steel $/kg
+coil_steel_fab_markup: 3.0           # coil-case / inter-coil support fabrication
+vessel_unit_cost: 0.72       # M$/m³ vessel shell (volume-based)
+# 220106 pumping: gas-load-driven. S_req = Q_gas / P_op; cost = pump_unit_cost * S_req.
+# See docs/account_justification/CAS220106_vacuum_pumping.md
+pump_unit_cost: 0.015        # M$ per (m³/s) installed speed (= $15/(L/s))
+pump_nbi_gas_amplification: 1.0  # gas particles pumped per NBI beam particle (C-2W cal.)
+pump_gas_temp_k: 300.0       # pumped-gas temperature [K] for Q = N*kT
+pump_ion_per_reaction: 2.0   # fuel ions consumed per fusion reaction
+nbi_beam_energy_kev: 120.0   # reference reactor NBI energy [keV]; gas load ~ 1/E_b
+vac_op_pressure_pa: 1.0      # global default plenum pressure [Pa]; override per concept
+e_fus_mev_dt: 17.6           # fusion energy per reaction [MeV], fueling-throughput term
+e_fus_mev_dd: 3.65           # branch-averaged
+e_fus_mev_dhe3: 18.3
+e_fus_mev_pb11: 8.7
 power_supplies_base: 80.0    # M$ at 1 GWe (power-scaled)
 divertor_base: 60.0          # M$ at 1 GWth (power-scaled)
 target_factory_base: 244.0   # M$ at 1 GWe ref (IFE/MIF target factory capital)

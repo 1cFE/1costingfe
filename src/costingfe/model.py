@@ -1,6 +1,7 @@
 """Top-level CostModel API: wires all 5 layers together."""
 
 import math
+import numbers
 
 import jax
 import jax.numpy as jnp
@@ -589,6 +590,28 @@ class CostModel:
         if any(k in overrides for k in ("p_nbi", "p_ecrh", "p_icrf", "p_lhcd")):
             p_nbi = params.get("p_nbi", 0.0)
 
+        # Integrity by construction: the heating split is what C220104 costs
+        # ($/MW per heating type), and p_input is what the power balance uses
+        # (q_sci = p_fus/p_input, recirc = p_input/eta_pin). They must reference
+        # the SAME injected MW. The split defines the MIX; we normalize its total
+        # to p_input so the costed heating always equals the power-balance
+        # heating, even when p_input is overridden without the split. A fully
+        # zero split (e.g. electrostatic orbitron/polywell, where input power is
+        # not NBI/RF heating) stays zero, so its NBI/RF capital is correctly $0.
+        # Concrete values only; under the uncertainty/AD path these are JAX
+        # tracers and the default p_nbi=p_input already tracks p_input.
+        _split_vals = (p_nbi, p_ecrh, p_icrf, p_lhcd, p_input)
+        if all(isinstance(v, numbers.Real) for v in _split_vals):
+            heat_split = p_nbi + p_ecrh + p_icrf + p_lhcd
+            if heat_split > 1e-12:
+                k = p_input / heat_split
+                p_nbi, p_ecrh, p_icrf, p_lhcd = (
+                    p_nbi * k,
+                    p_ecrh * k,
+                    p_icrf * k,
+                    p_lhcd * k,
+                )
+
         # C220104 pulsed-driver inputs. p_driver (avg power) costs mechanical
         # injectors; pt.e_driver_mj (per-pulse energy) costs lasers/accelerators on
         # a rep-rate-independent $/J basis; e_preheat_mj costs the laser preheat
@@ -632,6 +655,8 @@ class CostModel:
             e_preheat_mj=e_preheat_mj,
             f_dec=params.get("f_dec", 0.0),
             p_dee=pt.p_dee,
+            burn_fraction=params["burn_fraction"],
+            vac_op_pressure_pa=params["vac_op_pressure_pa"],
             # Pulsed DEC params
             pulsed_conversion=self.pulsed_conversion,
             e_stored_mj=getattr(pt, "e_stored_mj", 0.0),

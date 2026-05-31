@@ -111,6 +111,8 @@ Available CAS-level keys: `CAS10`, `CAS21`-`CAS28`.
 
 Available CAS22 sub-account keys: `C220101` (blanket), `C220102` (shield), `C220103` (coils), `C220104` (heating), `C220105` (structure), `C220106` (vacuum), `C220107` (power supplies), `C220108` (divertor), `C220109` (DEC), `C220111` (installation), `C220112` (isotope sep), `C220200` (coolant), `C220300` (aux cooling), `C220400` (rad waste), `C220500` (fuel handling), `C220600` (other equipment), `C220700` (I&C).
 
+Sub-line convention: an account that bundles components with distinct cost bases also emits informational `<CODE>_<component>` keys alongside the canonical total — currently `C220106_vessel` and `C220106_pump` (vessel shell vs gas-load pumping). These sub-lines are excluded from all aggregation and are for visibility/sensitivity only; the canonical `C220106` carries the sum.
+
 CAS70 sub-accounts: `CAS71` (annual O&M), `CAS72` (annualized scheduled replacement — blanket/FW + divertor, PV-discounted at interest rate).
 
 Sensitivity analysis works with overrides -- overridden accounts become constants with zero gradient:
