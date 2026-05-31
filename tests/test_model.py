@@ -424,3 +424,117 @@ def test_laser_driver_type_override_changes_capital_and_om():
     ).forward(1000.0, 0.85, 30)
     assert krf.cas22_detail["C220104"] < dpssl.cas22_detail["C220104"]  # 40 < 205 $/MJ
     assert krf.costs.lcoe != dpssl.costs.lcoe
+
+
+# --- Two-knob projection: per-module override pass-through invariant ----------
+#
+# The two-knob call shape `forward(net=1000, n_mod=1000/P_native,
+# override_reference_mw=P_native)` projects a concept's native-scale cost
+# story to a 1 GWe NOAK plant. The design invariant under this call:
+#
+#   - per-module reactor-island overrides written at native per-module power
+#     pass through unchanged per module (scaling ratio = 1.0)
+#   - plant-aggregate overrides (CAS27 etc.) scale by exactly n_mod to the
+#     plant total
+#
+# This requires `_scale_overrides` to run its reference forward at n_mod=1
+# (single module at native power) so the reference frame matches the frame
+# the analyst wrote the override in. Running the reference at the caller's
+# n_mod silently inflates per-module overrides on power-dependent accounts.
+
+
+def _two_knob_kwargs(p_native: float) -> dict:
+    return dict(
+        net_electric_mw=1000.0,
+        n_mod=1000.0 / p_native,
+        override_reference_mw=p_native,
+        availability=0.85,
+        lifetime_yr=30,
+    )
+
+
+def test_two_knob_per_module_power_dependent_override_passes_through():
+    """C220101 (structure) is per-module and power-dependent. Under the two-knob
+    call, an override written at native per-module power must arrive at the
+    same per-module value (ratio = 1.0).
+
+    Regression: the prior _scale_overrides ran its reference at the caller's
+    n_mod, making the reference per-module power P_native**2 / 1000 instead of
+    P_native. The override for power-dependent per-module accounts was rescaled
+    by the ratio of those two per-module powers — Phase 0 measured +47% on ARC
+    (P_native=400, n_mod=2.5).
+    """
+    model = CostModel(concept=ConfinementConcept.TOKAMAK, fuel=Fuel.DT)
+    p_native = 400.0
+    override_value = 349.0  # M$, per module at native power
+    result = model.forward(
+        cost_overrides={"C220101": override_value},
+        **_two_knob_kwargs(p_native),
+    )
+    # Per-module value in the result must equal the override (within float noise).
+    assert result.cas22_detail["C220101"] == override_value
+
+
+def test_two_knob_per_module_no_power_term_override_passes_through():
+    """C220103 (coils) is per-module with no thermal-power term — must also
+    pass through unchanged. This case passed under the buggy code, so it
+    anchors that the fix doesn't regress it."""
+    model = CostModel(concept=ConfinementConcept.TOKAMAK, fuel=Fuel.DT)
+    p_native = 400.0
+    override_value = 6900.0
+    result = model.forward(
+        cost_overrides={"C220103": override_value},
+        **_two_knob_kwargs(p_native),
+    )
+    assert result.cas22_detail["C220103"] == override_value
+
+
+def test_two_knob_per_module_special_materials_override_passes_through():
+    """CAS27 (special materials) is also per-module in this library: its default
+    is `cas27_special_materials(cc, pt.p_net, ...)` and `pt.p_net` is per-module
+    net power. So a CAS27 override written at native per-module power must pass
+    through unchanged, just like the C220xxx sub-accounts."""
+    model = CostModel(concept=ConfinementConcept.TOKAMAK, fuel=Fuel.DT)
+    p_native = 400.0
+    override_value = 50.0
+    result = model.forward(
+        cost_overrides={"CAS27": override_value},
+        **_two_knob_kwargs(p_native),
+    )
+    assert result.costs.cas27 == pytest.approx(override_value, rel=1e-9)
+
+
+def test_two_knob_plant_aggregate_cas22_override_scales_to_target_plant():
+    """CAS22 is plant-aggregate: its default (computed in forward()) is
+    `per_module_equipment * n_mod + labor + plant_wide`, already summed over
+    modules. An override written for a native-scale plant must scale to the
+    target plant. The ratio is not exactly n_mod because of CAS22's
+    multi-unit labor factor, but it must be close to n_mod and strictly
+    greater than 1 for n_mod > 1.
+
+    Regression intent: this test will fail if anyone "fixes" target-side
+    n_mod too — which would collapse plant-aggregate scaling to 1.0."""
+    model = CostModel(concept=ConfinementConcept.TOKAMAK, fuel=Fuel.DT)
+    p_native = 400.0
+    n_mod = 1000.0 / p_native
+    override_value = 1000.0
+    result = model.forward(
+        cost_overrides={"CAS22": override_value},
+        **_two_knob_kwargs(p_native),
+    )
+    # Measure the library's own CAS22 ratio between target and reference frames
+    # (the ratio the fixed _scale_overrides should apply).
+    ref = model.forward(net_electric_mw=p_native, n_mod=1, availability=0.85, lifetime_yr=30)
+    tgt = model.forward(net_electric_mw=1000.0, n_mod=n_mod, availability=0.85, lifetime_yr=30)
+    expected_ratio = float(tgt.costs.cas22) / float(ref.costs.cas22)
+    assert expected_ratio > 1.0  # plant-aggregate must scale up
+    assert result.costs.cas22 == pytest.approx(override_value * expected_ratio, rel=1e-6)
+
+
+def test_two_knob_accepts_fractional_n_mod():
+    """The two-knob call computes n_mod = 1000 / P_native, which is rarely
+    integer. P_native=233 → n_mod≈4.292."""
+    model = CostModel(concept=ConfinementConcept.TOKAMAK, fuel=Fuel.DT)
+    p_native = 233.0
+    result = model.forward(**_two_knob_kwargs(p_native))
+    assert result.costs.lcoe > 0

@@ -68,16 +68,18 @@ class TestTier1FieldConstraints:
                 lifetime_yr=-5.0,
             )
 
-    def test_n_mod_must_be_integer(self):
-        with pytest.raises(ValidationError, match="n_mod"):
-            CostingInput(
-                concept=ConfinementConcept.TOKAMAK,
-                fuel=Fuel.DT,
-                net_electric_mw=1000.0,
-                n_mod=1.5,
-            )
+    def test_n_mod_accepts_fractional(self):
+        # n_mod is a positive real: the two-knob projection call uses
+        # n_mod = 1000 / P_native, which is non-integer for almost every concept.
+        inp = CostingInput(
+            concept=ConfinementConcept.TOKAMAK,
+            fuel=Fuel.DT,
+            net_electric_mw=1000.0,
+            n_mod=4.29,
+        )
+        assert inp.n_mod == 4.29
 
-    def test_n_mod_must_be_at_least_one(self):
+    def test_n_mod_must_be_positive(self):
         with pytest.raises(ValidationError, match="n_mod"):
             CostingInput(
                 concept=ConfinementConcept.TOKAMAK,

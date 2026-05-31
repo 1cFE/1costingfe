@@ -1004,8 +1004,13 @@ class CostModel:
         CAS22 sub-account overrides (C220101, etc.) are scaled using the
         CAS22 sub-account detail from the reference and target runs.
         """
+        # Reference forward runs at one module at the design-point native power
+        # — the frame the analyst writes the override in. The target forward
+        # keeps the caller's n_mod so plant-aggregate accounts scale to the
+        # target plant total.
+        ref_kwargs = dict(forward_kwargs, n_mod=1)
         ref_result = self.forward(
-            net_electric_mw=reference_mw, cost_overrides=None, **forward_kwargs
+            net_electric_mw=reference_mw, cost_overrides=None, **ref_kwargs
         )
         target_result = self.forward(
             net_electric_mw=target_mw, cost_overrides=None, **forward_kwargs
