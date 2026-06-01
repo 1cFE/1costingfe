@@ -12,7 +12,7 @@ p_lhcd: 0.0         # LHCD heating [MW]
 
 mn: 1.1             # Neutron energy multiplier
 eta_p: 0.5          # Pumping efficiency
-eta_pin: 0.5        # Heating system wall-plug efficiency
+eta_couple: 1.0      # ECRH coupling; eta_pin = 0.50 x 1.0 = 0.50
 eta_de: 0.85        # DEC efficiency
 f_sub: 0.03         # Subsystem power fraction
 f_dec: 0.0          # DEC fraction

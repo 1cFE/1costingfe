@@ -40,7 +40,7 @@ p_lhcd: 0.0         # LHCD heating [MW]
 
 mn: 1.053           # Neutron energy multiplier (Li2O + W; M_blanket in analysis)
 eta_p: 0.5          # Pumping efficiency
-eta_pin: 0.70       # ICRH wall-plug efficiency
+eta_couple: 1.0      # ICRF coupling; eta_pin = 0.70 x 1.0 = 0.70
 eta_de: 0.0         # No direct energy conversion (closed dipole field)
 f_sub: 0.03         # Subsystem power fraction
 f_dec: 0.0          # No end-loss DEC (unlike a mirror)

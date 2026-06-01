@@ -11,7 +11,7 @@ p_lhcd: 0.0         # LHCD heating [MW]
 
 mn: 1.1             # Neutron energy multiplier
 eta_p: 0.5          # Pumping efficiency
-eta_pin: 0.5        # Heating system wall-plug efficiency
+eta_couple: 0.8333   # NBI coupling; eta_pin = 0.60 x 0.8333 = 0.50
 eta_de: 0.60        # DEC efficiency (end-plug DEC)
 f_sub: 0.03         # Subsystem power fraction
 f_dec: 0.3          # DEC fraction (significant end-loss recovery)

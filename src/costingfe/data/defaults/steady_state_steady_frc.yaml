@@ -10,18 +10,23 @@
 # C220103 (low-field FRC coils); vac_op_pressure_pa sets the gas-load pumping in
 # C220106; the heating split feeds C220104 and is normalized to p_input.
 
-p_input: 80.0       # Heating power into plasma [MW] (driver-sustained)
+p_input: 26.0       # Plasma-coupled heating power [MW]. TAE/C-2W-grounded:
+                    # ~21 MW injected at C-2W, 26 MW a modest reactor scale-up
+                    # (fusion-tea 18-p-b11-frc synthesis.md / model_setup.py).
 
 # Heating / driver split for CAS22 (must sum to p_input). NBI is the TAE driver;
 # for a PFRC-style RF/RMF machine set p_nbi=0 and p_icrf=p_input.
-p_nbi: 80.0         # Neutral beam injection [MW]
+p_nbi: 26.0         # Neutral beam injection [MW] (= p_input; all NBI)
 p_ecrh: 0.0         # ECRH [MW]
 p_icrf: 0.0         # ICRF / RMF-class RF current drive [MW]
 p_lhcd: 0.0         # LHCD [MW]
 
 mn: 1.1             # Neutron energy multiplier (DT default; aneutronic -> 1.0)
 eta_p: 0.5          # Pumping efficiency
-eta_pin: 0.5        # Heating wall-plug efficiency
+eta_couple: 0.43    # NBI delivered->plasma coupling at C-2W (shine-through +
+                    # tangential-duct losses; OSTI 2441289). eta_pin = eta_source_nbi
+                    # 0.60 x 0.43 = 0.26. A PFRC-style RF FRC overrides p_icrf and
+                    # eta_couple (RMF coupling ~0.60).
 eta_de: 0.60        # DEC efficiency (only if direct conversion enabled via f_dec)
 f_sub: 0.03         # Subsystem power fraction
 f_dec: 0.0          # DEC fraction (thermal baseline; direct conversion is opt-in)
