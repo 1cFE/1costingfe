@@ -63,6 +63,13 @@ class CostingConstants:
     heating_icrf_per_mw: float = 4.1494  # Ion Cyclotron Resonance Frequency
     heating_ecrh_per_mw: float = 5.0  # Electron Cyclotron Resonance Heating (gyrotrons)
     heating_lhcd_per_mw: float = 4.0  # Lower Hybrid Current Drive (klystrons)
+    # Heating wall-plug source efficiency by method (wall-plug -> delivered
+    # power, before plasma coupling). Combined with a per-concept eta_couple
+    # (in the concept YAML) to form eta_pin = eta_source x eta_couple.
+    eta_source_nbi: float = 0.60  # negative-ion NBI source (OSTI 2441289 / ITER)
+    eta_source_icrf: float = 0.70  # RF tetrode transmitter (ITER ICRF ~70%)
+    eta_source_ecrh: float = 0.50  # gyrotron wall-plug
+    eta_source_lhcd: float = 0.50  # klystron wall-plug
     # 220104: Pulsed driver capital, concept-dispatched in cas22.py C220104.
     # Lasers, accelerators, and electromagnetic guns are costed per joule of pulse
     # energy: their capital is set by pulse energy (laser aperture / diode count,

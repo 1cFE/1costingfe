@@ -56,6 +56,13 @@ power_supplies_base: 80.0    # M$ at 1 GWe (power-scaled)
 divertor_base: 60.0          # M$ at 1 GWth (power-scaled)
 target_factory_base: 244.0   # M$ at 1 GWe ref (IFE/MIF target factory capital)
 
+# Heating source efficiency by method (wall-plug -> delivered). Combined with
+# per-concept eta_couple (concept YAML) as eta_pin = eta_source x eta_couple.
+eta_source_nbi: 0.60         # negative-ion NBI source (OSTI 2441289 / ITER)
+eta_source_icrf: 0.70        # RF tetrode transmitter (ITER ICRF ~70%)
+eta_source_ecrh: 0.50        # gyrotron wall-plug
+eta_source_lhcd: 0.50        # klystron wall-plug
+
 # C220109: DEC add-on for linear devices (M$ at 400 MWe DEC electric output)
 # Source: docs/account_justification/CAS220109_direct_energy_converter.md
 dec_base: 125.0              # Total DEC add-on cost at P_DEE_REF
