@@ -1191,7 +1191,7 @@ P_{\text{in,eff}} = \max\!\bigl(P_{\text{in}},\;
 \noindent This ensures $P_{\text{transport}} \geq 0$ and correctly
 penalizes radiation-dominated regimes through increased recirculating
 power: the additional heating must be supplied at wall-plug efficiency
-$\eta_{\text{aux}}$, which raises $P_{\text{recirc}}$ and degrades the
+$\eta_{\text{pin}}$, which raises $P_{\text{recirc}}$ and degrades the
 engineering~$Q$. For example, a p-${}^{11}$B mirror at
 $T_e = 150$~keV requires $P_{\text{in,eff}} \gg P_{\text{in}}$ due to
 synchrotron losses, driving the LCOE well above D-T levels.
@@ -1241,19 +1241,41 @@ to sustain the plant:
 
 \begin{equation}
 \label{eq:p-recirc}
-P_{\text{recirc}} = \frac{P_{\text{in,eff}}}{\eta_{\text{aux}}}
+P_{\text{recirc}} = \frac{P_{\text{in,eff}}}{\eta_{\text{pin}}}
   + P_{\text{coils}} + P_{\text{pump}} + P_{\text{cryo}}
   + P_{\text{cool}} + f_{\text{sub}} \, P_{\text{et}}
   + P_{\text{other}}
 \end{equation}
 
-\noindent where $P_{\text{in,eff}}/\eta_{\text{aux}}$ is the wall-plug
+\noindent where $P_{\text{in,eff}}/\eta_{\text{pin}}$ is the wall-plug
 power for the heating system (using the effective heating power from
 \cref{eq:p-input-eff}), $P_{\text{coils}}$ powers the magnets,
 $P_{\text{cryo}}$ and $P_{\text{cool}}$ serve the cryogenic and cooling
 systems, $f_{\text{sub}} P_{\text{et}}$ covers balance-of-plant
 subsystems (typically 3\%), and $P_{\text{other}}$ includes tritium
-processing and housekeeping loads. The net electric power is:
+processing and housekeeping loads.
+
+The heating wall-plug efficiency is not a single device constant but a product
+of a method-level source efficiency and a device-level coupling efficiency,
+\begin{equation}
+  \eta_{\text{pin}} = \frac{\sum_i P_i}{\sum_i P_i / \bigl(\eta_{\text{src}}(i)\,\eta_{\text{cpl}}\bigr)},
+\end{equation}
+where $i$ runs over the heating methods (NBI, ICRF, ECRH, LHCD) in the mix,
+$\eta_{\text{src}}(i)$ is the wall-plug-to-delivered source efficiency of method
+$i$ (negative-ion NBI $0.60$, ICRF $0.70$, ECRH $0.50$, LHCD $0.50$), and
+$\eta_{\text{cpl}}$ is the concept's delivered-to-absorbed coupling. This makes
+the recirculating heating load track the actual driver: a beam-driven FRC,
+whose tangential injection through long ducts and short plasma path give a
+coupling of only $\eta_{\text{cpl}} \approx 0.43$ (C-2W), lands at
+$\eta_{\text{pin}} = 0.60 \times 0.43 = 0.26$, whereas an RF-driven device
+couples far better. Concepts whose input power is not delivered by an NBI/RF
+heating system (electrostatic confinement; pulsed drivers) specify
+$\eta_{\text{pin}}$ directly. The per-concept $\eta_{\text{cpl}}$ values are
+chosen so the product reproduces each benchmarked concept's calibrated
+$\eta_{\text{pin}}$, leaving the benchmarks unchanged while making the
+method-dependence explicit.
+
+The net electric power is:
 
 \begin{equation}
 \label{eq:p-net}
@@ -1294,8 +1316,9 @@ derived quantity.  The driver wall-plug efficiency $\eta_{\text{pin}}$
 relates stored energy to delivered energy:
 $E_{\text{stored}} = E_{\text{drv}} / \eta_{\text{pin}}$.
 Here $\eta_{\text{pin}}$ characterises pulsed-driver hardware (laser, ion
-beam, capacitor bank) and is distinct from the steady-state auxiliary
-heating efficiency $\eta_{\text{aux}}$ used in \cref{eq:p-recirc}.
+beam, capacitor bank); the steady-state $\eta_{\text{pin}}$ in
+\cref{eq:p-recirc} refers instead to the auxiliary heating wall-plug
+efficiency, which may be decomposed into source and coupling factors.
 The charged-particle fraction $f_{\text{cp}}$ is derived from the fuel
 type and determines the ash--neutron split, while
 $f_{\text{rad}}$ is the fraction of ash power radiated during the burn,
