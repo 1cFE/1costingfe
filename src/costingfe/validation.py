@@ -116,6 +116,7 @@ class CostingInput(BaseModel):
     # MFE only
     p_input: float | None = None
     eta_pin: float | None = None
+    eta_couple: float | None = None  # heating delivered->plasma coupling (concept)
     eta_de: float | None = None
     f_dec: float | None = None
     p_coils: float | None = None
@@ -171,7 +172,6 @@ class CostingInput(BaseModel):
     ]
     _MFE_REQUIRED = [
         "p_input",
-        "eta_pin",
         "eta_p",
         "eta_de",
         "f_dec",
@@ -217,6 +217,18 @@ class CostingInput(BaseModel):
             raise ValueError(
                 f"Missing required engineering parameters for "
                 f"{family.value}: {', '.join(missing)}"
+            )
+
+        # Steady-state heating efficiency: either an explicit eta_pin
+        # (electrostatic / direct-injection concepts) or an eta_couple that
+        # combines with the per-method eta_source to form eta_pin.
+        if (
+            family == ConfinementFamily.STEADY_STATE
+            and self.eta_pin is None
+            and self.eta_couple is None
+        ):
+            raise ValueError(
+                "steady-state concept requires either eta_pin or eta_couple"
             )
 
         # 0D model requires q95 and f_GW
