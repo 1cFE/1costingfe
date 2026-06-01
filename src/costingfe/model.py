@@ -101,8 +101,40 @@ class CostModel:
         fr = params["fuel_recovery"]
         return bf / (1.0 - fr * (1.0 - bf))
 
+    def _effective_eta_pin(self, params):
+        """Heating wall-plug efficiency eta_pin = eta_source(method) x eta_couple.
+
+        For NBI/RF-heated concepts (those that set eta_couple), the effective
+        eta_pin is the mix-weighted product
+            eta_pin = sum_i p_i / sum_i p_i / (eta_source_i * eta_couple).
+        Concepts without an NBI/RF method (electrostatic orbitron/polywell;
+        pulsed drivers) keep their explicit eta_pin. An explicit eta_pin always
+        wins. Dict-key checks are static (JAX-safe under AD tracing); the
+        arithmetic traces cleanly.
+        """
+        if "eta_couple" not in params or "eta_pin" in params:
+            return params["eta_pin"]
+        ec = params["eta_couple"]
+        cc = self.cc
+        p_input = params.get("p_input", 0.0)
+        p_nbi = params.get("p_nbi", p_input)
+        p_icrf = params.get("p_icrf", 0.0)
+        p_ecrh = params.get("p_ecrh", 0.0)
+        p_lhcd = params.get("p_lhcd", 0.0)
+        num = p_nbi + p_icrf + p_ecrh + p_lhcd
+        den = (
+            p_nbi / (cc.eta_source_nbi * ec)
+            + p_icrf / (cc.eta_source_icrf * ec)
+            + p_ecrh / (cc.eta_source_ecrh * ec)
+            + p_lhcd / (cc.eta_source_lhcd * ec)
+        )
+        return num / den
+
     def _power_balance(self, params, n_mod):
         """Dispatch power balance based on confinement family."""
+        # Derive eta_pin from per-method source x per-concept coupling, so all
+        # downstream power-balance sites (and the 0D branch) use the same value.
+        params = {**params, "eta_pin": self._effective_eta_pin(params)}
         p_net_per_mod = params["net_electric_mw"] / n_mod
 
         # 0D tokamak branch
