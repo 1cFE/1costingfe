@@ -108,12 +108,20 @@ class CostModel:
         eta_pin is the mix-weighted product
             eta_pin = sum_i p_i / sum_i p_i / (eta_source_i * eta_couple).
         Concepts without an NBI/RF method (electrostatic orbitron/polywell;
-        pulsed drivers) keep their explicit eta_pin. An explicit eta_pin always
-        wins. Dict-key checks are static (JAX-safe under AD tracing); the
-        arithmetic traces cleanly.
+        pulsed drivers) keep their explicit eta_pin. For an NBI/RF-heated
+        concept eta_pin is DERIVED, so passing it directly is rejected (override
+        eta_couple instead). Dict-key checks are static (JAX-safe under AD
+        tracing); the arithmetic traces cleanly.
         """
-        if "eta_couple" not in params or "eta_pin" in params:
+        if "eta_couple" not in params:
+            # Electrostatic / pulsed concepts: eta_pin is the direct input.
             return params["eta_pin"]
+        if "eta_pin" in params:
+            raise ValueError(
+                "eta_pin cannot be set for an NBI/RF-heated concept (it is "
+                "derived from eta_source x eta_couple). Override eta_couple or "
+                "the eta_source_* constants instead."
+            )
         ec = params["eta_couple"]
         cc = self.cc
         p_input = params.get("p_input", 0.0)
@@ -987,7 +995,6 @@ class CostModel:
         family_specific = {
             ConfinementFamily.STEADY_STATE: [
                 "p_input",
-                "eta_pin",
                 "eta_de",
                 "f_dec",
                 "p_coils",
@@ -1034,7 +1041,14 @@ class CostModel:
                 "f_pdv",
             ],
         }
-        return common + family_specific.get(self.family, [])
+        keys = common + family_specific.get(self.family, [])
+        if self.family == ConfinementFamily.STEADY_STATE:
+            # Heated concepts tune eta_couple (eta_pin is derived); electrostatic
+            # concepts tune eta_pin directly.
+            keys.append(
+                "eta_couple" if "eta_couple" in self._eng_defaults else "eta_pin"
+            )
+        return keys
 
     # CostingConstants float fields — cost model calibration parameters
     # Exclude reference/normalization constants that aren't real levers:

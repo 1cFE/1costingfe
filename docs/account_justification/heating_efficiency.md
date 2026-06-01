@@ -26,8 +26,11 @@ reduces to `eta_pin = eta_source(method) * eta_couple`.
 
 Concepts whose input power is not delivered by an NBI/RF heating system
 (electrostatic confinement such as orbitron and polywell; all pulsed drivers)
-specify `eta_pin` directly instead of `eta_couple`. An explicit `eta_pin`
-override always bypasses the derivation.
+specify `eta_pin` directly instead of `eta_couple`. For an NBI/RF-heated
+concept, `eta_pin` is a derived quantity and cannot be set directly: passing it
+raises an error, so the efficiency is tuned through `eta_couple` (or the
+`eta_source_*` constants), which keeps a single, physically consistent source
+of truth.
 
 ## eta_source (per method, wall-plug to delivered)
 

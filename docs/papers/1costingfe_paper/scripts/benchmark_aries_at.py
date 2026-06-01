@@ -49,7 +49,7 @@ def run(output_dir: Path) -> dict:
         "p_input": 50.0,  # default
         "mn": 1.1,  # default
         "eta_p": 0.5,  # default
-        "eta_pin": 0.5,  # default
+        "eta_couple": 0.8333,  # NBI coupling; eta_pin = 0.60 x 0.8333 = 0.50
         "eta_de": 0.85,  # default
         "f_sub": 0.03,  # default
         "f_dec": 0.0,

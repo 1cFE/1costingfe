@@ -52,9 +52,16 @@ def test_frc_rf_driver_couples_better_than_nbi():
     assert float(rf.power_table.rec_frac) < float(nbi.power_table.rec_frac)
 
 
-def test_explicit_eta_pin_override_wins():
-    """An explicit eta_pin override bypasses the source x coupling derivation."""
+def test_eta_pin_rejected_for_heated_concept():
+    """eta_pin is derived for NBI/RF concepts; setting it directly is rejected."""
     m = CostModel(concept=C.TOKAMAK, fuel=Fuel.DT)
+    with pytest.raises(ValueError, match="eta_pin"):
+        m.forward(net_electric_mw=200.0, eta_pin=0.30, **_BASE)
+
+
+def test_eta_pin_still_accepted_for_electrostatic():
+    """Electrostatic concepts keep eta_pin as their direct input (unchanged)."""
+    m = CostModel(concept=C.POLYWELL, fuel=Fuel.PB11)
     a = m.forward(net_electric_mw=200.0, **_BASE)
-    b = m.forward(net_electric_mw=200.0, eta_pin=0.30, **_BASE)
+    b = m.forward(net_electric_mw=200.0, eta_pin=0.5, **_BASE)
     assert float(b.power_table.rec_frac) > float(a.power_table.rec_frac)

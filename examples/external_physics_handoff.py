@@ -45,7 +45,7 @@ def main() -> None:
         r_coil=1.85,  # m, effective winding bore radius
         # Power balance (Section 2.2 Table)
         p_input=50.0,  # MW, NBI heating (neutral beams sustain mirror)
-        eta_pin=0.60,  # heating wall-plug efficiency
+        eta_couple=1.0,  # NBI coupling; eta_pin = 0.60 x 1.0 = 0.60
         eta_p=0.50,  # pumping efficiency
         p_coils=5.0,  # MW, solenoid + mirror coils
         p_cool=25.0,  # MW, first-wall cooling
