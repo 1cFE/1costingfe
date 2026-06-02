@@ -69,6 +69,18 @@ lev_coil_markup: 8.0          # Float / energize / no-access engineering markup
 lev_coil_cryostat_cost: 100.0 # Integral neon-slush cryostat + flux pump +
                               # levitation control [M$] -- FIRST-CUT placeholder
 
+# External stationary lift coil -- a single SC coil outside the inner VV that
+# provides the magnetic field-gradient force balance against the floating
+# coil's gravity (Simpson et al. 2026, arXiv:2602.20564, Reactor A: the lift
+# coil's field is set by force balance against the floating coil mass, NOT by
+# plasma confinement, so it is much smaller than the floating coil). We
+# approximate its full installed cost as a fraction of the floating coil's
+# with-markup cost rather than re-running Biot-Savart on its own b_center /
+# r_bore (which would conflate with the floating coil's parameters in the
+# current first-cut signature). 0.10 is a first-cut estimate; refine when
+# Simpson publishes lift-coil specifications.
+stationary_lift_coil_fraction: 0.10
+
 # Radial build geometry [m] -- Simpson 2026 Reactor A inner vacuum vessel at
 # ~20.6 m radius, thin Inconel membrane (no coil Lorentz forces, no disruption
 # EM loads -- outer concrete shell handles atmospheric pressure). Plasma fills

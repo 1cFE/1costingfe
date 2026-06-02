@@ -691,6 +691,9 @@ class CostModel:
             n_coils=n_coils,
             lev_coil_markup=params.get("lev_coil_markup"),
             lev_coil_cryostat_cost=params.get("lev_coil_cryostat_cost"),
+            stationary_lift_coil_fraction=params.get(
+                "stationary_lift_coil_fraction", 0.10
+            ),
             p_nbi=p_nbi,
             p_ecrh=p_ecrh,
             p_icrf=p_icrf,

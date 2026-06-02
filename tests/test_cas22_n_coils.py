@@ -69,11 +69,33 @@ def test_n_coils_negative_raises():
 
 
 def test_dipole_stationary_coil_count_default():
-    """DIPOLE's _COIL_DEFAULTS n_coils is the STATIONARY levitation coil set,
-    which is >=2 (the levitated coil itself is costed as a separate term)."""
+    """DIPOLE's `_COIL_DEFAULTS[DIPOLE]` is retained for table-lookup safety
+    (downstream tooling iterates the dict), but its values are NOT consumed by
+    the C220103 calculation: the DIPOLE branch in cas22 short-circuits the
+    standard stationary path and instead derives the external lift coil's
+    cost as `stationary_lift_coil_fraction * floating_with_markup` (Simpson
+    2026 — the lift coil's field is set by force balance against the floating
+    coil's gravity, not by plasma confinement). The entry's n_coils is set to
+    1 (the single external lift coil Simpson specifies)."""
     from costingfe.layers.cas22 import _COIL_DEFAULTS
 
-    assert _COIL_DEFAULTS[ConfinementConcept.DIPOLE]["n_coils"] >= 2
+    assert _COIL_DEFAULTS[ConfinementConcept.DIPOLE]["n_coils"] == 1
+
+
+def test_dipole_stationary_lift_coil_fraction_default():
+    """Default `stationary_lift_coil_fraction = 0.10`: the single external lift
+    coil's full installed cost is 10% of the floating coil's with-markup cost."""
+    from costingfe import CostModel, Fuel
+
+    model = CostModel(concept=ConfinementConcept.DIPOLE, fuel=Fuel.DT)
+    base = model.forward(**_base_kwargs())
+    # Doubling the fraction increases C220103 by exactly the floating-with-
+    # markup cost * 0.10 (the delta), so per-module delta should be positive
+    # and the ratio of (more - base) / floating_with_markup should be ~0.10.
+    more = model.forward(stationary_lift_coil_fraction=0.20, **_base_kwargs())
+    assert float(more.cas22_detail["C220103"]) > float(
+        base.cas22_detail["C220103"]
+    )
 
 
 def test_dipole_levitated_coil_cryostat_additive():
