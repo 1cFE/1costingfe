@@ -42,8 +42,8 @@ def _make_cas22(fuel=Fuel.DT, n_mod=1, blanket_t=0.70):
         vessel_vol=geo.vessel_vol,
         family=ConfinementFamily.STEADY_STATE,
         concept=ConfinementConcept.TOKAMAK,
-        b_max=12.0,
-        r_coil=1.85,
+        b_center=12.0,
+        r_bore=1.85,
         coil_material=CoilMaterial.REBCO_HTS,
         blanket_form=BlanketForm.LIQUID_METAL,
         p_nbi=50.0,
@@ -73,7 +73,7 @@ def test_cas22_pb11_no_breeding():
 
 
 def test_cas22_isotope_separation_zeroed():
-    """CAS220112 should be zero — isotope procurement is in CAS80 market prices."""
+    """CAS220112 should be zero - isotope procurement is in CAS80 market prices."""
     for fuel in [Fuel.DT, Fuel.DD, Fuel.DHE3, Fuel.PB11]:
         result = _make_cas22(fuel=fuel)
         assert result["C220112"] == 0.0, (
@@ -160,8 +160,8 @@ def test_cas22_n_mod_one_unchanged_by_multi_unit_factor():
         vessel_vol=geo.vessel_vol,
         family=ConfinementFamily.STEADY_STATE,
         concept=ConfinementConcept.TOKAMAK,
-        b_max=12.0,
-        r_coil=1.85,
+        b_center=12.0,
+        r_bore=1.85,
         coil_material=CoilMaterial.REBCO_HTS,
         blanket_form=BlanketForm.LIQUID_METAL,
         p_nbi=50.0,
@@ -206,7 +206,7 @@ def test_cas22_all_subaccounts_present():
     for key in expected_keys:
         assert key in result, f"Missing sub-account {key}"
         assert result[key] >= 0, f"Sub-account {key} is negative"
-    # C220119 removed — replacement is now CAS72 (annualized, not capital)
+    # C220119 removed - replacement is now CAS72 (annualized, not capital)
     assert "C220119" not in result
 
 
@@ -253,8 +253,8 @@ def _make_cas22_with_family(family=ConfinementFamily.STEADY_STATE):
         vessel_vol=VESSEL_VOL,
         family=family,
         concept=ConfinementConcept.TOKAMAK,
-        b_max=12.0,
-        r_coil=1.85,
+        b_center=12.0,
+        r_bore=1.85,
         coil_material=CoilMaterial.REBCO_HTS,
         blanket_form=BlanketForm.LIQUID_METAL,
         p_nbi=50.0,
@@ -284,6 +284,20 @@ def test_cas220108_ife_uses_target_factory():
     assert ife["C220108"] > mfe["C220108"], msg
     expected = CC.target_factory_base * (1100.0 / 1000.0) ** 0.7
     assert abs(ife["C220108"] - expected) < 0.01
+
+
+def test_cas220108_dipole_has_no_divertor():
+    """Levitated dipole exhausts through the loss cone at the top/bottom
+    openings of the chamber -- no W monoblock divertor cassette to cost.
+    C220108 must be zero for DIPOLE even though it is STEADY_STATE."""
+    from costingfe import CostModel, Fuel
+
+    r = CostModel(concept=ConfinementConcept.DIPOLE, fuel=Fuel.DT).forward(
+        net_electric_mw=208.0,
+        availability=0.85,
+        lifetime_yr=30,
+    )
+    assert float(r.cas22_detail["C220108"]) == 0.0
 
 
 # ---- Plant-wide accounts must use total plant power for n_mod > 1 ----
@@ -323,8 +337,8 @@ def test_plant_wide_c220200_scales_with_n_mod():
 
 
 def _make_cas22_coil(
-    b_max=12.0,
-    r_coil=1.85,
+    b_center=12.0,
+    r_bore=1.85,
     concept=ConfinementConcept.TOKAMAK,
     coil_material=CoilMaterial.REBCO_HTS,
 ):
@@ -347,8 +361,8 @@ def _make_cas22_coil(
         vessel_vol=geo.vessel_vol,
         family=ConfinementFamily.STEADY_STATE,
         concept=concept,
-        b_max=b_max,
-        r_coil=r_coil,
+        b_center=b_center,
+        r_bore=r_bore,
         coil_material=coil_material,
         blanket_form=BlanketForm.LIQUID_METAL,
         p_nbi=50.0,
@@ -368,7 +382,7 @@ def test_cas220103_conductor_scaling_formula():
     * $/kAm * markup."""
     import math
 
-    result = _make_cas22_coil(b_max=12.0, r_coil=1.85)
+    result = _make_cas22_coil(b_center=12.0, r_bore=1.85)
     mu0 = 4 * math.pi * 1e-7
     G = 4 * math.pi**2  # tokamak
     total_kAm = G * 12.0 * 1.85**2 / (mu0 * 1000)
@@ -377,19 +391,50 @@ def test_cas220103_conductor_scaling_formula():
     assert abs(result["C220103"] - expected) < 0.1
 
 
+def test_cas220103_biot_savart_consistency_single_loop():
+    """For a single circular loop the formula must reduce to the textbook
+    Biot-Savart identity:
+
+        NI    = 2 * b_center * R / mu_0          (B at loop center)
+        kA*m  = NI * (2 pi R) / 1000             (one turn of length 2 pi R)
+              = 4 pi * b_center * R^2 / (mu_0 * 1000)
+
+    A single-loop concept (DIPOLE with n_coils=1) must satisfy this for any
+    consistent (b_center, r_bore) triple - independent of cost calibration.
+    """
+    import math
+
+    from costingfe.layers.cas22 import _COIL_DEFAULTS, _compute_geometry_factor
+
+    for b_center, r_bore in [(6.26, 5.3), (12.0, 1.85), (0.5, 1.85), (23.0, 1.0)]:
+        path_factor = _COIL_DEFAULTS[ConfinementConcept.DIPOLE]["path_factor"]
+        G = _compute_geometry_factor(ConfinementConcept.DIPOLE, path_factor, n_coils=1)
+        mu0 = 4 * math.pi * 1e-7
+        kAm_formula = G * b_center * r_bore**2 / (mu0 * 1000)
+
+        # Biot-Savart reference path for one circular loop
+        NI = 2 * b_center * r_bore / mu0
+        kAm_biot_savart = NI * (2 * math.pi * r_bore) / 1000
+
+        assert math.isclose(kAm_formula, kAm_biot_savart, rel_tol=1e-12), (
+            f"kA*m formula {kAm_formula} != Biot-Savart {kAm_biot_savart} "
+            f"for (b_center={b_center}, r_bore={r_bore})"
+        )
+
+
 def test_cas220103_scales_with_b_field():
     """Higher B-field -> more conductor -> higher cost (linear in B)."""
-    low_b = _make_cas22_coil(b_max=8.0)
-    high_b = _make_cas22_coil(b_max=16.0)
+    low_b = _make_cas22_coil(b_center=8.0)
+    high_b = _make_cas22_coil(b_center=16.0)
     assert high_b["C220103"] > low_b["C220103"]
     # Linear in B, so 2x B -> 2x cost
     assert abs(high_b["C220103"] / low_b["C220103"] - 2.0) < 0.01
 
 
-def test_cas220103_scales_with_r_coil_squared():
+def test_cas220103_scales_with_r_bore_squared():
     """Larger coil bore -> quadratically more conductor."""
-    small = _make_cas22_coil(r_coil=1.0)
-    large = _make_cas22_coil(r_coil=2.0)
+    small = _make_cas22_coil(r_bore=1.0)
+    large = _make_cas22_coil(r_bore=2.0)
     assert abs(large["C220103"] / small["C220103"] - 4.0) < 0.01
 
 
@@ -438,8 +483,8 @@ def _make_cas22_heating(p_nbi=50.0, p_icrf=0.0, p_ecrh=0.0, p_lhcd=0.0):
         vessel_vol=VESSEL_VOL,
         family=ConfinementFamily.STEADY_STATE,
         concept=ConfinementConcept.TOKAMAK,
-        b_max=12.0,
-        r_coil=1.85,
+        b_center=12.0,
+        r_bore=1.85,
         coil_material=CoilMaterial.REBCO_HTS,
         blanket_form=BlanketForm.LIQUID_METAL,
         p_nbi=p_nbi,
@@ -521,8 +566,8 @@ def test_cas220110_concept_scales():
         vessel_vol=VESSEL_VOL,
         family=ConfinementFamily.STEADY_STATE,
         concept=ConfinementConcept.TOKAMAK,
-        b_max=12.0,
-        r_coil=1.85,
+        b_center=12.0,
+        r_bore=1.85,
         coil_material=CoilMaterial.REBCO_HTS,
         blanket_form=BlanketForm.LIQUID_METAL,
         p_nbi=50.0,
@@ -551,8 +596,8 @@ def test_cas220110_concept_scales():
         vessel_vol=VESSEL_VOL,
         family=ConfinementFamily.STEADY_STATE,
         concept=ConfinementConcept.MIRROR,
-        b_max=12.0,
-        r_coil=1.85,
+        b_center=12.0,
+        r_bore=1.85,
         coil_material=CoilMaterial.REBCO_HTS,
         blanket_form=BlanketForm.LIQUID_METAL,
         p_nbi=50.0,
@@ -572,7 +617,7 @@ def test_cas220110_concept_scales():
 
 
 def _make_cas22_dec(f_dec=0.3, p_dee=300.0):
-    """Helper for DEC tests — mirror with DEC."""
+    """Helper for DEC tests - mirror with DEC."""
     rb = RadialBuild(R0=6.2, plasma_t=2.0, elon=1.7, blanket_t=0.70)
     geo = compute_geometry(rb, ConfinementConcept.TOKAMAK)
     return cas22_reactor_plant_equipment(
@@ -591,8 +636,8 @@ def _make_cas22_dec(f_dec=0.3, p_dee=300.0):
         vessel_vol=geo.vessel_vol,
         family=ConfinementFamily.STEADY_STATE,
         concept=ConfinementConcept.MIRROR,
-        b_max=12.0,
-        r_coil=1.85,
+        b_center=12.0,
+        r_bore=1.85,
         coil_material=CoilMaterial.REBCO_HTS,
         blanket_form=BlanketForm.LIQUID_METAL,
         p_nbi=50.0,
@@ -676,7 +721,7 @@ def test_multi_unit_labor_discount_in_normal_path():
     one = _make_cas22(fuel=Fuel.DT, n_mod=1)
     two = _make_cas22(fuel=Fuel.DT, n_mod=2)
 
-    # Equipment keys are per-module values — unchanged by n_mod
+    # Equipment keys are per-module values - unchanged by n_mod
     assert float(two["C220101"]) == pytest.approx(float(one["C220101"]), rel=1e-9)
 
     # Reconstruct expected C220000(n=2) from n=1 per-module values + n=2 plant_wide
@@ -702,7 +747,7 @@ def test_multi_unit_labor_discount_in_override_path():
         **common, cost_overrides={"C220101": float(base.cas22_detail["C220101"])}
     )
 
-    # Override echoes the same value → C220000 should match
+    # Override echoes the same value -> C220000 should match
     assert float(overridden.cas22_detail["C220000"]) == pytest.approx(
         float(base.cas22_detail["C220000"]), rel=1e-6
     )
@@ -731,8 +776,8 @@ def _make_cas22_pulsed(concept, e_driver_mj=0.0, p_driver=0.0):
         vessel_vol=VESSEL_VOL,
         family=ConfinementFamily.PULSED,
         concept=concept,
-        b_max=12.0,
-        r_coil=1.85,
+        b_center=12.0,
+        r_bore=1.85,
         coil_material=CoilMaterial.REBCO_HTS,
         blanket_form=BlanketForm.LIQUID_METAL,
         p_nbi=0.0,

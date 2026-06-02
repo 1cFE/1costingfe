@@ -21,9 +21,14 @@ p_trit: 10.0        # Tritium processing power [MW]
 p_house: 4.0        # Housekeeping power [MW]
 p_cryo: 0.5         # Cryogenic power [MW]
 
-# Coil parameters
-b_max: 12.0          # Peak field on conductor [T]
-r_coil: 1.85         # Effective winding bore radius [m] (pyFECONs calibration)
+# Coil parameters. b_center / r_bore drive kA*m via Biot-Savart:
+#   kA*m = G * b_center * r_bore^2 / (mu_0 * 1000)
+# b_center is the field at the geometric center of the loop (axis), NOT the
+# peak field on the conductor (peak-on-conductor is ~2-4x higher for high-field
+# SC, but that ratio does not enter the ampere-meter quantity). r_bore is the
+# effective winding-bore radius (calibration parameter).
+b_center: 12.0       # Field at coil center [T]
+r_bore: 1.85         # Effective winding bore radius [m]
 
 # Radial build geometry [m] — CATF spherical tokamak reference
 R0: 3.0          # Major radius R0

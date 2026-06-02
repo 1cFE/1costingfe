@@ -37,6 +37,7 @@ def test_blanket_form_valid_fills():
     assert BlanketForm.SOLID_BREEDER.valid_fills == {
         BlanketFill.BE_CERAMIC,
         BlanketFill.CERAMIC_ONLY,
+        BlanketFill.LI2O,
     }
     assert BlanketForm.NONE.valid_fills == {BlanketFill.NONE}
 

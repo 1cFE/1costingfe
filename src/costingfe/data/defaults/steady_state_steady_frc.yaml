@@ -40,9 +40,10 @@ p_cryo: 1.0         # Cryogenic power [MW]
 # Coil parameters. Near-unity FRC beta: the plasma's own current confines it, so
 # external coils run at low field (resistive copper, ~0.1-1 T) far below a
 # tokamak/mirror. coil_material=copper costs C220103 by copper mass build-up
-# (b_max/r_coil set the ampere-meters); see CAS22_reactor_components.md.
-b_max: 0.5
-r_coil: 1.85
+# (b_center/r_bore set the ampere-meters); see CAS22_reactor_components.md.
+# b_center is the field at the loop center (NOT peak-on-conductor).
+b_center: 0.5
+r_bore: 1.85
 coil_material: copper  # resistive copper (near-unity beta, low external field)
 
 # Radial build geometry [m] (linear cylinder)

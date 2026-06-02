@@ -18,7 +18,7 @@ Key stellarator differences from tokamak (CAS22 coil model):
     field-quality tolerances to preserve quasi-symmetry
   - path_factor=2x: non-planar coil winding path is ~2x longer per
     coil than a comparable planar TF coil at the same major radius
-  - b_max=18T (vs 12T tokamak): HTS REBCO enables higher peak field
+  - b_center=18T (vs 12T tokamak): HTS REBCO enables higher on-axis field
   - Heating costed as ECRH at $5/MW (vs NBI at $7.06/MW for tokamak)
   - Zero current drive power: p_input is pure auxiliary heating for
     startup and profile control, not sustaining a plasma current

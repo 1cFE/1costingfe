@@ -41,8 +41,8 @@ def main() -> None:
         structure_t=0.15,  # m
         vessel_t=0.10,  # m
         # Magnets
-        b_max=12.0,  # T, peak field on conductor
-        r_coil=1.85,  # m, effective winding bore radius
+        b_center=12.0,  # T, on-axis field at the coil center
+        r_bore=1.85,  # m, effective winding bore radius
         # Power balance (Section 2.2 Table)
         p_input=50.0,  # MW, NBI heating (neutral beams sustain mirror)
         eta_couple=1.0,  # NBI coupling; eta_pin = 0.60 x 1.0 = 0.60

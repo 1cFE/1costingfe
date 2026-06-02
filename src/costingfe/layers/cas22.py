@@ -19,6 +19,7 @@ import jax.numpy as jnp
 
 from costingfe.defaults import CostingConstants
 from costingfe.types import (
+    BlanketFill,
     BlanketForm,
     CoilMaterial,
     ConfinementConcept,
@@ -42,13 +43,14 @@ _COIL_DEFAULTS = {
     # solenoid coils discretizing the 50 m central cell. Simple-mirror devices
     # (WHAM/BEAM/Anvil) would use n_coils ≈ 4.
     ConfinementConcept.MIRROR: {"markup": 2.5, "path_factor": 1.0, "n_coils": 10},
-    # DIPOLE n_coils is the STATIONARY levitation/support coil set only (>=2):
-    # the external SC coils that produce the field holding the floating coil up.
-    # The levitated coil itself is NOT in this count — it is costed as a separate
-    # additive term in C220103 (lev_coil_markup + integral cryostat), because it
-    # is a distinct piece of tech (cooled mid-plasma, persistent current while
-    # disconnected, unshielded). See cas22 DIPOLE branch below.
-    ConfinementConcept.DIPOLE: {"markup": 3.0, "path_factor": 1.0, "n_coils": 2},
+    # DIPOLE: the DIPOLE branch in C220103 does NOT consume these defaults
+    # (markup / path_factor / n_coils). It computes the floating coil's kA*m
+    # from b_center / r_bore directly, then approximates the single external
+    # stationary lift coil as `stationary_lift_coil_fraction * floating_with_
+    # markup` (default 0.10). This dict entry is kept so concept-level table
+    # lookups (e.g. test_cas22_n_coils, downstream tooling) don't KeyError on
+    # DIPOLE; the values are not used by the cost calculation.
+    ConfinementConcept.DIPOLE: {"markup": 3.0, "path_factor": 1.0, "n_coils": 1},
     # Steady-state FRC (beam-driven, e.g. TAE; RMF-driven PFRC) is a linear,
     # open-field-line device like a mirror: external formation + mirror/end-plug
     # coils discretized as independent solenoids (G = n_coils * 4*pi). The
@@ -82,7 +84,14 @@ def _compute_geometry_factor(
 ) -> float:
     """Geometry factor G for conductor quantity scaling.
 
-    total_kAm = G * B * R^2 / (mu_0 * 1000)
+    total_kAm = G * B_center * R^2 / (mu_0 * 1000)
+
+    Derived from Biot-Savart for a thin circular loop:
+      B_center = mu_0 * N*I / (2 R)  ->  N*I = 2 * B_center * R / mu_0
+      kA*m     = N*I * (2 pi R) / 1000 = 4 pi * B_center * R^2 / (mu_0 * 1000)
+    so a single circular loop has G = 4 pi. Multi-coil and 3D-path systems
+    multiply by per-concept factors below. The B input is the field at the
+    center of the loop (axis), NOT the peak field on the conductor.
 
     Tokamak: G = 4pi^2 — empirical total-system (TF+CS+PF) scaling.
     Mirror:  G = n_coils * 4*pi — sum over independent solenoid coils.
@@ -119,8 +128,8 @@ def cas22_reactor_plant_equipment(
     vessel_vol: float,
     family: ConfinementFamily,
     concept: ConfinementConcept,
-    b_max: float,
-    r_coil: float,
+    b_center: float,
+    r_bore: float,
     coil_material: CoilMaterial,
     blanket_form: BlanketForm,
     p_nbi: float,
@@ -143,6 +152,8 @@ def cas22_reactor_plant_equipment(
     n_coils: int | None = None,
     lev_coil_markup: float | None = None,
     lev_coil_cryostat_cost: float | None = None,
+    stationary_lift_coil_fraction: float = 0.10,
+    blanket_fill: BlanketFill | None = None,
 ) -> dict[str, float]:
     """Compute all CAS22 sub-accounts. Returns dict of account_code -> M$.
 
@@ -173,14 +184,20 @@ def cas22_reactor_plant_equipment(
         Fuel.DHE3: cc.blanket_unit_cost_dhe3,
         Fuel.PB11: cc.blanket_unit_cost_pb11,
     }
+    # Chemistry override: the fuel-keyed table above is calibrated against PbLi
+    # liquid-metal blankets (density ~9.4 t/m^3, flow loop + MHD ducts + online
+    # tritium extraction). Solid Li2O (~2 t/m^3, no flow loop) is ~3-5x cheaper
+    # per m^3. Branch on blanket_fill so DIPOLE-class machines using Li2O do not
+    # pay the PbLi premium volumetrically.
+    if blanket_fill == BlanketFill.LI2O:
+        unit = cc.blanket_unit_cost_li2o
+    else:
+        unit = blanket_unit[fuel]
     # TODO: incorporate wall_material cost multiplier into C220101
     # (W tiles vs flowing Li systems vs SiC composites have very different
     # fabrication costs — requires dedicated research)
     c220101 = (
-        blanket_unit[fuel]
-        * blanket_form.structure_factor
-        * blanket_vol
-        * (p_th / P_TH_REF) ** 0.6
+        unit * blanket_form.structure_factor * blanket_vol * (p_th / P_TH_REF) ** 0.6
     )
 
     # -----------------------------------------------------------------------
@@ -200,7 +217,14 @@ def cas22_reactor_plant_equipment(
 
     # -----------------------------------------------------------------------
     # 220103: Coils. Two cost regimes on the same ampere-meter quantity
-    # (total_kAm = G * b_max * r_coil^2 / mu0):
+    # (total_kAm = G * b_center * r_bore^2 / mu0). b_center is the field at the
+    # geometric center of the loop (axis), NOT the peak field on the conductor;
+    # peak-on-conductor is a factor of ~2-4 higher for high-field SC, but that
+    # ratio does not enter the ampere-meter quantity (it would only matter for a
+    # J_c-vs-field conductor derating or a B_max^2 structure term, neither of
+    # which is modeled here). r_bore is the effective winding-bore radius, NOT a
+    # cross-section / cable dimension. See _compute_geometry_factor docstring
+    # and docs/account_justification/CAS22_reactor_components.md.
     #   - Superconducting (HTS/LTS): cost = total_kAm * $/kAm * markup. The
     #     expensive conductor dominates; REBCO $50/kAm (NOAK), markup captures
     #     winding, quench protection, cryostat, testing.
@@ -210,45 +234,64 @@ def cas22_reactor_plant_equipment(
     #     ampere_meters, add steel support, apply fabrication markups. This is
     #     the right basis for low-field FRC/linear copper coils, where the
     #     $/kAm path collapses to a near-zero, unphysical number.
-    # See docs/account_justification/CAS22_reactor_components.md
     # -----------------------------------------------------------------------
-    defaults = _COIL_DEFAULTS.get(concept)
-    if defaults is None:
-        # No confinement magnets (IFE drivers, magnet-free pulsed)
-        c220103 = 0.0
-    else:
-        coil_markup = defaults["markup"]
-        path_factor = defaults["path_factor"]
-        # Honor per-call override; fall back to concept default
-        n_coils_eff = n_coils if n_coils is not None else defaults["n_coils"]
-        if n_coils_eff < 0:
-            raise ValueError(f"n_coils must be >= 0, got {n_coils_eff}")
-        G = _compute_geometry_factor(concept, path_factor, n_coils_eff)
-        total_kAm = G * b_max * r_coil**2 / (_MU0 * 1000)
-        if coil_material == CoilMaterial.COPPER:
-            ampere_meters = total_kAm * 1000.0
-            j_a_m2 = cc.coil_cu_current_density_a_mm2 * 1e6
-            m_cu = (_RHO_CU / j_a_m2) * ampere_meters
-            m_steel = cc.coil_struct_fraction * m_cu
-            c220103 = (
-                m_cu * cc.coil_cu_price_per_kg * cc.coil_cu_fab_markup
-                + m_steel * cc.coil_steel_price_per_kg * cc.coil_steel_fab_markup
-            ) / 1e6
-        else:
-            conductor_cost = total_kAm * coil_material.default_cost_per_kAm / 1e6
-            c220103 = conductor_cost * coil_markup
-
-    # Levitated dipole: the floating field coil is a distinct cost object, not
-    # another entry in the stationary-coil sum. It is a single HTS ring (G=4*pi)
-    # carrying persistent current with an integral onboard cryostat (cooled
-    # mid-plasma, electrically disconnected). lev_coil_markup captures the
-    # float/energize/no-access engineering; lev_coil_cryostat_cost is the
-    # integral cryoplant + levitation control, added on top of the stationary
-    # levitation coils already in c220103 above.
     if concept == ConfinementConcept.DIPOLE:
-        lev_kAm = 4 * math.pi * b_max * r_coil**2 / (_MU0 * 1000)
+        # ---------------------------------------------------------------
+        # Levitated dipole — two distinct coil populations:
+        #   1) the FLOATING field coil (the "core magnet") — a single HTS
+        #      ring carrying persistent current at the design point's
+        #      b_center / r_bore. Its kA*m follows Biot-Savart with G=4*pi
+        #      and gets the float / no-access lev_coil_markup, plus the
+        #      flat lev_coil_cryostat_cost (integral neon-slush cryoplant
+        #      + flux pump + levitation control).
+        #   2) ONE external stationary lift coil — sits outside the inner
+        #      VV (Simpson 2026, arXiv:2602.20564, §2.2 Reactor A: the
+        #      floating coil is held up by external lift coils whose field
+        #      is set by force balance against the coil's gravity, NOT by
+        #      plasma confinement). The lift coil operates at a much lower
+        #      center field (only force balance is required) at typically
+        #      larger R (sits outside the chamber), so its kA*m and
+        #      conductor budget are much smaller than the floating coil.
+        #      It also does NOT carry the float / no-access engineering
+        #      markup (it's a standard external SC coil with full access
+        #      for assembly and maintenance).
+        # We approximate the stationary lift coil's full installed cost as
+        # a small fraction of the floating coil's with-markup cost. The
+        # default (stationary_lift_coil_fraction = 0.10) is a first-cut
+        # estimate; a more rigorous version would parameterize the lift
+        # coil's own b_center_stationary / r_bore_stationary.
+        # ---------------------------------------------------------------
+        lev_kAm = 4 * math.pi * b_center * r_bore**2 / (_MU0 * 1000)
         lev_conductor = lev_kAm * coil_material.default_cost_per_kAm / 1e6
-        c220103 = c220103 + lev_conductor * lev_coil_markup + lev_coil_cryostat_cost
+        floating_with_markup = lev_conductor * lev_coil_markup
+        stationary_lift_cost = stationary_lift_coil_fraction * floating_with_markup
+        c220103 = floating_with_markup + stationary_lift_cost + lev_coil_cryostat_cost
+    else:
+        defaults = _COIL_DEFAULTS.get(concept)
+        if defaults is None:
+            # No confinement magnets (IFE drivers, magnet-free pulsed)
+            c220103 = 0.0
+        else:
+            coil_markup = defaults["markup"]
+            path_factor = defaults["path_factor"]
+            # Honor per-call override; fall back to concept default
+            n_coils_eff = n_coils if n_coils is not None else defaults["n_coils"]
+            if n_coils_eff < 0:
+                raise ValueError(f"n_coils must be >= 0, got {n_coils_eff}")
+            G = _compute_geometry_factor(concept, path_factor, n_coils_eff)
+            total_kAm = G * b_center * r_bore**2 / (_MU0 * 1000)
+            if coil_material == CoilMaterial.COPPER:
+                ampere_meters = total_kAm * 1000.0
+                j_a_m2 = cc.coil_cu_current_density_a_mm2 * 1e6
+                m_cu = (_RHO_CU / j_a_m2) * ampere_meters
+                m_steel = cc.coil_struct_fraction * m_cu
+                c220103 = (
+                    m_cu * cc.coil_cu_price_per_kg * cc.coil_cu_fab_markup
+                    + m_steel * cc.coil_steel_price_per_kg * cc.coil_steel_fab_markup
+                ) / 1e6
+            else:
+                conductor_cost = total_kAm * coil_material.default_cost_per_kAm / 1e6
+                c220103 = conductor_cost * coil_markup
 
     # -----------------------------------------------------------------------
     # 220104: Supplementary Heating (MFE) or Primary Driver (pulsed)
@@ -356,7 +399,13 @@ def cas22_reactor_plant_equipment(
     # See docs/account_justification/CAS22_plant_systems.md
     # -----------------------------------------------------------------------
     if family == ConfinementFamily.STEADY_STATE:
-        c220108 = cc.divertor_base * (p_th / 1000.0) ** 0.5
+        if concept == ConfinementConcept.DIPOLE:
+            # Closed-field-line dipole: particles exhaust through the loss cone
+            # at the top/bottom openings of the chamber, so there is no W
+            # monoblock divertor cassette to manufacture (Simpson 2026 §2.2.6).
+            c220108 = 0.0
+        else:
+            c220108 = cc.divertor_base * (p_th / 1000.0) ** 0.5
     elif concept in (
         ConfinementConcept.PULSED_FRC,
         ConfinementConcept.THETA_PINCH,

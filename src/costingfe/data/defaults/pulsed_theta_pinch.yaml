@@ -21,10 +21,11 @@ p_cryo: 0.0          # Copper coils
 p_target: 0.0        # No manufactured targets
 p_coils: 0.5         # Compression coils average power [MW]
 
-# Coil parameters — copper pulsed coils
+# Coil parameters — copper pulsed coils. b_center = peak field at the loop
+# center during compression (NOT field on the conductor surface).
 coil_material: copper
-b_max: 8.0           # Peak compression field [T]
-r_coil: 0.4          # Winding bore [m]
+b_center: 8.0        # Field at coil center during peak compression [T]
+r_bore: 0.4          # Effective winding bore [m]
 
 # Radial build geometry [m] (cylindrical)
 R0: 0.0
