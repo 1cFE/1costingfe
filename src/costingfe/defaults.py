@@ -52,7 +52,8 @@ class CostingConstants:
     blanket_unit_cost_li2o: float = 0.2
 
     # 220102: Shield — volume-based unit cost (M$/m³)
-    # Calibrated at reference shield volume ~516 m³
+    # Reference: ~350 m³ steel + borated water -> $261M DT
+    # (docs/account_justification/CAS22_reactor_components.md)
     shield_unit_cost: float = 0.74  # M$/m³, DT reference
 
     # 220103-220108: Reactor components
@@ -104,10 +105,11 @@ class CostingConstants:
     # incur no preheat cost.
     laser_preheat_per_mj: float = 80.0  # M$/MJ preheat laser energy (DPSSL class)
     # 220105: Primary Structure — volume-based (M$/m³)
-    structure_unit_cost: float = 0.15  # Calibrated at ~208 m³
+    # Reference: ~200 m³ structural steel -> $28M (CAS22_reactor_components.md)
+    structure_unit_cost: float = 0.15
     # 220106: Vacuum System — vessel (volume-based) + gas-load pumping.
     # See docs/account_justification/CAS220106_vacuum_pumping.md
-    vessel_unit_cost: float = 0.72  # M$/m³ vessel shell, calibrated at ~148 m³
+    vessel_unit_cost: float = 0.72  # M$/m³ vessel shell, ref ~210 m³ -> $151M
     # Gas-load-driven pumping: S_req = Q_gas / P_op, cost = pump_unit_cost * S_req.
     # Q_gas = NBI neutral-gas load + fueling/exhaust throughput (outgassing negligible).
     pump_unit_cost: float = 0.015  # M$ per (m³/s) installed speed (= $15/(L/s))
