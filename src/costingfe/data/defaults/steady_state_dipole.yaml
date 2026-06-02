@@ -76,8 +76,14 @@ lev_coil_cryostat_cost: 100.0 # Integral neon-slush cryostat + flux pump +
 # approximate its full installed cost as a fraction of the floating coil's
 # with-markup cost rather than re-running Biot-Savart on its own b_center /
 # r_bore (which would conflate with the floating coil's parameters in the
-# current first-cut signature). 0.10 is a first-cut estimate; refine when
-# Simpson publishes lift-coil specifications.
+# current first-cut signature). Validation: Simpson 2026 (Sec 4, "the details
+# of the limiter and top magnet have not been considered ... the top magnet
+# will be a small fraction of the core magnet cost and therefore will not
+# affect the cost of the overall plant significantly") endorses the fraction-of-
+# core-magnet approach but gives NO quantitative top-magnet specs (no field,
+# current, radius, or mass in any table). So 0.10 is consistent with the paper's
+# qualitative "small fraction" bound but is not numerically pinned; it is a
+# documented first-cut, refine if Simpson publishes lift-coil specifications.
 stationary_lift_coil_fraction: 0.10
 
 # Radial build geometry [m] -- Simpson 2026 Reactor A inner vacuum vessel at
