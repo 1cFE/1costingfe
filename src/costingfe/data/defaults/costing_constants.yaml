@@ -1,4 +1,6 @@
-# All values from pyFECONs CostingConstants defaults
+# Default CostingConstants. Per-constant provenance is in the comments below
+# and docs/account_justification/; values stand on vendor/procurement,
+# ARIES/ITER, Gen-IV EMWG, and primary-literature sources.
 
 # CAS10 (bureaucracy: licensing, permits, studies)
 site_permits: 3.0           # M$
@@ -19,9 +21,10 @@ licensing_time_dhe3: 0.75   # 6-12 months (DI-016)
 licensing_time_pb11: 0.0    # no NRC jurisdiction (DI-016)
 
 # CAS22 — Reactor Plant Equipment
-# Source: pyFECONs costing/calculations/cas22/, calibrated to volume-based
+# Account structure: pyFECONs costing/calculations/cas22/ (Gen-IV EMWG CAS)
 # 220101: First Wall + Blanket — volume-based unit costs (M$/m³)
-# Calibrated against reference tokamak (R=6.2m, a=2.0m, κ=1.7)
+# DT 0.60 = NOAK-reduced RAFM-steel blanket mass build-up (~3500 t x $150/kg
+# fab, ITER 440-module cross-check); see CAS22_reactor_components.md
 blanket_unit_cost_dt: 0.60   # Full breeding blanket (TBR>1.05)
 blanket_unit_cost_dd: 0.30   # Energy capture, no breeding
 blanket_unit_cost_dhe3: 0.08 # Minimal X-ray + ~5% neutron
@@ -161,13 +164,14 @@ inflation_2019_2024: 1.22
 electric_per_mw: 0.08418    # 0.069 * 1.22 — switchyard, transformers, cabling
 misc_per_mw: 0.05124        # 0.042 * 1.22 — fire protection, compressed air, HVAC
 
-# CAS28 — Digital twin (M$, fixed)
-# Source: NtTau Digital LTD in-house estimate (pyFECONS)
+# CAS28 — Digital twin (M$, fixed). Software-dominated; does not scale with plant size.
+# Source: DOE ARPA-E GEMINA per-project reactor digital-twin budgets
+# (U. Michigan scalable reactor digital twin $5.2M; $2-10M industrial plant twins).
 # See docs/account_justification/CAS28_digital_twin.md
 digital_twin: 5.0
 
 # CAS29 — Contingency on direct costs
-# Source: Gen-IV EMWG convention, pyFECONS
+# Source: Gen-IV EMWG convention
 # See docs/account_justification/CAS29_contingency.md
 contingency_rate_foak: 0.10
 contingency_rate_noak: 0.0
