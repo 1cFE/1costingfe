@@ -309,18 +309,18 @@ The cost basis differs by driver type:
   liquid-metal recirculation plant genuinely scales with throughput (average
   power), not just per-pulse energy.
 
-The laser and heavy-ion per-MJ figures reproduce the prior $/W NOAK projections
-at each driver's reference rep rate, then hold constant off-reference: laser
-$8/W × 10 Hz = 80 M$/MJ; heavy-ion $12/W × 5 Hz = 60 M$/MJ.  The plasma-jet
-coefficient (4 M$/MJ) likewise preserves its reference point (f_rep = 1 Hz).
+The heavy-ion and plasma-jet per-MJ figures reproduce their $/W reference points,
+held constant off-reference (heavy-ion $12/W × 5 Hz = 60 M$/MJ; plasma-jet at
+f_rep = 1 Hz).  The laser figure (205 M$/MJ) is grounded in published DPSSL NOAK
+estimates; see the Laser IFE row and the double-counting note below.
 
 #### Driver costs
 
 | Concept | Basis | Coefficient | Hardware | Rationale |
 |---------|-------|------------:|----------|-----------|
-| Laser IFE | $/MJ | 80 | Diode-pumped solid-state laser | NIF-heritage optics at NOAK volume. Current DPSSL $20–50/W; NOAK target $8/W. Costed on pulse energy. |
+| Laser IFE | $/MJ | 205 | Diode-pumped solid-state laser (optics + diodes) | Optics + diode arrays, the dominant turnkey part. With the C220107 cap bank (~$5/J at η=0.10) the laser totals ~$210/J = aggressive DPSSL NOAK. Published DPSSL turnkey NOAK spans $210–700/J (diode roadmap to ~$0.007/W; ARPA-E IFE workshop, Zuegel 2023; Orth/LLNL DPSSL study), FOAK $700–1000/J. Costed on pulse energy. |
 | Heavy ion | $/MJ | 60 | RF linac + storage rings | Accelerator capital scales with per-pulse beam energy and ring charge. Higher than laser due to ring infrastructure. |
-| MagLIF | $/MJ (preheat only) | 80 | Laser preheat system | Main driver is the electrical Z-pinch (C220107). C220104 carries only the preheat laser, costed per joule of preheat pulse energy (`e_preheat_mj`); same DPSSL class as the IFE driver. Set `e_preheat_mj = 0` for no-preheat magnetized compression (e.g. Pacific Fusion). |
+| MagLIF | $/MJ (preheat only) | 205 | Laser preheat system | Main driver is the electrical Z-pinch (C220107). C220104 carries only the preheat laser, costed per joule of preheat pulse energy (`e_preheat_mj`); same DPSSL class as the IFE driver. Set `e_preheat_mj = 0` for no-preheat magnetized compression (e.g. Pacific Fusion). |
 | Plasma jet | $/MJ | 4 | Plasma gun array | Electromagnetic plasma guns, sized by per-pulse energy and current. More complex than pneumatics, simpler than lasers. |
 | Staged Z-pinch | $/MJ | 1.5 | Coaxial gun + gas injection | Sheared-flow stabilization hardware: coaxial accelerator electrodes plus neutral-gas puff valves and fast pumping. Single, simpler coaxial assembly, so cheaper per MJ than the plasma-jet array. The Z-pinch cap bank itself is in C220107. |
 | Mag. target | $/MW | 3 | Pneumatic pistons, liquid metal loop | Mechanical compression hardware. Throughput-scaled (mass moved each shot), so kept on average power deliberately. Mature industrial technology. |

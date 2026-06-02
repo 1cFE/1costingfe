@@ -87,14 +87,18 @@ class CostingConstants:
     # Lasers, accelerators, and electromagnetic guns are costed per joule of pulse
     # energy: their capital is set by pulse energy (laser aperture / diode count,
     # ring charge, coaxial-gun size and peak current), not by how often the driver
-    # fires, so the basis is rep-rate-independent. The laser/heavy-ion values
-    # reproduce the prior $/W NOAK figures at their reference rep rates
-    # (laser $8/W x 10 Hz = 80 M$/MJ; heavy-ion $12/W x 5 Hz = 60 M$/MJ) without the
-    # spurious rep-rate scaling. Pneumatic/mechanical injectors (mag-target) keep an
-    # average-power (throughput) basis because they accelerate mass each shot and
-    # their handling/recirculation plant scales with throughput (M$/MW, 2023$).
-    driver_laser_per_mj: float = 80.0  # M$/MJ DPSSL pulse energy (was $8/W at 10 Hz)
-    driver_heavy_ion_per_mj: float = 60.0  # M$/MJ beam energy (was $12/W at 5 Hz)
+    # fires, so the basis is rep-rate-independent. Pneumatic/mechanical injectors
+    # (mag-target) keep an average-power (throughput) basis because they accelerate
+    # mass each shot and their handling/recirculation plant scales with throughput
+    # (M$/MW, 2023$). Like every pulsed concept, the laser keeps the C220104
+    # (driver hardware) / C220107 (electrical store) split: this value is the
+    # optics + diode-array $/J (the dominant part); the capacitor bank that fires
+    # the diodes is the small C220107 term, so C220104 + C220107 lands at the
+    # published turnkey NOAK. See CAS22_reactor_components.md (C220104).
+    driver_laser_per_mj: float = 205.0  # M$/MJ; optics + diodes. With the ~$5/J
+    #   C220107 cap bank the laser totals ~$210/J = aggressive DPSSL NOAK (diode
+    #   roadmap to ~$0.007/W). Published DPSSL NOAK $210-700/J, FOAK $700-1000/J.
+    driver_heavy_ion_per_mj: float = 60.0  # M$/MJ beam energy (heavy-ion accelerator)
     driver_plasma_jet_per_mj: float = 4.0  # M$/MJ EM plasma-gun pulse energy
     driver_staged_zpinch_per_mj: float = 1.5  # M$/MJ sheared-flow gun + gas inj.
     driver_mag_target_per_mw: float = 3.0  # M$/MW avg power, pneumatic pistons
@@ -103,7 +107,9 @@ class CostingConstants:
     # pulse energy (same DPSSL class as the IFE driver). Concepts that magnetize and
     # compress without a preheat laser (e.g. Pacific Fusion) set e_preheat_mj=0 and
     # incur no preheat cost.
-    laser_preheat_per_mj: float = 80.0  # M$/MJ preheat laser energy (DPSSL class)
+    laser_preheat_per_mj: float = (
+        205.0  # M$/MJ preheat laser (same DPSSL class as driver)
+    )
     # 220105: Primary Structure — volume-based (M$/m³)
     # Reference: ~200 m³ structural steel -> $28M (CAS22_reactor_components.md)
     structure_unit_cost: float = 0.15
