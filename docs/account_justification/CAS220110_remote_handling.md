@@ -151,7 +151,7 @@ concept-aware:
 
 | Concept | Default availability | Rationale |
 |---------|---------------------:|-----------|
-| Tokamak | 0.85 | pyFECONs / ARIES heritage; port-limited blanket replacement campaigns. |
+| Tokamak | 0.85 | ARIES heritage; port-limited blanket replacement campaigns. |
 | Stellarator | 0.85 | Toroidal continuity must be re-established; 3D coil routing does not improve outage duration. |
 | Mirror | 0.87 | Axial extraction of blanket rings; shorter scheduled-outage duration. |
 | Other | 0.85 | No concept-specific basis claimed. |

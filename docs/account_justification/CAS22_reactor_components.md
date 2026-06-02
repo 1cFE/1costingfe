@@ -203,7 +203,7 @@ therefore a **mass build-up**, re-pricing the same ampere-meters by mass:
 | ρ_Cu | 8960 kg/m³ | physical |
 | J (current density) | 5 A/mm² | water-cooled copper practice |
 | cu_$/kg | 11 | LME 2026-class copper |
-| cu_markup | 3.5 | winding, insulation, cooling, jointing, test (ARIES/pyFECONS class) |
+| cu_markup | 3.5 | winding, insulation, cooling, jointing, test (ARIES class) |
 | f_struct | 0.6 | steel support mass / copper mass |
 | steel_$/kg | 6 | fabricated structural steel |
 | steel_markup | 3.0 | coil-case / inter-coil support fabrication |
@@ -259,10 +259,10 @@ here; the driver's recirculating-power burden is already represented via
 
 | System | $/MW | Source | Scope |
 |--------|-----:|--------|-------|
-| NBI | 7.06 | ARIES/pyFECONS, calibrated to ITER NBI procurement | Ion source, accelerator, neutralizer, duct, cryo pumps, power supply |
-| ICRF | 4.15 | ARIES/pyFECONS | RF generators, transmission lines, antenna, matching network |
-| ECRH | 5.00 | ARIES/pyFECONS | Gyrotrons (1 MW each), transmission waveguides, launchers |
-| LHCD | 4.00 | ARIES/pyFECONS | Klystrons, waveguide grills, power supply |
+| NBI | 7.06 | ARIES, calibrated to ITER NBI procurement | Ion source, accelerator, neutralizer, duct, cryo pumps, power supply |
+| ICRF | 4.15 | ARIES | RF generators, transmission lines, antenna, matching network |
+| ECRH | 5.00 | ARIES; ITER gyrotron cross-check | Gyrotrons (1 MW each), transmission waveguides, launchers |
+| LHCD | 4.00 | ARIES | Klystrons, waveguide grills, power supply |
 
 #### Validation
 
