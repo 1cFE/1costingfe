@@ -41,6 +41,11 @@ class CostingConstants:
     blanket_unit_cost_dd: float = 0.30  # Energy capture, no breeding
     blanket_unit_cost_dhe3: float = 0.08  # Minimal X-ray + ~5% neutron
     blanket_unit_cost_pb11: float = 0.05  # Minimal X-ray only
+    # Li2O solid ceramic breeder (DT) — chemistry-specific override applied
+    # in C220101 when blanket_fill == LI2O. Derived from ~2 t/m^3 packed
+    # density x ~$100k/t fusion-grade Li2O pricing; no flow loop, no MHD
+    # ducts, no online tritium extraction (cheaper per m^3 than PbLi).
+    blanket_unit_cost_li2o: float = 0.2
 
     # 220102: Shield — volume-based unit cost (M$/m³)
     # Calibrated at reference shield volume ~516 m³

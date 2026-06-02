@@ -26,7 +26,10 @@ _BASE = dict(
         (C.TOKAMAK, Fuel.DT, 233.41),
         (C.MIRROR, Fuel.DT, 186.47),
         (C.STELLARATOR, Fuel.DT, 359.94),
-        (C.DIPOLE, Fuel.DHE3, 182.79),
+        # DIPOLE re-benchmarked after the radial-build inversion + spherical
+        # geometry dispatch + Li2O blanket fill (Simpson 2026 alignment); the
+        # coupling factor itself is unchanged — only the cost basis moved.
+        (C.DIPOLE, Fuel.DHE3, 303.62),
         (C.POLYWELL, Fuel.PB11, 52.98),
     ],
 )

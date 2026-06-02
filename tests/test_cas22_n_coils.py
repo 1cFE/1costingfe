@@ -20,8 +20,8 @@ def _base_kwargs():
         structure_t=0.2,
         vessel_t=0.2,
         p_input=20.0,
-        b_max=8.0,
-        r_coil=1.0,
+        b_center=8.0,
+        r_bore=1.0,
     )
 
 

@@ -139,6 +139,7 @@ class BlanketFill(Enum):
     FLIBE = "flibe"
     BE_CERAMIC = "be_ceramic"
     CERAMIC_ONLY = "ceramic_only"
+    LI2O = "li2o"
     NONE = "none"
 
     @property
@@ -153,13 +154,22 @@ _BLANKET_FILL_FACTOR = {
     BlanketFill.FLIBE: 5.0,
     BlanketFill.BE_CERAMIC: 13.0,
     BlanketFill.CERAMIC_ONLY: 3.0,
+    # Li2O fusion-grade ceramic powder pricing per kg of Li-bearing material;
+    # similar order of magnitude to CERAMIC_ONLY.
+    BlanketFill.LI2O: 3.0,
     BlanketFill.NONE: 0.0,
 }
 
 _BLANKET_FORM_VALID_FILLS = {
     BlanketForm.LIQUID_METAL: {BlanketFill.PBLI, BlanketFill.LI},
     BlanketForm.MOLTEN_SALT: {BlanketFill.FLIBE},
-    BlanketForm.SOLID_BREEDER: {BlanketFill.BE_CERAMIC, BlanketFill.CERAMIC_ONLY},
+    # Li2O is a solid ceramic breeder (no Be multiplier needed when a separate
+    # W neutron multiplier handles TBR, as in OpenStar / Simpson 2026).
+    BlanketForm.SOLID_BREEDER: {
+        BlanketFill.BE_CERAMIC,
+        BlanketFill.CERAMIC_ONLY,
+        BlanketFill.LI2O,
+    },
     BlanketForm.NONE: {BlanketFill.NONE},
 }
 

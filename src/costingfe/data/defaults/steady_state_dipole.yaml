@@ -52,27 +52,38 @@ p_house: 4.0        # Housekeeping power [MW]
 p_cryo: 1.31        # Cryogenic wall-plug power [MW] (neon slush at 24.6 K,
                     # eta_cryo ~1.25%; Reactor A Table 9)
 
-# Coil parameters. b_max / r_coil / coil_material describe the SC magnets;
+# Coil parameters. b_center / r_bore / coil_material describe the SC magnets;
 # the stationary levitation coils (n_coils, _COIL_DEFAULTS) and the levitated
-# coil both scale off these in this first cut.
+# coil both scale off these. b_center is the field at the geometric center of
+# the loop (axis), NOT the peak field on the conductor; for Simpson Reactor A
+# B_max = 23.0 T at the conductor, b_center = 6.26 T -> ratio ~3.67. The
+# kA*m formula NI = 2 * b_center * R / mu_0 is derived for B_center.
 coil_material: rebco_hts  # OpenStar floating coil is HTS REBCO
-b_max: 23.0          # Peak field on conductor [T] (Reactor A, Table 7)
-r_coil: 1.0          # Floating-coil characteristic radius [m]
+b_center: 6.26       # Field at coil center [T] (Simpson 2026 Reactor A: B_max
+                     #   23 T on conductor / 3.67 peak-to-center ~= 6.26 T)
+r_bore: 5.3          # Floating-coil winding-bore radius [m] (R_c, Table 7)
+peak_to_center_ratio: 3.67  # B_max on conductor / b_center; ~3-4 for high-field SC
 
 # Levitated-coil-specific cost terms (added to C220103, see cas22 DIPOLE branch)
 lev_coil_markup: 8.0          # Float / energize / no-access engineering markup
 lev_coil_cryostat_cost: 100.0 # Integral neon-slush cryostat + flux pump +
                               # levitation control [M$] -- FIRST-CUT placeholder
 
-# Radial build geometry [m] -- torus approximation of a roughly spherical
-# plasma region (outer radius ~7 m, 2 m Li2O blanket shell; Simpson et al.)
-R0: 5.0              # Major radius to the plasma region
-plasma_t: 2.0        # Plasma minor extent
+# Radial build geometry [m] -- Simpson 2026 Reactor A inner vacuum vessel at
+# ~20.6 m radius, thin Inconel membrane (no coil Lorentz forces, no disruption
+# EM loads -- outer concrete shell handles atmospheric pressure). Plasma fills
+# the volume out to a thin Li2O breeding shell mounted inside the inner VV.
+#
+# Volumes are computed under DIPOLE's spherical-shell branch in geometry.py:
+# plasma fills 0 .. plasma_t, then blanket, then (zero) shield/structure/gap,
+# then a thin vessel membrane. Total outer radius (vessel_or) ~= 20.6 m.
+R0: 0.0              # Not used for spherical dispatch
+plasma_t: 20.27      # Plasma fills the chamber out to the Li2O blanket shell
 elon: 1.0
-blanket_t: 2.00      # Thick Li2O breeding shell (DT)
-ht_shield_t: 0.50    # W-B4C-W neutron shield
-structure_t: 0.20    # Primary structure
-vessel_t: 0.20       # Large vacuum vessel
+blanket_t: 0.33      # Thin Li2O breeding shell at large radius
+ht_shield_t: 0.0     # No dedicated HT shield (blanket + plasma volume attenuate)
+structure_t: 0.0     # No primary structure inside the inner VV
+vessel_t: 0.008      # Thin Inconel membrane (~8 mm); no Lorentz/disruption loads
 
 # Construction
 construction_time_yr: 6.0  # Years
@@ -102,6 +113,8 @@ pb11_f_alpha_n: 0.0
 pb11_f_p_n: 0.0
 
 # Blanket configuration: Li2O solid ceramic, natural lithium (TBR 1.1 via W
-# neutron multiplication; no Li-6 enrichment).
+# neutron multiplication; no Li-6 enrichment). Li2O carries its own
+# blanket_unit_cost_li2o in the C220101 branch -- volumetrically cheaper than
+# PbLi: ~$0.2 M$/m^3 derived from 2 t/m^3 x $100k/t fusion-grade Li2O.
 blanket_form: solid_breeder
-blanket_fill: ceramic_only
+blanket_fill: li2o

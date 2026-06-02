@@ -18,6 +18,7 @@ Usage:
 from costingfe.model import CostModel
 from costingfe.types import (
     CONCEPT_TO_FAMILY,
+    BlanketFill,
     BlanketForm,
     CoilMaterial,
     ConfinementConcept,
@@ -102,10 +103,12 @@ def generate_subsystems(
         vessel_vol=geo.vessel_vol,
         family=model.family,
         concept=concept_enum,
-        b_max=params["b_max"],
-        r_coil=params["r_coil"],
+        b_center=params.get("b_center", params.get("b_max")),
+        r_bore=params.get("r_bore", params.get("r_coil")),
+        peak_to_center_ratio=params.get("peak_to_center_ratio", 3.0),
         coil_material=CoilMaterial(params.get("coil_material", "rebco_hts")),
         blanket_form=BlanketForm(params["blanket_form"]),
+        blanket_fill=BlanketFill(params["blanket_fill"]),
         p_nbi=params.get("p_nbi", 0.0),
         p_icrf=params.get("p_icrf", 0.0),
         p_ecrh=params.get("p_ecrh", 0.0),

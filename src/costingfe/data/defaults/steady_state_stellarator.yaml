@@ -23,9 +23,11 @@ p_trit: 10.0        # Tritium processing power [MW]
 p_house: 4.0        # Housekeeping power [MW]
 p_cryo: 0.8         # Cryogenic power [MW]
 
-# Coil parameters
-b_max: 18.0          # Peak field on conductor [T] (HTS REBCO enables 15-20T)
-r_coil: 1.85         # Effective winding bore radius [m] (calibration parameter)
+# Coil parameters (see steady_state_tokamak.yaml for the b_center / r_bore /
+# peak_to_center_ratio convention).
+b_center: 18.0       # Field at coil center [T] (HTS REBCO enables 15-20T peak)
+r_bore: 1.85         # Effective winding bore radius [m]
+peak_to_center_ratio: 3.0
 
 # Radial build geometry [m]
 R0: 5.5          # Major radius R0

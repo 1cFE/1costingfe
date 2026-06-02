@@ -610,10 +610,13 @@ class CostModel:
 
         # CAS22: compute detail, apply sub-account overrides, recompute totals
         # Coil parameters: from YAML defaults or user overrides.
-        # r_coil = effective winding bore radius (calibration parameter,
+        # r_bore = effective winding bore radius (calibration parameter,
         # not necessarily equal to the radial build vessel_or).
-        r_coil = params.get("r_coil", 1.85)
-        b_max = params.get("b_max", 12.0)
+        # b_center = field at the center of the loop (axis), NOT peak-on-conductor.
+        # peak_to_center_ratio documents B_max = ratio * b_center (informational).
+        r_bore = params.get("r_bore", params.get("r_coil", 1.85))
+        b_center = params.get("b_center", params.get("b_max", 12.0))
+        peak_to_center_ratio = params.get("peak_to_center_ratio", 3.0)
         coil_material = CoilMaterial(params.get("coil_material", "rebco_hts"))
         n_coils = params.get("n_coils", None)
         blanket_form = BlanketForm(params["blanket_form"])
@@ -679,10 +682,12 @@ class CostModel:
             vessel_vol=vessel_vol,
             family=self.family,
             concept=self.concept,
-            b_max=b_max,
-            r_coil=r_coil,
+            b_center=b_center,
+            r_bore=r_bore,
             coil_material=coil_material,
             blanket_form=blanket_form,
+            blanket_fill=blanket_fill,
+            peak_to_center_ratio=peak_to_center_ratio,
             n_coils=n_coils,
             lev_coil_markup=params.get("lev_coil_markup"),
             lev_coil_cryostat_cost=params.get("lev_coil_cryostat_cost"),
@@ -1015,8 +1020,9 @@ class CostModel:
                 "T_edge",
                 "tau_ratio",
                 # Magnet costing
-                "b_max",
-                "r_coil",
+                "b_center",
+                "r_bore",
+                "peak_to_center_ratio",
                 # Heating mix (CAS22 costing)
                 "p_nbi",
                 "p_ecrh",

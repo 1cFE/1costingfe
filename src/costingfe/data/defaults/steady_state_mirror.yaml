@@ -22,9 +22,11 @@ p_trit: 10.0        # Tritium processing power [MW]
 p_house: 4.0        # Housekeeping power [MW]
 p_cryo: 1.0         # Cryogenic power [MW]
 
-# Coil parameters
-b_max: 12.0          # Peak field on conductor [T]
-r_coil: 1.85         # Effective winding bore radius [m] (calibration parameter)
+# Coil parameters (see steady_state_tokamak.yaml for the b_center / r_bore /
+# peak_to_center_ratio convention).
+b_center: 12.0       # Field at coil center [T]
+r_bore: 1.85         # Effective winding bore radius [m]
+peak_to_center_ratio: 3.0
 
 # Radial build geometry [m]
 R0: 0.0          # Not used for cylinder

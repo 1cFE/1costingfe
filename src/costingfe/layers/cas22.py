@@ -19,6 +19,7 @@ import jax.numpy as jnp
 
 from costingfe.defaults import CostingConstants
 from costingfe.types import (
+    BlanketFill,
     BlanketForm,
     CoilMaterial,
     ConfinementConcept,
@@ -82,7 +83,14 @@ def _compute_geometry_factor(
 ) -> float:
     """Geometry factor G for conductor quantity scaling.
 
-    total_kAm = G * B * R^2 / (mu_0 * 1000)
+    total_kAm = G * B_center * R^2 / (mu_0 * 1000)
+
+    Derived from Biot-Savart for a thin circular loop:
+      B_center = mu_0 * N*I / (2 R)  ->  N*I = 2 * B_center * R / mu_0
+      kA*m     = N*I * (2 pi R) / 1000 = 4 pi * B_center * R^2 / (mu_0 * 1000)
+    so a single circular loop has G = 4 pi. Multi-coil and 3D-path systems
+    multiply by per-concept factors below. The B input is the field at the
+    center of the loop (axis), NOT the peak field on the conductor.
 
     Tokamak: G = 4pi^2 — empirical total-system (TF+CS+PF) scaling.
     Mirror:  G = n_coils * 4*pi — sum over independent solenoid coils.
@@ -119,8 +127,8 @@ def cas22_reactor_plant_equipment(
     vessel_vol: float,
     family: ConfinementFamily,
     concept: ConfinementConcept,
-    b_max: float,
-    r_coil: float,
+    b_center: float,
+    r_bore: float,
     coil_material: CoilMaterial,
     blanket_form: BlanketForm,
     p_nbi: float,
@@ -143,6 +151,8 @@ def cas22_reactor_plant_equipment(
     n_coils: int | None = None,
     lev_coil_markup: float | None = None,
     lev_coil_cryostat_cost: float | None = None,
+    blanket_fill: BlanketFill | None = None,
+    peak_to_center_ratio: float = 3.0,
 ) -> dict[str, float]:
     """Compute all CAS22 sub-accounts. Returns dict of account_code -> M$.
 
@@ -173,11 +183,20 @@ def cas22_reactor_plant_equipment(
         Fuel.DHE3: cc.blanket_unit_cost_dhe3,
         Fuel.PB11: cc.blanket_unit_cost_pb11,
     }
+    # Chemistry override: the fuel-keyed table above is calibrated against PbLi
+    # liquid-metal blankets (density ~9.4 t/m^3, flow loop + MHD ducts + online
+    # tritium extraction). Solid Li2O (~2 t/m^3, no flow loop) is ~3-5x cheaper
+    # per m^3. Branch on blanket_fill so DIPOLE-class machines using Li2O do not
+    # pay the PbLi premium volumetrically.
+    if blanket_fill == BlanketFill.LI2O:
+        unit = cc.blanket_unit_cost_li2o
+    else:
+        unit = blanket_unit[fuel]
     # TODO: incorporate wall_material cost multiplier into C220101
     # (W tiles vs flowing Li systems vs SiC composites have very different
     # fabrication costs — requires dedicated research)
     c220101 = (
-        blanket_unit[fuel]
+        unit
         * blanket_form.structure_factor
         * blanket_vol
         * (p_th / P_TH_REF) ** 0.6
@@ -200,7 +219,12 @@ def cas22_reactor_plant_equipment(
 
     # -----------------------------------------------------------------------
     # 220103: Coils. Two cost regimes on the same ampere-meter quantity
-    # (total_kAm = G * b_max * r_coil^2 / mu0):
+    # (total_kAm = G * b_center * r_bore^2 / mu0). b_center is the field at the
+    # geometric center of the loop (axis), NOT the peak field on the conductor;
+    # peak-on-conductor is a factor peak_to_center_ratio higher (typically 2-4
+    # for high-field SC). r_bore is the effective winding-bore radius, NOT a
+    # cross-section / cable dimension. See _compute_geometry_factor docstring
+    # and docs/account_justification/CAS22_reactor_components.md.
     #   - Superconducting (HTS/LTS): cost = total_kAm * $/kAm * markup. The
     #     expensive conductor dominates; REBCO $50/kAm (NOAK), markup captures
     #     winding, quench protection, cryostat, testing.
@@ -210,8 +234,11 @@ def cas22_reactor_plant_equipment(
     #     ampere_meters, add steel support, apply fabrication markups. This is
     #     the right basis for low-field FRC/linear copper coils, where the
     #     $/kAm path collapses to a near-zero, unphysical number.
-    # See docs/account_justification/CAS22_reactor_components.md
     # -----------------------------------------------------------------------
+    # peak_to_center_ratio is currently informational (documents the relation
+    # B_max = peak_to_center_ratio * b_center for the conductor) and not used
+    # in the kA*m calculation, which is intrinsically a b_center quantity.
+    _ = peak_to_center_ratio
     defaults = _COIL_DEFAULTS.get(concept)
     if defaults is None:
         # No confinement magnets (IFE drivers, magnet-free pulsed)
@@ -224,7 +251,7 @@ def cas22_reactor_plant_equipment(
         if n_coils_eff < 0:
             raise ValueError(f"n_coils must be >= 0, got {n_coils_eff}")
         G = _compute_geometry_factor(concept, path_factor, n_coils_eff)
-        total_kAm = G * b_max * r_coil**2 / (_MU0 * 1000)
+        total_kAm = G * b_center * r_bore**2 / (_MU0 * 1000)
         if coil_material == CoilMaterial.COPPER:
             ampere_meters = total_kAm * 1000.0
             j_a_m2 = cc.coil_cu_current_density_a_mm2 * 1e6
@@ -246,7 +273,7 @@ def cas22_reactor_plant_equipment(
     # integral cryoplant + levitation control, added on top of the stationary
     # levitation coils already in c220103 above.
     if concept == ConfinementConcept.DIPOLE:
-        lev_kAm = 4 * math.pi * b_max * r_coil**2 / (_MU0 * 1000)
+        lev_kAm = 4 * math.pi * b_center * r_bore**2 / (_MU0 * 1000)
         lev_conductor = lev_kAm * coil_material.default_cost_per_kAm / 1e6
         c220103 = c220103 + lev_conductor * lev_coil_markup + lev_coil_cryostat_cost
 

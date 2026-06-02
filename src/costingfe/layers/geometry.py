@@ -128,6 +128,15 @@ def compute_geometry(rb: RadialBuild, concept: ConfinementConcept) -> Geometry:
             return _cylinder_shell_volume(h, r_in, r_out)
 
         firstwall_area = 2 * math.pi * vacuum_or * h
+    elif concept == ConfinementConcept.DIPOLE:
+        # Levitated dipole: roughly spherical vessel surrounding a floating
+        # ring coil. The torus branch is unsafe here because the minor radius
+        # exceeds the major radius for dipole-class machines (Simpson 2026
+        # Reactor A: inner VV ~20.6 m), causing the torus to self-intersect.
+        def vol(r_in, r_out):
+            return _sphere_shell_volume(r_in, r_out)
+
+        firstwall_area = 4 * math.pi * vacuum_or**2
     elif family == ConfinementFamily.STEADY_STATE:
         # Tokamak / stellarator: torus
         R = rb.R0
