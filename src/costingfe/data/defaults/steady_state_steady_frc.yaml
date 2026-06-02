@@ -44,7 +44,6 @@ p_cryo: 1.0         # Cryogenic power [MW]
 # b_center is the field at the loop center (NOT peak-on-conductor).
 b_center: 0.5
 r_bore: 1.85
-peak_to_center_ratio: 3.0
 coil_material: copper  # resistive copper (near-unity beta, low external field)
 
 # Radial build geometry [m] (linear cylinder)

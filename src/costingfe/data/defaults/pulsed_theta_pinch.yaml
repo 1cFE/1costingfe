@@ -26,7 +26,6 @@ p_coils: 0.5         # Compression coils average power [MW]
 coil_material: copper
 b_center: 8.0        # Field at coil center during peak compression [T]
 r_bore: 0.4          # Effective winding bore [m]
-peak_to_center_ratio: 3.0
 
 # Radial build geometry [m] (cylindrical)
 R0: 0.0

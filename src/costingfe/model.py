@@ -613,10 +613,8 @@ class CostModel:
         # r_bore = effective winding bore radius (calibration parameter,
         # not necessarily equal to the radial build vessel_or).
         # b_center = field at the center of the loop (axis), NOT peak-on-conductor.
-        # peak_to_center_ratio documents B_max = ratio * b_center (informational).
-        r_bore = params.get("r_bore", params.get("r_coil", 1.85))
-        b_center = params.get("b_center", params.get("b_max", 12.0))
-        peak_to_center_ratio = params.get("peak_to_center_ratio", 3.0)
+        r_bore = params.get("r_bore", 1.85)
+        b_center = params.get("b_center", 12.0)
         coil_material = CoilMaterial(params.get("coil_material", "rebco_hts"))
         n_coils = params.get("n_coils", None)
         blanket_form = BlanketForm(params["blanket_form"])
@@ -687,7 +685,6 @@ class CostModel:
             coil_material=coil_material,
             blanket_form=blanket_form,
             blanket_fill=blanket_fill,
-            peak_to_center_ratio=peak_to_center_ratio,
             n_coils=n_coils,
             lev_coil_markup=params.get("lev_coil_markup"),
             lev_coil_cryostat_cost=params.get("lev_coil_cryostat_cost"),
@@ -1025,7 +1022,6 @@ class CostModel:
                 # Magnet costing
                 "b_center",
                 "r_bore",
-                "peak_to_center_ratio",
                 # Heating mix (CAS22 costing)
                 "p_nbi",
                 "p_ecrh",

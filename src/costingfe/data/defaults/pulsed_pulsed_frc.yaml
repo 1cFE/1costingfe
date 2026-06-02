@@ -26,7 +26,6 @@ p_coils: 0.5         # Formation/acceleration coils average power [MW]
 coil_material: copper
 b_center: 5.0        # Field at coil center [T] (pulsed copper, lower than HTS)
 r_bore: 0.6          # Effective winding bore [m]
-peak_to_center_ratio: 3.0
 
 # Radial build geometry [m] (cylindrical, per module)
 # Each module is a linear machine ~10m long with ~0.5m plasma radius.

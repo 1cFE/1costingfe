@@ -62,7 +62,6 @@ coil_material: rebco_hts  # OpenStar floating coil is HTS REBCO
 b_center: 6.26       # Field at coil center [T] (Simpson 2026 Reactor A: B_max
                      #   23 T on conductor / 3.67 peak-to-center ~= 6.26 T)
 r_bore: 5.3          # Floating-coil winding-bore radius [m] (R_c, Table 7)
-peak_to_center_ratio: 3.67  # B_max on conductor / b_center; ~3-4 for high-field SC
 
 # Levitated-coil-specific cost terms (added to C220103, see cas22 DIPOLE branch)
 lev_coil_markup: 8.0          # Float / energize / no-access engineering markup

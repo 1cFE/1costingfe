@@ -93,9 +93,7 @@ def test_dipole_stationary_lift_coil_fraction_default():
     # markup cost * 0.10 (the delta), so per-module delta should be positive
     # and the ratio of (more - base) / floating_with_markup should be ~0.10.
     more = model.forward(stationary_lift_coil_fraction=0.20, **_base_kwargs())
-    assert float(more.cas22_detail["C220103"]) > float(
-        base.cas22_detail["C220103"]
-    )
+    assert float(more.cas22_detail["C220103"]) > float(base.cas22_detail["C220103"])
 
 
 def test_dipole_levitated_coil_cryostat_additive():

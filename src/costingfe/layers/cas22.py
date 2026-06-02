@@ -154,7 +154,6 @@ def cas22_reactor_plant_equipment(
     lev_coil_cryostat_cost: float | None = None,
     stationary_lift_coil_fraction: float = 0.10,
     blanket_fill: BlanketFill | None = None,
-    peak_to_center_ratio: float = 3.0,
 ) -> dict[str, float]:
     """Compute all CAS22 sub-accounts. Returns dict of account_code -> M$.
 
@@ -198,10 +197,7 @@ def cas22_reactor_plant_equipment(
     # (W tiles vs flowing Li systems vs SiC composites have very different
     # fabrication costs — requires dedicated research)
     c220101 = (
-        unit
-        * blanket_form.structure_factor
-        * blanket_vol
-        * (p_th / P_TH_REF) ** 0.6
+        unit * blanket_form.structure_factor * blanket_vol * (p_th / P_TH_REF) ** 0.6
     )
 
     # -----------------------------------------------------------------------
@@ -223,8 +219,10 @@ def cas22_reactor_plant_equipment(
     # 220103: Coils. Two cost regimes on the same ampere-meter quantity
     # (total_kAm = G * b_center * r_bore^2 / mu0). b_center is the field at the
     # geometric center of the loop (axis), NOT the peak field on the conductor;
-    # peak-on-conductor is a factor peak_to_center_ratio higher (typically 2-4
-    # for high-field SC). r_bore is the effective winding-bore radius, NOT a
+    # peak-on-conductor is a factor of ~2-4 higher for high-field SC, but that
+    # ratio does not enter the ampere-meter quantity (it would only matter for a
+    # J_c-vs-field conductor derating or a B_max^2 structure term, neither of
+    # which is modeled here). r_bore is the effective winding-bore radius, NOT a
     # cross-section / cable dimension. See _compute_geometry_factor docstring
     # and docs/account_justification/CAS22_reactor_components.md.
     #   - Superconducting (HTS/LTS): cost = total_kAm * $/kAm * markup. The
@@ -237,10 +235,6 @@ def cas22_reactor_plant_equipment(
     #     the right basis for low-field FRC/linear copper coils, where the
     #     $/kAm path collapses to a near-zero, unphysical number.
     # -----------------------------------------------------------------------
-    # peak_to_center_ratio is currently informational (documents the relation
-    # B_max = peak_to_center_ratio * b_center for the conductor) and not used
-    # in the kA*m calculation, which is intrinsically a b_center quantity.
-    _ = peak_to_center_ratio
     if concept == ConfinementConcept.DIPOLE:
         # ---------------------------------------------------------------
         # Levitated dipole — two distinct coil populations:
@@ -270,14 +264,8 @@ def cas22_reactor_plant_equipment(
         lev_kAm = 4 * math.pi * b_center * r_bore**2 / (_MU0 * 1000)
         lev_conductor = lev_kAm * coil_material.default_cost_per_kAm / 1e6
         floating_with_markup = lev_conductor * lev_coil_markup
-        stationary_lift_cost = (
-            stationary_lift_coil_fraction * floating_with_markup
-        )
-        c220103 = (
-            floating_with_markup
-            + stationary_lift_cost
-            + lev_coil_cryostat_cost
-        )
+        stationary_lift_cost = stationary_lift_coil_fraction * floating_with_markup
+        c220103 = floating_with_markup + stationary_lift_cost + lev_coil_cryostat_cost
     else:
         defaults = _COIL_DEFAULTS.get(concept)
         if defaults is None:
@@ -299,14 +287,10 @@ def cas22_reactor_plant_equipment(
                 m_steel = cc.coil_struct_fraction * m_cu
                 c220103 = (
                     m_cu * cc.coil_cu_price_per_kg * cc.coil_cu_fab_markup
-                    + m_steel
-                    * cc.coil_steel_price_per_kg
-                    * cc.coil_steel_fab_markup
+                    + m_steel * cc.coil_steel_price_per_kg * cc.coil_steel_fab_markup
                 ) / 1e6
             else:
-                conductor_cost = (
-                    total_kAm * coil_material.default_cost_per_kAm / 1e6
-                )
+                conductor_cost = total_kAm * coil_material.default_cost_per_kAm / 1e6
                 c220103 = conductor_cost * coil_markup
 
     # -----------------------------------------------------------------------

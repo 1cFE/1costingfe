@@ -108,8 +108,8 @@ Per-concept defaults: 10 concepts default to `(liquid_metal, pbli)` (tokamak, st
 | **p_coils** | Coil resistive/refrigerator parasitic. | MW (large for copper, small for SC) |
 | **p_cool** | Primary loop cooling power. | MW |
 | **elon** | Elongation kappa. | dimensionless |
-| **b_max** | Peak field on conductor. | T |
-| **r_coil** | Effective winding bore radius (pyFECONs calibration). | m |
+| **b_center** | Field at the coil center (on axis), NOT peak-on-conductor. | T |
+| **r_bore** | Effective winding bore radius (calibration parameter). | m |
 | **coil_material** | Conductor technology. Sets default cost/kAm and cryo expectation. | `rebco_hts` ($50/kAm) · `nb3sn` ($7) · `nbti` ($7) · `copper` ($1) |
 | **n_coils** | Override coil count (else inferred from concept). | int or `None` |
 

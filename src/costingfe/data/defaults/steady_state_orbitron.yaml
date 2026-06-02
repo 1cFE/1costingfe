@@ -32,7 +32,6 @@ p_cryo: 0.0          # No cryogenics (permanent or normal-conducting magnets)
 coil_material: copper
 b_center: 2.0        # Field at coil center [T]
 r_bore: 0.3          # Effective winding bore [m]
-peak_to_center_ratio: 3.0
 
 # Radial build geometry [m] (cylindrical, compact)
 R0: 0.0
