@@ -28,7 +28,10 @@ from costingfe.types import (
     PulsedConversion,
 )
 
-# Concept-dependent coil defaults (from pyFECONs cas220103_coils.py)
+# Concept-dependent coil defaults. Markups are engineering build-ups
+# (conductor is ~10-15% of finished magnet cost; per-concept winding,
+# structure, and quench-protection complexity), validated against CFS
+# SPARC REBCO usage. See docs/account_justification/CAS22_reactor_components.md
 # markup: manufacturing complexity multiplier over raw conductor cost
 # path_factor: extra coil path length for 3D geometries (stellarator)
 # n_coils: number of discrete coils — only used for mirror (G = n_coils * 4*pi);

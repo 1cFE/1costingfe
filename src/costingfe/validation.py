@@ -31,7 +31,7 @@ def default_availability(concept: ConfinementConcept) -> float:
     vacuum/structural continuity. Same physical basis as the C220110 0.55x
     remote-handling capex scaling and the CAS70 0.85x O&M scaling.
 
-    Tokamak/stellarator: 0.85 (pyFECONs/ARIES heritage).
+    Tokamak/stellarator: 0.85 (ARIES heritage).
     Mirror: 0.87 (shorter scheduled outages).
     Other concepts: 0.85 (no concept-specific basis to claim better).
     """

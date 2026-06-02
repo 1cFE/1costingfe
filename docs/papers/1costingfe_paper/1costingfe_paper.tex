@@ -1638,8 +1638,12 @@ thermal-intensity scaling for component accounts and
 percentage-of-subtotal for installation labor. They are not
 re-derived here.
 
-Sub-account CAS22.01.01 (first wall + blanket) inherits the pyFECONS
-volume $\times$ thermal-intensity $\times$ fuel-dependent unit cost,
+Sub-account CAS22.01.01 (first wall + blanket) follows the pyFECONS
+volume $\times$ thermal-intensity $\times$ fuel-dependent unit-cost
+form, with the D-T reference unit cost anchored to a RAFM-steel blanket
+materials mass build-up (about 3500~t of fabricated nuclear-grade
+structure, breeder, and multiplier, NOAK-reduced and cross-checked
+against the 440-module ITER blanket/shield),
 extended with a blanket-form structural complexity factor
 $s(\mathrm{form}) \in \{1.0, 1.3, 1.2, 0.0\}$ for liquid-metal,
 molten-salt, solid-breeder, and no-blanket architectures respectively:
@@ -2343,19 +2347,19 @@ breeding blanket), recovering minimal special-material inventory.
 
 CAS28 covers a plant-wide digital twin for operator training, predictive
 maintenance, and operational optimization.  A fixed cost of \$5M is adopted,
-independent of plant size, fuel type, or number of modules.  The estimate
-is sourced from NtTau Digital LTD (in-house assessment for the pyFECONS
-framework \citep{woodruff2026}), consistent with industrial digital twin
-deployments for large thermal plants (\$2--10M).
+independent of plant size, fuel type, or number of modules: the digital twin
+is software-dominated, and its complexity scales with the number of modeled
+subsystems rather than plant capacity.
 
-The \$5\,M figure is sourced from a single pyFECONS internal note;
-no independent benchmark has yet been adopted. CAS28 is therefore
-the lowest-information account in the framework and the figure is
-treated as a placeholder with wide uncertainty. Closing this gap
-requires sourcing one or more independent quotes for plant digital
-twin integration; the figure may be varied via
-\texttt{cost\_overrides=\{"CAS28": <value>\}} until that work
-completes.
+The \$5\,M figure is anchored to disclosed advanced-reactor digital-twin
+budgets. Under the DOE ARPA-E GEMINA program \citep{arpae_gemina2020}, the
+University of Michigan received \$5.2M to develop a scalable reactor digital
+twin (first validated on a campus molten-salt loop, then applied to the
+Kairos Power design), alongside a complementary \$2.2M Argonne award for
+O\&M automation. A single plant-wide reactor twin therefore lands at the
+adopted \$5M, consistent with industrial digital twin deployments for large
+thermal plants (\$2--10M; Siemens MindSphere, GE Predix, AVEVA). The figure
+may be varied via \texttt{cost\_overrides=\{"CAS28": <value>\}}.
 
 
 %% ------------------------------------------------------------

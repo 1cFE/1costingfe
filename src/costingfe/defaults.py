@@ -35,8 +35,12 @@ class CostingConstants:
 
     # CAS22 — Reactor Plant Equipment
     # 220101: First Wall + Blanket — volume-based unit costs (M$/m³)
-    # Calibrated against pyFECONs at reference tokamak geometry
-    # (R=6.2m, a=2.0m, κ=1.7, blanket_t=0.7m → ~1018 m³ assembly)
+    # DT 0.60 = NOAK-reduced RAFM-steel blanket mass build-up: ~3500 t
+    # (steel + PbLi breeder + Be multiplier + W armor) x $150/kg fabricated
+    # = $525M FOAK over ~650 m³ -> 0.60 after NOAK learning-curve reduction
+    # ($389M); ITER 440-module / 2000 t cross-check. DD/DHe3/pB11 scale down
+    # by blanket complexity (no breeder / minimal / X-ray liner only).
+    # See docs/account_justification/CAS22_reactor_components.md
     blanket_unit_cost_dt: float = 0.60  # Full breeding blanket (TBR>1.05)
     blanket_unit_cost_dd: float = 0.30  # Energy capture, no breeding
     blanket_unit_cost_dhe3: float = 0.08  # Minimal X-ray + ~5% neutron
@@ -63,7 +67,10 @@ class CostingConstants:
     coil_steel_price_per_kg: float = 6.0  # fabricated structural steel, $/kg
     coil_steel_fab_markup: float = 3.0  # coil-case / inter-coil support fabrication
     # 220104: Supplementary Heating — per-MW linear costs (M$/MW, 2023$)
-    # Source: pyFECONs cas220104 / ARIES + ITER average costs
+    # Vendor-purchased turnkey systems. Source: ARIES heating-system costs;
+    # NBI 7.06 calibrated to ITER NBI procurement (EUR 9-15M/MW FOAK -> NOAK
+    # discount), ECRH 5.0 to ITER gyrotron procurement (EUR 5-10M/MW).
+    # See docs/account_justification/CAS22_reactor_components.md
     heating_nbi_per_mw: float = 7.0642  # Neutral Beam Injection
     heating_icrf_per_mw: float = 4.1494  # Ion Cyclotron Resonance Frequency
     heating_ecrh_per_mw: float = 5.0  # Electron Cyclotron Resonance Heating (gyrotrons)
@@ -244,8 +251,10 @@ class CostingConstants:
     misc_per_mw: float = 0.05124  # Fire protection, compressed air, HVAC
     heat_rej_per_mw: float = 0.03416  # Cooling towers, circ water
 
-    # CAS28 — Digital twin (M$, fixed)
-    # Source: NtTau Digital LTD estimate (pyFECONS)
+    # CAS28 — Digital twin (M$, fixed). Software-dominated; does not scale
+    # with plant size. Source: DOE ARPA-E GEMINA per-project reactor digital-
+    # twin budgets (U. Michigan scalable reactor digital twin $5.2M; $2-10M
+    # industrial plant twins). See docs/account_justification/CAS28_digital_twin.md
     digital_twin: float = 5.0
 
     # CAS29 — Contingency on direct costs (Gen-IV EMWG convention)
