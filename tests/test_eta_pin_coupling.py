@@ -27,9 +27,10 @@ _BASE = dict(
         (C.MIRROR, Fuel.DT, 186.47),
         (C.STELLARATOR, Fuel.DT, 359.94),
         # DIPOLE re-benchmarked after the radial-build inversion + spherical
-        # geometry dispatch + Li2O blanket fill (Simpson 2026 alignment); the
-        # coupling factor itself is unchanged — only the cost basis moved.
-        (C.DIPOLE, Fuel.DHE3, 303.62),
+        # geometry dispatch + Li2O blanket fill + C220108 divertor zeroing
+        # (Simpson 2026 alignment); the coupling factor itself is unchanged —
+        # only the cost basis moved.
+        (C.DIPOLE, Fuel.DHE3, 298.90),
         (C.POLYWELL, Fuel.PB11, 52.98),
     ],
 )

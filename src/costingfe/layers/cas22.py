@@ -383,7 +383,13 @@ def cas22_reactor_plant_equipment(
     # See docs/account_justification/CAS22_plant_systems.md
     # -----------------------------------------------------------------------
     if family == ConfinementFamily.STEADY_STATE:
-        c220108 = cc.divertor_base * (p_th / 1000.0) ** 0.5
+        if concept == ConfinementConcept.DIPOLE:
+            # Closed-field-line dipole: particles exhaust through the loss cone
+            # at the top/bottom openings of the chamber, so there is no W
+            # monoblock divertor cassette to manufacture (Simpson 2026 §2.2.6).
+            c220108 = 0.0
+        else:
+            c220108 = cc.divertor_base * (p_th / 1000.0) ** 0.5
     elif concept in (
         ConfinementConcept.PULSED_FRC,
         ConfinementConcept.THETA_PINCH,

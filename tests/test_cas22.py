@@ -286,6 +286,20 @@ def test_cas220108_ife_uses_target_factory():
     assert abs(ife["C220108"] - expected) < 0.01
 
 
+def test_cas220108_dipole_has_no_divertor():
+    """Levitated dipole exhausts through the loss cone at the top/bottom
+    openings of the chamber -- no W monoblock divertor cassette to cost.
+    C220108 must be zero for DIPOLE even though it is STEADY_STATE."""
+    from costingfe import CostModel, Fuel
+
+    r = CostModel(concept=ConfinementConcept.DIPOLE, fuel=Fuel.DT).forward(
+        net_electric_mw=208.0,
+        availability=0.85,
+        lifetime_yr=30,
+    )
+    assert float(r.cas22_detail["C220108"]) == 0.0
+
+
 # ---- Plant-wide accounts must use total plant power for n_mod > 1 ----
 
 
