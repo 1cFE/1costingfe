@@ -146,3 +146,11 @@ def test_inverse_1gw_target():
     )
     assert p_fus > 1000  # fusion power must exceed net electric
     assert p_fus < 10000  # but not absurdly large
+
+
+def test_forward_peaking_factor_reduces_radiation():
+    """A peaking factor < 1 lowers p_rad in the forward balance."""
+    base = dict(CATF_PARAMS)
+    pt_full = mfe_forward_power_balance(**base)
+    pt_peaked = mfe_forward_power_balance(**{**base, "radiation_peaking_factor": 0.1})
+    assert float(pt_peaked.p_rad) < float(pt_full.p_rad)

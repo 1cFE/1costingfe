@@ -253,6 +253,7 @@ def compute_p_rad(
     R_w: float = 0.6,
     alpha_n: float = 0.5,
     alpha_T: float = 1.0,
+    radiation_peaking_factor: float = 1.0,
 ) -> float:
     """Plasma radiation power (bremsstrahlung + synchrotron + line) [MW].
 
@@ -263,6 +264,12 @@ def compute_p_rad(
     Volume-averaged n_e, T_e are converted to central values using
     the profile exponents: T_e0 = T_e * (1 + alpha_T),
     n_e0 = n_e * (1 + alpha_n).  Assumes beta_T = 2 (parabolic).
+
+    radiation_peaking_factor scales the collisional volume-integral terms
+    (bremsstrahlung + line) to correct peak-value-times-full-volume over-counting
+    for peaked profiles (emission-measure ratio). It does NOT scale synchrotron,
+    whose profile dependence is already carried by alpha_n/alpha_T. Default 1.0
+    (uniform profile, no correction).
     """
     n_e_20 = n_e * 1e-20
     p_brem = 5.35e3 * n_e_20**2 * Z_eff * jnp.sqrt(T_e) * volume * 1e-6  # -> MW
@@ -290,4 +297,4 @@ def compute_p_rad(
     p_sync = jnp.where(use_albajar, p_sync_albajar, 0.0)
 
     p_line = compute_p_line(n_e, T_e, impurities, volume)
-    return p_brem + p_sync + p_line
+    return radiation_peaking_factor * (p_brem + p_line) + p_sync

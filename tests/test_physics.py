@@ -142,6 +142,44 @@ def test_no_impurities_unchanged():
     assert float(p_rad_old) == float(p_rad_new)
 
 
+def test_peaking_factor_scales_brems_linearly():
+    """radiation_peaking_factor multiplies the bremsstrahlung term linearly."""
+    n_e, T_e, Z_eff, V, B = (
+        1e20,
+        15.0,
+        1.5,
+        500.0,
+        0.0,
+    )  # B=0 -> no sync via Albajar gate
+    p_full = compute_p_rad(n_e, T_e, Z_eff, V, B, R=0.0, a=0.0)
+    p_half = compute_p_rad(
+        n_e, T_e, Z_eff, V, B, R=0.0, a=0.0, radiation_peaking_factor=0.5
+    )
+    assert abs(float(p_half) - 0.5 * float(p_full)) < 1e-6 * float(p_full)
+
+
+def test_peaking_factor_leaves_synchrotron_untouched():
+    """The factor scales brems+line but NOT synchrotron."""
+    # Geometry enabled (R,a>0) so synchrotron is nonzero.
+    n_e, T_e, Z_eff, V, B = 1e20, 15.0, 1.5, 500.0, 5.0
+    kw = dict(R=6.0, a=2.0, kappa=1.7, R_w=0.6)
+    p_full = compute_p_rad(n_e, T_e, Z_eff, V, B, **kw)
+    p_scaled = compute_p_rad(n_e, T_e, Z_eff, V, B, radiation_peaking_factor=0.5, **kw)
+    # Synchrotron is invariant, so halving the factor must remove LESS than half
+    # the total (the sync part is unscaled).
+    assert float(p_scaled) > 0.5 * float(p_full)
+
+
+def test_peaking_factor_default_is_one():
+    """Default factor reproduces the pre-change result exactly."""
+    n_e, T_e, Z_eff, V, B = 1e20, 15.0, 1.5, 500.0, 5.0
+    p_a = compute_p_rad(n_e, T_e, Z_eff, V, B, R=6.0, a=2.0)
+    p_b = compute_p_rad(
+        n_e, T_e, Z_eff, V, B, R=6.0, a=2.0, radiation_peaking_factor=1.0
+    )
+    assert float(p_a) == float(p_b)
+
+
 def test_lithium_wall_low_radiation():
     """Li wall should produce less line radiation than W wall."""
     n_e, T_e, V = 1e20, 15.0, 500.0

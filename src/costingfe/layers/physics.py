@@ -178,6 +178,7 @@ def mfe_forward_power_balance(
     p_rad_override: float | None = None,
     f_rad_fus: float | None = None,
     seeded_impurities: dict[str, float] | None = None,
+    radiation_peaking_factor: float = 1.0,
 ) -> PowerTable:
     """MFE forward power balance: fusion power -> net electric.
 
@@ -238,6 +239,7 @@ def mfe_forward_power_balance(
             a=a_minor,
             kappa=kappa,
             R_w=R_w,
+            radiation_peaking_factor=radiation_peaking_factor,
         )
 
     # Step 4: Plasma energy balance — P_ash + P_input = P_rad + P_transport
@@ -350,6 +352,7 @@ def mfe_inverse_power_balance(
     p_rad_override: float | None = None,
     f_rad_fus: float | None = None,
     seeded_impurities: dict[str, float] | None = None,
+    radiation_peaking_factor: float = 1.0,
 ) -> float:
     """Inverse MFE power balance: target net electric -> required fusion power.
 
@@ -404,6 +407,7 @@ def mfe_inverse_power_balance(
                 a=a_minor,
                 kappa=kappa,
                 R_w=R_w,
+                radiation_peaking_factor=radiation_peaking_factor,
             )
     else:
         p_rad_raw = 0.0  # placeholder; _p_net uses f_rad_fus * pf

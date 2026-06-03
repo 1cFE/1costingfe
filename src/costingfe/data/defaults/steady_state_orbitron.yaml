@@ -53,6 +53,7 @@ n_e: 1.0e+18         # Low density [m^-3]
 T_e: 5.0             # Effective electron temperature [keV]
 Z_eff: 1.5           # Effective charge
 plasma_volume: 0.5   # Small volume [m^3]
+radiation_peaking_factor: 1.0   # Uniform profile, no emission-measure correction
 B: 1.0               # Central field [T]
 
 # Impurity model
