@@ -150,11 +150,9 @@ are actively working to reduce.
 | Mirror | 2.5× | Simple solenoid coils. Well-established manufacturing. n_coils=10 default (HAMMIR-class tandem: 4 end-plug HTS + 6 central-cell LTS solenoids over a 50 m central cell). Simple-mirror devices (WHAM/BEAM/Anvil) use n_coils≈4. |
 | Pulsed FRC | 1.5× | Theta-pinch formation coils. Simple, repetitive geometry. |
 | Theta pinch | 1.5× | Compression coils. Simple solenoid geometry. |
-| MagLIF | 2.0× | Axial field solenoid. Moderate complexity (pulsed duty). |
-| Mag. target | 1.5× | Guide-field solenoid. Small, simple coils. |
-| Plasma jet | 1.5× | Guide-field solenoid. Small, simple coils. |
 | Orbitron | 1.5× | Electrostatic confinement coils. |
 | Polywell | 2.0× | Polyhedral magrid. Moderate 3D complexity. |
+| MIF (MagLIF / Mag. target / Plasma jet) | — | $0: no plant-scale confinement magnets. MagLIF compresses with a Z-pinch liner; magnetized-target concepts compress mechanically/kinetically (the seed field lives in the pellet or CT injector); plasma-jet concepts merge plasma guns. The MFE conductor-scaling model does not apply. A small seed/guide coil, where one exists, is opt-in per concept via a `cost_overrides` entry on C220103. |
 | IFE / Z-pinch / DPF | — | $0: no confinement magnets. |
 
 ### Validation

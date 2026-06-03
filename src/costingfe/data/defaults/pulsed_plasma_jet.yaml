@@ -12,9 +12,9 @@ f_sub: 0.03          # Subsystem power fraction
 p_pump: 1.0          # Pumping power [MW]
 p_trit: 10.0         # Tritium processing power [MW]
 p_house: 4.0         # Housekeeping power [MW]
-p_cryo: 0.2          # Cryogenic power [MW]
+p_cryo: 0.0          # Cryogenic power [MW] (no superconducting confinement magnets)
 p_target: 3.0        # Liner/target factory power [MW]
-p_coils: 0.2         # Guide field coils [MW]
+p_coils: 0.0         # No plant-scale confinement magnets (merging plasma guns)
 
 # Radial build geometry [m] (spherical chamber)
 R0: 0.0          # Not used for sphere

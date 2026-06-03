@@ -27,6 +27,7 @@ p_cryo: 0.8         # Cryogenic power [MW]
 # convention).
 b_center: 18.0       # Field at coil center [T] (HTS REBCO enables 15-20T peak)
 r_bore: 1.85         # Effective winding bore radius [m]
+coil_material: rebco_hts  # HTS REBCO superconductor (15-20 T non-planar coils)
 
 # Radial build geometry [m]
 R0: 5.5          # Major radius R0

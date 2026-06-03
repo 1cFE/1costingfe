@@ -17,9 +17,9 @@ f_sub: 0.03          # Subsystem power fraction
 p_pump: 1.0          # Pumping power [MW]
 p_trit: 10.0         # Tritium processing power [MW]
 p_house: 4.0         # Housekeeping power [MW]
-p_cryo: 0.5          # Cryogenic power [MW] (for axial field coils)
+p_cryo: 0.0          # Cryogenic power [MW] (room-temp pulsed seed coils, no cryoplant)
 p_target: 3.0        # Liner manufacturing [MW]
-p_coils: 1.0         # Axial field coils [MW]
+p_coils: 0.1         # Axial seed-field coils [MW] (small pre-magnetization solenoid, not MFE confinement magnets)
 
 # Radial build geometry [m] (cylindrical chamber)
 R0: 0.0
