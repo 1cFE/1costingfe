@@ -493,6 +493,15 @@ result = model.forward(
 Downstream rollups (CAS22, total capital, LCOE) recompute
 automatically. Mirror coils are typically smaller absolute cost than
 tokamak TF/CS/PF systems, reflecting the simpler solenoid topology.
+Overrides apply to the direct-capital accounts (CAS10 and CAS21--CAS28,
+including individual CAS22 sub-accounts); the downstream aggregates
+(CAS29--CAS30), owner and supplementary costs (CAS40--CAS50), interest
+during construction (CAS60), and the annualized operations, fuel, and
+financial accounts (CAS70--CAS90) are computed from these and the
+physics, so they are not overridden directly. When an override is
+supplied at a reference power and the plant is then rescaled, only
+these directly-overridable accounts carry the override forward, each
+rescaled by its own cost ratio between the two power points.
 
 \paragraph{Batch sweeps.} \texttt{batch\_lcoe} computes LCOE for many
 values of one or more parameters in a single call, returning a list of
@@ -1159,8 +1168,25 @@ reduces to bremsstrahlung plus synchrotron as before.
 \paragraph{Plasma Energy Balance.}
 
 The total radiated power is
-$P_{\text{rad}} = P_{\text{brem}} + P_{\text{sync}} + P_{\text{line}}$,
-computed at the user-specified electron temperature $T_e$.
+\begin{equation}
+\label{eq:p-rad}
+P_{\text{rad}} = f_{\text{peak}}\,(P_{\text{brem}} + P_{\text{line}})
+  + P_{\text{sync}},
+\end{equation}
+computed at the user-specified electron temperature $T_e$. The
+collisional terms (bremsstrahlung and line radiation) evaluate the
+local emissivity $\propto n_e^2\sqrt{T_e}$ from volume-averaged $n_e$
+and $T_e$ and integrate it over the full geometric volume $V$. For a
+highly peaked profile this over-counts the loss, because the emission
+is concentrated in a small dense, hot core; the peaking factor
+$f_{\text{peak}}$ rescales these terms to the emission-measure-weighted
+volume. Uniform-profile concepts use $f_{\text{peak}} = 1$, while a
+levitated dipole with a Hasegawa--Mauel core ($n_e \propto R^{-4}$,
+$T_e \propto R^{-8/3}$) uses $f_{\text{peak}} \approx 0.05$, the hot,
+dense core being about 5\% of the geometric volume. Synchrotron
+radiation is excluded from the rescaling because the Albajar model
+already carries the profile dependence through the shape factor
+$K(\alpha_n, \alpha_T, \beta_T)$.
 In steady state, the plasma energy balance requires that all power
 entering the plasma (charged-particle fusion products plus external
 heating) equals all power leaving (radiation plus transport to
@@ -1638,6 +1664,22 @@ thermal-intensity scaling for component accounts and
 percentage-of-subtotal for installation labor. They are not
 re-derived here.
 
+The divertor sub-account (CAS22.01.08) keeps this inherited scaling for
+steady-state MFE concepts that exhaust onto a material target,
+$C_{220108} = c_{\text{div}}\,(P_{\text{th}}/1000)^{0.5}$ with
+$c_{\text{div}} = 60$~M\$, but its value is concept-dependent. A
+levitated dipole has a closed-field-line topology and exhausts through
+the loss cone at the chamber openings, so it carries no manufactured
+divertor cassette and $C_{220108} = 0$. For inertial and
+magneto-inertial concepts the same sub-account instead funds the
+target factory, $C_{220108} = c_{\text{tgt}}\,(P_{\text{et}}/1000)^{0.7}$
+with $c_{\text{tgt}} = 244$~M\$, applied to the concepts that fabricate
+or accelerate a target every shot (laser and heavy-ion IFE, MagLIF, and
+the pneumatic mag-target loop). Pulsed concepts that form their plasma
+in situ from gas injection (pulsed FRC, theta pinch, dense plasma
+focus, sheared-flow Z-pinch) manufacture no targets and carry
+$C_{220108} = 0$.
+
 Sub-account CAS22.01.01 (first wall + blanket) follows the pyFECONS
 volume $\times$ thermal-intensity $\times$ fuel-dependent unit-cost
 form, with the D-T reference unit cost anchored to a RAFM-steel blanket
@@ -1657,6 +1699,14 @@ FLiBe-wetted surfaces) and solid-breeder designs (pebble-bed canisters
 with separate breeder and multiplier zones), all relative to the
 PbLi-style flow-channel baseline. The fill material chemistry is costed
 separately under CAS27 (Section~\ref{sec:cas27}).
+
+The fuel-keyed unit cost $c_{\text{blk}}(f)$ is calibrated to a PbLi
+liquid-metal blanket (about 9.4~t/m$^3$, with a flow loop, MHD ducts,
+and online tritium extraction). A solid Li$_2$O ceramic breeder (used
+by the levitated dipole) has none of these, runs at about 2~t/m$^3$,
+and is roughly 3--5$\times$ cheaper per unit volume, so concepts with a
+Li$_2$O fill substitute a dedicated unit cost
+$c_{\text{Li}_2\text{O}} = 0.2$~M\$/m$^3$ in place of $c_{\text{blk}}(f)$.
 
 \subsubsection*{Multi-Unit Labor Factor for $n_{\rm mod}>1$}
 \label{sec:multi-unit-labor}
@@ -1747,12 +1797,10 @@ Stellarator & 12$\times$ & 2.0 & \$1{,}546M & Non-planar 3D coils \\
 Mirror      &  2.5$\times$ & 1.0 & \$513M & 10 simple solenoids (HAMMIR-class) \\
 Pulsed FRC  &  1.5$\times$ & 1.0 & n/a & Theta-pinch formation coils \\
 Theta pinch &  1.5$\times$ & 1.0 & n/a & Compression coils \\
-MagLIF      &  2.0$\times$ & 1.0 & n/a & Axial field solenoid \\
-Mag.\ target &  1.5$\times$ & 1.0 & n/a & Guide-field solenoid \\
-Plasma jet  &  1.5$\times$ & 1.0 & n/a & Guide-field solenoid \\
 Orbitron    &  1.5$\times$ & 1.0 & n/a & Electrostatic confinement \\
 Polywell    &  2.0$\times$ & 1.0 & n/a & Polyhedral magrid \\
-IFE/Z-pinch & \multicolumn{3}{l}{\$0 (no confinement magnets)} & n/a \\
+Dipole      &  3.0$\times$ & 1.0 & n/a & Floating coil + lift coils (see text) \\
+MIF, IFE, Z-pinch & \multicolumn{3}{l}{\$0 (no plant-scale confinement magnets)} & Seed coils opt-in \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -1801,6 +1849,30 @@ $B = 0.5$~T, $R = 1.85$~m, $n_{\text{coils}} = 4$ carries about 123~t of
 copper and 74~t of steel, giving $C_{220103} \approx \$6$M, versus about
 \$0.1M from the \$/kA-m path at the same field.
 
+\subsubsection{Levitated Dipole Floating Coil}
+The levitated dipole replaces the external magnet set with a single
+superconducting floating coil immersed in the plasma, so its
+CAS22.01.03 follows a dedicated build-up rather than
+\cref{eq:cas2203}. The floating coil's conductor quantity is the
+single-ring value $4\pi\, B_{\text{center}}\, R_{\text{coil}}^2/\mu_0$
+(geometry factor $G = 4\pi$ as for one mirror solenoid), priced on the
+same \$/kA-m conductor basis but carrying a higher markup
+($M_{\text{lev}} = 8$) for the float, no-access engineering: a
+persistent-current joint, an integral cryostat, and inductive charging
+with no demountable leads. The external stationary lift coils that
+hold the floating coil against gravity are taken as a fixed fraction
+(default $0.10$) of the floating-coil cost, and an integral cryostat
+term covering neon-slush cooling, the flux pump, and levitation
+control is added as a flat \$100M:
+\begin{equation}
+\label{eq:cas2203-dipole}
+C_{220103} = M_{\text{lev}}\, c_{\text{float}}
+  + f_{\text{lift}}\, M_{\text{lev}}\, c_{\text{float}}
+  + c_{\text{cryo}},
+\end{equation}
+with $f_{\text{lift}} = 0.10$ and $c_{\text{cryo}} = 100$~M\$. The
+reference OpenStar Reactor~A point uses $B_{\text{center}} = 6.26$~T
+and $R_{\text{coil}} = 5.3$~m.
 
 %% ------------------------------------------------------------
 \subsection{CAS22.01.04: Supplementary Heating / Primary Driver}
@@ -1864,10 +1936,15 @@ E_{\text{drv}} \, f_{\text{rep}}$:
 \begin{equation}
 C_{220104} = c^{P}_{\text{drv}} \times P_{\text{drv}} \quad [\text{M\$}]
 \end{equation}
-The laser and heavy-ion per-joule coefficients reproduce the underlying \$/W
-NOAK projections at each driver's reference repetition rate (laser $\$8$/W at
-$10$~Hz gives $80$~M\$/MJ; heavy ion $\$12$/W at $5$~Hz gives $60$~M\$/MJ) and
-then hold constant away from that reference.  The plasma-jet gun and the
+The heavy-ion per-joule coefficient reproduces the underlying \$/W NOAK
+projection at its reference repetition rate ($\$12$/W at $5$~Hz gives
+$60$~M\$/MJ) and then holds constant away from that reference.  The laser
+coefficient of $205$~M\$/MJ is set from published diode-pumped solid-state
+laser (DPSSL) NOAK estimates of \$210--700/J: the CAS22.01.04 optics and
+diode array carry about \$205/J, and the CAS22.01.07 capacitor bank that
+fires the diodes adds about \$5/J, so the turnkey driver lands at the
+aggressive end (about \$210/J) of the published NOAK range, consistent with
+a diode roadmap toward \$0.007/W.  The plasma-jet gun and the
 sheared-flow Z-pinch's coaxial gun follow the same per-pulse logic; the
 single sheared-flow gun assembly is cheaper per joule ($1.5$~M\$/MJ) than the
 plasma-gun array ($4$~M\$/MJ).
@@ -1880,11 +1957,11 @@ plasma-gun array ($4$~M\$/MJ).
 \toprule
 Concept & Basis & Coeff. & Hardware \\
 \midrule
-Laser IFE   & M\$/MJ & 80 & Diode-pumped solid-state laser \\
+Laser IFE   & M\$/MJ & 205 & Diode-pumped solid-state laser \\
 Heavy ion   & M\$/MJ & 60 & RF linac + storage rings \\
 Plasma jet  & M\$/MJ &  4 & Plasma gun array \\
 Staged Z-pinch & M\$/MJ & 1.5 & Coaxial gun + gas injection \\
-MagLIF      & M\$/MJ & 80 & Laser preheat; main driver in CAS22.01.07 \\
+MagLIF      & M\$/MJ & 205 & Laser preheat (DPSSL); main driver in CAS22.01.07 \\
 Mag.\ target & M\$/MW &  3 & Pneumatic pistons, liquid metal loop \\
 \midrule
 Z-pinch, DPF & n/a & 0 & Driver is electrical (CAS22.01.07) \\
@@ -2683,7 +2760,14 @@ CAS70 comprises two sub-accounts:
   current density.  Because their shot lifetime can imply sub-annual
   replacement, this term is taken as a levelized annual recurring cost,
   $c_{\text{rep}}\,C_{220104}\,N_{\text{shots/yr}}/N_{\text{life}}$, rather
-  than as discrete events.
+  than as discrete events.  Here $c_{\text{rep}} = 0.5$ is the
+  consumable-electrode share of the driver capital $C_{220104}$ (range
+  $0.25$--$0.75$), $N_{\text{life}} = 10^{8}$ shots is the electrode
+  lifetime before replacement (range $10^{7}$--$10^{9}$, high uncertainty
+  with no NOAK data), and $N_{\text{shots/yr}} = f_{\text{rep}}\times
+  8760\times 3600\times a$ is the annual shot count at repetition rate
+  $f_{\text{rep}}$ and availability $a$; the term scales with the module
+  count $n_{\text{mod}}$.
 \end{itemize}
 
 \subsubsection{CAS71: Staffing-Based O\&M}
