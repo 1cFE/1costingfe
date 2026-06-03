@@ -187,6 +187,7 @@ class CostModel:
                 Z_eff=_to_num(params["Z_eff"]),
                 plasma_volume=_to_num(params["plasma_volume"]),
                 B=_to_num(params["B"]),
+                radiation_peaking_factor=_to_num(params["radiation_peaking_factor"]),
                 f_rad_fus=params.get("f_rad_fus", self.cc.f_rad_fus(self.fuel)),
             )
 

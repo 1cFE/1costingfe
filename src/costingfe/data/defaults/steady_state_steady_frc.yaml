@@ -75,6 +75,7 @@ n_e: 5.0e+19
 T_e: 20.0
 Z_eff: 1.2
 plasma_volume: 70.0  # pi * plasma_t^2 * chamber_length
+radiation_peaking_factor: 1.0   # Uniform profile, no emission-measure correction
 B: 0.5               # Central field [T] (low external field)
 
 # Fuel burn fraction defaults (physics.py ash_neutron_split)

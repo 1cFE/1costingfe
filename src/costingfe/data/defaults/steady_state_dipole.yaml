@@ -116,7 +116,12 @@ R_w: 0.4               # Wall reflectivity for synchrotron
 n_e: 1.95e+20       # Electron density [m^-3]
 T_e: 10.9           # Electron temperature [keV] (peak ion temp; lower than tokamak)
 Z_eff: 1.5          # Effective charge
-plasma_volume: 200.0 # Plasma volume [m^3]
+plasma_volume: 13600.0 # Geometric plasma volume [m^3] (Simpson 2026 Reactor A,
+                       #   Table 6). No longer a radiation fudge: the peaking
+                       #   factor below carries the profile correction.
+radiation_peaking_factor: 0.05 # Hasegawa-Mauel profile (n prop R^-4, T prop R^-8/3);
+                               #   the hot/dense radiating core is about 5% of
+                               #   the geometric volume (Simpson 2026 sec 2.1.1).
 B: 2.0              # Characteristic plasma-region field [T] (falls off from coil)
 
 # Fuel burn fraction defaults (physics.py ash_neutron_split)

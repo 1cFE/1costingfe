@@ -53,6 +53,7 @@ n_e: 1.0e+20        # Electron density [m^-3]
 T_e: 12.0           # Electron temperature [keV]
 Z_eff: 1.3          # Effective charge
 plasma_volume: 800.0 # Plasma volume [m^3] (larger than tokamak)
+radiation_peaking_factor: 1.0   # Uniform profile, no emission-measure correction
 B: 5.0              # Magnetic field [T]
 
 # Fuel burn fraction defaults (physics.py ash_neutron_split)
