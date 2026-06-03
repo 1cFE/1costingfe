@@ -74,6 +74,91 @@ def test_cas30_1gwe_reference_case():
     assert 700 < result < 900
 
 
+# ---------------------------------------------------------------------------
+# CAS30 n_mod economy-of-scale: indirect costs (supervision, field indirect,
+# offsite design services) don't grow linearly with module count. Wright's-law
+# alpha=0.5 captures the per-plant + shared-overhead nature of these services.
+# ---------------------------------------------------------------------------
+
+
+def test_cas30_n_mod_1_matches_prior_formula():
+    """Backward compatibility: n_mod=1 reproduces the pre-fix formula."""
+    cas20 = 4000.0
+    t_con = 6.0
+    result_default = cas30_indirect(CC, cas20, t_con)
+    result_explicit_1 = cas30_indirect(CC, cas20, t_con, n_mod=1)
+    assert abs(result_default - result_explicit_1) < 1e-9
+    # And matches the formula: 0.20 * 4000 * (6/6) * 1^0.5 = 800
+    assert abs(result_default - 800.0) < 0.01
+
+
+def test_cas30_n_mod_economy_of_scale_default_alpha():
+    """alpha=0.5 (default) gives sqrt(n_mod) scaling: at n_mod=4, CAS30 is
+    4^0.5 / 4 = 50% of the pre-fix (linear) value for the same per-module
+    CAS20.
+
+    For a 4-module plant where each module's CAS20 is $1B (so total CAS20 =
+    $4B), pre-fix CAS30 = $800M (20% of $4B). Post-fix at alpha=0.5,
+    CAS30 = 0.20 * (4000/4) * 4^0.5 * (6/6) = 0.20 * 1000 * 2 = $400M.
+    Half the pre-fix value — economies of scale halve indirect costs for
+    a 4-module plant relative to a single-unit plant of the same total
+    direct cost.
+    """
+    cas20 = 4000.0
+    n_mod = 4
+    result = cas30_indirect(CC, cas20, 6.0, n_mod=n_mod)
+    expected = 0.20 * (cas20 / n_mod) * (n_mod ** 0.5) * 1.0
+    assert abs(result - expected) < 0.01
+    assert abs(result - 400.0) < 0.01
+
+
+def test_cas30_n_mod_extreme_modular():
+    """Large n_mod (e.g. 1000 modules of small fusion devices to net 1 GWe):
+    CAS30 drops to ~3% of pre-fix value. This is the avalanche-orbitron-class
+    modular case where the per-fix formula was producing unreasonably large
+    indirect costs (~$1.2B on a $9B overnight)."""
+    cas20 = 4000.0
+    n_mod = 1000
+    result = cas30_indirect(CC, cas20, 6.0, n_mod=n_mod)
+    # 0.20 * (4000/1000) * 1000^0.5 * 1.0 = 0.20 * 4 * 31.62 = 25.30
+    expected = 0.20 * (cas20 / n_mod) * (n_mod ** 0.5) * 1.0
+    assert abs(result - expected) < 0.01
+    # ~3% of the n_mod=1 case (since 1000^-0.5 ~= 0.0316)
+    baseline = cas30_indirect(CC, cas20, 6.0, n_mod=1)
+    assert 0.025 < (result / baseline) < 0.035
+
+
+def test_cas30_custom_n_mod_scaling_alpha():
+    """The economy-of-scale exponent is configurable via
+    indirect_n_mod_scaling."""
+    cas20 = 4000.0
+    n_mod = 4
+
+    # alpha=1.0 reproduces pre-fix linear scaling
+    cc_linear = CC.replace(indirect_n_mod_scaling=1.0)
+    result_linear = cas30_indirect(cc_linear, cas20, 6.0, n_mod=n_mod)
+    assert abs(result_linear - 800.0) < 0.01  # same as pre-fix at any n_mod
+
+    # alpha=0.0 reproduces pure per-plant (no n_mod scaling)
+    cc_perplant = CC.replace(indirect_n_mod_scaling=0.0)
+    result_perplant = cas30_indirect(cc_perplant, cas20, 6.0, n_mod=n_mod)
+    # 0.20 * (4000/4) * 4^0 * 1.0 = 0.20 * 1000 = 200
+    assert abs(result_perplant - 200.0) < 0.01
+
+    # alpha=0.7 moderate economy
+    cc_moderate = CC.replace(indirect_n_mod_scaling=0.7)
+    result_moderate = cas30_indirect(cc_moderate, cas20, 6.0, n_mod=n_mod)
+    # 0.20 * 1000 * 4^0.7 = 0.20 * 1000 * 2.639 = 527.8
+    expected = 0.20 * (cas20 / n_mod) * (n_mod ** 0.7) * 1.0
+    assert abs(result_moderate - expected) < 0.01
+
+
+def test_cas30_n_mod_default_alpha_is_half():
+    """Default indirect_n_mod_scaling should be 0.5 (Wright's-law sqrt,
+    matching CAS40 staffing-economy convention)."""
+    assert CC.indirect_n_mod_scaling == 0.5
+
+
 def test_cas10_land_cost_1gwe():
     """Land at 1GWe: 0.25 acres/MWe * 1000 MWe * $10,000/acre = $2.5M."""
     # Land is computed inside cas10_preconstruction; verify via defaults

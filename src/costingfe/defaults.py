@@ -272,6 +272,16 @@ class CostingConstants:
     # CAS30
     indirect_fraction: float = 0.20
     reference_construction_time: float = 6.0
+    # Wright's-law-style economy-of-scale exponent for modular plants.
+    # CAS30 captures construction supervision, field indirect, and offsite
+    # design services — costs that don't grow linearly with module count
+    # (one site engineering team supervises N modules, equipment is shared,
+    # permits/studies are written once per plant). Apply n_mod^alpha
+    # scaling with alpha = 0.5 by default, matching CAS40's staffing-
+    # economy convention. alpha = 1.0 reproduces pre-fix per-module behavior
+    # (linear with n_mod); alpha = 0.0 is pure per-plant (no n_mod scaling).
+    # See docs/account_justification/CAS30_indirect_service_costs.md.
+    indirect_n_mod_scaling: float = 0.5
 
     # CAS40 — Capitalized owner's costs (M$ at 1 GWe reference, 2023$)
     # Source: CAS40_capitalized_owners_costs.md — INL methodology on CAS71-73 staffing

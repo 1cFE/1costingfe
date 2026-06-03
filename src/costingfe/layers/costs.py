@@ -181,18 +181,52 @@ def cas29_contingency(cc, cas2x_total, noak):
     return cc.contingency_rate(noak) * cas2x_total
 
 
-def cas30_indirect(cc, cas20, construction_time):
+def cas30_indirect(cc, cas20, construction_time, n_mod=1):
     """CAS30: Indirect service costs. Returns M$.
 
     Computed as a fraction of total direct cost (CAS20), scaled by
-    construction time relative to a reference duration.
+    construction time relative to a reference duration, with a Wright's-law
+    economy-of-scale correction for modular plants (n_mod > 1).
 
-    See docs/account_justification/CAS30_indirect_service_costs.md
-    for derivation and source analysis.
+    Without the n_mod correction, CAS30 grows linearly with module count
+    because CAS20 itself includes per-module costs (CAS22 equipment per
+    module, CAS23-26 scaling with n_mod). But CAS30's scope —
+    construction supervision, field indirect (equipment rental, temp
+    buildings, consumables), and offsite design services (engineering,
+    project management) — does NOT grow linearly with module count:
+
+      - One site engineering / supervision team can manage N modules,
+        not N teams.
+      - Construction equipment (cranes, welders, transport, laydown,
+        warehousing) is shared across modules.
+      - Permits, plant studies, and project-level QA are written once
+        for the plant, not per module.
+      - Insurance and bonding scale with total project value but with
+        sub-linear premium structure.
+
+    Apply ``cc.indirect_n_mod_scaling`` (default 0.5, matching the CAS40
+    staffing-economy alpha) to capture this:
+
+      CAS30 = indirect_fraction
+              * (CAS20 / n_mod) * n_mod ** alpha
+              * (T_construction / T_ref)
+
+    For n_mod = 1 the n_mod factor is unity and the formula reduces to
+    the pre-fix expression — preserving the calibration for single-machine
+    utility-scale plants. For modular concepts the indirect cost grows
+    sub-linearly with module count, which matches both nuclear-construction
+    data (Korean APR1400 NOAK indirect ~15-20% vs FOAK Vogtle ~35%+) and
+    intuition (the n-th module's permits / supervision / equipment
+    share is much smaller than the first's).
+
+    See docs/account_justification/CAS30_indirect_service_costs.md for
+    derivation, source analysis, and the rationale for alpha = 0.5.
     """
+    per_module_cas20 = cas20 / n_mod
+    scaled_cas20 = per_module_cas20 * (n_mod ** cc.indirect_n_mod_scaling)
     return (
         cc.indirect_fraction
-        * cas20
+        * scaled_cas20
         * (construction_time / cc.reference_construction_time)
     )
 
