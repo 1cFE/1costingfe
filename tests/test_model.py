@@ -223,6 +223,18 @@ def test_dipole_concept_runs():
     assert result.cas22_detail["C220103"] > 0
 
 
+def test_dipole_radiation_peaking_keeps_recirc_sane():
+    """With the peaking factor, the dipole's bremsstrahlung no longer explodes,
+    so the recirculating fraction stays physical (issue #24). Without it, the
+    13,600 m^3 geometric volume drives p_rad above the fusion power and pushes
+    recirc toward 86%."""
+    model = CostModel(concept=ConfinementConcept.DIPOLE, fuel=Fuel.DT)
+    result = model.forward(net_electric_mw=208.0, availability=0.85, lifetime_yr=30)
+    assert float(result.power_table.rec_frac) < 0.5
+    # p_fus must be the right order of magnitude (hundreds of MW, not thousands).
+    assert 300.0 < float(result.power_table.p_fus) < 1500.0
+
+
 def test_cas22_detail_in_result():
     """ForwardResult should include CAS22 sub-account detail."""
     model = CostModel(concept=ConfinementConcept.TOKAMAK, fuel=Fuel.DT)
