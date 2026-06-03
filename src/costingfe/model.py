@@ -610,13 +610,21 @@ class CostModel:
             overridden.append("CAS21")
 
         # CAS22: compute detail, apply sub-account overrides, recompute totals
-        # Coil parameters: from YAML defaults or user overrides.
+        # Coil parameters: every confinement-magnet concept declares b_center /
+        # r_bore in its concept YAML (the source of truth). The 0.0 fallback is
+        # a "no field" sentinel for magnet-free concepts (IFE drivers, MIF), whose
+        # _COIL_DEFAULTS is None so the coil model never reads these. A nonzero
+        # code default here would silently impose a tokamak-class field on any
+        # concept that omits the parameter.
         # r_bore = effective winding bore radius (calibration parameter,
         # not necessarily equal to the radial build vessel_or).
         # b_center = field at the center of the loop (axis), NOT peak-on-conductor.
-        r_bore = params.get("r_bore", 1.85)
-        b_center = params.get("b_center", 12.0)
-        coil_material = CoilMaterial(params.get("coil_material", "rebco_hts"))
+        r_bore = params.get("r_bore", 0.0)
+        b_center = params.get("b_center", 0.0)
+        # Every confinement-magnet concept declares coil_material in its YAML.
+        # COPPER is an inert sentinel for magnet-free concepts, whose
+        # _COIL_DEFAULTS is None so the material is never read for cost.
+        coil_material = CoilMaterial(params.get("coil_material", "copper"))
         n_coils = params.get("n_coils", None)
         blanket_form = BlanketForm(params["blanket_form"])
         blanket_fill = BlanketFill(params["blanket_fill"])

@@ -26,6 +26,7 @@ p_cryo: 1.0         # Cryogenic power [MW]
 # convention).
 b_center: 12.0       # Field at coil center [T]
 r_bore: 1.85         # Effective winding bore radius [m]
+coil_material: rebco_hts  # HTS REBCO end-plug coils (LTS central-cell folded into same conductor cost basis)
 
 # Radial build geometry [m]
 R0: 0.0          # Not used for cylinder

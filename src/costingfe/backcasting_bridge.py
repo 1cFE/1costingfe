@@ -103,9 +103,13 @@ def generate_subsystems(
         vessel_vol=geo.vessel_vol,
         family=model.family,
         concept=concept_enum,
-        b_center=params.get("b_center", 12.0),
-        r_bore=params.get("r_bore", 1.85),
-        coil_material=CoilMaterial(params.get("coil_material", "rebco_hts")),
+        # 0.0 = "no field" sentinel for magnet-free concepts; confinement-magnet
+        # concepts supply b_center / r_bore from their YAML (see model.py).
+        b_center=params.get("b_center", 0.0),
+        r_bore=params.get("r_bore", 0.0),
+        # COPPER is an inert sentinel for magnet-free concepts (material unread);
+        # confinement-magnet concepts supply coil_material from their YAML.
+        coil_material=CoilMaterial(params.get("coil_material", "copper")),
         blanket_form=BlanketForm(params["blanket_form"]),
         blanket_fill=BlanketFill(params["blanket_fill"]),
         p_nbi=params.get("p_nbi", 0.0),

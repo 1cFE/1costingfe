@@ -64,10 +64,15 @@ _COIL_DEFAULTS = {
     ConfinementConcept.THETA_PINCH: {"markup": 1.5, "path_factor": 1.0, "n_coils": 0},
     ConfinementConcept.ORBITRON: {"markup": 1.5, "path_factor": 1.0, "n_coils": 0},
     ConfinementConcept.POLYWELL: {"markup": 2.0, "path_factor": 1.0, "n_coils": 0},
-    # MIF — guide-field solenoids (simpler, smaller than full confinement)
-    ConfinementConcept.MAG_TARGET: {"markup": 1.5, "path_factor": 1.0, "n_coils": 0},
-    ConfinementConcept.PLASMA_JET: {"markup": 1.5, "path_factor": 1.0, "n_coils": 0},
-    ConfinementConcept.MAGLIF: {"markup": 2.0, "path_factor": 1.0, "n_coils": 0},
+    # MIF — no plant-scale confinement magnets. MagLIF compresses
+    # with a Z-pinch liner; MAG_TARGET (General Fusion, NearStar) compresses
+    # magnetized plasma mechanically/kinetically; PLASMA_JET merges plasma guns.
+    # The MFE conductor-scaling model (tokamak geometry factor + multi-tesla
+    # field) does not apply. Any small seed/guide coil is opt-in per concept via
+    # cost_overrides on C220103.
+    ConfinementConcept.MAG_TARGET: None,
+    ConfinementConcept.PLASMA_JET: None,
+    ConfinementConcept.MAGLIF: None,
     # IFE / magnet-free pulsed — no confinement magnets
     ConfinementConcept.LASER_IFE: None,
     ConfinementConcept.ZPINCH: None,

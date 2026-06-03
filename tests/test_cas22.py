@@ -462,6 +462,29 @@ def test_cas220103_material_affects_cost():
     assert rebco["C220103"] > nb3sn["C220103"]  # REBCO $50 vs Nb3Sn $7
 
 
+@pytest.mark.parametrize(
+    "concept",
+    [
+        ConfinementConcept.MAGLIF,
+        ConfinementConcept.MAG_TARGET,
+        ConfinementConcept.PLASMA_JET,
+    ],
+)
+def test_cas220103_mif_no_confinement_magnets(concept):
+    """MIF concepts have no plant-scale confinement magnets, so the
+    conductor-scaling coil model must not apply: C220103 is zero by default.
+
+    MagLIF compresses with a Z-pinch liner; MAG_TARGET (e.g. General Fusion,
+    NearStar) compresses magnetized plasma mechanically/kinetically; PLASMA_JET
+    merges plasma guns. None has an MFE-style confinement-magnet system. Any
+    small seed/guide coil is opt-in per concept via cost_overrides. Without this,
+    these concepts inherited the tokamak geometry factor (G = 4*pi^2) plus the
+    12 T / 1.85 m field fallback, producing $97-129M of phantom coil capital.
+    """
+    result = _make_cas22_coil(concept=concept, b_center=12.0, r_bore=1.85)
+    assert result["C220103"] == 0.0
+
+
 # ---- CAS220104: Per-MW heating sub-accounts ----
 
 
