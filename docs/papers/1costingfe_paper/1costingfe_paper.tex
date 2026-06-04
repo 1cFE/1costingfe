@@ -3086,10 +3086,10 @@ Coils & REBCO HTS, demountable & \\
 The published fabricated-component cost is \$5{,}560M (FY2014~USD,
 \citep{sorbom2015arc} p.~25, Section 6.6), or \$7{,}562M after
 escalation to 2025~USD. \texttt{1costingfe} predicts an overnight
-capital cost of \$2{,}721M, an overnight specific cost of
-10{,}078~\$/kWe, and an LCOE of 139.9~\$/MWh under the framework's
+capital cost of \$2{,}660M, an overnight specific cost of
+9{,}853~\$/kWe, and an LCOE of 137.5~\$/MWh under the framework's
 NOAK default assumptions. The implied delta on overnight cost is
-$-64$\,\%. Sorbom's volumetric estimate uses a single \$1.06M/tonne
+$-65$\,\%. Sorbom's volumetric estimate uses a single \$1.06M/tonne
 fabricated multiplier averaged across four heritage burning-plasma
 designs (FIRE, BPX, PCAST5, ARIES-RS), with the dominant contribution
 from a 4{,}350-tonne SS316LN structural support priced at \$4.6\,B.
@@ -3140,10 +3140,10 @@ The 1costingfe ``Overnight'' row reports CAS10+CAS21+CAS22+CAS23+CAS24+CAS25+CAS
 (everything before interest during construction); the 1costingfe
 ``Total'' row also includes CAS60 (IDC).
 
-% Direct: published 1521.1 M$ (1992) * 2.295 = 3491; 1cfe sum CAS21+22+23+24+25+26+27 = 3575
-% Overnight $/kWe: published 2441 (1992) * 2.295 = 5602; 1cfe (CAS10-50)/kWe = 4689
-% Total: published 2844 M$ (1992) * 2.295 = 6527; 1cfe total_capital = 5591
-% LCOE: published 47.53 mill/kWh (1992) * 2.295 = 109.1 $/MWh; 1cfe = 78.6
+% Direct: published 1521.1 M$ (1992) * 2.295 = 3491; 1cfe sum CAS21+22+23+24+25+26+27 = 3493
+% Overnight $/kWe: published 2441 (1992) * 2.295 = 5602; 1cfe (CAS10-50)/kWe = 4586
+% Total: published 2844 M$ (1992) * 2.295 = 6527; 1cfe total_capital = 5468
+% LCOE: published 47.53 mill/kWh (1992) * 2.295 = 109.1 $/MWh; 1cfe = 77.3
 \begin{table}[h]
 \centering
 \caption{ARIES-AT cross-walk against published top-level rollups.
@@ -3154,20 +3154,20 @@ escalated from 1992~USD to 2025~USD by a factor of 2.295.}
 \toprule
 Account & Published (2025~USD) & \texttt{1costingfe} & $\Delta$ (\%) \\
 \midrule
-Direct cost (Account 90), M\$       & 3{,}491 & 3{,}575 &  $+2.4$ \\
-Overnight specific cost, \$/kWe     & 5{,}602 & 4{,}689 & $-16.3$ \\
-Total cost (Account 99), M\$        & 6{,}527 & 5{,}591 & $-14.3$ \\
-LCOE, \$/MWh                        &   109.1 &    78.6 & $-28.0$ \\
+Direct cost (Account 90), M\$       & 3{,}491 & 3{,}493 &  $+0.1$ \\
+Overnight specific cost, \$/kWe     & 5{,}602 & 4{,}586 & $-18.1$ \\
+Total cost (Account 99), M\$        & 6{,}527 & 5{,}468 & $-16.2$ \\
+LCOE, \$/MWh                        &   109.1 &    77.3 & $-29.2$ \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-The direct-cost row agrees within 3\,\%, indicating that the
-bottom-up CAS21--27 procurement basis lands close to the heritage 2002
+The direct-cost row matches almost exactly (within 0.1\,\%), indicating
+that the bottom-up CAS21--27 procurement basis lands on the heritage 2002
 ARIES systems-study estimate at the top level. The overnight specific
-cost is 16\,\% lower; this is consistent with \texttt{1costingfe}'s
+cost is 18\,\% lower; this is consistent with \texttt{1costingfe}'s
 NOAK default assumption replacing the FOAK-with-learning-multiplier
-convention used in the ARIES program. The LCOE divergence ($-28$\,\%)
+convention used in the ARIES program. The LCOE divergence ($-29$\,\%)
 is dominated by the same NOAK effect propagated through the capital
 recovery factor.
 

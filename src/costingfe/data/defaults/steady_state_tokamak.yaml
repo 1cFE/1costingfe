@@ -2,15 +2,20 @@
 
 p_input: 50.0       # Heating power [MW]
 
-# Heating mix for CAS22 costing (must sum to p_input)
-p_nbi: 50.0         # NBI heating [MW] (primary heating for tokamak)
-p_ecrh: 0.0         # ECRH heating [MW]
-p_icrf: 0.0         # ICRF heating [MW]
+# Heating mix for CAS22 costing (must sum to p_input). Balanced modern-tokamak
+# mix (ITER-class NBI + ICRF + ECRH); a generic DT tokamak uses several methods,
+# not pure NBI. Analysts override per design (ARC is LHCD+ICRF, SPARC ICRF).
+p_nbi: 20.0         # NBI heating [MW]
+p_ecrh: 15.0        # ECRH heating [MW]
+p_icrf: 15.0        # ICRF heating [MW]
 p_lhcd: 0.0         # LHCD heating [MW]
 
 mn: 1.1             # Neutron energy multiplier
 eta_p: 0.5          # Pumping efficiency
-eta_couple: 0.8333   # NBI coupling; eta_pin = 0.60 x 0.8333 = 0.50
+# Plasma coupling, applied to every heating method; per-method source
+# efficiencies differ via eta_source_* (NBI 0.60, ICRF 0.70, ECRH 0.50), so the
+# mix-weighted eta_pin is computed in _effective_eta_pin.
+eta_couple: 0.8333
 eta_de: 0.85        # DEC efficiency
 f_sub: 0.03         # Subsystem power fraction
 f_dec: 0.0          # DEC fraction (0 = no DEC)

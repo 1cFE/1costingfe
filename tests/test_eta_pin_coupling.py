@@ -30,7 +30,7 @@ _BASE = dict(
         # b_center 18->6 T fix (on-axis field, not peak-on-conductor). Tokamak
         # is ~unchanged (recalibration is cost-neutral at its R0=3.0 reference);
         # stellarator LCOE drops as the field correction outweighs the markup.
-        (C.TOKAMAK, Fuel.DT, 233.35),
+        (C.TOKAMAK, Fuel.DT, 226.89),
         (C.MIRROR, Fuel.DT, 186.47),
         (C.STELLARATOR, Fuel.DT, 342.34),
         # DIPOLE re-benchmarked after the radial-build inversion + spherical
