@@ -29,7 +29,9 @@ result = model.forward(
     mn=1.1,
     eta_th=0.46,
     eta_p=0.5,
-    eta_pin=0.5,
+    # eta_pin is derived from eta_source x eta_couple for an NBI/RF-heated
+    # concept; override eta_couple (0.60 x 0.8333 = 0.50), not eta_pin.
+    eta_couple=0.8333,
     eta_de=0.85,
     f_sub=0.03,
     f_dec=0.0,

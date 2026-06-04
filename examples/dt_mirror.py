@@ -32,7 +32,9 @@ result = model.forward(
     mn=1.1,  # Blanket neutron multiplier
     eta_th=0.50,  # Lower thermal efficiency
     eta_p=0.5,  # Pumping efficiency
-    eta_pin=0.5,  # Heating wall-plug efficiency
+    # eta_pin is derived from eta_source x eta_couple for an NBI/RF-heated
+    # concept; override eta_couple (0.60 x 0.8333 = 0.50), not eta_pin.
+    eta_couple=0.8333,
     eta_de=0.60,  # DEC efficiency on end-loss ions
     f_sub=0.03,  # BOP subsystem fraction
     f_dec=0.30,  # Fraction of transport power to DEC
