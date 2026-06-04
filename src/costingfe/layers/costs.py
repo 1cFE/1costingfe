@@ -14,6 +14,7 @@ import jax.numpy as jnp
 from costingfe.layers.economics import (
     compute_crf,
     levelized_annual_cost,
+    levelized_replacement_cost,
 )
 from costingfe.layers.physics import (
     DD_F_HE3_DEFAULT,
@@ -300,64 +301,44 @@ def cas70_om(
         annual_om, interest_rate, inflation_rate, lifetime_yr, t_project
     )
 
-    # CAS72: Annualized scheduled replacement
+    # CAS72: Annualized scheduled replacement. Each term is the level annual
+    # cost of replacing an item every t_replace years over the plant life,
+    # computed by the shared geometric closed-form helper
+    # (levelized_replacement_cost). The first set is capital, so only
+    # replacements beyond it are charged.
     core_lifetime_cal = core_lifetime / availability  # FPY → calendar years
-    n_rep = jnp.maximum(0.0, jnp.ceil(lifetime_yr / core_lifetime_cal) - 1.0)
     cost_per_event = sum(cas22_detail[k] for k in replaceable_accounts) * n_mod
-    # Sum PV of each replacement event, using jnp.where for JAX traceability.
-    # Max replacements bounded by lifetime/core_lifetime; 20 covers all cases
-    # (e.g., 60yr plant / 3yr core = 19 replacements).
-    MAX_REP = 20
-    pv = 0.0
-    for k in range(1, MAX_REP + 1):
-        # Clamp exponent to 0 for inactive iterations (k > n_rep) to prevent
-        # float32 overflow in the backward pass.  jnp.where evaluates both
-        # branches, so a large exponent k*core_lifetime_cal for dead iterations
-        # produces inf, and inf*0 = NaN in the VJP.  With a clamped exponent
-        # the discount is 1.0 for inactive slots, keeping gradients finite.
-        safe_exp = jnp.where(k <= n_rep, k * core_lifetime_cal, 0.0)
-        discount = (1 + interest_rate) ** safe_exp
-        pv = pv + jnp.where(k <= n_rep, cost_per_event / discount, 0.0)
-    crf = compute_crf(interest_rate, lifetime_yr)
-    cas72 = pv * crf
+    cas72 = levelized_replacement_cost(
+        cost_per_event, core_lifetime_cal, interest_rate, lifetime_yr
+    )
 
-    # DEC grid replacement (additive, independent cycle)
-    # Use jnp.maximum(p_dee, 1e-6) as a safe base for the power law to avoid NaN
-    # gradients at p_dee=0 (since d/dp_dee of p_dee^0.7 → ∞ there). The outer
-    # jnp.where masks the result to zero when p_dee == 0.
+    # DEC grid replacement (additive, independent cycle).
+    # jnp.maximum(p_dee, 1e-6) keeps the power-law gradient finite at p_dee=0;
+    # the outer jnp.where masks the result to zero when p_dee == 0.
     P_DEE_REF = 400.0
     p_dee_safe = jnp.maximum(p_dee, 1e-6)
     dec_grid = cc.dec_grid_cost * jnp.where(
         p_dee > 0, (p_dee_safe / P_DEE_REF) ** 0.7, 0.0
     )
     dec_grid_life_cal = cc.dec_grid_lifetime(fuel) / availability
-    n_rep_dec = jnp.maximum(0.0, jnp.ceil(lifetime_yr / dec_grid_life_cal) - 1.0)
-    dec_cost = dec_grid * n_mod
-    pv_dec = 0.0
-    for k in range(1, MAX_REP + 1):
-        safe_exp_dec = jnp.where(k <= n_rep_dec, k * dec_grid_life_cal, 0.0)
-        discount = (1 + interest_rate) ** safe_exp_dec
-        pv_dec = pv_dec + jnp.where(k <= n_rep_dec, dec_cost / discount, 0.0)
-    cas72 = cas72 + pv_dec * crf
+    cas72 = cas72 + levelized_replacement_cost(
+        dec_grid * n_mod, dec_grid_life_cal, interest_rate, lifetime_yr
+    )
 
-    # Cap bank scheduled replacement (INDUCTIVE_DEC only)
+    # Cap bank scheduled replacement (INDUCTIVE_DEC only).
     if pulsed_conversion == PulsedConversion.INDUCTIVE_DEC and f_rep > 0:
         n_shots_per_year = f_rep * 8760.0 * 3600.0 * availability
         t_replace_cap = cc.cap_shot_lifetime / n_shots_per_year
-        n_rep_cap = jnp.maximum(0.0, jnp.ceil(lifetime_yr / t_replace_cap) - 1.0)
         cap_cost = cas22_detail.get("C220107", 0.0) * n_mod
-        pv_cap = 0.0
-        for k in range(1, MAX_REP + 1):
-            safe_exp_cap = jnp.where(k <= n_rep_cap, k * t_replace_cap, 0.0)
-            discount = (1 + interest_rate) ** safe_exp_cap
-            pv_cap = pv_cap + jnp.where(k <= n_rep_cap, cap_cost / discount, 0.0)
-        cas72 = cas72 + pv_cap * crf
+        cas72 = cas72 + levelized_replacement_cost(
+            cap_cost, t_replace_cap, interest_rate, lifetime_yr
+        )
 
     # Formation-electrode scheduled replacement (EM-gun concepts).
     # Plasma-facing coaxial-gun electrodes (sheared-flow Z-pinch, plasma jet) erode
     # under high current density and are periodically replaced. The replacement
-    # interval can be sub-annual, which the discrete MAX_REP loop above would
-    # truncate, so this is modeled as a levelized annual recurring cost.
+    # interval can be sub-annual; levelized_replacement_cost assumes whole-interval
+    # cycles, so this is modeled instead as a levelized annual recurring cost.
     if (
         concept in (ConfinementConcept.STAGED_ZPINCH, ConfinementConcept.PLASMA_JET)
         and f_rep > 0

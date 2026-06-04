@@ -1,3 +1,5 @@
+import math as _math
+
 import pytest
 
 from costingfe.defaults import load_costing_constants
@@ -15,7 +17,10 @@ from costingfe.layers.costs import (
     cas80_fuel,
     cas90_financial,
 )
-from costingfe.layers.economics import compute_crf, levelized_annual_cost
+from costingfe.layers.economics import (
+    compute_crf,
+    levelized_annual_cost,
+)
 from costingfe.types import ConfinementConcept, Fuel
 
 CC = load_costing_constants()
@@ -691,3 +696,37 @@ def test_cas72_electrode_replacement_magnitude():
     t_project = _total_project_time(CC, 6, Fuel.DT, True)
     expected = levelized_annual_cost(annual, 0.07, 0.02, 30, t_project)
     assert (cas72_gun - cas72_bare) == pytest.approx(expected)
+
+
+def _manual_repl_check(event_cost, t_replace, i, n):
+    s = (1.0 + i) ** (-t_replace)
+    n_rep = max(0, _math.ceil(n / t_replace) - 1)
+    pv = sum(event_cost * s**k for k in range(1, n_rep + 1))
+    crf = (i * (1 + i) ** n) / ((1 + i) ** n - 1)
+    return pv * crf
+
+
+def test_cas72_core_matches_helper():
+    """Core replacement equals the geometric helper for the summed accounts."""
+    detail = {"C220101": 100.0, "C220104": 0.0, "C220108": 50.0}
+    _, _, c72 = cas70_om(
+        CC,
+        cas22_detail=detail,
+        replaceable_accounts=CC.replaceable_accounts,
+        n_mod=1,
+        p_net=1000.0,
+        availability=0.85,
+        inflation_rate=0.02,
+        interest_rate=0.07,
+        lifetime_yr=30,
+        core_lifetime=CC.core_lifetime(Fuel.DT),
+        construction_time=6,
+        fuel=Fuel.DT,
+        noak=True,
+        concept=ConfinementConcept.TOKAMAK,
+    )
+    cost_per_event = sum(detail[k] for k in CC.replaceable_accounts if k in detail)
+    t_core = CC.core_lifetime(Fuel.DT) / 0.85
+    assert float(c72) == pytest.approx(
+        _manual_repl_check(cost_per_event, t_core, 0.07, 30), rel=1e-6
+    )
