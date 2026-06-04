@@ -31,7 +31,13 @@ from costingfe.layers.physics import (
     Q_DT,
     Q_PB11,
 )
-from costingfe.types import BlanketFill, ConfinementConcept, Fuel, PulsedConversion
+from costingfe.types import (
+    BlanketFill,
+    ConfinementConcept,
+    Fuel,
+    LaserDriverType,
+    PulsedConversion,
+)
 
 
 def _total_project_time(cc, construction_time, fuel, noak):
@@ -271,6 +277,7 @@ def cas70_om(
     pulsed_conversion=None,
     f_rep=0.0,
     concept=None,
+    laser_driver_type=None,
 ):
     """CAS70: Annualized O&M + scheduled replacement. Returns (total, cas71, cas72).
 
@@ -355,6 +362,39 @@ def cas70_om(
         cas72 = cas72 + levelized_annual_cost(
             annual_electrode, interest_rate, inflation_rate, lifetime_yr, t_project
         )
+
+    # Laser-IFE driver scheduled replacement (DPSSL / KrF / Nd:Glass).
+    # Each architecture has its own replaceable subsystems with distinct shot
+    # lifetimes; each is summed via the shared geometric helper. Diodes whose
+    # NOAK life exceeds the plant contribute ~0 (capital); flashlamps wear
+    # sub-annually and dominate. See CAS22_reactor_components.md (CAS72 O&M).
+    _LASER_SUBSYSTEMS = {
+        LaserDriverType.DPSSL: (
+            ("dpssl_diode_replace_frac", "dpssl_diode_shot_lifetime"),
+            ("dpssl_crystal_replace_frac", "dpssl_crystal_shot_lifetime"),
+            ("dpssl_optics_replace_frac", "dpssl_optics_shot_lifetime"),
+        ),
+        LaserDriverType.KRF: (
+            ("krf_foil_replace_frac", "krf_foil_shot_lifetime"),
+            ("krf_ebeam_replace_frac", "krf_ebeam_shot_lifetime"),
+        ),
+        LaserDriverType.NDGLASS: (
+            ("ndglass_lamp_replace_frac", "ndglass_lamp_shot_lifetime"),
+        ),
+    }
+    if (
+        concept == ConfinementConcept.LASER_IFE
+        and f_rep > 0
+        and laser_driver_type is not None
+    ):
+        n_shots_per_year = f_rep * 8760.0 * 3600.0 * availability
+        c220104 = cas22_detail.get("C220104", 0.0) * n_mod
+        for frac_attr, life_attr in _LASER_SUBSYSTEMS[laser_driver_type]:
+            event_cost = getattr(cc, frac_attr) * c220104
+            t_replace = getattr(cc, life_attr) / n_shots_per_year
+            cas72 = cas72 + levelized_replacement_cost(
+                event_cost, t_replace, interest_rate, lifetime_yr
+            )
 
     return cas71 + cas72, cas71, cas72
 

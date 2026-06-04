@@ -20,6 +20,7 @@ from costingfe.layers.costs import (
 from costingfe.layers.economics import (
     compute_crf,
     levelized_annual_cost,
+    levelized_replacement_cost,
 )
 from costingfe.model import CostModel
 from costingfe.types import ConfinementConcept, Fuel, LaserDriverType
@@ -764,3 +765,93 @@ def test_c220104_branches_by_driver_type():
     ndglass = _laser_c220104(LaserDriverType.NDGLASS)
     assert krf == pytest.approx(dpssl * 40.0 / 205.0, rel=1e-6)
     assert ndglass == pytest.approx(dpssl * 1000.0 / 205.0, rel=1e-6)
+
+
+_LASER_KWARGS = dict(
+    cas22_detail={"C220101": 0.0, "C220104": 1000.0, "C220108": 0.0},
+    replaceable_accounts=CC.replaceable_accounts,
+    n_mod=1,
+    p_net=1000.0,
+    availability=0.85,
+    inflation_rate=0.02,
+    interest_rate=0.07,
+    lifetime_yr=30,
+    core_lifetime=CC.core_lifetime(Fuel.DT),
+    construction_time=6,
+    fuel=Fuel.DT,
+    noak=True,
+    f_rep=10.0,
+    concept=ConfinementConcept.LASER_IFE,
+)
+
+
+def _laser_cas72(driver_type):
+    _, _, c72 = cas70_om(CC, laser_driver_type=driver_type, **_LASER_KWARGS)
+    _, _, c72_none = cas70_om(CC, laser_driver_type=None, **_LASER_KWARGS)
+    return float(c72 - c72_none)
+
+
+def test_cas72_dpssl_replacement_magnitude():
+    """DPSSL replacement = sum over (diodes, crystals, optics) of the geometric
+    helper applied to replace_frac*C220104 with t = shot_life / shots_per_yr."""
+    n_shots = 10.0 * 8760.0 * 3600.0 * 0.85
+    c220104 = 1000.0
+    expected = (
+        levelized_replacement_cost(
+            CC.dpssl_diode_replace_frac * c220104,
+            CC.dpssl_diode_shot_lifetime / n_shots,
+            0.07,
+            30,
+        )
+        + levelized_replacement_cost(
+            CC.dpssl_crystal_replace_frac * c220104,
+            CC.dpssl_crystal_shot_lifetime / n_shots,
+            0.07,
+            30,
+        )
+        + levelized_replacement_cost(
+            CC.dpssl_optics_replace_frac * c220104,
+            CC.dpssl_optics_shot_lifetime / n_shots,
+            0.07,
+            30,
+        )
+    )
+    assert _laser_cas72(LaserDriverType.DPSSL) == pytest.approx(
+        float(expected), rel=1e-6
+    )
+
+
+def test_cas72_dpssl_diodes_outlive_plant_contribute_zero():
+    """At NOAK diode life (1e10 ≈ 37 yr > plant) the diode term is ~0; dropping
+    diode life to demonstrated 1e8 makes it dominate (sensitivity lever)."""
+    n_shots = 10.0 * 8760.0 * 3600.0 * 0.85
+    diode_noak = levelized_replacement_cost(
+        CC.dpssl_diode_replace_frac * 1000.0,
+        CC.dpssl_diode_shot_lifetime / n_shots,
+        0.07,
+        30,
+    )
+    diode_demo = levelized_replacement_cost(
+        CC.dpssl_diode_replace_frac * 1000.0, 1.0e8 / n_shots, 0.07, 30
+    )
+    assert float(diode_noak) == pytest.approx(0.0)
+    assert float(diode_demo) > 100.0  # huge if diodes wear sub-annually
+
+
+def test_cas72_ndglass_dominates_dpssl():
+    """Flashlamp replacement is prohibitive -> Nd:Glass CAS72 >> DPSSL."""
+    assert _laser_cas72(LaserDriverType.NDGLASS) > 10.0 * _laser_cas72(
+        LaserDriverType.DPSSL
+    )
+
+
+def test_cas72_no_laser_replacement_guards():
+    """No-op for non-laser concept, f_rep=0, or laser_driver_type=None."""
+    tok = {**_LASER_KWARGS, "concept": ConfinementConcept.TOKAMAK}
+    _, _, a = cas70_om(CC, laser_driver_type=LaserDriverType.DPSSL, **tok)
+    _, _, b = cas70_om(CC, laser_driver_type=None, **tok)
+    assert float(a) == float(b)
+    zero = {**_LASER_KWARGS, "f_rep": 0.0}
+    _, _, c = cas70_om(CC, laser_driver_type=LaserDriverType.DPSSL, **zero)
+    _, _, d = cas70_om(CC, laser_driver_type=None, **zero)
+    assert float(c) == float(d)
