@@ -399,3 +399,23 @@ def test_mirror_dt_no_dec_by_default():
     result = model.forward(net_electric_mw=500.0, availability=0.85, lifetime_yr=30)
     # Mirror default f_dec=0.3 applies even for DT
     assert result.cas22_detail["C220109"] > 0
+
+
+def test_laser_driver_type_defaults_to_dpssl_from_yaml():
+    from costingfe.types import LaserDriverType
+
+    model = CostModel(concept=ConfinementConcept.LASER_IFE, fuel=Fuel.DT)
+    assert model.laser_driver_type == LaserDriverType.DPSSL
+
+
+def test_laser_driver_type_override_changes_capital_and_om():
+    from costingfe.types import LaserDriverType
+
+    dpssl = CostModel(
+        ConfinementConcept.LASER_IFE, Fuel.DT, laser_driver_type=LaserDriverType.DPSSL
+    ).forward(1000.0, 0.85, 30)
+    krf = CostModel(
+        ConfinementConcept.LASER_IFE, Fuel.DT, laser_driver_type=LaserDriverType.KRF
+    ).forward(1000.0, 0.85, 30)
+    assert krf.cas22_detail["C220104"] < dpssl.cas22_detail["C220104"]  # 40 < 205 $/MJ
+    assert krf.costs.lcoe != dpssl.costs.lcoe

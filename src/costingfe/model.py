@@ -61,6 +61,7 @@ from costingfe.types import (
     CostResult,
     ForwardResult,
     Fuel,
+    LaserDriverType,
     PowerCycle,
     PulsedConversion,
     WallMaterial,
@@ -76,6 +77,7 @@ class CostModel:
         costing_constants: CostingConstants = None,
         power_cycle: PowerCycle = PowerCycle.RANKINE,
         pulsed_conversion: PulsedConversion = None,
+        laser_driver_type: LaserDriverType = None,
     ):
         self.concept = concept
         self.fuel = fuel
@@ -89,6 +91,13 @@ class CostModel:
         self._eng_defaults = load_engineering_defaults(
             f"{self.family.value}_{concept.value}"
         )
+        # Driver architecture for LASER_IFE. Default comes from the concept YAML
+        # (laser_driver_type: dpssl), not hardcoded; explicit arg overrides it.
+        if laser_driver_type is None:
+            _ld = self._eng_defaults.get("laser_driver_type")
+            if _ld is not None:
+                laser_driver_type = LaserDriverType(_ld)
+        self.laser_driver_type = laser_driver_type
 
     @staticmethod
     def _dhe3_f_He3_eff(params):
@@ -737,6 +746,7 @@ class CostModel:
             p_driver=p_driver,
             e_driver_mj=pt.e_driver_mj,
             e_preheat_mj=e_preheat_mj,
+            laser_driver_type=self.laser_driver_type,
             f_dec=params.get("f_dec", 0.0),
             p_dee=pt.p_dee,
             burn_fraction=params["burn_fraction"],
@@ -878,6 +888,7 @@ class CostModel:
             pulsed_conversion=self.pulsed_conversion,
             f_rep=params.get("f_rep", 0.0),
             concept=self.concept,
+            laser_driver_type=self.laser_driver_type,
         )
         c80 = cas80_fuel(
             cc,
