@@ -364,7 +364,9 @@ estimates; see the Laser IFE row and the double-counting note below.
 
 | Concept | Basis | Coefficient | Hardware | Rationale |
 |---------|-------|------------:|----------|-----------|
-| Laser IFE | $/MJ | 205 | Diode-pumped solid-state laser (optics + diodes) | Optics + diode arrays, the dominant turnkey part. With the C220107 cap bank (~$5/J at η=0.10) the laser totals ~$210/J = aggressive DPSSL NOAK. Published DPSSL turnkey NOAK spans $210–700/J (diode roadmap to ~$0.007/W; ARPA-E IFE workshop, Zuegel 2023; Orth/LLNL DPSSL study), FOAK $700–1000/J. Costed on pulse energy. |
+| Laser IFE (DPSSL) | $/MJ | 205 | Diode-pumped solid-state (optics + diodes) | Default architecture; optics + diode arrays. With the C220107 cap bank (around $5/J) the laser totals around $210/J, the aggressive end of the published DPSSL NOAK range ($210-700/J; diode roadmap toward $0.007/W). Selected by `laser_driver_type=dpssl`. |
+| Laser IFE (KrF) | $/MJ | 40 | KrF excimer (e-beam pumped + gas) | NRL Electra / Xcimer heritage. 40 leans to the Xcimer/ASPEN large-aperture-optics claim ($10-20/J optical-on-target, an unproven long-pulse-scaling target); the NRL/Sethian engineering baseline is around $200/J (Sethian, Fusion Sci. Tech. 64, 2013). Range 20-200. `laser_driver_type=krf`. |
+| Laser IFE (Nd:Glass) | $/MJ | 1000 | Flashlamp-pumped Nd:Glass (NIF-class) | NIF $3.5-4.2B / 1.1-1.9 MJ UV is around $2000/J facility, driver-only roughly half. Commercially marginal: see the flashlamp replacement note below. `laser_driver_type=nd_glass`. |
 | Heavy ion | $/MJ | 60 | RF linac + storage rings | Accelerator capital scales with per-pulse beam energy and ring charge. Higher than laser due to ring infrastructure. |
 | MagLIF | $/MJ (preheat only) | 205 | Laser preheat system | Main driver is the electrical Z-pinch (C220107). C220104 carries only the preheat laser, costed per joule of preheat pulse energy (`e_preheat_mj`); same DPSSL class as the IFE driver. Set `e_preheat_mj = 0` for no-preheat magnetized compression (e.g. Pacific Fusion). |
 | Plasma jet | $/MJ | 4 | Plasma gun array | Electromagnetic plasma guns, sized by per-pulse energy and current. More complex than pneumatics, simpler than lasers. |
@@ -402,6 +404,42 @@ with `electrode_replace_frac = 0.5` (consumable-electrode share of the C220104
 flow-drive capital; range 0.25 to 0.75) and `electrode_shot_lifetime = 1e8` shots
 (high uncertainty, no NOAK data; range 1e7 to 1e9). At the reference staged
 Z-pinch this is about $25M/yr levelized.
+
+#### Laser-driver scheduled replacement (CAS72 O&M)
+
+A rep-rated laser driver's replaceable subsystems wear at shot lifetimes
+spanning sub-annual to multi-decade, so each is modeled as the level annual
+cost of replacing it every `t = shot_lifetime / shots_per_year` years over the
+plant life, summed via the shared geometric closed-form helper
+(`levelized_replacement_cost`, the same machinery as core/DEC/cap-bank
+replacement). The first set is capital (already in C220104); only replacements
+beyond it are charged. Each subsystem cost is `replace_frac` times C220104. Shot
+lifetimes are NOAK projections (LIFE / HiPER / NRL Electra), not demonstrated.
+
+| Architecture | Subsystem | replace_frac | NOAK shot life | Demonstrated | Source |
+|---|---|---:|---:|---:|---|
+| DPSSL | Pump diodes | 0.50 | 1e10 | 1e8 (Mercury) | Orth/Bibeau DPSSL studies; Mercury (OSTI 1019071); Zuegel ARPA-E 2023 |
+| DPSSL | KDP/DKDP crystals | 0.03 | 3e9 | NIF 14.3 J/cm2 spec | DKDP fatigue studies; NIF DKDP lifetime |
+| DPSSL | Final optics (GIMM/transport/debris) | 0.05 | 3e8 | 1e5 (GIMM) | Latkowski fused-silica final optics (OSTI 20845924); GIMM (UCSD-CER-05-08; FST 56(1)) |
+| KrF | Hibachi foil + windows | 0.04 | 3e8 | 1e4-1e5 | Sethian Electra (DTIC ADA480681) |
+| KrF | E-beam diode + gas | 0.06 | 3e8 | engineering estimate | Sethian Electra |
+| Nd:Glass | Xe flashlamps | 0.10 | 1e4 | O(1e3-1e4) | NIF flashlamp specs (lasers.llnl.gov; SPIE 8599) |
+
+Three consequences fall out of the calibration, at a $1B driver, 10 Hz, 0.85
+availability, 30-yr / 7% WACC plant:
+
+- DPSSL diodes are capital, not O&M. At NOAK life (1e10 shots, around 37 yr) the
+  replacement interval exceeds the plant life, so `n_rep = 0` and diodes
+  contribute about $0. Diode shot life is the make-or-break sensitivity lever:
+  at the demonstrated 1e8 shots they would wear sub-annually and dominate LCOE.
+- DPSSL O&M is optics-dominated, landing around $48M/yr levelized, within the
+  LIFE-projected band, driven by the final-optics line (around 1.1 yr interval).
+- Nd:Glass is prohibitive. Flashlamps wear sub-annually (1e4 shots), so the
+  replacement term explodes: the model surfaces NIF-class non-viability for
+  rep-rated IFE, on top of its roughly 5x higher capital.
+
+KrF and Nd:Glass subsystem cost shares are engineering estimates; no verified
+component cost breakdown exists in the open literature.
 
 ---
 
