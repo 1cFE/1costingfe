@@ -26,9 +26,13 @@ def run(output_dir: Path) -> dict:
     output_dir.mkdir(parents=True, exist_ok=True)
 
     inputs = {
-        # ARC published geometry and power balance
+        # ARC published geometry and power balance (Sorbom et al. 2015, Table 1)
         "R0": 3.3,
         "elon": 1.84,
+        # On-axis field from the same source as the geometry (NOT the YAML
+        # default): the bilinear coil model is linear in b_center, so the field
+        # and the radial build must come from the same design point.
+        "b_center": 9.2,  # B0 on-axis [T]; Sorbom et al. 2015, Table 1
         "p_input": 25.0,  # default: ICRF auxiliary heating
         "eta_th": 0.40,
         # Framework requirements not directly published for ARC

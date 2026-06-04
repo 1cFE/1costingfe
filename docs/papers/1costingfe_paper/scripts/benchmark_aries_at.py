@@ -29,6 +29,10 @@ def run(output_dir: Path) -> dict:
         # ARIES-AT published geometry and power balance
         "R0": 5.2,
         "elon": 2.2,
+        # On-axis field from the same source as the geometry (NOT the YAML
+        # default): the bilinear coil model is linear in b_center, so the field
+        # and the radial build must come from the same design point.
+        "b_center": 5.86,  # B0 on-axis [T]; ARIES-AT reference design
         "eta_th": 0.59,
         "net_electric_mw": 1000.0,
         # Framework requirements not directly published, plant-level defaults

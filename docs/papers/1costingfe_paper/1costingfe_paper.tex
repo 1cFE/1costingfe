@@ -1761,20 +1761,33 @@ solenoid (CS), poloidal field (PF) coils, structural casing,
 insulation, quench protection, cryostat interfaces, and testing.
 
 \subsubsection{Conductor Scaling Law}
-Total conductor quantity in kA-m is estimated from the field, coil
-radius, and a geometry-dependent path-length factor:
+The conductor quantity in kA-m follows from the magnet topology. For a
+toroidal system the on-axis field fixes the total ampere-turns through
+Amp\`ere's law, $NI = 2\pi R_0 B / \mu_0$, while the conductor length per
+turn scales with the coil-bore radius $r_{\text{coil}}$ (the winding
+encircles the plasma, blanket, shield, and vessel). The kA-m, and hence
+the cost, are therefore \emph{bilinear} in the major radius $R_0$ and the
+coil bore $r_{\text{coil}}$:
 \begin{equation}
 \label{eq:cas2203}
-C_{220103} = \frac{G \cdot B_{\max} \cdot R_{\text{coil}}^2}
+C_{220103} = \frac{G \cdot B \cdot R_0 \cdot r_{\text{coil}}}
                    {\mu_0 \times 1000}
              \times c_{\text{kAm}}
              \times M_{\text{concept}}
+             \qquad \text{(toroidal)}.
 \end{equation}
 
-\noindent where $G$ is a geometry factor (tokamak: $4\pi^2$;
-stellarator: $4\pi^2 \times f_{\text{path}}$; mirror:
-$n_{\text{coils}} \cdot 4\pi$, where $n_{\text{coils}}$ is the
-number of independent solenoid coils in the mirror layout),
+\noindent For a linear device (mirror, FRC, dipole, pulsed) the magnet is
+a true circular loop or solenoid, for which $B = \mu_0 N I / (2R)$ and the
+turn length is $2\pi R$, giving the textbook $r^2$ scaling
+$C_{220103} \propto G \cdot B \cdot r_{\text{coil}}^2 / \mu_0$. Here $G$ is
+a geometry factor (tokamak: $4\pi^2$; stellarator:
+$4\pi^2 \times f_{\text{path}}$, the $f_{\text{path}}=2$ capturing the
+roughly doubled length of a non-planar 3D winding; mirror:
+$n_{\text{coils}} \cdot 4\pi$, the sum over independent solenoids), $B$ is
+the field at the loop centre / on axis (not the peak field on the
+conductor, which is a factor of $\sim$2--4 higher for high-field
+superconductor but does not enter the ampere-metre quantity),
 $c_{\text{kAm}}$ is the conductor cost per kA-metre, and
 $M_{\text{concept}}$ is a manufacturing markup capturing winding,
 insulation, quench protection, structural casing, cryostat, and testing.
@@ -1784,16 +1797,29 @@ the Hammer evolution) plus six LTS solenoids discretizing the 50~m
 central cell at conservative pitch. Simple-mirror devices
 (WHAM/BEAM/Anvil) use $n_{\text{coils}} \approx 4$.
 
+The coil-bore radius $r_{\text{coil}}$ is taken as the outer radius of the
+vacuum vessel from the device's radial build, since in a magnetic-confinement
+reactor the superconducting magnets sit outboard of the entire
+plasma--blanket--shield--vessel stack. The ARC point design places its TF
+coils beyond a 0.85~m inboard blanket/shield standoff
+\citep{sorbom2015arc}, and ARIES-CS requires 1.5--2~m (1.79~m for a regular
+breeding module) between the plasma and the middle of the coil winding pack
+\citep{najmabadi2008stellarator}; for a tandem mirror the coil radius is likewise
+the sum of the plasma radius, blanket and shield thickness, and assembly
+gaps. Deriving $r_{\text{coil}}$ from the radial build, rather than treating
+it as a free parameter, ties the magnet cost to the same geometry that sets
+the blanket and shield volumes.
+
 \begin{table}[htbp]
 \caption{CAS22.01.03 manufacturing markups and path factors by confinement concept.}
 \label{tab:cas2203-markup}
 \centering
 \begin{tabular}{lrrrl}
 \toprule
-Concept & Markup & Path factor & Example (12~T, 1.85~m) & Rationale \\
+Concept & Markup & Path factor & Ref.\ coil cost & Rationale \\
 \midrule
-Tokamak     &  8$\times$ & 1.0 & \$516M & TF+CS+PF complexity \\
-Stellarator & 12$\times$ & 2.0 & \$1{,}546M & Non-planar 3D coils \\
+Tokamak     &  3.09$\times$ & 1.0 & \$516M & TF+CS+PF complexity; calibrated at the SPARC-class reference ($B=12$~T, $R_0=3.0$~m, $r_{\text{coil}}=2.95$~m) \\
+Stellarator &  5.87$\times$ & 2.0 & \$2{,}130M & Non-planar 3D coils; $1.9\times$ the tokamak markup, the {NCSX} modular-coil production cost overrun \citep{neilson2010ncsx} \\
 Mirror      &  2.5$\times$ & 1.0 & \$513M & 10 simple solenoids (HAMMIR-class) \\
 Pulsed FRC  &  1.5$\times$ & 1.0 & n/a & Theta-pinch formation coils \\
 Theta pinch &  1.5$\times$ & 1.0 & n/a & Compression coils \\
@@ -3000,10 +3026,10 @@ Coils & REBCO HTS, demountable & \\
 The published fabricated-component cost is \$5,560\,M (FY2014~USD,
 \citep{sorbom2015arc} p.~25, Section 6.6), or \$7,562\,M after
 escalation to 2025~USD. \texttt{1costingfe} predicts an overnight
-capital cost of \$3,224\,M, an overnight specific cost of
-\$11,940\,/kWe, and an LCOE of \$160.2\,/MWh under the framework's
+capital cost of \$2,721\,M, an overnight specific cost of
+\$10,078\,/kWe, and an LCOE of \$139.9\,/MWh under the framework's
 NOAK default assumptions. The implied delta on overnight cost is
-$-57$\,\%. Sorbom's volumetric estimate uses a single \$1.06\,M/tonne
+$-64$\,\%. Sorbom's volumetric estimate uses a single \$1.06\,M/tonne
 fabricated multiplier averaged across four heritage burning-plasma
 designs (FIRE, BPX, PCAST5, ARIES-RS), with the dominant contribution
 from a 4{,}350-tonne SS316LN structural support priced at \$4.6\,B.
@@ -3054,10 +3080,10 @@ The 1costingfe ``Overnight'' row reports CAS10+CAS21+CAS22+CAS23+CAS24+CAS25+CAS
 (everything before interest during construction); the 1costingfe
 ``Total'' row also includes CAS60 (IDC).
 
-% Direct: published 1521.1 M$ (1992) * 2.295 = 3491; 1cfe sum CAS21+22+23+24+25+26+27 = 3683
-% Overnight $/kWe: published 2441 (1992) * 2.295 = 5602; 1cfe (CAS10-50)/kWe = 4822
-% Total: published 2844 M$ (1992) * 2.295 = 6527; 1cfe total_capital = 5749
-% LCOE: published 47.53 mill/kWh (1992) * 2.295 = 109.1 $/MWh; 1cfe = 80.4
+% Direct: published 1521.1 M$ (1992) * 2.295 = 3491; 1cfe sum CAS21+22+23+24+25+26+27 = 3575
+% Overnight $/kWe: published 2441 (1992) * 2.295 = 5602; 1cfe (CAS10-50)/kWe = 4689
+% Total: published 2844 M$ (1992) * 2.295 = 6527; 1cfe total_capital = 5591
+% LCOE: published 47.53 mill/kWh (1992) * 2.295 = 109.1 $/MWh; 1cfe = 78.6
 \begin{table}[h]
 \centering
 \caption{ARIES-AT cross-walk against published top-level rollups.
@@ -3068,20 +3094,20 @@ escalated from 1992~USD to 2025~USD by a factor of 2.295.}
 \toprule
 Account & Published (2025~USD) & \texttt{1costingfe} & $\Delta$ (\%) \\
 \midrule
-Direct cost (Account 90), M\$       & 3{,}491 & 3{,}683 &  $+5.5$ \\
-Overnight specific cost, \$/kWe     & 5{,}602 & 4{,}822 & $-13.9$ \\
-Total cost (Account 99), M\$        & 6{,}527 & 5{,}749 & $-11.9$ \\
-LCOE, \$/MWh                        &   109.1 &    80.4 & $-26.3$ \\
+Direct cost (Account 90), M\$       & 3{,}491 & 3{,}575 &  $+2.4$ \\
+Overnight specific cost, \$/kWe     & 5{,}602 & 4{,}689 & $-16.3$ \\
+Total cost (Account 99), M\$        & 6{,}527 & 5{,}591 & $-14.3$ \\
+LCOE, \$/MWh                        &   109.1 &    78.6 & $-28.0$ \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-The direct-cost row agrees within 6\,\%, indicating that the
+The direct-cost row agrees within 3\,\%, indicating that the
 bottom-up CAS21--27 procurement basis lands close to the heritage 2002
 ARIES systems-study estimate at the top level. The overnight specific
-cost is 14\,\% lower; this is consistent with \texttt{1costingfe}'s
+cost is 16\,\% lower; this is consistent with \texttt{1costingfe}'s
 NOAK default assumption replacing the FOAK-with-learning-multiplier
-convention used in the ARIES program. The LCOE divergence ($-26$\,\%)
+convention used in the ARIES program. The LCOE divergence ($-28$\,\%)
 is dominated by the same NOAK effect propagated through the capital
 recovery factor.
 

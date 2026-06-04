@@ -110,14 +110,33 @@ $40–80M raw material.  The higher cost reflects:
 
 ### Costing model
 
-    total_kAm = G × B_max × R_coil² / (μ₀ × 1000)
+The conductor quantity (ampere-meters) depends on device topology:
+
+    Toroidal (tokamak, stellarator):
+        total_kAm = G × B × R0 × r_coil / (μ₀ × 1000)
+    Linear / loop (mirror, FRC, dipole, pulsed):
+        total_kAm = G × B × r_coil² / (μ₀ × 1000)
+
     C220103 = total_kAm × $/kAm × markup / 1e6
+
+The toroidal form is **bilinear**, not the square of one radius: the toroidal
+field needs ampere-turns ~ B·R0 (Ampère's law around the torus) and the
+conductor length per turn ~ the coil bore r_coil. The earlier model used a
+single R² calibrated at SPARC's major radius (1.85 m); that made coil cost
+grow as R0² and produced unphysically large costs for big machines (a stellarator
+fed its major radius cost an order of magnitude too much). Real toroidal
+conductor grows ~linearly in R0. For a true solenoid/ring loop (linear devices),
+B = μ₀NI/(2R) with length 2πR gives R², which is correct, so those keep the
+r² form.
 
 where:
 - **G** = geometry factor (tokamak: 4π², stellarator: 4π²×path_factor,
   mirror: n_coils×4π)
-- **B_max** = peak field on conductor (default 12 T)
-- **R_coil** = effective coil radius (default 1.85 m)
+- **B** = field at the loop center / on axis (NOT peak-on-conductor; default
+  12 T for the SPARC-class tokamak reference)
+- **R0** = major radius (toroidal devices); **r_coil** = coil-bore radius =
+  `vessel_or` from the radial build (the TF/modular coils sit just outside the
+  vessel). r_coil replaces the old "effective coil radius" calibration knob.
 - **n_coils** = number of independent solenoid coils (mirror only;
   default 10, calibrated to a Realta HAMMIR-class tandem mirror with
   4 end-plug HTS coils plus ~6 LTS central-cell solenoid coils
@@ -125,6 +144,34 @@ where:
   WHAM/BEAM/Anvil use n_coils ≈ 4)
 - **$/kAm** = conductor cost per kilo-amp-meter
 - **markup** = manufacturing complexity multiplier
+
+### Coil-bore radius from the radial build
+
+`r_coil` is taken as `vessel_or` (the outer radius of the vacuum vessel
+in the radial build), because the superconducting magnets sit outboard of
+the entire plasma/blanket/shield/vessel stack. This is confirmed by the
+published radial builds:
+
+- **Tokamak (ARC, Sorbom et al. 2015, Fig. 2):** inboard order from the
+  plasma inward is plasma → SOL → vacuum vessel → blanket → blanket tank →
+  thermal shield → neutron shield → vacuum gap → TF coil → CS. The TF coil
+  is on the far side of the vessel + blanket + shield; the stated inboard
+  plasma-to-coil standoff is Δb = 0.85 m. (ARC is a liquid-immersion design,
+  so its thin vessel sits inside the FLiBe blanket, but the magnet is still
+  outboard of everything.)
+- **Stellarator (ARIES-CS, Najmabadi et al. 2008):** 1.5–2 m between the
+  plasma and the middle of the coil winding pack; 1.79 m for a regular
+  breeding module (1.31 m with an optimized WC shield). The model's default
+  stellarator build (vessel_or − plasma_t ≈ 1.7 m) matches this.
+- **Mirror (tandem-mirror reactor studies):** "the coil radius is the sum
+  of the plasma radius, blanket and shield thickness, and assembly gaps,"
+  i.e. exactly vessel_or; WITAMIR-I central-cell solenoids are ~4 m radius.
+
+Deriving `r_coil` from the radial build (rather than treating it as a free
+calibration knob) ties the magnet cost to the same geometry that sets the
+blanket and shield volumes. NOTE: the model places the LT shield outboard
+of the coil, whereas ARIES-RS places it between vessel and coil; this does
+not affect `r_coil = vessel_or`.
 
 ### Conductor pricing
 
@@ -145,8 +192,8 @@ are actively working to reduce.
 
 | Concept | Markup | Rationale |
 |---------|-------:|-----------|
-| Tokamak | 8.0× | TF + CS + PF coil systems. Complex D-shaped winding, insulation, quench protection, structural casing, cryostat integration. Conductor is ~10–15% of finished magnet cost. |
-| Stellarator | 12.0× | Non-planar 3D coil geometry. Tighter tolerances, longer winding paths (2× path factor), higher manufacturing complexity. |
+| Tokamak | 3.09× | TF + CS + PF coil systems. Complex D-shaped winding, insulation, quench protection, structural casing, cryostat integration. Calibrated so the SPARC-class reference (B=12T, R0=3.0m, r_coil=2.95m) coil system = $516M under the bilinear model, matching the prior r_bore² calibration at its reference point. |
+| Stellarator | 5.87× | Non-planar 3D coil geometry. = 1.9× the tokamak markup, the NCSX modular-coil production cost overrun (90%; Neilson et al. 2010, PPPL-4455), the documented penalty for non-planar 3D coil fabrication (winding onto machined 3D forms, ±1.5mm tolerances, metrology). The longer 3D winding path is handled separately by the 2× path factor in G, so this 1.9× is fabrication complexity only. |
 | Mirror | 2.5× | Simple solenoid coils. Well-established manufacturing. n_coils=10 default (HAMMIR-class tandem: 4 end-plug HTS + 6 central-cell LTS solenoids over a 50 m central cell). Simple-mirror devices (WHAM/BEAM/Anvil) use n_coils≈4. |
 | Pulsed FRC | 1.5× | Theta-pinch formation coils. Simple, repetitive geometry. |
 | Theta pinch | 1.5× | Compression coils. Simple solenoid geometry. |
@@ -157,17 +204,18 @@ are actively working to reduce.
 
 ### Validation
 
-At reference (B=12T, R=1.85m, REBCO @ $50/kAm, 8× markup):
-- Total conductor: ~1.29M kAm → $64.5M raw conductor
-- With 8× markup: $516M total coil system
-- This includes: conductor, winding, insulation, quench protection,
-  structural casing, cryostat, power leads, instrumentation, testing
+At the SPARC-class tokamak reference (B=12T, R0=3.0m, r_coil=2.95m, REBCO @
+$50/kAm, 3.09× markup, bilinear model): $516M total coil system, matching the
+prior r_bore² calibration's reference point (which used the same B and $/kAm
+with R=1.85m and an 8× markup). This includes conductor, winding, insulation,
+quench protection, structural casing, cryostat, power leads, instrumentation,
+and testing. CFS SPARC used ~300 km of REBCO tape for a ~2m-class magnet; a full
+tokamak power-plant coil set is ~5–10× larger. Because the model is now linear
+in R0, a larger tokamak (e.g. ARC, R0=3.3m) scales its coil cost up
+proportionally rather than as R0².
 
-CFS SPARC used ~300 km of REBCO tape for a ~2m-class magnet.
-A full tokamak power plant coil set is ~5–10× larger.
-
-For mirrors at the same reference (B=12T, R=1.85m, REBCO @ $50/kAm,
-2.5× markup, n_coils=10): total conductor 4.1M kAm, raw conductor
+For mirrors (linear device, unchanged r² loop form: B=12T, r_bore=1.85m, REBCO @
+$50/kAm, 2.5× markup, n_coils=10): total conductor 4.1M kAm, raw conductor
 $205M, finished coil system $513M. With the previous n_coils=4
 assumption the coil system was $205M, which understated a tandem
 mirror's actual coil burden by 2.5×. Realta's commercial design
