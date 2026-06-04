@@ -13,6 +13,7 @@ from costingfe.model import CostModel
 from costingfe.types import (
     ConfinementConcept,
     Fuel,
+    LaserDriverType,
     PowerCycle,
     PulsedConversion,
 )
@@ -39,6 +40,7 @@ class FusionTeaInput:
     pulsed_conversion: str = (
         ""  # "" means use concept default; "thermal" or "inductive_dec"
     )
+    laser_driver_type: str = ""  # "" = concept default; "dpssl" | "krf" | "nd_glass"
     costing_overrides: dict[str, float] = field(
         default_factory=dict
     )  # CostingConstants field → value
@@ -96,12 +98,17 @@ def run_costing(inp: FusionTeaInput) -> FusionTeaOutput:
     if inp.pulsed_conversion:
         pulsed_conv = PulsedConversion(inp.pulsed_conversion)
 
+    laser_drv = None
+    if inp.laser_driver_type:
+        laser_drv = LaserDriverType(inp.laser_driver_type)
+
     model = CostModel(
         concept=concept,
         fuel=fuel,
         costing_constants=cc,
         power_cycle=power_cycle,
         pulsed_conversion=pulsed_conv,
+        laser_driver_type=laser_drv,
     )
     result = model.forward(
         net_electric_mw=inp.net_electric_mw,

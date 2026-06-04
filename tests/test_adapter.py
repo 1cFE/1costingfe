@@ -205,3 +205,18 @@ def test_adapter_no_overrides_unchanged():
     out2 = run_costing(inp2)
     assert out1.lcoe == out2.lcoe
     assert out2.overridden == []
+
+
+def test_adapter_resolves_laser_driver_type():
+    from costingfe.adapter import FusionTeaInput, run_costing
+
+    base = dict(
+        concept="laser_ife",
+        fuel="dt",
+        net_electric_mw=1000.0,
+        availability=0.85,
+        lifetime_yr=30,
+    )
+    dpssl = run_costing(FusionTeaInput(**base, laser_driver_type="dpssl"))
+    krf = run_costing(FusionTeaInput(**base, laser_driver_type="krf"))
+    assert krf.lcoe != dpssl.lcoe
