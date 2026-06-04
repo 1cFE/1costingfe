@@ -259,6 +259,25 @@ def cas60_idc(interest_rate, overnight_cost, construction_time):
     return f_idc * overnight_cost
 
 
+# Replaceable laser-driver subsystems per architecture: (replace_frac attr,
+# shot_lifetime attr) on CostingConstants. Consumed by the CAS72 dispatch in
+# cas70_om. Module-level (pure constant) to avoid rebuilding it per call.
+_LASER_SUBSYSTEMS = {
+    LaserDriverType.DPSSL: (
+        ("dpssl_diode_replace_frac", "dpssl_diode_shot_lifetime"),
+        ("dpssl_crystal_replace_frac", "dpssl_crystal_shot_lifetime"),
+        ("dpssl_optics_replace_frac", "dpssl_optics_shot_lifetime"),
+    ),
+    LaserDriverType.KRF: (
+        ("krf_foil_replace_frac", "krf_foil_shot_lifetime"),
+        ("krf_ebeam_replace_frac", "krf_ebeam_shot_lifetime"),
+    ),
+    LaserDriverType.NDGLASS: (
+        ("ndglass_lamp_replace_frac", "ndglass_lamp_shot_lifetime"),
+    ),
+}
+
+
 def cas70_om(
     cc,
     cas22_detail,
@@ -344,8 +363,9 @@ def cas70_om(
     # Formation-electrode scheduled replacement (EM-gun concepts).
     # Plasma-facing coaxial-gun electrodes (sheared-flow Z-pinch, plasma jet) erode
     # under high current density and are periodically replaced. The replacement
-    # interval can be sub-annual; levelized_replacement_cost assumes whole-interval
-    # cycles, so this is modeled instead as a levelized annual recurring cost.
+    # interval can be sub-annual. This stays on levelized_annual_cost (the
+    # inflation-escalating convention) rather than the geometric replacement
+    # helper, to preserve its existing calibration.
     if (
         concept in (ConfinementConcept.STAGED_ZPINCH, ConfinementConcept.PLASMA_JET)
         and f_rep > 0
@@ -366,22 +386,9 @@ def cas70_om(
     # Laser-IFE driver scheduled replacement (DPSSL / KrF / Nd:Glass).
     # Each architecture has its own replaceable subsystems with distinct shot
     # lifetimes; each is summed via the shared geometric helper. Diodes whose
-    # NOAK life exceeds the plant contribute ~0 (capital); flashlamps wear
-    # sub-annually and dominate. See CAS22_reactor_components.md (CAS72 O&M).
-    _LASER_SUBSYSTEMS = {
-        LaserDriverType.DPSSL: (
-            ("dpssl_diode_replace_frac", "dpssl_diode_shot_lifetime"),
-            ("dpssl_crystal_replace_frac", "dpssl_crystal_shot_lifetime"),
-            ("dpssl_optics_replace_frac", "dpssl_optics_shot_lifetime"),
-        ),
-        LaserDriverType.KRF: (
-            ("krf_foil_replace_frac", "krf_foil_shot_lifetime"),
-            ("krf_ebeam_replace_frac", "krf_ebeam_shot_lifetime"),
-        ),
-        LaserDriverType.NDGLASS: (
-            ("ndglass_lamp_replace_frac", "ndglass_lamp_shot_lifetime"),
-        ),
-    }
+    # NOAK life approaches/exceeds the plant contribute ~0 (at most one
+    # heavily-discounted replacement); flashlamps wear sub-annually and
+    # dominate. See CAS22_reactor_components.md (CAS72 O&M).
     if (
         concept == ConfinementConcept.LASER_IFE
         and f_rep > 0
