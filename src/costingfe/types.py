@@ -32,6 +32,23 @@ class PulsedConversion(Enum):
     INDUCTIVE_DEC = "inductive_dec"
 
 
+class LaserDriverType(Enum):
+    """Laser-IFE driver architecture.
+
+    Selects, for LASER_IFE, both the C220104 capital coefficient ($/MJ) and the
+    CAS72 scheduled-replacement subsystem set. Chosen via the laser_driver_type
+    parameter (concept-YAML default + per-run override), not a separate concept.
+
+    DPSSL is the commercial baseline (LIFE / HiPER / Focused Energy / Marvel);
+    KRF carries the NRL Electra / Xcimer heritage; NDGLASS (NIF-class) is
+    flagged commercially marginal — flashlamp shot life is Xe-arc-limited.
+    """
+
+    DPSSL = "dpssl"  # diode-pumped solid-state
+    KRF = "krf"  # KrF excimer
+    NDGLASS = "nd_glass"  # flashlamp-pumped Nd:Glass (NIF-class)
+
+
 CONCEPT_TO_FAMILY = {
     ConfinementConcept.TOKAMAK: ConfinementFamily.STEADY_STATE,
     ConfinementConcept.STELLARATOR: ConfinementFamily.STEADY_STATE,

@@ -62,3 +62,11 @@ def test_concept_default_conversion():
         CONCEPT_DEFAULT_CONVERSION[ConfinementConcept.MAG_TARGET]
         == PulsedConversion.THERMAL
     )
+
+
+def test_laser_driver_type_values():
+    from costingfe.types import LaserDriverType
+
+    assert LaserDriverType("dpssl") == LaserDriverType.DPSSL
+    assert LaserDriverType("krf") == LaserDriverType.KRF
+    assert LaserDriverType("nd_glass") == LaserDriverType.NDGLASS
