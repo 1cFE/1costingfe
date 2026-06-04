@@ -1,5 +1,6 @@
 """Top-level CostModel API: wires all 5 layers together."""
 
+import difflib
 import math
 import numbers
 
@@ -471,6 +472,31 @@ class CostModel:
                 noak=noak,
                 **overrides,
             )
+        # Reject unknown override kwargs. params.update(overrides) below
+        # silently swallows any key, so a stale/misspelled parameter (e.g.
+        # r_coil for r_bore, b_max for b_center) would leave the YAML default
+        # in force and produce a wrong cost with no signal. Validate against
+        # the concept's engineering parameters (its YAML), the costing-constant
+        # fields, and the cross-cutting optional/derived knobs that forward()
+        # and cas22 read via params.get() but that a given concept's YAML need
+        # not declare (see _OPTIONAL_OVERRIDE_KEYS).
+        allowed = (
+            set(self._eng_defaults)
+            | set(cc_float_fields())
+            | self._OPTIONAL_OVERRIDE_KEYS
+        )
+        unknown = [k for k in overrides if k not in allowed]
+        if unknown:
+            hints = []
+            for k in sorted(unknown):
+                close = difflib.get_close_matches(k, allowed, n=1)
+                hints.append(f"{k} (did you mean {close[0]}?)" if close else k)
+            raise ValueError(
+                f"forward() got unknown parameter(s) for concept "
+                f"{self.concept.value}: {', '.join(hints)}. Unknown kwargs are "
+                "not silently ignored, as that would hide a costing error."
+            )
+
         # Merge defaults with overrides
         params = dict(self._eng_defaults)
         # Inject CostingConstants float fields into params so they are
@@ -616,8 +642,10 @@ class CostModel:
         # _COIL_DEFAULTS is None so the coil model never reads these. A nonzero
         # code default here would silently impose a tokamak-class field on any
         # concept that omits the parameter.
-        # r_bore = effective winding bore radius (calibration parameter,
-        # not necessarily equal to the radial build vessel_or).
+        # r_bore = loop radius for LINEAR/loop devices (mirror, FRC, dipole,
+        # pulsed), which use the r^2 coil model. For TOROIDAL devices (tokamak,
+        # stellarator) the coil model is bilinear in R0 and the coil-bore radius
+        # (= geo.vessel_or, passed below), and r_bore is unused there.
         # b_center = field at the center of the loop (axis), NOT peak-on-conductor.
         r_bore = params.get("r_bore", 0.0)
         b_center = params.get("b_center", 0.0)
@@ -691,6 +719,8 @@ class CostModel:
             concept=self.concept,
             b_center=b_center,
             r_bore=r_bore,
+            R0=params["R0"],
+            r_coil=geo.vessel_or,
             coil_material=coil_material,
             blanket_form=blanket_form,
             blanket_fill=blanket_fill,
@@ -1063,6 +1093,34 @@ class CostModel:
                 "eta_couple" if "eta_couple" in self._eng_defaults else "eta_pin"
             )
         return keys
+
+    # Cross-cutting optional/derived overrides that forward() and cas22 read
+    # via params.get() but that a concept's YAML need not declare. forward()
+    # validates override kwargs against this set (plus the concept's YAML keys
+    # and the costing-constant fields). Keep in sync when a new params.get()
+    # input is added; an omission surfaces as a spurious "unknown parameter".
+    _OPTIONAL_OVERRIDE_KEYS = frozenset(
+        {
+            # Power-cycle / coupling knobs injected or derived by forward()
+            "eta_th",
+            "eta_pin",
+            "eta_couple",
+            "f_rad",
+            "f_rad_fus",
+            # 0D plasma model (TOKAMAK)
+            "use_0d_model",
+            "0d_mode",
+            "fw_area",
+            # Coil / magnet knobs not in every concept YAML
+            "n_coils",
+            "lev_coil_markup",
+            "lev_coil_cryostat_cost",
+            "stationary_lift_coil_fraction",
+            # Pulsed driver
+            "p_driver",
+            "e_preheat_mj",
+        }
+    )
 
     # CostingConstants float fields — cost model calibration parameters
     # Exclude reference/normalization constants that aren't real levers:

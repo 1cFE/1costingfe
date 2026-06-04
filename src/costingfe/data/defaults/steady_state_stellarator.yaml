@@ -23,11 +23,14 @@ p_trit: 10.0        # Tritium processing power [MW]
 p_house: 4.0        # Housekeeping power [MW]
 p_cryo: 0.8         # Cryogenic power [MW]
 
-# Coil parameters (see steady_state_tokamak.yaml for the b_center / r_bore
-# convention).
-b_center: 18.0       # Field at coil center [T] (HTS REBCO enables 15-20T peak)
-r_bore: 1.85         # Effective winding bore radius [m]
-coil_material: rebco_hts  # HTS REBCO superconductor (15-20 T non-planar coils)
+# Coil parameters. Toroidal coil cost is bilinear in R0 and the coil-bore
+# radius (= vessel_or from the radial build); see cas22.py C220103.
+b_center: 6.0        # On-axis field [T]. NOT peak-on-conductor: HTS REBCO gives
+                     # ~15-20 T peak on the winding, but the ampere-meter cost
+                     # term uses the field at the loop center (axis).
+r_bore: 1.85         # [m] unused for forward coil costing (geometry-driven);
+                     # retained for backcasting/compat only.
+coil_material: rebco_hts  # HTS REBCO superconductor (3D non-planar coils)
 
 # Radial build geometry [m]
 R0: 5.5          # Major radius R0

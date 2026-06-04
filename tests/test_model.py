@@ -1,4 +1,38 @@
+import pytest
+
 from costingfe import ConfinementConcept, CostModel, Fuel
+
+
+def test_forward_rejects_unknown_kwarg():
+    """An unknown override kwarg must raise, not be silently ignored.
+
+    Silently dropping a stale/misspelled magnet kwarg (e.g. r_coil/b_max)
+    leaves the YAML default in force and produces a wrong cost with no
+    signal. The error should name the offending key and suggest the
+    intended one.
+    """
+    model = CostModel(concept=ConfinementConcept.TOKAMAK, fuel=Fuel.DT)
+    with pytest.raises(ValueError, match="r_coil"):
+        model.forward(
+            net_electric_mw=1000.0,
+            availability=0.85,
+            lifetime_yr=30,
+            r_coil=5.0,  # not a real parameter; the live key is r_bore
+        )
+
+
+def test_forward_accepts_known_kwargs():
+    """Legitimate engineering and costing-constant overrides still work."""
+    model = CostModel(concept=ConfinementConcept.TOKAMAK, fuel=Fuel.DT)
+    result = model.forward(
+        net_electric_mw=1000.0,
+        availability=0.85,
+        lifetime_yr=30,
+        r_bore=2.5,
+        b_center=11.0,
+        eta_th=0.45,
+    )
+    assert result.costs.lcoe > 0
 
 
 def test_forward_basic():

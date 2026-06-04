@@ -15,6 +15,7 @@ All costs in M$. Source: pyFECONs costing/calculations/cas22/
 
 import math
 
+import jax
 import jax.numpy as jnp
 
 from costingfe.defaults import CostingConstants
@@ -39,8 +40,18 @@ from costingfe.types import (
 # None → no confinement magnets (IFE drivers, magnet-free pulsed concepts)
 _COIL_DEFAULTS = {
     # MFE / electrostatic — full confinement magnets
-    ConfinementConcept.TOKAMAK: {"markup": 8.0, "path_factor": 1.0, "n_coils": 0},
-    ConfinementConcept.STELLARATOR: {"markup": 12.0, "path_factor": 2.0, "n_coils": 0},
+    # Tokamak/stellarator use the bilinear toroidal conductor model
+    # (total_kAm = G * B * R0 * r_coil), so markup is a pure fabrication
+    # multiplier, NOT a blended geometry+complexity factor. markup=3.09 is
+    # calibrated so the SPARC-class reference tokamak (B=12T, R0=3.0, r_coil=
+    # vessel_or=2.95m) coil system = $516M, matching the prior r_bore^2
+    # calibration at its reference point. The stellarator's 5.87 is 1.9x the
+    # tokamak value, the NCSX modular-coil production cost overrun (90%,
+    # Neilson 2010 PPPL-4455) — the documented penalty for non-planar 3D coil
+    # fabrication. The longer 3D winding path is handled separately by
+    # path_factor=2 in G, so the 1.9x is fabrication complexity only.
+    ConfinementConcept.TOKAMAK: {"markup": 3.09, "path_factor": 1.0, "n_coils": 0},
+    ConfinementConcept.STELLARATOR: {"markup": 5.87, "path_factor": 2.0, "n_coils": 0},
     # Mirror n_coils calibrated to Realta HAMMIR-class tandem mirror:
     # 4 end-plug HTS coils (2 per end, Hammer evolution) + ~6 LTS central-cell
     # solenoid coils discretizing the 50 m central cell. Simple-mirror devices
@@ -138,6 +149,8 @@ def cas22_reactor_plant_equipment(
     concept: ConfinementConcept,
     b_center: float,
     r_bore: float,
+    R0: float,
+    r_coil: float,
     coil_material: CoilMaterial,
     blanket_form: BlanketForm,
     p_nbi: float,
@@ -224,15 +237,26 @@ def cas22_reactor_plant_equipment(
     )
 
     # -----------------------------------------------------------------------
-    # 220103: Coils. Two cost regimes on the same ampere-meter quantity
-    # (total_kAm = G * b_center * r_bore^2 / mu0). b_center is the field at the
-    # geometric center of the loop (axis), NOT the peak field on the conductor;
-    # peak-on-conductor is a factor of ~2-4 higher for high-field SC, but that
-    # ratio does not enter the ampere-meter quantity (it would only matter for a
-    # J_c-vs-field conductor derating or a B_max^2 structure term, neither of
-    # which is modeled here). r_bore is the effective winding-bore radius, NOT a
-    # cross-section / cable dimension. See _compute_geometry_factor docstring
-    # and docs/account_justification/CAS22_reactor_components.md.
+    # 220103: Coils. Conductor quantity (ampere-meters) by device topology:
+    #   - TOROIDAL (tokamak, stellarator): total_kAm = G * b_center * R0 *
+    #     r_coil / mu0. This is BILINEAR, not r^2: the toroidal field needs
+    #     ampere-turns ~ B*R0 (Ampere's law around the torus), and the
+    #     conductor length per turn ~ the coil bore r_coil. R0 is the major
+    #     radius; r_coil is the coil-bore radius = vessel_or from the radial
+    #     build (the TF/modular coils sit just outside the vessel). Using a
+    #     single r^2 (the prior model, calibrated at SPARC's R0=1.85m) made
+    #     coil cost grow as R0^2 and exploded for large machines; real toroidal
+    #     conductor grows ~linearly in R0.
+    #   - LINEAR/LOOP (mirror, FRC, dipole, pulsed): total_kAm = G * b_center *
+    #     r_bore^2 / mu0. For a real solenoid/ring loop, B = mu0*N*I/(2R) and
+    #     length = 2*pi*R, so r^2 is correct; r_bore is the loop radius.
+    # b_center is the field at the geometric center of the loop (axis), NOT the
+    # peak field on the conductor; peak-on-conductor is a factor of ~2-4 higher
+    # for high-field SC, but that ratio does not enter the ampere-meter quantity
+    # (it would only matter for a J_c-vs-field conductor derating or a B_max^2
+    # structure term, neither of which is modeled here). See
+    # _compute_geometry_factor docstring and
+    # docs/account_justification/CAS22_reactor_components.md.
     #   - Superconducting (HTS/LTS): cost = total_kAm * $/kAm * markup. The
     #     expensive conductor dominates; REBCO $50/kAm (NOAK), markup captures
     #     winding, quench protection, cryostat, testing.
@@ -287,7 +311,28 @@ def cas22_reactor_plant_equipment(
             if n_coils_eff < 0:
                 raise ValueError(f"n_coils must be >= 0, got {n_coils_eff}")
             G = _compute_geometry_factor(concept, path_factor, n_coils_eff)
-            total_kAm = G * b_center * r_bore**2 / (_MU0 * 1000)
+            if concept in (
+                ConfinementConcept.TOKAMAK,
+                ConfinementConcept.STELLARATOR,
+            ):
+                # Toroidal: bilinear in major radius and coil-bore radius.
+                # Guard against a silent zero-cost coil from a missing R0/r_coil,
+                # but only on concrete values: under JAX tracing (sensitivity /
+                # uncertainty) these are positive-valued tracers and a Python
+                # comparison would raise TracerBoolConversionError.
+                _concrete = not (
+                    isinstance(R0, jax.core.Tracer)
+                    or isinstance(r_coil, jax.core.Tracer)
+                )
+                if _concrete and (R0 <= 0 or r_coil <= 0):
+                    raise ValueError(
+                        f"{concept.value} coil cost needs R0>0 and r_coil>0, "
+                        f"got R0={R0}, r_coil={r_coil}"
+                    )
+                total_kAm = G * b_center * R0 * r_coil / (_MU0 * 1000)
+            else:
+                # Linear/loop device: r^2 is correct for a real solenoid/ring.
+                total_kAm = G * b_center * r_bore**2 / (_MU0 * 1000)
             if coil_material == CoilMaterial.COPPER:
                 ampere_meters = total_kAm * 1000.0
                 j_a_m2 = cc.coil_cu_current_density_a_mm2 * 1e6

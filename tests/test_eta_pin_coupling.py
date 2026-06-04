@@ -23,9 +23,16 @@ _BASE = dict(
 @pytest.mark.parametrize(
     "concept,fuel,expected",
     [
-        (C.TOKAMAK, Fuel.DT, 233.41),
+        # Tokamak/stellarator re-benchmarked after the bilinear toroidal coil
+        # model (total_kAm = G*B*R0*r_coil, replacing the SPARC-calibrated
+        # r_bore^2), the recalibrated markups (tokamak 3.09; stellarator 5.87 =
+        # 1.9x tokamak, NCSX modular-coil overrun), and the stellarator
+        # b_center 18->6 T fix (on-axis field, not peak-on-conductor). Tokamak
+        # is ~unchanged (recalibration is cost-neutral at its R0=3.0 reference);
+        # stellarator LCOE drops as the field correction outweighs the markup.
+        (C.TOKAMAK, Fuel.DT, 233.35),
         (C.MIRROR, Fuel.DT, 186.47),
-        (C.STELLARATOR, Fuel.DT, 359.94),
+        (C.STELLARATOR, Fuel.DT, 342.34),
         # DIPOLE re-benchmarked after the radial-build inversion + spherical
         # geometry dispatch + Li2O blanket fill + C220108 divertor zeroing +
         # external stationary lift coil restructured as

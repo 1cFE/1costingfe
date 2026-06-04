@@ -44,6 +44,8 @@ def _make_cas22(fuel=Fuel.DT, n_mod=1, blanket_t=0.70):
         concept=ConfinementConcept.TOKAMAK,
         b_center=12.0,
         r_bore=1.85,
+        R0=6.2,
+        r_coil=GEO.vessel_or,
         coil_material=CoilMaterial.REBCO_HTS,
         blanket_form=BlanketForm.LIQUID_METAL,
         p_nbi=50.0,
@@ -162,6 +164,8 @@ def test_cas22_n_mod_one_unchanged_by_multi_unit_factor():
         concept=ConfinementConcept.TOKAMAK,
         b_center=12.0,
         r_bore=1.85,
+        R0=6.2,
+        r_coil=GEO.vessel_or,
         coil_material=CoilMaterial.REBCO_HTS,
         blanket_form=BlanketForm.LIQUID_METAL,
         p_nbi=50.0,
@@ -255,6 +259,8 @@ def _make_cas22_with_family(family=ConfinementFamily.STEADY_STATE):
         concept=ConfinementConcept.TOKAMAK,
         b_center=12.0,
         r_bore=1.85,
+        R0=6.2,
+        r_coil=GEO.vessel_or,
         coil_material=CoilMaterial.REBCO_HTS,
         blanket_form=BlanketForm.LIQUID_METAL,
         p_nbi=50.0,
@@ -339,12 +345,18 @@ def test_plant_wide_c220200_scales_with_n_mod():
 def _make_cas22_coil(
     b_center=12.0,
     r_bore=1.85,
+    R0=6.2,
+    r_coil=None,
     concept=ConfinementConcept.TOKAMAK,
     coil_material=CoilMaterial.REBCO_HTS,
 ):
-    """Helper for coil model tests."""
+    """Helper for coil model tests. r_coil defaults to the vessel_or of the
+    R0=6.2 reference radial build (the coil-bore radius the toroidal model
+    uses); pass it explicitly to test bilinear scaling."""
     rb = RadialBuild(R0=6.2, plasma_t=2.0, elon=1.7, blanket_t=0.70)
     geo = compute_geometry(rb, ConfinementConcept.TOKAMAK)
+    if r_coil is None:
+        r_coil = geo.vessel_or
     return cas22_reactor_plant_equipment(
         CC,
         p_net=1000.0,
@@ -363,6 +375,8 @@ def _make_cas22_coil(
         concept=concept,
         b_center=b_center,
         r_bore=r_bore,
+        R0=R0,
+        r_coil=r_coil,
         coil_material=coil_material,
         blanket_form=BlanketForm.LIQUID_METAL,
         p_nbi=50.0,
@@ -378,16 +392,22 @@ def _make_cas22_coil(
 
 
 def test_cas220103_conductor_scaling_formula():
-    """Coil cost should use conductor scaling: G * B * R^2 / (mu0 * 1000)
-    * $/kAm * markup."""
+    """Toroidal coil cost uses the bilinear conductor model:
+    G * B * R0 * r_coil / (mu0 * 1000) * $/kAm * markup."""
     import math
 
-    result = _make_cas22_coil(b_center=12.0, r_bore=1.85)
+    from costingfe.layers.geometry import RadialBuild, compute_geometry
+
+    r_coil = compute_geometry(
+        RadialBuild(R0=6.2, plasma_t=2.0, elon=1.7, blanket_t=0.70),
+        ConfinementConcept.TOKAMAK,
+    ).vessel_or
+    result = _make_cas22_coil(b_center=12.0, R0=6.2, r_coil=r_coil)
     mu0 = 4 * math.pi * 1e-7
     G = 4 * math.pi**2  # tokamak
-    total_kAm = G * 12.0 * 1.85**2 / (mu0 * 1000)
+    total_kAm = G * 12.0 * 6.2 * r_coil / (mu0 * 1000)
     conductor_cost = total_kAm * 50.0 / 1e6  # REBCO default
-    expected = conductor_cost * 8.0  # tokamak markup
+    expected = conductor_cost * 3.09  # tokamak markup (bilinear recalibration)
     assert abs(result["C220103"] - expected) < 0.1
 
 
@@ -431,10 +451,30 @@ def test_cas220103_scales_with_b_field():
     assert abs(high_b["C220103"] / low_b["C220103"] - 2.0) < 0.01
 
 
-def test_cas220103_scales_with_r_bore_squared():
-    """Larger coil bore -> quadratically more conductor."""
-    small = _make_cas22_coil(r_bore=1.0)
-    large = _make_cas22_coil(r_bore=2.0)
+def test_cas220103_toroidal_scales_linearly_with_R0_and_r_coil():
+    """Toroidal coil cost is bilinear: linear in major radius R0 and linear in
+    the coil-bore radius r_coil (NOT the square of a single radius). This is the
+    fix that stops large-machine coil costs from blowing up as R0^2."""
+    base = _make_cas22_coil(R0=4.0, r_coil=2.0)
+    double_R0 = _make_cas22_coil(R0=8.0, r_coil=2.0)
+    double_rc = _make_cas22_coil(R0=4.0, r_coil=4.0)
+    assert abs(double_R0["C220103"] / base["C220103"] - 2.0) < 0.01
+    assert abs(double_rc["C220103"] / base["C220103"] - 2.0) < 0.01
+
+
+def test_cas220103_toroidal_ignores_r_bore():
+    """For toroidal concepts, r_bore is vestigial: coil cost is driven by
+    R0 and r_coil from geometry, so varying r_bore must not change it."""
+    a = _make_cas22_coil(r_bore=1.0)
+    b = _make_cas22_coil(r_bore=5.0)
+    assert a["C220103"] == b["C220103"]
+
+
+def test_cas220103_linear_device_scales_with_r_bore_squared():
+    """Linear/loop devices (here a real single-loop DIPOLE) keep the r^2 loop
+    form: doubling the loop radius quadruples the conductor."""
+    small = _make_cas22_coil(concept=ConfinementConcept.MIRROR, r_bore=1.0)
+    large = _make_cas22_coil(concept=ConfinementConcept.MIRROR, r_bore=2.0)
     assert abs(large["C220103"] / small["C220103"] - 4.0) < 0.01
 
 
@@ -445,12 +485,15 @@ def test_cas220103_stellarator_higher_than_tokamak():
     assert stell["C220103"] > tok["C220103"]
 
 
-def test_cas220103_mirror_comparable_to_tokamak():
-    """Mirror: lower markup (2.5x vs 8x) is offset by n_coils=10 worth of
-    independent solenoids in a HAMMIR-class tandem layout, so coil cost lands
-    within ~20% of tokamak rather than dramatically below it. The mirror's
-    overall cost advantage comes from BOP/blanket simplicity, not C220103."""
-    tok = _make_cas22_coil(concept=ConfinementConcept.TOKAMAK)
+def test_cas220103_mirror_comparable_to_compact_tokamak():
+    """At compact-tokamak scale (R0=3.0, the SPARC/CATF reference class) the
+    mirror's coil cost (low 2.5x markup, offset by n_coils=10 HAMMIR-class
+    solenoids on the r^2 loop model) lands within ~20% of the tokamak's; the
+    mirror's overall advantage comes from BOP/blanket simplicity, not C220103.
+    Note this is size-dependent under the bilinear toroidal model: a LARGER
+    tokamak's coils scale with R0 and come to dominate the mirror's (see
+    test_cas220103_toroidal_scales_linearly_with_R0_and_r_coil)."""
+    tok = _make_cas22_coil(concept=ConfinementConcept.TOKAMAK, R0=3.0)
     mir = _make_cas22_coil(concept=ConfinementConcept.MIRROR)
     assert 0.8 < mir["C220103"] / tok["C220103"] < 1.2
 
@@ -508,6 +551,8 @@ def _make_cas22_heating(p_nbi=50.0, p_icrf=0.0, p_ecrh=0.0, p_lhcd=0.0):
         concept=ConfinementConcept.TOKAMAK,
         b_center=12.0,
         r_bore=1.85,
+        R0=6.2,
+        r_coil=GEO.vessel_or,
         coil_material=CoilMaterial.REBCO_HTS,
         blanket_form=BlanketForm.LIQUID_METAL,
         p_nbi=p_nbi,
@@ -591,6 +636,8 @@ def test_cas220110_concept_scales():
         concept=ConfinementConcept.TOKAMAK,
         b_center=12.0,
         r_bore=1.85,
+        R0=6.2,
+        r_coil=GEO.vessel_or,
         coil_material=CoilMaterial.REBCO_HTS,
         blanket_form=BlanketForm.LIQUID_METAL,
         p_nbi=50.0,
@@ -621,6 +668,8 @@ def test_cas220110_concept_scales():
         concept=ConfinementConcept.MIRROR,
         b_center=12.0,
         r_bore=1.85,
+        R0=6.2,
+        r_coil=GEO.vessel_or,
         coil_material=CoilMaterial.REBCO_HTS,
         blanket_form=BlanketForm.LIQUID_METAL,
         p_nbi=50.0,
@@ -661,6 +710,8 @@ def _make_cas22_dec(f_dec=0.3, p_dee=300.0):
         concept=ConfinementConcept.MIRROR,
         b_center=12.0,
         r_bore=1.85,
+        R0=6.2,
+        r_coil=GEO.vessel_or,
         coil_material=CoilMaterial.REBCO_HTS,
         blanket_form=BlanketForm.LIQUID_METAL,
         p_nbi=50.0,
@@ -801,6 +852,8 @@ def _make_cas22_pulsed(concept, e_driver_mj=0.0, p_driver=0.0):
         concept=concept,
         b_center=12.0,
         r_bore=1.85,
+        R0=6.2,
+        r_coil=GEO.vessel_or,
         coil_material=CoilMaterial.REBCO_HTS,
         blanket_form=BlanketForm.LIQUID_METAL,
         p_nbi=0.0,
