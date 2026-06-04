@@ -626,6 +626,7 @@ class CostModel:
         cc_kwargs = {k: params[k] for k in cc_float_fields() if k in params}
         cc_kwargs["building_costs"] = self.cc.building_costs
         cc_kwargs["replaceable_accounts"] = self.cc.replaceable_accounts
+        cc_kwargs["coil_markup"] = self.cc.coil_markup
         cc = CostingConstants(**cc_kwargs)
         co = cost_overrides or {}
         overridden = []

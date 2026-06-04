@@ -272,6 +272,13 @@ class CostingConstants:
     # Each entry has fuel keys (dt/dd/dhe3/pb11 or 'all') + 'scales' key
     building_costs: dict[str, dict] = None  # loaded from YAML
 
+    # 220103 — per-concept SC coil manufacturing markup (conductor -> installed
+    # magnet system: winding, quench protection, structural casing, cryostat,
+    # testing). Keyed by ConfinementConcept.value. Loaded from YAML; this is a
+    # cost-calibration constant, not a per-design knob. Copper concepts use the
+    # mass build-up markups (coil_cu_fab_markup, coil_steel_fab_markup) instead.
+    coil_markup: dict[str, float] = None  # loaded from YAML
+
     # CAS27 — Special materials: initial reactor material inventory (M$ at 1 GWe)
     # Default assumes PbLi blanket concept for DT (~4,500 tonnes PbLi @ $3/kg
     # + enriched Li top-up). HCPB concepts with Be multiplier override to ~$200M.

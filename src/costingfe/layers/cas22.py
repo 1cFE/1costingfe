@@ -38,44 +38,39 @@ from costingfe.types import (
 # path_factor: extra coil path length for 3D geometries (stellarator)
 # n_coils: number of discrete coils — only used for mirror (G = n_coils * 4*pi);
 #         ignored by tokamak/stellarator branches whose G is empirical total-system
-# None → no confinement magnets (IFE drivers, magnet-free pulsed concepts)
+# Per-concept STRUCTURAL/geometry coil parameters. The manufacturing markup is
+# a cost-calibration constant and lives in costing_constants.yaml (coil_markup),
+# alongside the copper-coil fab markups; it is read from `cc`, not from here.
+# None → no confinement magnets (IFE drivers, magnet-free pulsed concepts).
 _COIL_DEFAULTS = {
-    # MFE / electrostatic — full confinement magnets
+    # MFE / electrostatic — full confinement magnets.
     # Tokamak/stellarator use the bilinear toroidal conductor model
-    # (total_kAm = G * B * R0 * r_coil), so markup is a pure fabrication
-    # multiplier, NOT a blended geometry+complexity factor. markup=3.09 is
-    # calibrated so the SPARC-class reference tokamak (B=12T, R0=3.0, r_coil=
-    # vessel_or=2.95m) coil system = $516M, matching the prior r_bore^2
-    # calibration at its reference point. The stellarator's 5.87 is 1.9x the
-    # tokamak value, the NCSX modular-coil production cost overrun (90%,
-    # Neilson 2010 PPPL-4455) — the documented penalty for non-planar 3D coil
-    # fabrication. The longer 3D winding path is handled separately by
-    # path_factor=2 in G, so the 1.9x is fabrication complexity only.
-    ConfinementConcept.TOKAMAK: {"markup": 3.09, "path_factor": 1.0, "n_coils": 0},
-    ConfinementConcept.STELLARATOR: {"markup": 5.87, "path_factor": 2.0, "n_coils": 0},
+    # (total_kAm = G * B * R0 * r_coil); path_factor=2 for the stellarator
+    # captures the ~2x longer non-planar 3D winding path in G.
+    ConfinementConcept.TOKAMAK: {"path_factor": 1.0, "n_coils": 0},
+    ConfinementConcept.STELLARATOR: {"path_factor": 2.0, "n_coils": 0},
     # Mirror n_coils calibrated to Realta HAMMIR-class tandem mirror:
     # 4 end-plug HTS coils (2 per end, Hammer evolution) + ~6 LTS central-cell
     # solenoid coils discretizing the 50 m central cell. Simple-mirror devices
     # (WHAM/BEAM/Anvil) would use n_coils ≈ 4.
-    ConfinementConcept.MIRROR: {"markup": 2.5, "path_factor": 1.0, "n_coils": 10},
-    # DIPOLE: the DIPOLE branch in C220103 does NOT consume these defaults
-    # (markup / path_factor / n_coils). It computes the floating coil's kA*m
-    # from b_center / r_bore directly, then approximates the single external
-    # stationary lift coil as `stationary_lift_coil_fraction * floating_with_
-    # markup` (default 0.10). This dict entry is kept so concept-level table
-    # lookups (e.g. test_cas22_n_coils, downstream tooling) don't KeyError on
-    # DIPOLE; the values are not used by the cost calculation.
-    ConfinementConcept.DIPOLE: {"markup": 3.0, "path_factor": 1.0, "n_coils": 1},
+    ConfinementConcept.MIRROR: {"path_factor": 1.0, "n_coils": 10},
+    # DIPOLE: the DIPOLE branch in C220103 does NOT consume these defaults. It
+    # computes the floating coil's kA*m from b_center / r_bore directly, then
+    # approximates the single external stationary lift coil as
+    # `stationary_lift_coil_fraction * floating_with_markup` (default 0.10).
+    # This entry is kept so concept-level table lookups (e.g. test_cas22_n_coils,
+    # downstream tooling) don't KeyError on DIPOLE.
+    ConfinementConcept.DIPOLE: {"path_factor": 1.0, "n_coils": 1},
     # Steady-state FRC (beam-driven, e.g. TAE; RMF-driven PFRC) is a linear,
     # open-field-line device like a mirror: external formation + mirror/end-plug
     # coils discretized as independent solenoids (G = n_coils * 4*pi). The
     # self-organized internal FRC field carries no coil cost. n_coils counts only
-    # the external coil set; resistive-magnet markup is lower than HTS mirrors.
-    ConfinementConcept.STEADY_FRC: {"markup": 2.0, "path_factor": 1.0, "n_coils": 4},
-    ConfinementConcept.PULSED_FRC: {"markup": 1.5, "path_factor": 1.0, "n_coils": 0},
-    ConfinementConcept.THETA_PINCH: {"markup": 1.5, "path_factor": 1.0, "n_coils": 0},
-    ConfinementConcept.ORBITRON: {"markup": 1.5, "path_factor": 1.0, "n_coils": 0},
-    ConfinementConcept.POLYWELL: {"markup": 2.0, "path_factor": 1.0, "n_coils": 0},
+    # the external coil set.
+    ConfinementConcept.STEADY_FRC: {"path_factor": 1.0, "n_coils": 4},
+    ConfinementConcept.PULSED_FRC: {"path_factor": 1.0, "n_coils": 0},
+    ConfinementConcept.THETA_PINCH: {"path_factor": 1.0, "n_coils": 0},
+    ConfinementConcept.ORBITRON: {"path_factor": 1.0, "n_coils": 0},
+    ConfinementConcept.POLYWELL: {"path_factor": 1.0, "n_coils": 0},
     # MIF — no plant-scale confinement magnets. MagLIF compresses
     # with a Z-pinch liner; MAG_TARGET (General Fusion, NearStar) compresses
     # magnetized plasma mechanically/kinetically; PLASMA_JET merges plasma guns.
@@ -309,7 +304,9 @@ def cas22_reactor_plant_equipment(
             # No confinement magnets (IFE drivers, magnet-free pulsed)
             c220103 = 0.0
         else:
-            coil_markup = defaults["markup"]
+            # Manufacturing markup is a calibration constant from
+            # costing_constants.yaml (coil_markup), keyed by concept.
+            coil_markup = cc.coil_markup[concept.value]
             path_factor = defaults["path_factor"]
             # Honor per-call override; fall back to concept default
             n_coils_eff = n_coils if n_coils is not None else defaults["n_coils"]
