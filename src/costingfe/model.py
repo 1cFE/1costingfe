@@ -707,11 +707,13 @@ class CostModel:
             p_driver = pt.e_driver_mj * params["f_rep"]
             e_preheat_mj = params.get("e_preheat_mj", 0.0)
             # Structural: a pulsed concept manufactures a consumed target iff its
-            # YAML sets a positive per-shot cost (laser/heavy-ion capsule,
-            # MagLIF/Z-pinch liner). In-situ formation concepts set 0. Read from
-            # the static config (not the traced params) so it can gate the
-            # target-factory branch under jax.grad/vmap.
-            manufactured_target = self._eng_defaults["target_unit_cost"] > 0.0
+            # per-shot cost is positive (laser/heavy-ion capsule, MagLIF/Z-pinch
+            # liner). In-situ formation concepts set 0. Read the merged params
+            # value so a forward() override turns the target factory on/off in
+            # lockstep with the CAS80 consumable (e.g. a pellet-fed MTF setting
+            # target_unit_cost > 0). target_unit_cost is not a differentiable
+            # key, so this stays a concrete bool under jax.grad/vmap.
+            manufactured_target = params["target_unit_cost"] > 0.0
         else:
             p_driver = 0.0
             e_preheat_mj = 0.0

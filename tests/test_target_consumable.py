@@ -107,6 +107,37 @@ def test_cas80_target_term_linear_in_unit_cost():
     assert float(c1) > float(c0)
 
 
+def test_forward_override_gates_factory_and_consumable_together():
+    """A forward() override of target_unit_cost must move the C220108 factory
+    and the CAS80 consumable in lockstep -- not turn one on without the other.
+
+    This is the pellet-fed MTF case (e.g. NearStar): a MAG_TARGET concept whose
+    default is in-situ (0) but which fabricates a target and sets a positive
+    per-shot cost via its own config.
+    """
+    base = dict(net_electric_mw=200.0, availability=0.40, lifetime_yr=30)
+    m = CostModel(concept=ConfinementConcept.MAG_TARGET, fuel=Fuel.DD)
+    off = m.forward(**base)
+    on = m.forward(target_unit_cost=5.0, **base)
+    # Default: no factory, minimal (fuel-only) CAS80.
+    assert float(off.cas22_detail["C220108"]) == 0.0
+    # Override: both the factory and the consumable switch on.
+    assert float(on.cas22_detail["C220108"]) > 0.0
+    assert float(on.costs.cas80) > float(off.costs.cas80)
+
+
+def test_forward_override_zero_turns_off_factory():
+    """Overriding target_unit_cost to 0 on a target concept removes both the
+    factory and the consumable (the inverse direction)."""
+    base = dict(net_electric_mw=500.0, availability=0.85, lifetime_yr=30)
+    m = CostModel(concept=ConfinementConcept.LASER_IFE, fuel=Fuel.DT)
+    on = m.forward(**base)
+    off = m.forward(target_unit_cost=0.0, **base)
+    assert float(on.cas22_detail["C220108"]) > 0.0
+    assert float(off.cas22_detail["C220108"]) == 0.0
+    assert float(off.costs.cas80) < float(on.costs.cas80)
+
+
 def test_zero_targets_per_year_no_target_cost():
     """With no shots there is no target consumable, whatever the unit cost."""
     base = dict(
