@@ -163,6 +163,9 @@ def cas22_reactor_plant_equipment(
     p_dee: float,
     burn_fraction: float,
     vac_op_pressure_pa: float,
+    # True iff the concept fabricates a consumed target/liner each shot
+    # (drives the C220108 target factory).
+    manufactured_target: bool,
     e_driver_mj: float = 0.0,  # Per-pulse driver energy [MJ]; $/J laser/accel basis
     e_preheat_mj: float = 0.0,  # Per-pulse preheat laser energy [MJ]; 0 = no preheat
     laser_driver_type=None,  # LaserDriverType for LASER_IFE; selects C220104 $/MJ
@@ -472,15 +475,17 @@ def cas22_reactor_plant_equipment(
             c220108 = 0.0
         else:
             c220108 = cc.divertor_base * (p_th / 1000.0) ** 0.5
-    elif concept in (
-        ConfinementConcept.PULSED_FRC,
-        ConfinementConcept.THETA_PINCH,
-        ConfinementConcept.DENSE_PLASMA_FOCUS,
-        ConfinementConcept.STAGED_ZPINCH,
-    ):
-        c220108 = 0.0  # No manufactured targets
-    else:  # IFE or MIF — target factory
+    elif manufactured_target:
+        # Pulsed concept that consumes a fabricated target/liner each shot
+        # (laser/heavy-ion capsule, MagLIF/Z-pinch liner): high-rep-rate
+        # target manufacturing infrastructure. Gated on manufactured_target
+        # rather than the concept enum so in-situ-formation concepts
+        # (plasma-jet, FRC/theta/DPF/staged-Z, liquid-liner MTF) carry no
+        # phantom target factory by default — no cost override required.
         c220108 = cc.target_factory_base * (p_et / 1000.0) ** 0.7
+    else:
+        # In-situ plasma/liner formation: no fabricated target, no factory.
+        c220108 = 0.0
 
     # -----------------------------------------------------------------------
     # 220109: Direct Energy Converter

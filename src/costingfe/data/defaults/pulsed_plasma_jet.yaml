@@ -13,7 +13,8 @@ p_pump: 1.0          # Pumping power [MW]
 p_trit: 10.0         # Tritium processing power [MW]
 p_house: 4.0         # Housekeeping power [MW]
 p_cryo: 0.0          # Cryogenic power [MW] (no superconducting confinement magnets)
-p_target: 3.0        # Liner/target factory power [MW]
+p_target: 0.0        # No target factory: the imploding liner is plasma formed in-situ by the standoff plasma guns (no fabricated target, "produces no hardware debris" — Hsu/Thio PJMIF)
+target_unit_cost: 0.0    # $/shot — no manufactured target consumable (plasma liner; working gas is sub-cent, carried as O&M not a per-shot part). See CAS80_target_consumables.md
 p_coils: 0.0         # No plant-scale confinement magnets (merging plasma guns)
 
 # Radial build geometry [m] (spherical chamber)

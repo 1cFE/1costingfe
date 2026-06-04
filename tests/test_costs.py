@@ -294,6 +294,8 @@ def test_lcoe_end_to_end_sanity():
         noak=True,
         burn_fraction=0.05,
         fuel_recovery=0.99,
+        target_unit_cost=0.0,
+        n_targets_per_year=0.0,
     )
     lcoe = compute_lcoe(c90, c70, c80, p_net=1000.0, n_mod=1, availability=0.85)
     assert 10 < lcoe < 500, f"LCOE {lcoe} $/MWh out of expected range"
@@ -424,6 +426,8 @@ _CAS80_KWARGS = dict(
     noak=True,
     burn_fraction=0.05,
     fuel_recovery=0.99,
+    target_unit_cost=0.0,
+    n_targets_per_year=0.0,
 )
 
 
@@ -442,6 +446,8 @@ def test_cas80_scales_with_p_fus():
         noak=True,
         burn_fraction=0.05,
         fuel_recovery=0.99,
+        target_unit_cost=0.0,
+        n_targets_per_year=0.0,
     )
     high = cas80_fuel(
         CC,
@@ -456,6 +462,8 @@ def test_cas80_scales_with_p_fus():
         noak=True,
         burn_fraction=0.05,
         fuel_recovery=0.99,
+        target_unit_cost=0.0,
+        n_targets_per_year=0.0,
     )
     assert high > low
 

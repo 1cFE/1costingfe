@@ -19,6 +19,7 @@ p_trit: 10.0         # Tritium processing power [MW]
 p_house: 4.0         # Housekeeping power [MW]
 p_cryo: 0.0          # Cryogenic power [MW] (room-temp pulsed seed coils, no cryoplant)
 p_target: 3.0        # Liner manufacturing [MW]
+target_unit_cost: 9.0    # $/shot — NOAK Be liner (~4.7) + recyclable transmission line (steel RTL ~5, net of recycling), 2024$. Goodin 2004, Cipiti/Rochau SAND2006-6590. See CAS80_target_consumables.md
 p_coils: 0.1         # Axial seed-field coils [MW] (small pre-magnetization solenoid, not MFE confinement magnets)
 
 # Radial build geometry [m] (cylindrical chamber)

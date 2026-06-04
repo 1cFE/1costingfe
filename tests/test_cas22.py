@@ -57,6 +57,7 @@ def _make_cas22(fuel=Fuel.DT, n_mod=1, blanket_t=0.70):
         p_dee=0.0,
         burn_fraction=0.05,
         vac_op_pressure_pa=1.0,
+        manufactured_target=False,
     )
 
 
@@ -177,6 +178,7 @@ def test_cas22_n_mod_one_unchanged_by_multi_unit_factor():
         p_dee=0.0,
         burn_fraction=0.05,
         vac_op_pressure_pa=1.0,
+        manufactured_target=False,
     )
     base = cas22_reactor_plant_equipment(CC, **base_kwargs)
     aggr = cas22_reactor_plant_equipment(cc_aggressive, **base_kwargs)
@@ -239,7 +241,9 @@ def test_cas22_structure_volume_based():
 # ---- CAS220108: Divertor vs Target Factory ----
 
 
-def _make_cas22_with_family(family=ConfinementFamily.STEADY_STATE):
+def _make_cas22_with_family(
+    family=ConfinementFamily.STEADY_STATE, manufactured_target=False
+):
     """Helper to compute CAS22 with a specific confinement family."""
     return cas22_reactor_plant_equipment(
         CC,
@@ -272,6 +276,7 @@ def _make_cas22_with_family(family=ConfinementFamily.STEADY_STATE):
         p_dee=0.0,
         burn_fraction=0.05,
         vac_op_pressure_pa=1.0,
+        manufactured_target=manufactured_target,
     )
 
 
@@ -285,7 +290,7 @@ def test_cas220108_mfe_uses_divertor():
 def test_cas220108_ife_uses_target_factory():
     """IFE should use target_factory_base (larger than divertor)."""
     mfe = _make_cas22_with_family(ConfinementFamily.STEADY_STATE)
-    ife = _make_cas22_with_family(ConfinementFamily.PULSED)
+    ife = _make_cas22_with_family(ConfinementFamily.PULSED, manufactured_target=True)
     msg = "Target factory should cost more than divertor"
     assert ife["C220108"] > mfe["C220108"], msg
     expected = CC.target_factory_base * (1100.0 / 1000.0) ** 0.7
@@ -388,6 +393,7 @@ def _make_cas22_coil(
         p_dee=0.0,
         burn_fraction=0.05,
         vac_op_pressure_pa=1.0,
+        manufactured_target=False,
     )
 
 
@@ -564,6 +570,7 @@ def _make_cas22_heating(p_nbi=50.0, p_icrf=0.0, p_ecrh=0.0, p_lhcd=0.0):
         p_dee=0.0,
         burn_fraction=0.05,
         vac_op_pressure_pa=1.0,
+        manufactured_target=False,
     )
 
 
@@ -649,6 +656,7 @@ def test_cas220110_concept_scales():
         p_dee=0.0,
         burn_fraction=0.05,
         vac_op_pressure_pa=1.0,
+        manufactured_target=False,
     )
     mir = cas22_reactor_plant_equipment(
         CC,
@@ -681,6 +689,7 @@ def test_cas220110_concept_scales():
         p_dee=0.0,
         burn_fraction=0.05,
         vac_op_pressure_pa=1.0,
+        manufactured_target=False,
     )
     assert mir["C220110"] < tok["C220110"]
 
@@ -723,6 +732,7 @@ def _make_cas22_dec(f_dec=0.3, p_dee=300.0):
         p_dee=p_dee,
         burn_fraction=0.05,
         vac_op_pressure_pa=1.0,
+        manufactured_target=False,
     )
 
 
@@ -866,6 +876,7 @@ def _make_cas22_pulsed(concept, e_driver_mj=0.0, p_driver=0.0):
         p_dee=0.0,
         burn_fraction=0.05,
         vac_op_pressure_pa=1.0,
+        manufactured_target=False,
     )
 
 

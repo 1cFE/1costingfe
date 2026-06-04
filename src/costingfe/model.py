@@ -706,9 +706,16 @@ class CostModel:
         if self.family == ConfinementFamily.PULSED:
             p_driver = pt.e_driver_mj * params["f_rep"]
             e_preheat_mj = params.get("e_preheat_mj", 0.0)
+            # Structural: a pulsed concept manufactures a consumed target iff its
+            # YAML sets a positive per-shot cost (laser/heavy-ion capsule,
+            # MagLIF/Z-pinch liner). In-situ formation concepts set 0. Read from
+            # the static config (not the traced params) so it can gate the
+            # target-factory branch under jax.grad/vmap.
+            manufactured_target = self._eng_defaults["target_unit_cost"] > 0.0
         else:
             p_driver = 0.0
             e_preheat_mj = 0.0
+            manufactured_target = False  # steady-state always uses a divertor
 
         c22_detail = cas22_reactor_plant_equipment(
             cc,
@@ -726,6 +733,7 @@ class CostModel:
             vessel_vol=vessel_vol,
             family=self.family,
             concept=self.concept,
+            manufactured_target=manufactured_target,
             b_center=b_center,
             r_bore=r_bore,
             R0=params["R0"],
@@ -890,6 +898,15 @@ class CostModel:
             concept=self.concept,
             laser_driver_type=self.laser_driver_type,
         )
+        # Per-shot target consumable (IFE/MIF): one fabricated target/liner per
+        # shot per module. Structural zero for steady-state (continuous
+        # operation, no shots), mirroring p_driver above.
+        if self.family == ConfinementFamily.PULSED:
+            target_unit_cost = params["target_unit_cost"]
+            n_targets_per_year = params["f_rep"] * 3600.0 * 8760.0 * avail_eff
+        else:
+            target_unit_cost = 0.0
+            n_targets_per_year = 0.0
         c80 = cas80_fuel(
             cc,
             pt.p_fus,
@@ -908,6 +925,8 @@ class CostModel:
             dhe3_f_He3=self._dhe3_f_He3_eff(params),
             burn_fraction=params["burn_fraction"],
             fuel_recovery=params["fuel_recovery"],
+            target_unit_cost=target_unit_cost,
+            n_targets_per_year=n_targets_per_year,
         )
         lcoe = compute_lcoe(c90, c70, c80, pt.p_net, n_mod, avail_eff)
         overnight = total_capital * 1e6 / (pt.p_net * n_mod * 1e3)  # $/kW

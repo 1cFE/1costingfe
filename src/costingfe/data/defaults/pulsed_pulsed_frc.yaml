@@ -19,6 +19,7 @@ p_trit: 0.5          # Tritium monitoring from DD side reactions [MW]
 p_house: 2.0         # Housekeeping power [MW]
 p_cryo: 0.0          # No cryogenics (copper coils)
 p_target: 0.0        # No manufactured targets (in-situ FRC formation)
+target_unit_cost: 0.0    # $/shot — in-situ plasmoid formation, no fabricated target. See CAS80_target_consumables.md
 p_coils: 0.5         # Formation/acceleration coils average power [MW]
 
 # Coil parameters — copper pulsed coils (not HTS). b_center = peak field at the

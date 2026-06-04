@@ -1675,11 +1675,17 @@ divertor cassette and $C_{220108} = 0$. For inertial and
 magneto-inertial concepts the same sub-account instead funds the
 target factory, $C_{220108} = c_{\text{tgt}}\,(P_{\text{et}}/1000)^{0.7}$
 with $c_{\text{tgt}} = 244$~M\$, applied to the concepts that fabricate
-or accelerate a target every shot (laser and heavy-ion IFE, MagLIF, and
-the pneumatic mag-target loop). Pulsed concepts that form their plasma
-in situ from gas injection (pulsed FRC, theta pinch, dense plasma
-focus, sheared-flow Z-pinch) manufacture no targets and carry
-$C_{220108} = 0$.
+a consumed target or liner every shot (laser and heavy-ion IFE, MagLIF,
+and the wire-array / dynamic-hohlraum Z-pinch). Whether a concept
+carries this factory is set by the single per-shot target cost
+$c_{\text{target}}$ (\cref{sec:cas80}): concepts that form their plasma
+or liner in situ---plasma-jet MIF (the imploding liner is itself
+plasma), the liquid-liner magnetized-target loop, pulsed FRC, theta
+pinch, dense plasma focus, and sheared-flow / staged Z-pinch---set
+$c_{\text{target}} = 0$ and carry $C_{220108} = 0$. The same knob
+governs the target-factory power draw, so an in-situ concept incurs
+neither the factory capital nor its recirculating power, with no cost
+override required.
 
 Sub-account CAS22.01.01 (first wall + blanket) follows the pyFECONS
 volume $\times$ thermal-intensity $\times$ fuel-dependent unit-cost
@@ -2923,6 +2929,40 @@ reaction in MeV (fuel-dependent; see \cref{tab:fusion-reactions}), and
 $e_{\text{MeV}} = 1.602 \times 10^{-13}$~J/MeV. The factor
 $8760 \times 3600$ converts one year to seconds. Fuel-specific
 unit costs are listed in \cref{tab:fuel-prices}.
+
+\subsubsection{Target Consumable for Inertial and Magneto-Inertial Concepts}
+\label{sec:cas80-target}
+For inertial and magneto-inertial concepts the fuel-bearing consumable
+is not only the isotope but the fabricated target destroyed on every
+shot: the capsule and hohlraum of a laser or heavy-ion target, the
+beryllium liner and recyclable transmission line of a MagLIF or Z-pinch
+load. Following the fission convention---where CAS80 holds the
+fabricated fuel \emph{assembly} (cladding and structure included), not
+only the raw isotope---this hardware is added to CAS80 as a per-shot
+term parallel to \cref{eq:cas80-base}:
+\begin{equation}
+\label{eq:cas80-target}
+A_{\text{target}} = N_{\text{mod}} \cdot \dot{N}_{\text{shot}} \cdot c_{\text{target}},
+\qquad
+\dot{N}_{\text{shot}} = f_{\text{rep}} \cdot 8760 \times 3600 \cdot f_{\text{avail}},
+\end{equation}
+where $c_{\text{target}}$ is the per-shot target cost (one target per
+shot per module) and $f_{\text{rep}}$ is the repetition rate. The
+burn-fraction correction below does not apply to $A_{\text{target}}$:
+the target is consumed whole each shot regardless of fuel burnup.
+$c_{\text{target}}$ is a per-concept input, zero for magnetic concepts
+and for in-situ-formation pulsed concepts (\cref{sec:cas22-inherited}),
+and it is the single knob that also switches on the
+target factory $C_{220108}$. NOAK mass-production estimates span
+\$0.25--0.70/shot for laser and heavy-ion capsules (where the
+fabricated shell is a few percent of LCOE) up to several dollars per
+shot for liner-plus-transmission-line loads, the transmission-line cost
+being net of in-situ material recycling. Because the rep rate enters
+linearly, a high-rep laser plant at $f_{\text{rep}} = 10$~Hz consumes
+$\sim$$2.7\times10^{8}$ targets per year, so even a sub-dollar capsule
+contributes a multiple-percent share of LCOE, whereas a $\sim$0.1~Hz
+liner concept is dominated by its per-unit hardware cost at far lower
+annual throughput.
 
 \subsubsection{Burn Fraction and Fuel Recovery}
 \Cref{eq:cas80-base} implicitly assumes that all injected fuel

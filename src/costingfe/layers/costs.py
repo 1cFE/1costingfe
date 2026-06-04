@@ -425,12 +425,22 @@ def cas80_fuel(
     *,
     burn_fraction,
     fuel_recovery,
+    target_unit_cost,
+    n_targets_per_year,
 ):
     """CAS80: Annualized fuel cost. Fuel-specific consumable costs.
 
     Each fuel cycle has different consumables, Q-values, and costs per reaction.
     The 1e6 (MW->W) and /1e6 ($->M$) cancel, giving a clean formula.
     Returns M$.
+
+    For inertial/magneto-inertial concepts the fuel-bearing consumable is not
+    just the isotope but the fabricated target destroyed each shot (capsule,
+    hohlraum, liner, recyclable transmission line). Following the fission
+    fuel-assembly convention (CAS80 holds the fabricated assembly, not only the
+    raw isotope), target_unit_cost [$ /shot] x n_targets_per_year [shots/yr per
+    module] adds this hardware to CAS80. Both are 0 for concepts with no
+    manufactured target (MFE, in-situ plasma/liner formation).
     """
     SECONDS_PER_YR = 3600.0 * 8760.0
 
@@ -491,6 +501,13 @@ def cas80_fuel(
     # multiplier = 1 + (1 - burn_fraction) / burn_fraction * (1 - fuel_recovery)
     fuel_loss = (1.0 - burn_fraction) / burn_fraction * (1.0 - fuel_recovery)
     annual_musd = annual_musd * (1.0 + fuel_loss)
+
+    # Target consumable (IFE/MIF): fabricated target/liner hardware destroyed
+    # each shot. $/shot x shots/yr/module x modules -> $/yr, /1e6 -> M$/yr. The
+    # burn-fraction correction above does not apply: the target is consumed
+    # whole every shot regardless of fuel burnup.
+    annual_target_musd = n_mod * n_targets_per_year * target_unit_cost / 1e6
+    annual_musd = annual_musd + annual_target_musd
 
     t_project = _total_project_time(cc, construction_time, fuel, noak)
     return levelized_annual_cost(

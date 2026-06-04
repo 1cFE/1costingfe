@@ -13,8 +13,9 @@ p_pump: 1.0          # Pumping power [MW]
 p_trit: 10.0         # Tritium processing power [MW]
 p_house: 4.0         # Housekeeping power [MW]
 p_cryo: 0.0          # Cryogenic power [MW] (no superconducting confinement magnets)
-p_target: 2.0        # Liner/target factory power [MW]
-p_coils: 0.0         # No plant-scale confinement magnets; seed field is in the pellet (NearStar) or CT injector (General Fusion)
+p_target: 0.0        # No target factory by default: the generic MTF concept (General Fusion / Helion-class) forms the magnetized target in-situ and recycles its liquid-metal liner. A pellet-fed MTF (e.g. NearStar) sets p_target and target_unit_cost in its own concept config.
+target_unit_cost: 0.0    # $/shot — in-situ formation, recycled liquid liner: no manufactured target consumable. Solid-liner MTF would set ~2-15. See CAS80_target_consumables.md
+p_coils: 0.0         # No plant-scale confinement magnets; seed field is in the CT injector (General Fusion) or the pellet (NearStar)
 
 # Radial build geometry [m] (spherical chamber)
 R0: 0.0          # Not used for sphere

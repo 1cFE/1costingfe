@@ -103,6 +103,9 @@ def generate_subsystems(
         vessel_vol=geo.vessel_vol,
         family=model.family,
         concept=concept_enum,
+        # Manufactured target iff the concept YAML set a positive per-shot cost
+        # (absent/0 for MFE and in-situ-formation concepts -> no target factory).
+        manufactured_target=params.get("target_unit_cost", 0.0) > 0.0,
         # 0.0 = "no field" sentinel for magnet-free concepts; confinement-magnet
         # concepts supply b_center / r_bore from their YAML (see model.py).
         b_center=params.get("b_center", 0.0),

@@ -19,6 +19,7 @@ p_trit: 10.0         # Tritium processing [MW]
 p_house: 3.0         # Housekeeping [MW]
 p_cryo: 0.0          # No cryogenics
 p_target: 0.0        # No manufactured targets (gas injection)
+target_unit_cost: 0.0    # $/shot — plasma forms from gas injection, no fabricated target. See CAS80_target_consumables.md
 p_coils: 0.5         # Stabilization coils [MW]
 
 # Radial build geometry [m] (cylindrical)

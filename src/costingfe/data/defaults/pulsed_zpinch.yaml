@@ -15,6 +15,7 @@ p_trit: 10.0         # Tritium processing power [MW]
 p_house: 4.0         # Housekeeping power [MW]
 p_cryo: 0.3          # Cryogenic power [MW]
 p_target: 1.5        # Target/liner factory power [MW]
+target_unit_cost: 6.0    # $/shot — NOAK dynamic-hohlraum wire-array load (~4.9) + recyclable transmission line (~1.2, net of recycling), 2024$. Goodin/Alexander FPA 2007, Olson 2001. See CAS80_target_consumables.md
 
 # Radial build geometry [m] (spherical chamber)
 R0: 0.0          # Not used for sphere

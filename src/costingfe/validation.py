@@ -126,6 +126,9 @@ class CostingInput(BaseModel):
 
     # Pulsed shared
     p_target: float | None = None
+    target_unit_cost: float | None = Field(
+        default=None, ge=0
+    )  # $/shot consumed target hardware (CAS80)
     # eta_pin: already declared above (shared MFE/PULSED)
     # p_coils: already declared above (shared MFE/PULSED)
 
@@ -185,6 +188,7 @@ class CostingInput(BaseModel):
         "f_rep",
         "eta_pin",
         "p_target",
+        "target_unit_cost",
     ]
 
     @model_validator(mode="after")

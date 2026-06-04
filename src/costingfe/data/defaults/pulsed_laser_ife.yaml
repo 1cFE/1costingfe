@@ -16,6 +16,7 @@ p_trit: 10.0         # Tritium processing power [MW]
 p_house: 4.0         # Housekeeping power [MW]
 p_cryo: 0.5          # Cryogenic power [MW]
 p_target: 1.0        # Target factory power [MW]
+target_unit_cost: 0.40   # $/shot — NOAK fabricated capsule, 2024$ (direct-drive ~0.27, indirect ~0.70). Woodworth-Meier 1995, Goodin/GA 2004, NAS 2013. See CAS80_target_consumables.md
 
 # Radial build geometry [m] (spherical chamber)
 R0: 0.0          # Not used for sphere

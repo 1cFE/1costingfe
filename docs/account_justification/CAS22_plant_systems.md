@@ -69,6 +69,15 @@ Target factory for inertial/magneto-inertial concepts.  Higher cost
 than MFE divertor due to high-repetition-rate target manufacturing
 infrastructure.
 
+Applied only to concepts that fabricate a consumed target/liner each
+shot (laser and heavy-ion IFE, MagLIF, wire-array/dynamic-hohlraum
+Z-pinch).  Gated on the per-shot `target_unit_cost` knob: concepts that
+form their plasma or liner in-situ (plasma-jet MIF, liquid-liner
+magnetized-target, pulsed FRC, theta-pinch, dense-plasma-focus,
+staged-Z) set it to 0 and carry C220108 = 0 and zero target-factory
+power by default, with no cost override.  The per-shot target consumable
+is costed in CAS80; see `CAS80_target_consumables.md`.
+
 ### C220109: Direct Energy Converter
 
 **Value: $0 (formally excluded from standard configurations).**

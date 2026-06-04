@@ -19,6 +19,7 @@ p_trit: 0.5          # Tritium monitoring [MW]
 p_house: 2.0         # Housekeeping [MW]
 p_cryo: 0.0          # Copper coils
 p_target: 0.0        # No manufactured targets
+target_unit_cost: 0.0    # $/shot — in-situ magnetic compression of gas-fill plasma, no fabricated target. See CAS80_target_consumables.md
 p_coils: 0.5         # Compression coils average power [MW]
 
 # Coil parameters — copper pulsed coils. b_center = peak field at the loop

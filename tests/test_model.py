@@ -93,7 +93,12 @@ def test_forward_mif_mag_target():
     result = model.forward(net_electric_mw=1000.0, availability=0.85, lifetime_yr=30)
     assert result.costs.lcoe > 0
     assert result.power_table.p_net > 0
-    assert result.power_table.p_target > 0  # Has liner/target factory
+    # The generic MTF concept (General Fusion / Helion-class) forms the
+    # magnetized target in-situ and recycles its liquid-metal liner, so there
+    # is no target factory by default: p_target and the C220108 factory are 0.
+    # A pellet-fed MTF (e.g. NearStar) sets these in its own concept config.
+    assert float(result.power_table.p_target) == 0.0
+    assert float(result.cas22_detail["C220108"]) == 0.0
 
 
 def test_sensitivity_ife():
