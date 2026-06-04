@@ -331,12 +331,12 @@ illustrative; the reference script is
 \texttt{examples/external\_physics\_handoff.py}, recorded in
 \cref{sec:appendix-handoff-script}.
 
-The physics outputs supplied as forward arguments are summarised in
+The physics outputs supplied as forward arguments are summarized in
 \cref{tab:tour-inputs}.
 
 \begin{table}[htbp]
 \caption{Inputs handed to \texttt{1costingfe} for the
-Section~\ref{sec:tour} reference scenario.}
+\cref{sec:tour} reference scenario.}
 \label{tab:tour-inputs}
 \centering
 \begin{tabular}{lll}
@@ -351,8 +351,8 @@ $M_n$         & 1.0                 & no neutron multiplication without a breedi
 $L$           & 80 m                & central cell length \\
 $r_p$         & 0.4 m               & plasma radius at midplane \\
 $B_{\max}$    & 12 T                & peak field on conductor \\
-$T_e$         & 70 keV              & per Section~3.1.3 example \\
-$n_e$         & $3.3 \times 10^{19}$ m${}^{-3}$ & per Section~3.1.3 example \\
+$T_e$         & 70 keV              & per \cref{sec:dhe3-split} example \\
+$n_e$         & $3.3 \times 10^{19}$ m${}^{-3}$ & per \cref{sec:dhe3-split} example \\
 $\eta_{\text{de}}$ & 0.70           & venetian-blind direct conversion (single-pass; \texttt{eta\_de}) \\
 $f_{\text{dec}}$ & 0.90             & charged-particle collection fraction (\texttt{f\_dec}) \\
 $f_T^*$       & 0.5                 & secondary D-T burn (\texttt{dhe3\_f\_T}) \\
@@ -396,7 +396,7 @@ financial charges (CAS90). LCOE is computed from these in
 \cref{tab:cas-overview}.
 
 \begin{table}[htbp]
-\caption{CAS-account rollup for the Section~\ref{sec:tour} reference
+\caption{CAS-account rollup for the \cref{sec:tour} reference
 scenario, in 2025\,USD. Recorded by
 \texttt{examples/external\_physics\_handoff.py}.}
 \label{tab:tour-rollup}
@@ -436,7 +436,7 @@ The forward pipeline of \cref{fig:pipeline} is differentiable end-to-end.
 Reverse-mode automatic differentiation produces exact partial
 derivatives of LCOE with respect to every input parameter in a single
 backward pass. \Cref{fig:tornado} shows the resulting tornado for the
-Section~\ref{sec:tour} reference scenario, organised into three bands:
+\cref{sec:tour} reference scenario, organized into three bands:
 physics outputs (the parameters supplied by the external physics
 model), cost unit prices (procurement-grounded \$/unit values that
 multiply physical quantities), and financial / methodology (cost-of-money,
@@ -897,6 +897,7 @@ neutron energy fraction $\bar{E}_n / \bar{E}_{\text{total}}$ increases from
 0.33 to approximately 0.44 due to the secondary D-T neutrons.
 
 \subsubsection{\texorpdfstring{Deuterium-helium 3 (D-${}^3$He)}{Deuterium-helium 3 (D-3He)}}
+\label{sec:dhe3-split}
 The D-${}^3$He fuel cycle is the most complex of the four considered
 here: the primary reaction is aneutronic ($Q = 18.3$~MeV), but at the
 required temperatures ($T_i = 60$--$100$~keV) a fraction
@@ -1336,12 +1337,12 @@ $P_{\text{net}}^*$, the engineering gain $Q_{\text{eng}} = P_{\text{et}}
 From these, the model derives the required driver energy per pulse
 $E_{\text{drv}}$ (MJ), the average driver power
 $P_{\text{drv}} = E_{\text{drv}} \, f_{\text{rep}}$, and the fusion
-power $P_{\text{fus}}$.  The scientific gain
+power $P_{\text{fus}}$. The scientific gain
 $Q_{\text{sci}} = P_{\text{fus}} / P_{\text{drv}}$ falls out as a
-derived quantity.  The driver wall-plug efficiency $\eta_{\text{pin}}$
+derived quantity. The driver wall-plug efficiency $\eta_{\text{pin}}$
 relates stored energy to delivered energy:
 $E_{\text{stored}} = E_{\text{drv}} / \eta_{\text{pin}}$.
-Here $\eta_{\text{pin}}$ characterises pulsed-driver hardware (laser, ion
+Here $\eta_{\text{pin}}$ characterizes pulsed-driver hardware (laser, ion
 beam, capacitor bank); the steady-state $\eta_{\text{pin}}$ in
 \cref{eq:p-recirc} refers instead to the auxiliary heating wall-plug
 efficiency, which may be decomposed into source and coupling factors.
@@ -1365,7 +1366,7 @@ requiring concept-dependent parameterization.
 For laser IFE, Z-pinch, mag-target, and other pulsed concepts whose
 driver energy thermalises in the blanket, the model supports an
 optional partial direct charged-particle capture path that mirrors
-the steady-state hybrid balance of \cref{eq:p-thermal}.  A fraction
+the steady-state hybrid balance of \cref{eq:p-thermal}. A fraction
 $f_{\text{dec}} \in [0, 1]$ of the non-radiated charged-particle
 power $P_{\text{ch,net}} = (1 - f_{\text{rad}})\,P_{\text{cp}}$ is
 collected at efficiency $\eta_{\text{de}}$; the remainder of the ash
@@ -1389,12 +1390,12 @@ For inductive recovery concepts (e.g.\ pulsed FRCs with capacitor-bank-driven co
 energy circulates in an electromagnetic loop: capacitor bank $\to$
 compression coils $\to$ plasma $\to$ coils $\to$ capacitor bank.
 Charged-particle energy does PdV work on the expanding plasmoid,
-which is recovered inductively.  The fraction of net charged-particle
+which is recovered inductively. The fraction of net charged-particle
 power that couples as PdV work is
 \begin{equation}
 f_{\text{pdv}} = 1 - \left(\frac{r_{\min}}{r_{\max}}\right)^{\!2(\gamma-1)}
 \end{equation}
-with $\gamma = 5/3$ for an ideal monatomic plasma.  The recovered and
+with $\gamma = 5/3$ for an ideal monatomic plasma. The recovered and
 net DEC powers are then
 \begin{align}
 P_{\text{recovered}} &= \eta_{\text{dec}} \bigl(P_{\text{drv}}
@@ -1412,16 +1413,16 @@ $P_{\text{drv}}\,(1/\eta_{\text{pin}} - 1)$ are drawn from the grid,
 not the full $P_{\text{drv}}/\eta_{\text{pin}}$.
 
 Neutrons, bremsstrahlung, and undirected charged particles still enter
-a thermal blanket.  When $\eta_{\text{th}} > 0$ a conventional thermal
+a thermal blanket. When $\eta_{\text{th}} > 0$ a conventional thermal
 cycle runs in parallel with the DEC, and the total gross electric is
-$P_{\text{et}} = P_{\text{dee}} + P_{\text{the}}$.  When
+$P_{\text{et}} = P_{\text{dee}} + P_{\text{the}}$. When
 $\eta_{\text{th}} = 0$ the concept is purely inductive and all
 thermal loads (pumps, balance of plant (BOP)) are zeroed automatically.
 
 For inductive DEC, the capacitor bank is costed on a \$/J stored-energy
 basis (Account~22.01.07, \cref{sec:cas2207}): $C_{220107} = c_{\text{cap}}
 \times E_{\text{stored}}$, where $c_{\text{cap}}$ is the all-in installed
-cost per joule.  The NOAK default and its justification are discussed in
+cost per joule. The NOAK default and its justification are discussed in
 \cref{sec:cas2207}.
 
 For the DEC inverse, the model takes the scientific gain $Q_{\text{sci}}$
@@ -1432,7 +1433,7 @@ E_{\text{stored}} = \frac{P_{\text{net}}}{f_{\text{rep}} \bigl(
   \,\eta_{\text{pin}}}
 \end{equation}
 where $\eta_{\text{eff}}$ combines the DEC and thermal conversion
-efficiencies.  This ensures that higher DEC efficiency correctly reduces
+efficiencies. This ensures that higher DEC efficiency correctly reduces
 the required capacitor bank size rather than inflating it.
 
 
@@ -1589,7 +1590,7 @@ p-${}^{11}$B & 384 & 384 & Industrial (no hot cell, no tritium, standard HVAC) \
 \end{table}
 
 \subsubsection{Fuel-Dependent Scoping}
-Each building is costed for what it physically is.  Key
+Each building is costed for what it physically is. Key
 differentiators by fuel:
 
 \begin{itemize}
@@ -1597,7 +1598,7 @@ differentiators by fuel:
   shielding, NQA-1 on tritium-wetted systems); D-D \$78M (3/4 scope,
   NQA-1 overhead similar); D-${}^3$He \$23M (shielded inspection room
   only); p-${}^{11}$B \textbf{\$0} (does not exist; nothing
-  activates).  The hot cell is physically integrated within the
+  activates). The hot cell is physically integrated within the
   reactor building, following UK pilot-plant cost models, not a separate
   structure.
 
@@ -1611,14 +1612,14 @@ differentiators by fuel:
 
 \item \textbf{Security:} Tritium is not listed in 10~CFR Part~37
   Category~1/2 table, so no armed response requirements apply for any fusion
-  fuel.  All fuels use standard industrial security (\$2--3.5M).
+  fuel. All fuels use standard industrial security (\$2--3.5M).
 
 \item \textbf{Site improvements:} D-T \$85M (larger footprint from
   hot cell, tritium processing); p-${}^{11}$B \$69M (standard industrial site).
 \end{itemize}
 
 \subsubsection{Scaling Basis}
-Different buildings scale with different physical drivers.  The
+Different buildings scale with different physical drivers. The
 turbine building scales with thermal electric power $P_{\text{the}}$
 (steam cycle only, not DEC); the reactor building and hot cell scale
 with fusion power $P_{\text{fus}}$; site improvements, control room,
@@ -1698,7 +1699,7 @@ premium for molten-salt designs (Hastelloy-N corrosion liner on
 FLiBe-wetted surfaces) and solid-breeder designs (pebble-bed canisters
 with separate breeder and multiplier zones), all relative to the
 PbLi-style flow-channel baseline. The fill material chemistry is costed
-separately under CAS27 (Section~\ref{sec:cas27}).
+separately under CAS27 (\cref{sec:cas27}).
 
 The fuel-keyed unit cost $c_{\text{blk}}(f)$ is calibrated to a PbLi
 liquid-metal blanket (about 9.4~t/m$^3$, with a flow loop, MHD ducts,
@@ -1712,7 +1713,7 @@ $c_{\text{Li}_2\text{O}} = 0.2$~M\$/m$^3$ in place of $c_{\text{blk}}(f)$.
 \label{sec:multi-unit-labor}
 
 Per-module installation labor (CAS22.01.11) is computed at the
-inherited 14\% of reactor subtotal for the first unit at a site.  For
+inherited 14\% of reactor subtotal for the first unit at a site. For
 a multi-module site, the on-site labor for each subsequent unit is
 discounted by a fixed factor $\phi_{\rm lab}$:
 \begin{equation}
@@ -1724,20 +1725,20 @@ C_{220111}^{\rm site}
 \end{equation}
 Equipment costs (CAS22.01.01--22.01.10) are \emph{not} discounted:
 each module is a separate manufactured copy and incurs full equipment
-cost.  Plant-wide accounts (CAS22.02--22.07) already use total plant
+cost. Plant-wide accounts (CAS22.02--22.07) already use total plant
 power $n_{\rm mod}\,P$ with sub-linear scaling exponents and capture
 the shared-infrastructure economy through that channel.
 
 The factor $\phi_{\rm lab}$ represents the documented twin/triplet
 unit co-location effect in fission EPC: re-use of construction crew,
 supervision, tooling, procedures, and engineering deliverables
-between adjacent units at a single site.  The empirical anchors are
+between adjacent units at a single site. The empirical anchors are
 roughly 20--30\% labor reduction for Vogtle 3$\rightarrow$4 (US
 AP1000), 10--15\% across Korean APR-1400 batches (Shin-Kori,
 Barakah), and a smaller but positive effect on the Chinese AP1000
-pairs (Sanmen, Haiyang).  The European EPR pairs (Olkiluoto,
+pairs (Sanmen, Haiyang). The European EPR pairs (Olkiluoto,
 Flamanville, Hinkley Point~C) show no clear twin-unit effect in
-public data, with FOAK and regulatory churn dominating.  The 8\%
+public data, with FOAK and regulatory churn dominating. The 8\%
 default sits below the middle of the 5--15\% empirical range.
 
 This factor is deliberately \emph{not} a Wright's-Law learning curve.
@@ -1747,7 +1748,7 @@ thousands), and the empirical fission literature on cross-program
 deployment finds no positive cross-program learning, with some
 analyses identifying \emph{negative} learning at the program level
 for US and French nuclear \citep{grubler2010,lovering2016,
-eashgates2020}.  Cross-fleet learning, if introduced in future work,
+eashgates2020}. Cross-fleet learning, if introduced in future work,
 belongs at a separate parameter representing cumulative units of a
 given concept built worldwide, not on $n_{\rm mod}$, which represents
 units at a single site.
@@ -1833,15 +1834,15 @@ MIF, IFE, Z-pinch & \multicolumn{3}{l}{\$0 (no plant-scale confinement magnets)}
 
 \subsubsection{Conductor Cost Assumptions}
 The default conductor is REBCO high-temperature superconductor at
-\$50/kA-m, an aggressive NOAK target.  Current market prices for
+\$50/kA-m, an aggressive NOAK target. Current market prices for
 REBCO tape are \$150--300/kA-m; the \$50/kA-m assumption reflects
 projected cost reductions from scaled-up manufacturing (analogous to
-the solar PV learning curve).  For comparison, Nb$_3$Sn (the ITER
+the solar PV learning curve). For comparison, Nb$_3$Sn (the ITER
 conductor) is \$7/kA-m at maturity, and NbTi (LHC heritage) is
 similar.
 
 This is a deliberate design choice: the model targets NOAK economics
-for a mature fusion industry, not FOAK procurement costs.  For FOAK
+for a mature fusion industry, not FOAK procurement costs. For FOAK
 sensitivity analysis, the conductor cost may be overridden to
 \$150--300/kA-m, which roughly triples the coil account.
 Unlike B-11 enrichment (where the FOAK/NOAK gap reflects a missing
@@ -1909,14 +1910,14 @@ family.
 
 \subsubsection{Steady-State MFE}
 For tokamaks, stellarators, and mirrors, the account covers
-vendor-purchased auxiliary heating systems.  Cost scales linearly with
+vendor-purchased auxiliary heating systems. Cost scales linearly with
 installed power:
 \begin{equation}
 C_{220104} = \sum_i c_i \, P_i \quad [\text{M\$}]
 \end{equation}
 where $c_{\text{NBI}} = 7.06$, $c_{\text{ICRF}} = 4.15$,
 $c_{\text{ECRH}} = 5.00$, $c_{\text{LHCD}} = 4.00$ (all M\$/MW,
-2023\$).  The per-MW costs are calibrated to ITER procurement contracts,
+2023\$). The per-MW costs are calibrated to ITER procurement contracts,
 adjusted from FOAK to NOAK.
 
 The split $P_i$ is priced per MW of \emph{injected} heating power, the
@@ -1937,24 +1938,24 @@ $\eta_{\text{pin}}$.
 
 \subsubsection{Pulsed Concepts}
 For pulsed concepts, the account covers the primary driver capital, namely
-the hardware that compresses or ignites the target.  This is the pulsed
+the hardware that compresses or ignites the target. This is the pulsed
 analog of the magnet system (CAS22.01.03): the mechanism that provides
-confinement.  The cost basis depends on the driver type.
+confinement. The cost basis depends on the driver type.
 
 Lasers, accelerators, and electromagnetic guns are costed per joule of pulse
-energy.  Their capital is set by the per-pulse energy (laser aperture,
+energy. Their capital is set by the per-pulse energy (laser aperture,
 amplifier and pump-diode count, accelerator beam energy and storage-ring
 charge, coaxial-gun size and peak current) and not by how often the driver
-fires.  Repetition rate adds cooling and consumable replacement, which are
+fires. Repetition rate adds cooling and consumable replacement, which are
 sub-dominant capital and operating costs rather than a multiplier on the
-driver hardware itself.  Costing on average power $E_{\text{drv}}
+driver hardware itself. Costing on average power $E_{\text{drv}}
 f_{\text{rep}}$ would instead price one physical laser across the $0.1$ to
 $15$~Hz range concepts run at as though it were a hundred different machines.
 Hence
 \begin{equation}
 C_{220104} = c^{E}_{\text{drv}} \times E_{\text{drv}} \quad [\text{M\$}]
 \end{equation}
-with $c^{E}_{\text{drv}}$ in M\$/MJ.  Pneumatic and mechanical injectors
+with $c^{E}_{\text{drv}}$ in M\$/MJ. Pneumatic and mechanical injectors
 (mag-target) instead accelerate target mass on every shot, so throughput
 (average power) drives their hardware count, handling, and recirculation
 plant, and they retain an average-power basis with $P_{\text{drv}} =
@@ -1964,16 +1965,22 @@ C_{220104} = c^{P}_{\text{drv}} \times P_{\text{drv}} \quad [\text{M\$}]
 \end{equation}
 The heavy-ion per-joule coefficient reproduces the underlying \$/W NOAK
 projection at its reference repetition rate ($\$12$/W at $5$~Hz gives
-$60$~M\$/MJ) and then holds constant away from that reference.  The laser
+$60$~M\$/MJ) and then holds constant away from that reference. The laser
 coefficient of $205$~M\$/MJ is set from published diode-pumped solid-state
 laser (DPSSL) NOAK estimates of \$210--700/J: the CAS22.01.04 optics and
 diode array carry about \$205/J, and the CAS22.01.07 capacitor bank that
 fires the diodes adds about \$5/J, so the turnkey driver lands at the
 aggressive end (about \$210/J) of the published NOAK range, consistent with
-a diode roadmap toward \$0.007/W.  The plasma-jet gun and the
+a diode roadmap toward \$0.007/W. The plasma-jet gun and the
 sheared-flow Z-pinch's coaxial gun follow the same per-pulse logic; the
 single sheared-flow gun assembly is cheaper per joule ($1.5$~M\$/MJ) than the
 plasma-gun array ($4$~M\$/MJ).
+The laser coefficient branches on driver architecture, selected by
+\texttt{laser\_driver\_type}: diode-pumped solid-state (DPSSL, the default) at
+$205$~M\$/MJ; KrF excimer at $40$~M\$/MJ, leaning to the large-aperture-optics
+projection for e-beam-pumped excimer (engineering range $20$--$200$~M\$/MJ); and
+flashlamp-pumped Nd:glass (NIF-class) at $1000$~M\$/MJ, set from the NIF
+\$3.5--4.2$\,$B / $1.1$--$1.9$~MJ-UV facility cost.
 
 \begin{table}[htbp]
 \caption{CAS22.01.04 driver cost coefficients by pulsed concept.}
@@ -1996,17 +2003,30 @@ Pulsed FRC, Theta pinch       & n/a & 0 & Driver is coils (CAS22.01.03) \\
 \end{tabular}
 \end{table}
 
+\paragraph{Driver scheduled replacement.}
+A rep-rated laser driver's replaceable subsystems wear at shot lifetimes
+spanning sub-annual to multi-decade, so each is charged as the level annual cost
+of replacing it every $t = N_{\text{life}} / \dot N_{\text{shot}}$ years over the
+plant life, summed by the same geometric replacement model used for the core,
+direct-energy-converter grid, and capacitor bank. The first set is capital
+(already in CAS22.01.04); only replacements beyond it are charged. For DPSSL the
+pump diodes carry a NOAK shot life ($\sim$$10^{10}$) that exceeds a 30-year plant
+at $10$~Hz, so they are effectively a capital item and the operating burden is
+dominated by the final optics; for flashlamp-pumped Nd:glass the lamp shot life
+($\sim$$10^4$) is sub-annual and the replacement term is prohibitive, which is
+the standard reason NIF-class drivers are not viable for rep-rated energy.
+
 For MagLIF the main driver is the electrical Z-pinch, costed in
 CAS22.01.07; the only CAS22.01.04 contribution is an optional laser
 preheat, costed per joule of preheat pulse energy
 $c_{\text{pre}} E_{\text{pre}}$ on the same diode-pumped solid-state laser
-basis as the IFE driver.  Magnetized-compression concepts that omit the
+basis as the IFE driver. Magnetized-compression concepts that omit the
 preheat laser set $E_{\text{pre}} = 0$ and incur no preheat cost, while the
 coefficient remains available for those that include one.
 
 Concepts whose driver is purely electrical (pulsed power / capacitor
 bank) have their driver capital captured entirely in CAS22.01.07 on a
-\$/J stored basis, avoiding double-counting.  Similarly, concepts
+\$/J stored basis, avoiding double-counting. Similarly, concepts
 whose confinement is provided by coils (pulsed FRC, theta pinch) have
 that hardware in CAS22.01.03.
 
@@ -2069,7 +2089,7 @@ currently the sole account that uses them.
 
 CAS22.01.07 covers the electrical power supply systems that drive the
 fusion core: magnet power supplies, pulsed power drivers, and associated
-switchgear.  The account has two modes.
+switchgear. The account has two modes.
 
 \subsubsection{Steady-State MFE}
 For tokamaks, stellarators, and mirrors, the cost scales with gross
@@ -2079,11 +2099,11 @@ electric output:
 \end{equation}
 The \$80M reference at 1\,GWe originates from the ARIES-CS design study
 (\$70.6M in 2004\$ for a 1.3\,GWe stellarator, approximately \$78/kW in
-2024\$).  Cross-checks against GW-scale HVDC converter stations
+2024\$). Cross-checks against GW-scale HVDC converter stations
 (\$100--250/kW installed)\footnote{HVDC converter station vendor literature, Siemens Energy and Hitachi ABB Power Grids, 2022--2024.} and utility-scale solar inverters
 (\$30--50/kW \citep{nrel_atb2024}) bracket the figure: fusion magnet supplies
 operate at lower voltage and higher current than HVDC, which is the
-cheaper regime for power electronics.  No direct vendor quote exists at
+cheaper regime for power electronics. No direct vendor quote exists at
 fusion-relevant parameters (1--10~kV, 10--100~kA, 100+~MW).
 Uncertainty: $\pm$20\%.
 
@@ -2094,17 +2114,17 @@ pulse on a \$/J basis:
   C_{220107} = c_{\text{cap}} \times E_{\text{stored}} \quad [\text{M\$}]
 \end{equation}
 where $c_{\text{cap}} = 0.50$~\$/J is the NOAK all-in installed cost
-(capacitors, switches, charging supplies, buswork).  This is an
+(capacitors, switches, charging supplies, buswork). This is an
 aggressive target: present lab-scale pricing is \$20--50/J, a 40--100$\times$
-gap.  The CATF IWG extension \citep{woodruff2026b} recommends
-\$1.5--4/J for NOAK.  The \$0.50/J default assumes advanced-dielectric
+gap. The CATF IWG extension \citep{woodruff2026b} recommends
+\$1.5--4/J for NOAK. The \$0.50/J default assumes advanced-dielectric
 capacitors manufactured at high volume, a commercial viability
 requirement, not a current capability.
 
-Capacitor banks require scheduled replacement (CAS72).  At $f_{\text{rep}}
+Capacitor banks require scheduled replacement (CAS72). At $f_{\text{rep}}
 = 1$~Hz and 85\% availability, the bank executes 27~million cycles per
-year.  At the NOAK baseline lifetime of $10^8$ shots, replacement occurs
-every 3.7~years.  The annualized replacement cost is computed as a
+year. At the NOAK baseline lifetime of $10^8$ shots, replacement occurs
+every 3.7~years. The annualized replacement cost is computed as a
 present-value sum of discrete replacements over the plant lifetime,
 discounted at the project interest rate.
 
@@ -2126,7 +2146,7 @@ substitution lands.
 CAS22.01.09 covers add-on direct energy converters for linear devices
 (mirrors and steady-state FRCs) where charged-particle exhaust escapes
 along open field lines and can be decelerated to recover kinetic energy
-as electricity.  Inductive DEC for pulsed-FRC architectures is captured in
+as electricity. Inductive DEC for pulsed-FRC architectures is captured in
 CAS22.01.07 via $Q_{\text{sci}}$-derived markups on the driver bank
 (\cref{sec:cas2207}); the present subsection covers the electrostatic
 venetian-blind variant for steady-state mirrors.
@@ -2149,7 +2169,7 @@ costed under CAS22.01.06 and the expander):
   \item Tank: \$3--15~M, central \$7~M.
     Industrial-grade fabricated 304L stainless ($\$10\text{--}15$/kg
     cleaned and ASME~Section~VIII Div~1 certified for $10^{-5}$ to
-    $10^{-6}$~Torr service).  Sizing for atmospheric collapse load
+    $10^{-6}$~Torr service). Sizing for atmospheric collapse load
     on a 10--15~m diameter, 20--40~m long shell with ring stiffeners
     every 1--2~m gives 300--500 tonnes (low end) to 600--800 tonnes
     (conservative). Same dimensional class as commercial refinery
@@ -2157,18 +2177,18 @@ costed under CAS22.01.06 and the expander):
     (4--5~m $\times$ 25--30~m, 1000--1500 tonnes, ASME~VIII Div~2
     at 200~bar internal) which run \$26--30~M; the VB tank holds
     only vacuum (1~atm external collapse load), so it sits well
-    below that price.  ITER cryostat (in the range \$30--40/kg,
+    below that price. ITER cryostat (in the range \$30--40/kg,
     nuclear-grade, double-walled) is overspec on certification.
   \item HV power conditioning (DC-AC chain): \$35--55~M, central \$45~M.
     The DEC outputs DC at multi-stage retarding potentials (30--100~kV),
-    which a converter chain returns to grid AC.  MISO's 2024 MTEP24
+    which a converter chain returns to grid AC. MISO's 2024 MTEP24
     cost guide \citep{miso2024mtep24} reports VSC HVDC valve hall
     capital at \$167/kW for $\pm 250$~kV / 500\,MW and \$178/kW for
     $\pm 400$~kV / 1.5~GW; the DEC needs the IGBT/DC-conversion
     portion only (no duplicate AC interconnect), placing it at
     roughly 60--70\% of full HVDC station cost, $\$100\text{--}120$/kW.
   \item Cryopumps: \$10--25~M, central \$15~M.
-    $10^6$--$10^7$~L/s pumping speed.  ITER cryopumps procurement
+    $10^6$--$10^7$~L/s pumping speed. ITER cryopumps procurement
     \citep{iter_cryopumps} (8 torus and cryostat cryopumps, EUR 21~M
     F4E investment, manufactured by Research Instruments / Alsymex)
     and industrial cryopump pricing\footnote{Edwards/Leybold STP-iXR class turbomolecular and cryogenic pump product datasheets, list pricing 2023.}
@@ -2176,18 +2196,18 @@ costed under CAS22.01.06 and the expander):
   \item Heat collection panels: \$10--20~M, central \$15~M.
     Hypervapotron-cooled tungsten panels for the 30--90\,MW heat
     load deposited on grids and collectors (5--15\% of charged-particle
-    power for geometrically transparent grids).  Design analog: the
+    power for geometrically transparent grids). Design analog: the
     ITER NBI residual ion dump and calorimeter \citep{hemsworth2017},
     which handle 5--13\,MW/m${}^2$ heat flux on hypervapotron-cooled
-    Cu-CrZr / W elements at the 16\,MW beam-line scale.  Public
+    Cu-CrZr / W elements at the 16\,MW beam-line scale. Public
     procurement values for the ITER beam-dump components are not
     disclosed; the dollar figure here is an order-of-magnitude
-    estimate scaled by area and heat flux.  ITER divertor pricing
+    estimate scaled by area and heat flux. ITER divertor pricing
     ($\$60$M/GW${}_\text{th}$) is overspec, since VB grids are not
     exposed to direct fusion plasma or 14~MeV neutron flux.
   \item Grid and collector modules: \$10--20~M, central \$15~M.
     Tungsten ribbon grids, alumina HV insulators, stainless
-    mounting frames.  Geometry-driven; this line uses
+    mounting frames. Geometry-driven; this line uses
     \citet{hoffman1977} ($\$4$k/m${}^2$ in 1975 USD, $\$23$k/m${}^2$
     in 2024 USD via CPI) at 300--1000~m${}^2$ collector area.
     Cross-checked against the TMX-integrated 48\% demonstration
@@ -2196,9 +2216,9 @@ costed under CAS22.01.06 and the expander):
     \$10--17~M, central \$12~M.
 \end{itemize}
 
-The hardware subtotal is \$78--152~M, central \$109~M.  Adding 15\%
+The hardware subtotal is \$78--152~M, central \$109~M. Adding 15\%
 installation (NOAK) gives \$90--175~M total, central \$125~M, which
-is the value used for $c_{\text{dec}}$.  Uncertainty: $\pm 35\%$,
+is the value used for $c_{\text{dec}}$. Uncertainty: $\pm 35\%$,
 dominated by the HV power conditioning scale-up factor and the
 plant-scale tank fabrication unit cost.
 
@@ -2325,17 +2345,17 @@ or cooling towers.
 
 The model supports three thermal cycles, selected by the user: steam
 Rankine, supercritical CO$_2$ (sCO$_2$) Brayton, and combined cycle
-(gas topping plus steam bottoming).  The cycle determines the thermal
+(gas topping plus steam bottoming). The cycle determines the thermal
 conversion efficiency $\eta_{\text{th}}$ and the per-MW coefficients for
-CAS23 (turbine plant) and CAS26 (heat rejection).  CAS24 (electrical
+CAS23 (turbine plant) and CAS26 (heat rejection). CAS24 (electrical
 equipment) and CAS25 (miscellaneous plant) are cycle-independent.
 
 CAS23 (turbine plant) scales with thermal electric power
 $P_{\text{the}} = \eta_{\text{th}} P_{\text{th}}$, and CAS26 (heat
-rejection) scales with total thermal power $P_{\text{th}}$.  This ensures
+rejection) scales with total thermal power $P_{\text{th}}$. This ensures
 both accounts auto-zero for pure direct energy conversion plants
 ($\eta_{\text{th}} = 0$) and scale correctly for hybrid DEC-plus-thermal
-configurations.  CAS24 and CAS25 scale with gross electric $P_{\text{et}}$:
+configurations. CAS24 and CAS25 scale with gross electric $P_{\text{et}}$:
 \begin{equation}
 \label{eq:bop}
 C_{23} = n_{\text{mod}} \, P_{\text{the}} \, c_{23}, \quad
@@ -2365,13 +2385,13 @@ CAS & Scope & Rankine & sCO$_2$ & Combined \\
 
 The Rankine coefficients derive from the ARIES cost-account tradition
 \citep{waganer2013}, calibrated against the NETL \textit{Cost and
-Performance Baseline for Fossil Energy Plants} \citep{netl2022}.  Pre-inflation
+Performance Baseline for Fossil Energy Plants} \citep{netl2022}. Pre-inflation
 (2019\$) values are escalated by a CPI factor of 1.22.
 
 The sCO$_2$ Brayton efficiency of $\eta_{\text{th}} = 0.47$ reflects the
 DOE/Sandia target of 45--50\% for recompression Brayton cycles at nuclear
 heat source temperatures (500--700$^\circ$C)
-\citep{doe_qtr2015_sco2,sandia_aec}.  The CAS23 coefficient is 22\% below
+\citep{doe_qtr2015_sco2,sandia_aec}. The CAS23 coefficient is 22\% below
 Rankine: sCO$_2$ turbomachinery is 85\% smaller by volume, but
 recuperators add cost, netting 20\% overall reduction
 \citep{ncepu_sco2_comparison}.
@@ -2379,7 +2399,7 @@ recuperators add cost, netting 20\% overall reduction
 The combined cycle efficiency of $\eta_{\text{th}} = 0.53$ is derived from
 NGCC performance ($>$60\%, \citealt{netl2022}), adjusted downward for fusion
 heat source temperatures (600$^\circ$C vs.\ 1500$^\circ$C gas
-turbine inlet).  The CAS23 coefficient is 19\% above Rankine due to dual
+turbine inlet). The CAS23 coefficient is 19\% above Rankine due to dual
 turbomachinery sets (topping plus bottoming) and a heat recovery steam generator (HRSG).
 
 Cross-checks against the NREL ATB 2024 nuclear cost breakdown
@@ -2411,7 +2431,7 @@ $s(\mathrm{form})$ in CAS22.01.01) and a \texttt{BlanketFill} (bulk
 material chemistry, driving $\phi(\mathrm{fill})$ here). Compatibility
 between form and fill is enforced at validation time.
 
-Table~\ref{tab:cas27_fills} lists the chemistry factors and their cost
+\Cref{tab:cas27_fills} lists the chemistry factors and their cost
 basis, calibrated relative to the D-T PbLi baseline (4{,}000 tonnes of
 Pb-17Li eutectic at \$3/kg plus enriched lithium premium, totaling
 \$15M at 1\,GWe).
@@ -2449,12 +2469,12 @@ breeding blanket), recovering minimal special-material inventory.
 \label{sec:cas28}
 
 CAS28 covers a plant-wide digital twin for operator training, predictive
-maintenance, and operational optimization.  A fixed cost of \$5M is adopted,
+maintenance, and operational optimization. A fixed cost of \$5M is adopted,
 independent of plant size, fuel type, or number of modules: the digital twin
 is software-dominated, and its complexity scales with the number of modeled
 subsystems rather than plant capacity.
 
-The \$5\,M figure is anchored to disclosed advanced-reactor digital-twin
+The \$5M figure is anchored to disclosed advanced-reactor digital-twin
 budgets. Under the DOE ARPA-E GEMINA program \citep{arpae_gemina2020}, the
 University of Michigan received \$5.2M to develop a scalable reactor digital
 twin (first validated on a campus molten-salt loop, then applied to the
@@ -2475,10 +2495,10 @@ CAS29 is a percentage-based contingency allowance on the sum of CAS21--28:
 C_{29} = f_{\text{cont}} \times \sum_{i=21}^{28} C_i
 \end{equation}
 \noindent where $f_{\text{cont}} = 10\%$ for FOAK and $0\%$ for NOAK,
-following the Gen-IV EMWG convention \citep{emwg2007}.  The 10\% FOAK
+following the Gen-IV EMWG convention \citep{emwg2007}. The 10\% FOAK
 contingency is conservative relative to the EMWG recommendation of 15--20\%
 for advanced reactors; individual CAS22 sub-accounts already include
-conservative fabrication markups.  The 0\% NOAK contingency reflects the
+conservative fabrication markups. The 0\% NOAK contingency reflects the
 assumption of a mature, standardised design with resolved construction risk.
 
 
@@ -2567,7 +2587,7 @@ CAS40 and CAS70 share the same underlying staff pool but cover
 different time periods. CAS40 is the capital cost of \emph{building}
 the operations team (pre-COD); CAS70 is the annual cost of
 \emph{running} it (post-COD). Both are derived from the same
-fuel-specific staffing analysis (Section~\ref{sec:cas70}), applied
+fuel-specific staffing analysis (\cref{sec:cas70}), applied
 through different cost models. There is no double-counting.
 
 \subsubsection{Methodology}
@@ -2777,16 +2797,16 @@ CAS70 comprises two sub-accounts:
   a fuel-dependent base cost per MW of net electric capacity.
 \item \textbf{CAS72}: Annualized scheduled component replacement.
   Replacement costs are discounted to present value at the time of
-  each replacement event and annualized via the CRF.  For pulsed
+  each replacement event and annualized via the CRF. For pulsed
   inductive DEC concepts, CAS72 includes capacitor bank scheduled
   replacement, whose lifetime is derived from cycle count and
-  repetition rate.  For the electromagnetic-gun concepts (sheared-flow
+  repetition rate. For the electromagnetic-gun concepts (sheared-flow
   Z-pinch and plasma jet), CAS72 also includes formation-electrode
   replacement: the plasma-facing coaxial-gun electrodes erode under high
-  current density.  Because their shot lifetime can imply sub-annual
+  current density. Because their shot lifetime can imply sub-annual
   replacement, this term is taken as a levelized annual recurring cost,
   $c_{\text{rep}}\,C_{220104}\,N_{\text{shots/yr}}/N_{\text{life}}$, rather
-  than as discrete events.  Here $c_{\text{rep}} = 0.5$ is the
+  than as discrete events. Here $c_{\text{rep}} = 0.5$ is the
   consumable-electrode share of the driver capital $C_{220104}$ (range
   $0.25$--$0.75$), $N_{\text{life}} = 10^{8}$ shots is the electrode
   lifetime before replacement (range $10^{7}$--$10^{9}$, high uncertainty
@@ -2804,7 +2824,7 @@ then adds non-labor costs (maintenance materials, insurance, supplies,
 regulatory fees, waste treatment, and general overhead). The staffing
 model is grounded in two reference datasets: the S-PRISM sodium fast
 reactor staffing estimate \citep{boardman2000} (494~staff for a
-1,520\,MWe fission plant) and INL's first-principles SFR cost
+1{,}520\,MWe fission plant) and INL's first-principles SFR cost
 estimation \citep{prosser2024}, which scales the S-PRISM baseline to
 different plant sizes. Conventional gas CCGT staffing data (25--35
 staff for 1\,GWe) anchors the lower bound.
@@ -2998,7 +3018,7 @@ escalation factors used are 2.295 for ARIES-AT (1992~USD $\to$
 
 ARC \citep{sorbom2015arc} is a 270\,MWe demountable-coil high-field
 tokamak with REBCO HTS magnets and a FLiBe blanket. The inputs used
-are summarised in \cref{tab:arc-inputs}.
+are summarized in \cref{tab:arc-inputs}.
 
 \begin{table}[h]
 \centering
@@ -3023,13 +3043,13 @@ Coils & REBCO HTS, demountable & \\
 
 % Sorbom 2015 p. 25, Section 6.6 "Cost feasibility": fabricated
 % component cost = $5.56B in FY2014 USD. Escalated: 5560 * 1.360 = 7562.
-The published fabricated-component cost is \$5,560\,M (FY2014~USD,
-\citep{sorbom2015arc} p.~25, Section 6.6), or \$7,562\,M after
+The published fabricated-component cost is \$5{,}560M (FY2014~USD,
+\citep{sorbom2015arc} p.~25, Section 6.6), or \$7{,}562M after
 escalation to 2025~USD. \texttt{1costingfe} predicts an overnight
-capital cost of \$2,721\,M, an overnight specific cost of
-\$10,078\,/kWe, and an LCOE of \$139.9\,/MWh under the framework's
+capital cost of \$2{,}721M, an overnight specific cost of
+10{,}078~\$/kWe, and an LCOE of 139.9~\$/MWh under the framework's
 NOAK default assumptions. The implied delta on overnight cost is
-$-64$\,\%. Sorbom's volumetric estimate uses a single \$1.06\,M/tonne
+$-64$\,\%. Sorbom's volumetric estimate uses a single \$1.06M/tonne
 fabricated multiplier averaged across four heritage burning-plasma
 designs (FIRE, BPX, PCAST5, ARIES-RS), with the dominant contribution
 from a 4{,}350-tonne SS316LN structural support priced at \$4.6\,B.
@@ -3046,7 +3066,7 @@ ARIES-AT \citep{najmabadi2006ariesat} is a 1\,GWe advanced-tokamak
 plant with low-temperature superconducting Nb$_3$Sn coils, a
 SiC-composite He-cooled Brayton power cycle, and a published
 per-account cost table that this section uses as the published-side
-reference. The inputs used are summarised in \cref{tab:aries-inputs}.
+reference. The inputs used are summarized in \cref{tab:aries-inputs}.
 
 \begin{table}[h]
 \centering
@@ -3189,7 +3209,7 @@ results in \cref{sec:benchmark} are recorded by the scripts
 \texttt{benchmark\_arc.py}, \texttt{benchmark\_aries\_at.py}, and
 \texttt{make\_benchmark\_bars.py}, located in
 \texttt{docs/papers/1costingfe\_paper/scripts/}.
-The Section~\ref{sec:tour} walkthrough is recorded by
+The \cref{sec:tour} walkthrough is recorded by
 \texttt{examples/external\_physics\_handoff.py} (the rollup table)
 and \texttt{docs/papers/1costingfe\_paper/scripts/make\_tornado.py}
 (the sensitivity tornado figure).
@@ -3451,7 +3471,7 @@ recirculating powers directly:
 P_{\text{et}} &= P_{\text{net}}^* \cdot \frac{Q_{\text{eng}}}{Q_{\text{eng}} - 1}, \\
 P_{\text{recirc}} &= P_{\text{et}} / Q_{\text{eng}}.
 \end{align}
-The driver power follows from the recirculating budget.  For thermal
+The driver power follows from the recirculating budget. For thermal
 conversion, $P_{\text{recirc}} = P_{\text{drv}}/\eta_{\text{pin}}
 + P_{\text{fixed}}$; for inductive DEC,
 $P_{\text{recirc}} = P_{\text{drv}}(1/\eta_{\text{pin}} - 1)
@@ -3459,7 +3479,7 @@ $P_{\text{recirc}} = P_{\text{drv}}(1/\eta_{\text{pin}} - 1)
 pumping, subsystem, auxiliary, cryogenic, target, and coil loads.
 Then $E_{\text{drv}} = P_{\text{drv}} / f_{\text{rep}}$, and
 $P_{\text{fus}}$ is obtained from the forward energy balance
-with the derived $E_{\text{drv}}$.  The inversion is closed-form
+with the derived $E_{\text{drv}}$. The inversion is closed-form
 (linear in $P_{\text{drv}}$ and $P_{\text{fus}}$).
 
 \subsection{Steady-State Inverse}
@@ -3470,7 +3490,7 @@ problem is to find the root
 $P_{\text{net}}(P_{\text{fus}}) = P_{\text{net}}^*$.
 
 For fixed plasma parameters $(n_e, T_e, B)$, the radiated power
-$P_{\text{rad}}$ is independent of $P_{\text{fus}}$.  However, the
+$P_{\text{rad}}$ is independent of $P_{\text{fus}}$. However, the
 effective heating power (\cref{eq:p-input-eff}) introduces a
 nonlinearity: when $P_{\text{rad}} > P_{\text{cp}} + P_{\text{in}}$,
 the effective heating depends on $P_{\text{cp}} = f_{\text{cp}} \,
@@ -3492,8 +3512,8 @@ $P_{\text{fus}}$, with two regimes:
 
 \noindent The inverse solver uses Newton iteration with an analytical
 piecewise-constant Jacobian, initialized from the closed-form uncapped
-solution.  Because $P_{\text{net}}(P_{\text{fus}})$ is piecewise linear,
-convergence is exact in at most two iterations.  The Newton step is:
+solution. Because $P_{\text{net}}(P_{\text{fus}})$ is piecewise linear,
+convergence is exact in at most two iterations. The Newton step is:
 
 \begin{equation}
 P_{\text{fus}}^{(k+1)} = P_{\text{fus}}^{(k)}
@@ -3510,7 +3530,7 @@ differentiation during sensitivity analysis.
 \section{Reference Walkthrough Script}
 \label{sec:appendix-handoff-script}
 
-The full reference script for the Section~\ref{sec:tour} walkthrough is
+The full reference script for the \cref{sec:tour} walkthrough is
 reproduced below. It is the canonical 1\,GWe D-${}^3$He steady-state
 mirror reference cited in \cref{tab:tour-inputs,tab:tour-rollup}, and
 lives in the repository at
