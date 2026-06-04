@@ -50,6 +50,31 @@ def levelized_annual_cost(
     return crf * pv
 
 
+def levelized_replacement_cost(
+    event_cost: float,
+    t_replace: float,
+    interest_rate: float,
+    plant_lifetime: float,
+) -> float:
+    """Level annual cost of replacing an item every ``t_replace`` years.
+
+    Closed form of the discrete replacement-PV series used by the core,
+    DEC-grid, and cap-bank blocks, with no iteration cap so it is exact for
+    sub-annual to multi-decade intervals. Nominal discount only, PV at
+    operation start, annualized by CRF. The first set is capital, so only
+    replacements beyond it are charged: n_rep = ceil(n / t) - 1.
+
+    pv = event_cost * sum_{k=1}^{n_rep} s^k = event_cost * s (1 - s^n_rep)/(1 - s),
+    with s = (1 + i)^(-t_replace). n_rep = 0 gives pv = 0.
+    """
+    i = interest_rate
+    n = plant_lifetime
+    s = (1.0 + i) ** (-t_replace)  # per-interval discount, < 1 for i > 0
+    n_rep = jnp.maximum(0.0, jnp.ceil(n / t_replace) - 1.0)
+    pv = event_cost * s * (1.0 - s**n_rep) / (1.0 - s)
+    return pv * compute_crf(i, n)
+
+
 def compute_lcoe(
     cas90: float,
     cas70: float,

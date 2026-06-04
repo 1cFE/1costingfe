@@ -1,7 +1,12 @@
+import math
+
+import pytest
+
 from costingfe.layers.economics import (
     compute_crf,
     compute_lcoe,
     levelized_annual_cost,
+    levelized_replacement_cost,
 )
 
 
@@ -98,3 +103,34 @@ def test_lcoe_sanity():
         availability=0.85,
     )
     assert 10 < lcoe < 200
+
+
+# ---- levelized_replacement_cost tests ----
+
+
+def _manual_repl(event_cost, t_replace, i, n):
+    s = (1.0 + i) ** (-t_replace)
+    n_rep = max(0, math.ceil(n / t_replace) - 1)
+    pv = sum(event_cost * s**k for k in range(1, n_rep + 1))
+    crf = (i * (1 + i) ** n) / ((1 + i) ** n - 1)
+    return pv * crf
+
+
+def test_repl_matches_geometric_sum_multi_year():
+    # interval 5 yr over 30 yr plant -> 5 replacements
+    got = levelized_replacement_cost(100.0, 5.0, 0.07, 30)
+    assert got == pytest.approx(_manual_repl(100.0, 5.0, 0.07, 30), rel=1e-6)
+
+
+def test_repl_no_cap_at_many_events():
+    # sub-annual interval -> ~80 events; closed form must NOT truncate at 20
+    t = 1.0e8 / (
+        10.0 * 8760.0 * 3600.0 * 0.85
+    )  # cap_shot_lifetime / shots_per_yr at 10 Hz
+    got = levelized_replacement_cost(100.0, t, 0.07, 30)
+    assert got == pytest.approx(_manual_repl(100.0, t, 0.07, 30), rel=1e-6)
+
+
+def test_repl_zero_when_item_outlives_plant():
+    # interval 40 yr > 30 yr plant -> 0 replacements beyond the initial set
+    assert levelized_replacement_cost(100.0, 40.0, 0.07, 30) == pytest.approx(0.0)
