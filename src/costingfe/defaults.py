@@ -98,6 +98,14 @@ class CostingConstants:
     driver_laser_per_mj: float = 205.0  # M$/MJ; optics + diodes. With the ~$5/J
     #   C220107 cap bank the laser totals ~$210/J = aggressive DPSSL NOAK (diode
     #   roadmap to ~$0.007/W). Published DPSSL NOAK $210-700/J, FOAK $700-1000/J.
+    # KrF excimer (NRL Electra / Xcimer) and flashlamp Nd:Glass (NIF-class)
+    # driver capital, $/MJ of pulse energy, selected by laser_driver_type for
+    # LASER_IFE. KrF 40 leans to the Xcimer/ASPEN large-aperture-optics claim
+    # (range 20-200; NRL/Sethian engineering baseline ~200). Nd:Glass 1000 from
+    # NIF $3.5-4.2B / 1.1-1.9 MJ UV (~$2000/J facility, driver-only ~half).
+    # See docs/account_justification/CAS22_reactor_components.md (C220104).
+    driver_krf_per_mj: float = 40.0  # M$/MJ KrF excimer driver hardware
+    driver_ndglass_per_mj: float = 1000.0  # M$/MJ flashlamp Nd:Glass driver
     driver_heavy_ion_per_mj: float = 60.0  # M$/MJ beam energy (heavy-ion accelerator)
     driver_plasma_jet_per_mj: float = 4.0  # M$/MJ EM plasma-gun pulse energy
     driver_staged_zpinch_per_mj: float = 1.5  # M$/MJ sheared-flow gun + gas inj.
@@ -175,6 +183,28 @@ class CostingConstants:
     # density. High uncertainty, no NOAK data.
     electrode_shot_lifetime: float = 1.0e8  # Shots before replacement. Range: 1e7-1e9
     electrode_replace_frac: float = 0.5  # Consumable share of C220104. Range 0.25-0.75
+    # CAS72 laser-IFE driver scheduled replacement, per architecture. Each
+    # subsystem: replace_frac = share of C220104; shot_lifetime = NOAK
+    # projection (shots), NOT demonstrated. Dispatched by laser_driver_type via
+    # the shared geometric replacement helper. KrF/Nd:Glass cost shares are
+    # engineering estimates. See CAS22_reactor_components.md (CAS72 O&M).
+    # DPSSL (LIFE/HiPER): diodes are ~plant-life (≈capital), optics dominate O&M.
+    dpssl_diode_replace_frac: float = 0.50  # pump diodes (dominant cost share)
+    dpssl_diode_shot_lifetime: float = 1.0e10  # NOAK ≈ plant life; demonstrated ~1e8
+    dpssl_crystal_replace_frac: float = 0.03  # KDP/DKDP tripler crystals (small)
+    dpssl_crystal_shot_lifetime: float = 3.0e9  # long-lived
+    dpssl_optics_replace_frac: float = 0.05  # final optics / GIMM / debris shields
+    dpssl_optics_shot_lifetime: float = 3.0e8  # GIMM NOAK target; demonstrated ~1e5
+    # KrF excimer (engineering estimates)
+    krf_foil_replace_frac: float = 0.04  # hibachi foil + windows
+    krf_foil_shot_lifetime: float = (
+        3.0e8  # Electra durability target; demonstrated ~1e4-1e5
+    )
+    krf_ebeam_replace_frac: float = 0.06  # e-beam diode + gas system
+    krf_ebeam_shot_lifetime: float = 3.0e8
+    # Nd:Glass (NIF-class): flashlamps are Xe-arc-limited; glass slabs are capital
+    ndglass_lamp_replace_frac: float = 0.10  # Xe flashlamps
+    ndglass_lamp_shot_lifetime: float = 1.0e4  # demonstrated O(1e3-1e4); arc-limited
 
     # Pulsed radiation fraction defaults (fraction of charged-particle energy)
     f_rad_dt: float = 0.10

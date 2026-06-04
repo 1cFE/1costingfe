@@ -730,3 +730,17 @@ def test_cas72_core_matches_helper():
     assert float(c72) == pytest.approx(
         _manual_repl_check(cost_per_event, t_core, 0.07, 30), rel=1e-6
     )
+
+
+def test_laser_driver_capital_and_subsystem_defaults():
+    assert CC.driver_laser_per_mj == pytest.approx(205.0)
+    assert CC.driver_krf_per_mj == pytest.approx(40.0)
+    assert CC.driver_ndglass_per_mj == pytest.approx(1000.0)
+    # DPSSL subsystem NOAK pairs
+    assert CC.dpssl_diode_replace_frac == pytest.approx(0.50)
+    assert CC.dpssl_diode_shot_lifetime == pytest.approx(1.0e10)
+    assert CC.dpssl_crystal_shot_lifetime == pytest.approx(3.0e9)
+    assert CC.dpssl_optics_shot_lifetime == pytest.approx(3.0e8)
+    # KrF + Nd:Glass
+    assert CC.krf_foil_shot_lifetime == pytest.approx(3.0e8)
+    assert CC.ndglass_lamp_shot_lifetime == pytest.approx(1.0e4)

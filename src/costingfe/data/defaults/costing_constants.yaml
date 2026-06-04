@@ -238,6 +238,28 @@ c_inv_per_kw_net: 150.0      # Grid-tie inverter ($/kW_net)
 # Pulsed inductive DEC — CAS72 cap replacement
 cap_shot_lifetime: 1.0e+8    # Shots, NOAK baseline. Sensitivity: 1e7-1e9
 
+# CAS22.01.04 laser-IFE driver capital by architecture (M$/MJ, selected by
+# laser_driver_type). DPSSL 205 (existing); KrF 40 (Xcimer/ASPEN-leaning,
+# range 20-200); Nd:Glass 1000 (NIF-class). See CAS22_reactor_components.md.
+driver_laser_per_mj: 205.0
+driver_krf_per_mj: 40.0
+driver_ndglass_per_mj: 1000.0
+
+# CAS72 laser-IFE driver scheduled replacement (per architecture).
+# replace_frac = share of C220104; shot_lifetime = NOAK projection (shots).
+dpssl_diode_replace_frac: 0.50
+dpssl_diode_shot_lifetime: 1.0e+10
+dpssl_crystal_replace_frac: 0.03
+dpssl_crystal_shot_lifetime: 3.0e+9
+dpssl_optics_replace_frac: 0.05
+dpssl_optics_shot_lifetime: 3.0e+8
+krf_foil_replace_frac: 0.04
+krf_foil_shot_lifetime: 3.0e+8
+krf_ebeam_replace_frac: 0.06
+krf_ebeam_shot_lifetime: 3.0e+8
+ndglass_lamp_replace_frac: 0.10
+ndglass_lamp_shot_lifetime: 1.0e+4
+
 # Pulsed radiation fraction defaults (frac of charged-particle energy)
 f_rad_dt: 0.10
 f_rad_dd: 0.08
