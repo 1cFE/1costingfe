@@ -26,6 +26,7 @@ from costingfe.types import (
     ConfinementConcept,
     ConfinementFamily,
     Fuel,
+    LaserDriverType,
     PulsedConversion,
 )
 
@@ -164,6 +165,7 @@ def cas22_reactor_plant_equipment(
     vac_op_pressure_pa: float,
     e_driver_mj: float = 0.0,  # Per-pulse driver energy [MJ]; $/J laser/accel basis
     e_preheat_mj: float = 0.0,  # Per-pulse preheat laser energy [MJ]; 0 = no preheat
+    laser_driver_type=None,  # LaserDriverType for LASER_IFE; selects C220104 $/MJ
     # Pulsed DEC parameters
     pulsed_conversion=None,
     e_stored_mj: float = 0.0,
@@ -379,8 +381,19 @@ def cas22_reactor_plant_equipment(
         # MAGLIF is in neither map: its main driver is electrical (C220107). Only
         # laser preheat lands here, costed per joule of preheat pulse energy, so a
         # magnetized-compression concept with e_preheat_mj=0 pays nothing.
+        # For LASER_IFE the per-MJ coefficient is set by the driver architecture
+        # (DPSSL/KrF/Nd:Glass). The MagLIF preheat line stays DPSSL-class.
+        _LASER_DRIVER_PER_MJ = {
+            LaserDriverType.DPSSL: cc.driver_laser_per_mj,
+            LaserDriverType.KRF: cc.driver_krf_per_mj,
+            LaserDriverType.NDGLASS: cc.driver_ndglass_per_mj,
+        }
+        if concept == ConfinementConcept.LASER_IFE and laser_driver_type is not None:
+            drv_per_mj = _LASER_DRIVER_PER_MJ[laser_driver_type]
+        else:
+            drv_per_mj = _DRIVER_COST_PER_MJ.get(concept, 0.0)
         c220104 = (
-            _DRIVER_COST_PER_MJ.get(concept, 0.0) * e_driver_mj
+            drv_per_mj * e_driver_mj
             + _DRIVER_COST_PER_MW.get(concept, 0.0) * p_driver
             + cc.laser_preheat_per_mj * e_preheat_mj
         )

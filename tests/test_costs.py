@@ -21,7 +21,8 @@ from costingfe.layers.economics import (
     compute_crf,
     levelized_annual_cost,
 )
-from costingfe.types import ConfinementConcept, Fuel
+from costingfe.model import CostModel
+from costingfe.types import ConfinementConcept, Fuel, LaserDriverType
 
 CC = load_costing_constants()
 
@@ -744,3 +745,22 @@ def test_laser_driver_capital_and_subsystem_defaults():
     # KrF + Nd:Glass
     assert CC.krf_foil_shot_lifetime == pytest.approx(3.0e8)
     assert CC.ndglass_lamp_shot_lifetime == pytest.approx(1.0e4)
+
+
+def _laser_c220104(driver_type):
+    model = CostModel(
+        concept=ConfinementConcept.LASER_IFE,
+        fuel=Fuel.DT,
+        laser_driver_type=driver_type,
+    )
+    result = model.forward(net_electric_mw=1000.0, availability=0.85, lifetime_yr=30)
+    return float(result.cas22_detail["C220104"])
+
+
+def test_c220104_branches_by_driver_type():
+    """C220104 = coeff * E_drv; KrF/Nd:Glass scale vs DPSSL by 40/205 and 1000/205."""
+    dpssl = _laser_c220104(LaserDriverType.DPSSL)
+    krf = _laser_c220104(LaserDriverType.KRF)
+    ndglass = _laser_c220104(LaserDriverType.NDGLASS)
+    assert krf == pytest.approx(dpssl * 40.0 / 205.0, rel=1e-6)
+    assert ndglass == pytest.approx(dpssl * 1000.0 / 205.0, rel=1e-6)
