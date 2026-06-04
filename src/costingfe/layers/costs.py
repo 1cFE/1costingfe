@@ -270,6 +270,7 @@ def cas70_om(
     pulsed_conversion=None,
     f_rep=0.0,
     concept=None,
+    laser_driver_type=None,
 ):
     """CAS70: Annualized O&M + scheduled replacement. Returns (total, cas71, cas72).
 
@@ -373,6 +374,56 @@ def cas70_om(
         )
         cas72 = cas72 + levelized_annual_cost(
             annual_electrode, interest_rate, inflation_rate, lifetime_yr, t_project
+        )
+
+    # Laser IFE driver scheduled replacement (DPSSL / KrF / Nd:Glass).
+    # Driver subsystems wear out at very different shot lifetimes — DPSSL
+    # final optics every ~5e7 shots (NOAK stretch), KDP every ~1e9, diodes
+    # every ~3e9. Replacement intervals are sub-annual for the most frequent
+    # subsystem so we model the full driver replacement as a levelized
+    # annual recurring cost, dispatching on `laser_driver_type` to apply
+    # the appropriate (replace_frac, shot_lifetime) pairs.
+    #
+    # All shot lifetimes default to NOAK stretch targets from LIFE / HiPER /
+    # NRL Electra mature-deployment projections — NOT what current research
+    # labs have demonstrated. See defaults.py docstrings for the source
+    # anchor and demonstrated/NOAK comparison per subsystem.
+    if (
+        concept == ConfinementConcept.LASER_IFE
+        and f_rep > 0
+        and laser_driver_type is not None
+    ):
+        from costingfe.types import LaserDriverType
+
+        n_shots_per_year = f_rep * 8760.0 * 3600.0 * availability
+        c220104 = cas22_detail.get("C220104", 0.0) * n_mod
+
+        if laser_driver_type == LaserDriverType.DPSSL:
+            annual_driver = (
+                cc.dpssl_optics_replace_frac * c220104 * n_shots_per_year
+                / cc.dpssl_optics_shot_lifetime
+                + cc.dpssl_kdp_replace_frac * c220104 * n_shots_per_year
+                / cc.dpssl_kdp_shot_lifetime
+                + cc.dpssl_diode_replace_frac * c220104 * n_shots_per_year
+                / cc.dpssl_diode_shot_lifetime
+            )
+        elif laser_driver_type == LaserDriverType.KRF:
+            annual_driver = (
+                cc.krf_window_replace_frac * c220104 * n_shots_per_year
+                / cc.krf_window_shot_lifetime
+                + cc.krf_tube_replace_frac * c220104 * n_shots_per_year
+                / cc.krf_tube_shot_lifetime
+            )
+        elif laser_driver_type == LaserDriverType.NDGLASS:
+            annual_driver = (
+                cc.ndglass_lamp_replace_frac * c220104 * n_shots_per_year
+                / cc.ndglass_lamp_shot_lifetime
+            )
+        else:
+            annual_driver = 0.0
+
+        cas72 = cas72 + levelized_annual_cost(
+            annual_driver, interest_rate, inflation_rate, lifetime_yr, t_project
         )
 
     return cas71 + cas72, cas71, cas72

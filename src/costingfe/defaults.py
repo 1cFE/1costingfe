@@ -176,6 +176,47 @@ class CostingConstants:
     electrode_shot_lifetime: float = 1.0e8  # Shots before replacement. Range: 1e7-1e9
     electrode_replace_frac: float = 0.5  # Consumable share of C220104. Range 0.25-0.75
 
+    # CAS72 laser-IFE driver scheduled replacement (LASER_IFE concepts:
+    # DPSSL/KrF/Nd:Glass). Each driver type has its own (replace_frac,
+    # shot_lifetime) pair per replaceable subsystem; the cas70_om block
+    # dispatches on LaserDriverType. Replace fractions are share of C220104
+    # (driver capex); shot lifetimes are NOAK stretch targets from LIFE,
+    # HiPER, and NRL Electra mature-deployment projections — NOT what
+    # current research labs have demonstrated.
+    #
+    # DPSSL (Diode-Pumped Solid-State Laser — LIFE / HiPER / Focused
+    # Energy / Marvel). Three replaceable subsystems:
+    #   - Final optics (debris shields, grazing-incidence mirrors). Most
+    #     frequent replacement; small capex share.
+    #   - KDP/DKDP frequency conversion crystals. Moderate frequency;
+    #     moderate capex share.
+    #   - Pump diodes. Least frequent; largest capex share (~35% of driver).
+    # NOAK lifetimes are LIFE's mature-line + stretch-goal projections
+    # (Dunne et al., LLNL-TR-462113, 2010; LIFE final-optics whitepaper).
+    dpssl_optics_replace_frac: float = 0.04  # 4% of driver capex (range 3-5%)
+    dpssl_optics_shot_lifetime: float = 1.0e9  # NOAK stretch (demonstrated ~1e5; LIFE target)
+    dpssl_kdp_replace_frac: float = 0.12  # 12% of driver capex (range 10-15%)
+    dpssl_kdp_shot_lifetime: float = 3.0e9  # NOAK mature-line (demonstrated ~1e8)
+    dpssl_diode_replace_frac: float = 0.35  # 35% of driver capex (range 30-40%)
+    dpssl_diode_shot_lifetime: float = 1.0e10  # NOAK stretch (LIFE mature-line basis ~1e10)
+
+    # KrF excimer (NRL Nike / Electra heritage). Two replaceable subsystems:
+    #   - Window + gas (most frequent; small capex share).
+    #   - Amplifier tubes (less frequent; substantial capex share).
+    # NOAK lifetimes are NRL Electra mature-deployment projections.
+    krf_window_replace_frac: float = 0.02  # 2% of driver capex (range 1-3%)
+    krf_window_shot_lifetime: float = 1.0e9  # NOAK stretch (demonstrated ~1e4)
+    krf_tube_replace_frac: float = 0.25  # 25% of driver capex (range 20-30%)
+    krf_tube_shot_lifetime: float = 5.0e9  # NOAK stretch (demonstrated ~1e8)
+
+    # Nd:Glass (flashlamp-pumped, NIF-class). One replaceable subsystem:
+    #   - Flashlamps. Fundamentally Xe-arc-limited; cannot reach DPSSL/KrF
+    #     lifetimes even at NOAK. Use NIF best-case extension as upper bound.
+    #     This concept type is FLAGGED as commercially marginal — the
+    #     replacement cost will dominate LCOE and surface that fact.
+    ndglass_lamp_replace_frac: float = 0.08  # 8% of driver capex (range 5-10%)
+    ndglass_lamp_shot_lifetime: float = 2.0e8  # NOAK best-case (NIF actual ~5e4); still marginal vs DPSSL
+
     # Pulsed radiation fraction defaults (fraction of charged-particle energy)
     f_rad_dt: float = 0.10
     f_rad_dd: float = 0.08

@@ -691,3 +691,158 @@ def test_cas72_electrode_replacement_magnitude():
     t_project = _total_project_time(CC, 6, Fuel.DT, True)
     expected = levelized_annual_cost(annual, 0.07, 0.02, 30, t_project)
     assert (cas72_gun - cas72_bare) == pytest.approx(expected)
+
+
+# ---------------------------------------------------------------------------
+# CAS72 laser IFE driver scheduled replacement (DPSSL / KrF / Nd:Glass).
+# Calibrated to LIFE / HiPER / NRL Electra mature-deployment NOAK projections.
+# ---------------------------------------------------------------------------
+
+
+from costingfe.types import LaserDriverType  # noqa: E402
+
+_LASER_KWARGS = dict(
+    cas22_detail={"C220101": 0.0, "C220104": 1000.0, "C220108": 0.0},
+    replaceable_accounts=CC.replaceable_accounts,
+    n_mod=1,
+    p_net=1000.0,
+    availability=0.85,
+    inflation_rate=0.02,
+    interest_rate=0.07,
+    lifetime_yr=30,
+    core_lifetime=CC.core_lifetime(Fuel.DT),
+    construction_time=6,
+    fuel=Fuel.DT,
+    noak=True,
+    f_rep=10.0,  # 10 Hz — LIFE/HiPER baseline rep-rate
+    concept=ConfinementConcept.LASER_IFE,
+)
+
+
+def test_cas72_dpssl_driver_replacement_present():
+    """DPSSL driver replacement adds to CAS72 vs no-driver-type baseline."""
+    _, _, cas72_dpssl = cas70_om(
+        CC, laser_driver_type=LaserDriverType.DPSSL, **_LASER_KWARGS
+    )
+    _, _, cas72_none = cas70_om(CC, laser_driver_type=None, **_LASER_KWARGS)
+    assert cas72_dpssl > cas72_none
+
+
+def test_cas72_dpssl_replacement_magnitude():
+    """DPSSL annual driver replacement = sum over (optics, KDP, diodes) of
+    replace_frac * C220104 * shots/yr / shot_lifetime, then levelized."""
+    _, _, cas72_dpssl = cas70_om(
+        CC, laser_driver_type=LaserDriverType.DPSSL, **_LASER_KWARGS
+    )
+    _, _, cas72_none = cas70_om(CC, laser_driver_type=None, **_LASER_KWARGS)
+    n_shots = 10.0 * 8760.0 * 3600.0 * 0.85  # f_rep * sec/yr * availability
+    c220104 = 1000.0  # M$
+    annual = (
+        CC.dpssl_optics_replace_frac * c220104 * n_shots / CC.dpssl_optics_shot_lifetime
+        + CC.dpssl_kdp_replace_frac * c220104 * n_shots / CC.dpssl_kdp_shot_lifetime
+        + CC.dpssl_diode_replace_frac * c220104 * n_shots / CC.dpssl_diode_shot_lifetime
+    )
+    t_project = _total_project_time(CC, 6, Fuel.DT, True)
+    expected = levelized_annual_cost(annual, 0.07, 0.02, 30, t_project)
+    assert (cas72_dpssl - cas72_none) == pytest.approx(expected, rel=1e-6)
+
+
+def test_cas72_dpssl_realistic_opex_range():
+    """At a $1B driver, 10 Hz, 0.85 availability, 30yr / 7% WACC plant, DPSSL
+    NOAK replacement contribution should be in the LIFE-projected range
+    (~$15-70M/yr levelized annual cost, dominated by optics at this lifetime
+    target). This is the headline check that the calibration produces
+    operationally meaningful but not absurd numbers.
+    """
+    _, _, cas72_dpssl = cas70_om(
+        CC, laser_driver_type=LaserDriverType.DPSSL, **_LASER_KWARGS
+    )
+    _, _, cas72_none = cas70_om(CC, laser_driver_type=None, **_LASER_KWARGS)
+    incremental = cas72_dpssl - cas72_none
+    # $1B driver × 10 Hz NOAK lifetimes → ~$40-70M/yr levelized
+    assert 15.0 < incremental < 80.0
+
+
+def test_cas72_krf_driver_replacement_present():
+    """KrF driver replacement adds to CAS72 vs no-driver-type baseline."""
+    _, _, cas72_krf = cas70_om(
+        CC, laser_driver_type=LaserDriverType.KRF, **_LASER_KWARGS
+    )
+    _, _, cas72_none = cas70_om(CC, laser_driver_type=None, **_LASER_KWARGS)
+    assert cas72_krf > cas72_none
+
+
+def test_cas72_krf_replacement_magnitude():
+    """KrF annual driver replacement = sum over (windows, tubes)."""
+    _, _, cas72_krf = cas70_om(
+        CC, laser_driver_type=LaserDriverType.KRF, **_LASER_KWARGS
+    )
+    _, _, cas72_none = cas70_om(CC, laser_driver_type=None, **_LASER_KWARGS)
+    n_shots = 10.0 * 8760.0 * 3600.0 * 0.85
+    c220104 = 1000.0
+    annual = (
+        CC.krf_window_replace_frac * c220104 * n_shots / CC.krf_window_shot_lifetime
+        + CC.krf_tube_replace_frac * c220104 * n_shots / CC.krf_tube_shot_lifetime
+    )
+    t_project = _total_project_time(CC, 6, Fuel.DT, True)
+    expected = levelized_annual_cost(annual, 0.07, 0.02, 30, t_project)
+    assert (cas72_krf - cas72_none) == pytest.approx(expected, rel=1e-6)
+
+
+def test_cas72_ndglass_dominates_due_to_flashlamps():
+    """Nd:Glass replacement should be much larger than DPSSL or KrF at the
+    same driver capex — this is the design intent that surfaces NIF-class
+    being commercially marginal (flashlamps cannot reach DPSSL/KrF lifetimes
+    even at NOAK)."""
+    _, _, cas72_ndglass = cas70_om(
+        CC, laser_driver_type=LaserDriverType.NDGLASS, **_LASER_KWARGS
+    )
+    _, _, cas72_dpssl = cas70_om(
+        CC, laser_driver_type=LaserDriverType.DPSSL, **_LASER_KWARGS
+    )
+    assert cas72_ndglass > cas72_dpssl
+
+
+def test_cas72_no_driver_replacement_when_not_laser_ife():
+    """Driver replacement block must only fire for LASER_IFE concepts.
+    Passing laser_driver_type to a non-laser concept is a no-op."""
+    kwargs = {**_LASER_KWARGS, "concept": ConfinementConcept.TOKAMAK}
+    _, _, cas72_with = cas70_om(
+        CC, laser_driver_type=LaserDriverType.DPSSL, **kwargs
+    )
+    _, _, cas72_without = cas70_om(CC, laser_driver_type=None, **kwargs)
+    assert cas72_with == cas72_without
+
+
+def test_cas72_no_driver_replacement_when_f_rep_zero():
+    """At f_rep=0 (steady-state lasers, conceptually impossible but still
+    a valid input), no shots per year => no replacement."""
+    kwargs = {**_LASER_KWARGS, "f_rep": 0.0}
+    _, _, cas72_with = cas70_om(
+        CC, laser_driver_type=LaserDriverType.DPSSL, **kwargs
+    )
+    _, _, cas72_without = cas70_om(CC, laser_driver_type=None, **kwargs)
+    assert cas72_with == cas72_without
+
+
+def test_dpssl_default_lifetimes_are_noak():
+    """Default shot lifetimes should be the NOAK stretch targets from LIFE/
+    HiPER literature, not what current research labs have demonstrated."""
+    # NOAK stretch / mature-line projections per the docstrings in defaults.py
+    assert CC.dpssl_optics_shot_lifetime == pytest.approx(1.0e9)
+    assert CC.dpssl_kdp_shot_lifetime == pytest.approx(3.0e9)
+    assert CC.dpssl_diode_shot_lifetime == pytest.approx(1.0e10)
+    assert CC.krf_window_shot_lifetime == pytest.approx(1.0e9)
+    assert CC.krf_tube_shot_lifetime == pytest.approx(5.0e9)
+    assert CC.ndglass_lamp_shot_lifetime == pytest.approx(2.0e8)
+
+
+def test_dpssl_replace_fractions_sum_to_realistic_capex_share():
+    """The three DPSSL replaceable subsystems (optics+KDP+diodes) should
+    together cover the bulk of driver capex (~50%, not 5% or 100%)."""
+    total_frac = (
+        CC.dpssl_optics_replace_frac
+        + CC.dpssl_kdp_replace_frac
+        + CC.dpssl_diode_replace_frac
+    )
+    assert 0.40 < total_frac < 0.60

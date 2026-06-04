@@ -60,6 +60,7 @@ from costingfe.types import (
     CostResult,
     ForwardResult,
     Fuel,
+    LaserDriverType,
     PowerCycle,
     PulsedConversion,
     WallMaterial,
@@ -75,6 +76,7 @@ class CostModel:
         costing_constants: CostingConstants = None,
         power_cycle: PowerCycle = PowerCycle.RANKINE,
         pulsed_conversion: PulsedConversion = None,
+        laser_driver_type: LaserDriverType = None,
     ):
         self.concept = concept
         self.fuel = fuel
@@ -83,6 +85,12 @@ class CostModel:
         self.pulsed_conversion = pulsed_conversion or CONCEPT_DEFAULT_CONVERSION.get(
             concept
         )
+        # laser_driver_type: relevant only for LASER_IFE concepts; defaults to
+        # DPSSL (the commercial-design baseline used by LIFE/HiPER/Focused
+        # Energy/Marvel). Consumed by cas70_om's driver-replacement block.
+        if laser_driver_type is None and concept == ConfinementConcept.LASER_IFE:
+            laser_driver_type = LaserDriverType.DPSSL
+        self.laser_driver_type = laser_driver_type
         self._cc_user_provided = costing_constants is not None
         self.cc = costing_constants or load_costing_constants()
         self._eng_defaults = load_engineering_defaults(
@@ -848,6 +856,7 @@ class CostModel:
             pulsed_conversion=self.pulsed_conversion,
             f_rep=params.get("f_rep", 0.0),
             concept=self.concept,
+            laser_driver_type=self.laser_driver_type,
         )
         c80 = cas80_fuel(
             cc,

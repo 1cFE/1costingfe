@@ -32,6 +32,25 @@ class PulsedConversion(Enum):
     INDUCTIVE_DEC = "inductive_dec"
 
 
+class LaserDriverType(Enum):
+    """Laser-IFE driver architecture, for scheduled-replacement costing.
+
+    Each subtype has a distinct replacement profile (which subsystems wear
+    and at what shot counts). Used by the cas70_om driver-replacement block
+    to dispatch to (replace_frac, shot_lifetime) pairs in CostingConstants.
+
+    DPSSL is the commercial-design baseline (LIFE, HiPER, Focused Energy,
+    Marvel). KRF carries the NRL Electra heritage. NDGLASS is explicitly
+    flagged as commercially marginal because flashlamp shot lifetime is
+    fundamentally Xe-arc-limited and cannot match reactor rep-rates over
+    a 30-yr plant life.
+    """
+
+    DPSSL = "dpssl"          # Diode-pumped solid-state (LIFE / HiPER baseline)
+    KRF = "krf"              # KrF excimer (NRL Nike / Electra heritage)
+    NDGLASS = "nd_glass"     # Flashlamp-pumped Nd:Glass (NIF-class; marginal for commercial)
+
+
 CONCEPT_TO_FAMILY = {
     ConfinementConcept.TOKAMAK: ConfinementFamily.STEADY_STATE,
     ConfinementConcept.STELLARATOR: ConfinementFamily.STEADY_STATE,
