@@ -30,16 +30,22 @@ _BASE = dict(
         # b_center 18->6 T fix (on-axis field, not peak-on-conductor). Tokamak
         # is ~unchanged (recalibration is cost-neutral at its R0=3.0 reference);
         # stellarator LCOE drops as the field correction outweighs the markup.
-        (C.TOKAMAK, Fuel.DT, 226.89),
-        (C.MIRROR, Fuel.DT, 186.47),
-        (C.STELLARATOR, Fuel.DT, 342.34),
+        # All re-benchmarked after CAS27 moved to a volume-based blanket-fill
+        # build-up (blanket_vol x vol_frac x density x $/kg, keyed on
+        # blanket_fill) replacing the special_materials x fill_factor x P_net
+        # model. DT/PbLi shifts are <0.5% (a fixed inventory no longer shrinks
+        # with net power).
+        (C.TOKAMAK, Fuel.DT, 227.89),
+        (C.MIRROR, Fuel.DT, 186.77),
+        (C.STELLARATOR, Fuel.DT, 343.16),
         # DIPOLE re-benchmarked after the radial-build inversion + spherical
         # geometry dispatch + Li2O blanket fill + C220108 divertor zeroing +
         # external stationary lift coil restructured as
         # stationary_lift_coil_fraction * floating_with_markup (Simpson 2026
-        # alignment); the coupling factor itself is unchanged — only the cost
-        # basis moved.
-        (C.DIPOLE, Fuel.DHE3, 257.10),
+        # alignment). +7.4% here is the volumetric CAS27: the dipole's large
+        # thin Li2O blanket (C220101 ~$360M) was previously costed at ~$0.6M of
+        # fill; it is now ~$235M, consistent with the blanket structure.
+        (C.DIPOLE, Fuel.DHE3, 276.11),
         (C.POLYWELL, Fuel.PB11, 52.98),
     ],
 )

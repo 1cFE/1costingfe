@@ -165,14 +165,23 @@ building_costs:
   service_water:      {all: 9,  scales: p_th}
   assembly_hall:      {all: 21, scales: fixed}
 
-# CAS27 — Special materials: initial reactor material inventory (M$ at 1 GWe)
-# Default assumes PbLi blanket concept for DT. For HCPB concepts with
-# beryllium neutron multiplier, override CAS27 to ~$200M.
-# See docs/account_justification/CAS27_special_materials.md
-special_materials_dt: 15.0    # PbLi fill (~4,500t @ $3/kg) + enriched Li
-special_materials_dd: 2.0     # Conventional coolant fills only
-special_materials_dhe3: 1.0   # Minimal special materials
-special_materials_pb11: 0.0   # No special materials
+# CAS27 — Special materials: initial blanket-fill inventory.
+# Volume-based mass build-up, keyed on blanket_fill (NOT power-scaled): an
+# inventory is set by blanket volume, not net electric power.
+#   CAS27 = blanket_vol[m3] x vol_frac x density[kg/m3] x price[$/kg] / 1e6
+# vol_frac is the fraction of the blanket region occupied by that material
+# (liquid fill fraction for liquids; breeder/multiplier-zone x pebble-packing
+# ~0.25 for solid pebble beds). See docs/account_justification/CAS27_special_materials.md
+cas27_fill_materials:
+  # liquid breeders/coolants
+  pbli:         {density: 9400, vol_frac: 0.50, price: 5.0}    # Pb-17Li (99.3% Pb @ ~$3/kg) + enriched Li-6 premium -> ~$5/kg effective
+  li:           {density: 490,  vol_frac: 0.80, price: 200.0}  # liquid Li, enriched Li-6 ($80 natural - $1000 high-enrichment; 200 mid)
+  flibe:        {density: 1940, vol_frac: 0.80, price: 150.0}  # 2LiF-BeF2; Be-dominated (Araiinejad & Shirvan 2025 NOAK ~$154/kg)
+  # solid pebble beds (vol_frac = bed fraction x ~0.63 packing)
+  be_ceramic:   {density: 1850, vol_frac: 0.25, price: 700.0}  # HCPB Be multiplier (dominant cost); Li-ceramic breeder folded in
+  ceramic_only: {density: 2400, vol_frac: 0.25, price: 150.0}  # Li4SiO4/Li2TiO3 breeder pebbles, no Be
+  li2o:         {density: 2013, vol_frac: 0.25, price: 150.0}  # Li2O ceramic
+  none:         {density: 0,    vol_frac: 0.0,  price: 0.0}    # aneutronic / no breeder
 
 # CAS23-26 — BOP equipment (M$/MW gross electric, 2024$)
 # turbine_per_mw and heat_rej_per_mw are now set by PowerCycle preset

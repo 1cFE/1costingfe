@@ -627,6 +627,7 @@ class CostModel:
         cc_kwargs["building_costs"] = self.cc.building_costs
         cc_kwargs["replaceable_accounts"] = self.cc.replaceable_accounts
         cc_kwargs["coil_markup"] = self.cc.coil_markup
+        cc_kwargs["cas27_fill_materials"] = self.cc.cas27_fill_materials
         cc = CostingConstants(**cc_kwargs)
         co = cost_overrides or {}
         overridden = []
@@ -835,7 +836,7 @@ class CostModel:
 
         c27 = co.get(
             "CAS27",
-            cas27_special_materials(cc, pt.p_net, self.fuel, blanket_fill),
+            cas27_special_materials(cc, blanket_fill, blanket_vol),
         )
         if "CAS27" in co:
             overridden.append("CAS27")

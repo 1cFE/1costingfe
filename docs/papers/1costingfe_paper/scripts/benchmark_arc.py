@@ -44,9 +44,13 @@ def run(output_dir: Path) -> dict:
         "interest_rate": 0.07,  # default
         "inflation_rate": 0.0245,  # default
         "noak": True,
+        # ARC uses a FLiBe liquid-immersion blanket (Sorbom et al. 2015), not the
+        # generic tokamak PbLi default — material drives the volume-based CAS27.
+        "blanket_form": "molten_salt",
+        "blanket_fill": "flibe",
         # Geometry components (defaults; ARC paper does not enumerate)
         "plasma_t": 1.13,
-        "blanket_t": 0.5,  # default: ARC FLiBe blanket nominal thickness
+        "blanket_t": 0.5,  # ARC FLiBe blanket nominal thickness
         "ht_shield_t": 0.2,  # default
         "structure_t": 0.2,  # default
         "vessel_t": 0.2,  # default

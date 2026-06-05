@@ -279,14 +279,11 @@ class CostingConstants:
     # mass build-up markups (coil_cu_fab_markup, coil_steel_fab_markup) instead.
     coil_markup: dict[str, float] = None  # loaded from YAML
 
-    # CAS27 — Special materials: initial reactor material inventory (M$ at 1 GWe)
-    # Default assumes PbLi blanket concept for DT (~4,500 tonnes PbLi @ $3/kg
-    # + enriched Li top-up). HCPB concepts with Be multiplier override to ~$200M.
+    # CAS27 — Special materials: initial blanket-fill inventory.
+    # Volume-based mass build-up keyed on blanket_fill (not power-scaled):
+    # {fill: {density, vol_frac, price}}. Loaded from YAML.
     # See docs/account_justification/CAS27_special_materials.md
-    special_materials_dt: float = 15.0  # PbLi fill + enriched Li for breeding
-    special_materials_dd: float = 2.0  # Conventional coolant fills only
-    special_materials_dhe3: float = 1.0  # Minimal special materials
-    special_materials_pb11: float = 0.0  # No special materials (conventional)
+    cas27_fill_materials: dict[str, dict] = None
 
     # CAS23-26 — BOP equipment (M$/MW gross electric, 2024$)
     # Source: ARIES/NETL calibration (2019$ × 1.22 CPI inflation)

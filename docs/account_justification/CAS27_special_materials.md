@@ -15,18 +15,43 @@ neutron multiplier inventory, and other special reactor materials.
 - CAS80 covers *fuel* (deuterium, tritium breeding feedstock as Li-6, etc.).
 - Annual replenishment of consumed materials is an operating cost (CAS70).
 
-## Costing Model
+## Costing Model — volume-based, keyed on blanket fill
 
-    CAS27 = special_materials_base(fuel) × (P_net / 1000)
+A blanket-fill inventory is a **material quantity set by blanket volume, not by
+net electric power**. CAS27 is therefore a volume-based mass build-up, keyed on
+`blanket_fill` (it does not depend on fuel or `P_net`):
 
-Linear scaling with net electric power.
+    CAS27 = blanket_vol × vol_frac × density × price / 1e6
 
-| Fuel | Base cost (M$ at 1 GWe) | Materials |
-|------|------------------------:|-----------|
-| DT | 15.0 | PbLi eutectic fill + enriched Li |
-| DD | 2.0 | Conventional coolant fills |
-| DHe3 | 1.0 | Minimal special materials |
-| pB11 | 0.0 | No special materials |
+where `blanket_vol` is the model's first-wall + blanket + reflector volume,
+and `vol_frac` is the fraction of that region occupied by the costed material
+(liquid fill fraction for liquids; breeder/multiplier-zone × pebble-packing
+≈ 0.25 for solid pebble beds). Fuel-appropriateness is captured by which fill a
+concept selects: aneutronic / non-breeding concepts use `blanket_fill = none`
+→ CAS27 = 0.
+
+This replaced the earlier `special_materials_base(fuel) × fill_factor ×
+(P_net/1000)` model. Power-scaling was a proxy that mis-fit compact / high-
+power-density designs (e.g. ARC's FLiBe immersion blanket) and under-counted
+large-blanket designs (e.g. the levitated dipole's thin-but-huge Li₂O shell,
+whose fill was costed at ~$0.6M against a ~$360M blanket structure). Scaling by
+the modelled `blanket_vol` instead is consistent with how the blanket
+*structure* (C220101) and the other reactor-component accounts are already costed.
+
+| `blanket_fill` | density (kg/m³) | vol_frac | price ($/kg) | basis |
+|---|---:|---:|---:|---|
+| `pbli` | 9400 | 0.50 | 5.0 | Pb-17Li (99.3% Pb @ ~$3/kg) + enriched Li-6 premium |
+| `li` | 490 | 0.80 | 200 | liquid Li; Li-6 enrichment ($80 natural → $1000 high; $200 mid) |
+| `flibe` | 1940 | 0.80 | 150 | 2LiF·BeF₂, Be-dominated (Araiinejad & Shirvan 2025 NOAK ~$154/kg); ρ from Sohal 2010 |
+| `be_ceramic` | 1850 | 0.25 | 700 | HCPB Be multiplier (dominant cost); Li-ceramic breeder folded in |
+| `ceramic_only` | 2400 | 0.25 | 150 | Li₄SiO₄/Li₂TiO₃ breeder pebbles |
+| `li2o` | 2013 | 0.25 | 150 | Li₂O ceramic |
+| `none` | — | — | — | aneutronic / no breeder → 0 |
+
+At a ~650 m³ 1 GWe blanket this lands PbLi ≈ $15M (unchanged baseline), FLiBe
+≈ $150M, HCPB ≈ $210M. The two most uncertain inputs are the `li` enrichment
+price and the solid-pebble `vol_frac` (~0.25); for HCPB the dominant Be is
+costed and the Li-ceramic breeder folded into that number.
 
 ## DT Blanket Material Analysis
 

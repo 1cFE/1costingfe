@@ -148,26 +148,26 @@ def cas26_heat_rejection(cc, p_th, n_mod):
     return n_mod * p_th * cc.heat_rej_per_mw
 
 
-def cas27_special_materials(cc, p_net, fuel, blanket_fill: BlanketFill):
-    """CAS27: Special materials, initial reactor material inventory. Returns M$.
+def cas27_special_materials(cc, blanket_fill: BlanketFill, blanket_vol):
+    """CAS27: Special materials, initial blanket-fill inventory. Returns M$.
 
-    Covers non-fuel reactor materials: breeding blanket fill (PbLi, Li, FLiBe),
-    neutron multiplier (Be if HCPB concept), and other special inventory.
+    The blanket fill (PbLi, Li, FLiBe, Be/ceramic pebbles) is a material
+    inventory: its cost is set by blanket *volume*, not net electric power.
     CAS220101 covers the blanket *structure*; CAS27 covers the *material fill*.
 
-    The per-fuel base sets the baseline (PbLi-style assumption); blanket_fill
-    scales by fill_factor to capture alternative chemistries (HCPB Be, FLiBe,
-    pure Li, ceramic-only, none).
+    Volume-based mass build-up, keyed on blanket_fill:
+
+        CAS27 = blanket_vol x vol_frac x density x price / 1e6
+
+    where vol_frac is the fraction of the blanket region occupied by that
+    material (liquid fill fraction for liquids; breeder/multiplier-zone x
+    pebble-packing for solids). Per-fill density/vol_frac/price live in
+    cc.cas27_fill_materials. Aneutronic concepts use blanket_fill = none -> 0.
 
     See docs/account_justification/CAS27_special_materials.md
     """
-    base = {
-        Fuel.DT: cc.special_materials_dt,
-        Fuel.DD: cc.special_materials_dd,
-        Fuel.DHE3: cc.special_materials_dhe3,
-        Fuel.PB11: cc.special_materials_pb11,
-    }
-    return base[fuel] * blanket_fill.fill_factor * (p_net / 1000.0)
+    m = cc.cas27_fill_materials[blanket_fill.value]
+    return blanket_vol * m["vol_frac"] * m["density"] * m["price"] / 1e6
 
 
 def cas28_digital_twin(cc):

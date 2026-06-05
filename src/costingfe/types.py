@@ -159,23 +159,9 @@ class BlanketFill(Enum):
     LI2O = "li2o"
     NONE = "none"
 
-    @property
-    def fill_factor(self) -> float:
-        """Multiplier on the per-fuel special_materials_<fuel> in CAS27."""
-        return _BLANKET_FILL_FACTOR[self]
+    # CAS27 cost is a volume-based mass build-up keyed on this fill via
+    # cc.cas27_fill_materials[fill.value]; see costs.cas27_special_materials.
 
-
-_BLANKET_FILL_FACTOR = {
-    BlanketFill.PBLI: 1.0,
-    BlanketFill.LI: 2.0,
-    BlanketFill.FLIBE: 5.0,
-    BlanketFill.BE_CERAMIC: 13.0,
-    BlanketFill.CERAMIC_ONLY: 3.0,
-    # Li2O fusion-grade ceramic powder pricing per kg of Li-bearing material;
-    # similar order of magnitude to CERAMIC_ONLY.
-    BlanketFill.LI2O: 3.0,
-    BlanketFill.NONE: 0.0,
-}
 
 _BLANKET_FORM_VALID_FILLS = {
     BlanketForm.LIQUID_METAL: {BlanketFill.PBLI, BlanketFill.LI},

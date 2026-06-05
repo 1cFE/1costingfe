@@ -1492,7 +1492,7 @@ CAS & Description & Disposition & Method \\
 24$^\dagger$ & Electric plant equipment & Replaced & Linear scaling on gross electric (NETL-calibrated) \\
 25$^\dagger$ & Miscellaneous plant equip.\ & Replaced & Linear scaling on gross electric (NETL-calibrated) \\
 26$^\dagger$ & Heat rejection systems & Replaced & Linear scaling on total thermal $P_{\text{th}}$ (NETL-calibrated) \\
-27$^\dagger$ & Special materials & Extended & Fuel-dependent base $\times$ blanket-fill chemistry factor (PbLi / Li / FLiBe / Be ceramic / ceramic only / none) \\
+27$^\dagger$ & Special materials & Extended & Volume-based blanket-fill inventory: $V_{\text{blk}} \times$ vol-frac $\times$ density $\times$ \$/kg (PbLi / Li / FLiBe / Be ceramic / ceramic only / none) \\
 28$^\dagger$ & Digital twin & Replaced & Fixed cost (\$5M) \\
 29$^\dagger$ & Contingency on direct costs & Inherited & 10\% FOAK, 0\% NOAK (Gen-IV EMWG) \\
 30$^\dagger$ & Indirect service costs & Replaced & Fraction of CAS20, construction-time scaled \\
@@ -2422,47 +2422,57 @@ using conventional, non-nuclear-grade BOP equipment.
 CAS27 covers the initial inventory of non-fuel reactor materials:
 breeding blanket fill, neutron multiplier, and other special inventory.
 CAS22.01.01 covers the blanket \textit{structure}; CAS27 covers the
-\textit{material that fills it}. The cost is a per-fuel base scaled
-linearly with net electric power and multiplied by a chemistry factor
-$\phi(\mathrm{fill}) \in \{0.0, 1.0, 2.0, 3.0, 5.0, 13.0\}$ selected by
-the blanket fill chemistry:
+\textit{material that fills it}. A material inventory is set by blanket
+volume, not net electric power, so CAS27 is a volume-based mass build-up
+keyed on the blanket fill:
 \begin{equation}
 \label{eq:cas27}
-C_{27} = C_{\text{mat,base}}(f) \cdot \phi(\mathrm{fill}) \cdot \frac{P_{\text{net}}}{1000}
+C_{27} = V_{\text{blk}} \cdot \nu(\mathrm{fill}) \cdot \rho(\mathrm{fill}) \cdot c(\mathrm{fill})
 \end{equation}
+where $V_{\text{blk}}$ is the first-wall + blanket + reflector volume,
+$\nu$ the fraction of that region occupied by the costed material
+(liquid fill fraction; or breeder/multiplier-zone $\times$ pebble
+packing $\approx 0.25$ for solid pebble beds), $\rho$ its density, and
+$c$ its unit price.
 
 The blanket configuration is specified as an orthogonal pair: a
 \texttt{BlanketForm} (structural architecture, driving
 $s(\mathrm{form})$ in CAS22.01.01) and a \texttt{BlanketFill} (bulk
-material chemistry, driving $\phi(\mathrm{fill})$ here). Compatibility
-between form and fill is enforced at validation time.
-
-\Cref{tab:cas27_fills} lists the chemistry factors and their cost
-basis, calibrated relative to the D-T PbLi baseline (4{,}000 tonnes of
-Pb-17Li eutectic at \$3/kg plus enriched lithium premium, totaling
-\$15M at 1\,GWe).
+material, driving the inventory here). Compatibility between form and
+fill is enforced at validation time. Fuel-appropriateness enters
+through the chosen fill: aneutronic / non-breeding concepts use
+\texttt{none} and recover zero. \Cref{tab:cas27_fills} lists the
+per-fill inputs.
 
 \begin{table}[h]
 \centering
-\caption{CAS27 fill chemistry factors $\phi(\mathrm{fill})$ relative to the D-T PbLi baseline (\$15M at 1\,GWe).}
+\caption{CAS27 blanket-fill inventory inputs (volume-based build-up).}
 \label{tab:cas27_fills}
-\begin{tabular}{lrl}
+\begin{tabular}{lrrrl}
 \toprule
-Fill chemistry & $\phi(\mathrm{fill})$ & Cost basis \\
+Fill & $\rho$ (kg/m$^3$) & $\nu$ & $c$ (\$/kg) & Basis \\
 \midrule
-\texttt{pbli} (PbLi eutectic)        & 1.0  & Baseline: 4{,}000 t at \$3/kg + Li-6 premium \\
-\texttt{li} (self-cooled Li)         & 2.0  & ~300 t at \$300--1000/kg enriched, center \$30M \\
-\texttt{flibe} (2LiF-BeF$_2$)        & 5.0  & ~1{,}000 t at \$50--150/kg with Li-7 enrichment, ~\$75M \\
-\texttt{be\_ceramic} (HCPB)          & 13.0 & ~300 t Be at \$500--800/kg + Li-ceramic pebbles, ~\$200M \\
-\texttt{ceramic\_only} (WCCB)        & 3.0  & Li-ceramic pebbles without Be multiplier, ~\$45M \\
-\texttt{none}                        & 0.0  & Aneutronic, no breeder \\
+\texttt{pbli}          & 9400 & 0.50 & 5   & Pb-17Li (99.3\% Pb) + enriched Li-6 premium \\
+\texttt{li}            & 490  & 0.80 & 200 & liquid Li, Li-6 enrichment (\$80--1000/kg) \\
+\texttt{flibe}         & 1940 & 0.80 & 150 & 2LiF-BeF$_2$, Be-dominated (NOAK) \\
+\texttt{be\_ceramic}   & 1850 & 0.25 & 700 & HCPB Be multiplier; Li-ceramic folded in \\
+\texttt{ceramic\_only} & 2400 & 0.25 & 150 & Li-ceramic breeder pebbles \\
+\texttt{li2o}          & 2013 & 0.25 & 150 & Li$_2$O ceramic \\
+\texttt{none}          & --   & --   & --  & Aneutronic, no breeder \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-The HCPB (\texttt{be\_ceramic}) factor of 13.0 is driven by global
+Scaling by the modelled blanket volume rather than a power-law keeps
+CAS27 consistent with the blanket structure (CAS22.01.01) and the other
+volume-based reactor-component accounts, and it costs both a compact
+high-power-density design (e.g. an ARC-class FLiBe immersion blanket,
+\$$\sim$100M) and a large thin-shell design (e.g. a levitated dipole's
+Li$_2$O blanket) by their actual material volume.
+
+The HCPB (\texttt{be\_ceramic}) inventory is dominated by global
 beryllium supply: world production is ~300 tonnes/yr, so a single
-DEMO-scale plant consumes the entire annual supply, which makes the
+DEMO-scale plant consumes the entire annual supply, making the
 beryllium cost the largest known discriminator in the EUROfusion
 blanket selection process.
 
@@ -3074,7 +3084,8 @@ $\kappa$ & 1.84 & elongation \\
 $B_0$ & 9.2\,T & on-axis field \\
 $P_\text{fus}$ & 525\,MW & fusion power \\
 $P_\text{net}$ & 270\,MWe & net electric \\
-$\eta_\text{th}$ & 0.40 & FLiBe blanket, He-cooled \\
+$\eta_\text{th}$ & 0.40 & He-cooled \\
+Blanket & FLiBe (molten salt) & immersion; drives volume-based CAS27 \\
 Fuel & D-T & \\
 Coils & REBCO HTS, demountable & \\
 \bottomrule
@@ -3086,10 +3097,10 @@ Coils & REBCO HTS, demountable & \\
 The published fabricated-component cost is \$5{,}560M (FY2014~USD,
 \citep{sorbom2015arc} p.~25, Section 6.6), or \$7{,}562M after
 escalation to 2025~USD. \texttt{1costingfe} predicts an overnight
-capital cost of \$2{,}660M, an overnight specific cost of
-9{,}853~\$/kWe, and an LCOE of 137.5~\$/MWh under the framework's
+capital cost of \$2{,}804M, an overnight specific cost of
+10{,}384~\$/kWe, and an LCOE of 145.3~\$/MWh under the framework's
 NOAK default assumptions. The implied delta on overnight cost is
-$-65$\,\%. Sorbom's volumetric estimate uses a single \$1.06M/tonne
+$-63$\,\%. Sorbom's volumetric estimate uses a single \$1.06M/tonne
 fabricated multiplier averaged across four heritage burning-plasma
 designs (FIRE, BPX, PCAST5, ARIES-RS), with the dominant contribution
 from a 4{,}350-tonne SS316LN structural support priced at \$4.6\,B.
@@ -3140,9 +3151,9 @@ The 1costingfe ``Overnight'' row reports CAS10+CAS21+CAS22+CAS23+CAS24+CAS25+CAS
 (everything before interest during construction); the 1costingfe
 ``Total'' row also includes CAS60 (IDC).
 
-% Direct: published 1521.1 M$ (1992) * 2.295 = 3491; 1cfe sum CAS21+22+23+24+25+26+27 = 3493
-% Overnight $/kWe: published 2441 (1992) * 2.295 = 5602; 1cfe (CAS10-50)/kWe = 4586
-% Total: published 2844 M$ (1992) * 2.295 = 6527; 1cfe total_capital = 5468
+% Direct: published 1521.1 M$ (1992) * 2.295 = 3491; 1cfe sum CAS21+22+23+24+25+26+27 = 3492
+% Overnight $/kWe: published 2441 (1992) * 2.295 = 5602; 1cfe (CAS10-50)/kWe = 4585
+% Total: published 2844 M$ (1992) * 2.295 = 6527; 1cfe total_capital = 5467
 % LCOE: published 47.53 mill/kWh (1992) * 2.295 = 109.1 $/MWh; 1cfe = 77.3
 \begin{table}[h]
 \centering
@@ -3154,9 +3165,9 @@ escalated from 1992~USD to 2025~USD by a factor of 2.295.}
 \toprule
 Account & Published (2025~USD) & \texttt{1costingfe} & $\Delta$ (\%) \\
 \midrule
-Direct cost (Account 90), M\$       & 3{,}491 & 3{,}493 &  $+0.1$ \\
-Overnight specific cost, \$/kWe     & 5{,}602 & 4{,}586 & $-18.1$ \\
-Total cost (Account 99), M\$        & 6{,}527 & 5{,}468 & $-16.2$ \\
+Direct cost (Account 90), M\$       & 3{,}491 & 3{,}492 &  $+0.0$ \\
+Overnight specific cost, \$/kWe     & 5{,}602 & 4{,}585 & $-18.2$ \\
+Total cost (Account 99), M\$        & 6{,}527 & 5{,}467 & $-16.2$ \\
 LCOE, \$/MWh                        &   109.1 &    77.3 & $-29.2$ \\
 \bottomrule
 \end{tabular}

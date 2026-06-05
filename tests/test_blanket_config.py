@@ -17,16 +17,6 @@ def test_blanket_form_structure_factors():
     assert BlanketForm.NONE.structure_factor == 0.0
 
 
-def test_blanket_fill_factors():
-    """Pin fill_factor values; drift here changes CAS27 across the board."""
-    assert BlanketFill.PBLI.fill_factor == 1.0
-    assert BlanketFill.LI.fill_factor == 2.0
-    assert BlanketFill.FLIBE.fill_factor == 5.0
-    assert BlanketFill.BE_CERAMIC.fill_factor == 13.0
-    assert BlanketFill.CERAMIC_ONLY.fill_factor == 3.0
-    assert BlanketFill.NONE.fill_factor == 0.0
-
-
 def test_blanket_form_valid_fills():
     """Compatibility table: only physical pairs allowed."""
     assert BlanketForm.LIQUID_METAL.valid_fills == {
@@ -51,26 +41,21 @@ def test_blanket_form_default_fills():
 
 
 @pytest.mark.parametrize(
-    "form, fill, exp_structure_factor, exp_fill_factor",
+    "form, fill, exp_structure_factor",
     [
-        ("liquid_metal", "pbli", 1.0, 1.0),
-        ("liquid_metal", "li", 1.0, 2.0),
-        ("molten_salt", "flibe", 1.3, 5.0),
-        ("solid_breeder", "be_ceramic", 1.2, 13.0),
-        ("solid_breeder", "ceramic_only", 1.2, 3.0),
+        ("liquid_metal", "pbli", 1.0),
+        ("liquid_metal", "li", 1.0),
+        ("molten_salt", "flibe", 1.3),
+        ("solid_breeder", "be_ceramic", 1.2),
+        ("solid_breeder", "ceramic_only", 1.2),
     ],
 )
-def test_dt_tokamak_blanket_cost_scaling(
-    form, fill, exp_structure_factor, exp_fill_factor
-):
-    """Picking a non-default blanket scales CAS22.01 and CAS27 by the
-    documented multipliers vs the (liquid_metal, pbli) baseline."""
+def test_dt_tokamak_blanket_structure_scaling(form, fill, exp_structure_factor):
+    """Picking a non-default blanket scales CAS22.01 (structure) by the
+    documented structure_factor vs the (liquid_metal, pbli) baseline. CAS27
+    (the fill inventory) is volume-based — see test_cas27_volumetric_all_fills."""
     model = CostModel(concept=ConfinementConcept.TOKAMAK, fuel=Fuel.DT)
-    kw = dict(
-        net_electric_mw=1000.0,
-        availability=0.85,
-        lifetime_yr=30,
-    )
+    kw = dict(net_electric_mw=1000.0, availability=0.85, lifetime_yr=30)
     baseline = model.forward(**kw, blanket_form="liquid_metal", blanket_fill="pbli")
     result = model.forward(**kw, blanket_form=form, blanket_fill=fill)
 
@@ -80,8 +65,42 @@ def test_dt_tokamak_blanket_cost_scaling(
         c220101_base * exp_structure_factor, rel=1e-6
     ), f"C220101 multiplier wrong for {form}/{fill}"
 
-    cas27_base = float(baseline.costs.cas27)
-    cas27_new = float(result.costs.cas27)
-    assert cas27_new == pytest.approx(cas27_base * exp_fill_factor, rel=1e-6), (
-        f"CAS27 multiplier wrong for {form}/{fill}"
+
+@pytest.mark.parametrize(
+    "fill", ["pbli", "li", "flibe", "be_ceramic", "ceramic_only", "li2o", "none"]
+)
+def test_cas27_volumetric_all_fills(fill):
+    """Every fill is costed volumetrically: blanket_vol x vol_frac x density x
+    price. Independent of net power; 'none' is zero."""
+    from costingfe.defaults import load_costing_constants
+    from costingfe.layers.costs import cas27_special_materials
+
+    cc = load_costing_constants()
+    bv = 643.5
+    m = cc.cas27_fill_materials[fill]
+    expected = bv * m["vol_frac"] * m["density"] * m["price"] / 1e6
+    got = float(cas27_special_materials(cc, BlanketFill(fill), bv))
+    assert got == pytest.approx(expected, rel=1e-9)
+    if fill == "none":
+        assert got == 0.0
+    else:
+        assert got > 0.0
+        # doubles with blanket volume; no dependence on net power at all.
+        got2 = float(cas27_special_materials(cc, BlanketFill(fill), 2 * bv))
+        assert got2 == pytest.approx(2 * got, rel=1e-9)
+
+
+def test_cas27_flibe_exceeds_pbli_and_scales_with_blanket():
+    """Through the full model: a thicker FLiBe blanket costs more CAS27, and the
+    volumetric FLiBe inventory far exceeds the PbLi baseline."""
+    model = CostModel(concept=ConfinementConcept.TOKAMAK, fuel=Fuel.DT)
+    kw = dict(net_electric_mw=1000.0, availability=0.85, lifetime_yr=30)
+    thin = model.forward(
+        **kw, blanket_form="molten_salt", blanket_fill="flibe", blanket_t=0.5
     )
+    thick = model.forward(
+        **kw, blanket_form="molten_salt", blanket_fill="flibe", blanket_t=1.0
+    )
+    assert float(thick.costs.cas27) > float(thin.costs.cas27)
+    pbli = model.forward(**kw)  # liquid_metal/pbli default
+    assert float(thin.costs.cas27) > 3 * float(pbli.costs.cas27)
