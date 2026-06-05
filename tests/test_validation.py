@@ -68,16 +68,20 @@ class TestTier1FieldConstraints:
                 lifetime_yr=-5.0,
             )
 
-    def test_n_mod_must_be_integer(self):
-        with pytest.raises(ValidationError, match="n_mod"):
-            CostingInput(
-                concept=ConfinementConcept.TOKAMAK,
-                fuel=Fuel.DT,
-                net_electric_mw=1000.0,
-                n_mod=1.5,
-            )
+    def test_n_mod_accepts_positive_float(self):
+        """FR-1 of costingfe-library-preconditions: n_mod must accept positive
+        real values for the two-knob projection (n_mod = 1000 / P_native)."""
+        valid = CostingInput(
+            concept=ConfinementConcept.TOKAMAK,
+            fuel=Fuel.DT,
+            net_electric_mw=1000.0,
+            n_mod=1.5,
+        )
+        assert valid.n_mod == 1.5
 
-    def test_n_mod_must_be_at_least_one(self):
+    def test_n_mod_must_be_positive(self):
+        """FR-1: n_mod accepts any positive real value (gt=0). Zero and
+        negative values are rejected."""
         with pytest.raises(ValidationError, match="n_mod"):
             CostingInput(
                 concept=ConfinementConcept.TOKAMAK,

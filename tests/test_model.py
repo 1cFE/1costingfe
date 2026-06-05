@@ -424,3 +424,156 @@ def test_laser_driver_type_override_changes_capital_and_om():
     ).forward(1000.0, 0.85, 30)
     assert krf.cas22_detail["C220104"] < dpssl.cas22_detail["C220104"]  # 40 < 205 $/MJ
     assert krf.costs.lcoe != dpssl.costs.lcoe
+
+
+# ──────────────────────────────────────────────────────────────────────
+# Regression tests for costingfe-library-preconditions spec (FR-1, FR-3)
+#
+# Two-knob projection call shape:
+#   forward(net_electric_mw=1000, n_mod=1000/P_native,
+#           override_reference_mw=P_native, cost_overrides={...})
+#
+# Expected semantics (FR-2):
+#   - The reference-side forward inside _scale_overrides runs at n_mod=1, so
+#     per-module reactor-island overrides pass through unchanged per module
+#     (scaling ratio = 1.0 for power-dependent and power-independent accounts
+#     alike, since both run at the same per-module power).
+#   - The target-side forward uses the caller's n_mod, so plant-aggregate
+#     accounts like CAS22 scale by approximately n_mod (close to but not
+#     exactly equal due to the multi-unit labor learning factor).
+#
+# Each test exercises the two-knob call shape and asserts the implied scaling
+# ratio matches the spec's semantic for one specific account family.
+# ──────────────────────────────────────────────────────────────────────
+
+# Shared two-knob fixture for the FR-3 regression tests
+_TWO_KNOB_P_NATIVE = 261.0
+_TWO_KNOB_BASE = dict(
+    availability=0.85,
+    lifetime_yr=30,
+    construction_time_yr=5.0,
+    R0=3.3,
+    plasma_t=1.13,
+    elon=1.84,
+    blanket_t=0.80,
+    ht_shield_t=0.20,
+    structure_t=0.20,
+    vessel_t=0.20,
+    p_input=38.6,
+    mn=1.1,
+    eta_p=0.5,
+    eta_couple=0.8,
+    f_sub=0.03,
+    p_coils=2.0,
+    p_cool=13.7,
+    p_pump=1.0,
+    p_trit=10.0,
+    p_house=4.0,
+    p_cryo=0.5,
+)
+
+
+def test_n_mod_accepts_float():
+    """FR-1: n_mod must accept positive real values for the two-knob projection.
+
+    The rework's two-knob mechanism computes n_mod = 1000 / P_native, which is
+    almost always non-integer (e.g. 1000/261 ≈ 3.83 for ARC). Passing a float
+    must not raise a validation error.
+    """
+    from costingfe.validation import CostingInput
+
+    valid = CostingInput(
+        concept=ConfinementConcept.TOKAMAK,
+        fuel=Fuel.DT,
+        net_electric_mw=1000.0,
+        n_mod=1000.0 / _TWO_KNOB_P_NATIVE,
+    )
+    assert valid.n_mod == 1000.0 / _TWO_KNOB_P_NATIVE
+
+
+def test_two_knob_per_module_power_dependent_passthrough():
+    """FR-3(a): per-module power-dependent override passes through unchanged.
+
+    Spec example account: C220101 (first wall + blanket). The reference-side
+    forward at n_mod=1 produces a per-module cost; the target-side forward at
+    n_mod = 1000/P_native produces the same per-module cost (since per-module
+    power is unchanged). The override's user-supplied value must arrive at the
+    target plant with scaling ratio exactly 1.0.
+    """
+    model = CostModel(concept=ConfinementConcept.TOKAMAK, fuel=Fuel.DT)
+    n_mod_run = 1000.0 / _TWO_KNOB_P_NATIVE
+    override_val = 349.0
+
+    result = model.forward(
+        net_electric_mw=1000.0,
+        n_mod=n_mod_run,
+        override_reference_mw=_TWO_KNOB_P_NATIVE,
+        cost_overrides={"C220101": override_val},
+        **_TWO_KNOB_BASE,
+    )
+    # Per-module override flows through at the target per-module value (not
+    # multiplied by n_mod, because the user's frame is one module).
+    assert abs(result.cas22_detail["C220101"] - override_val) < 0.01, (
+        f"C220101 override expected to pass through at {override_val} M$ per module; "
+        f"got {result.cas22_detail['C220101']:.2f}"
+    )
+
+
+def test_two_knob_per_module_no_power_term_passthrough():
+    """FR-3(a) variant: a per-module account with no power scaling term also
+    passes through unchanged.
+
+    Spec example account: C220103 (coils). The coil cost formula depends only
+    on geometry (b_max, r_coil, n_coils), not on power. Under FR-2 this account
+    arrives at ratio 1.0 in both the buggy and fixed reference frames — but the
+    test still locks down the expected behavior.
+    """
+    model = CostModel(concept=ConfinementConcept.TOKAMAK, fuel=Fuel.DT)
+    n_mod_run = 1000.0 / _TWO_KNOB_P_NATIVE
+    override_val = 6901.0
+
+    result = model.forward(
+        net_electric_mw=1000.0,
+        n_mod=n_mod_run,
+        override_reference_mw=_TWO_KNOB_P_NATIVE,
+        cost_overrides={"C220103": override_val},
+        **_TWO_KNOB_BASE,
+    )
+    assert abs(result.cas22_detail["C220103"] - override_val) < 0.01, (
+        f"C220103 override expected to pass through at {override_val} M$ per module; "
+        f"got {result.cas22_detail['C220103']:.2f}"
+    )
+
+
+def test_two_knob_plant_aggregate_scales_with_n_mod():
+    """FR-3(b): a plant-aggregate override scales by approximately n_mod.
+
+    Spec example account: CAS22 (Reactor Plant Equipment total). Its default
+    computation is per_module_equipment * n_mod + labor + plant_wide, so it
+    already sums over modules. The user-supplied override (in plant-aggregate
+    frame at the reference power) must scale toward the target plant total —
+    approximately n_mod, but slightly less due to the multi-unit labor
+    learning factor encoded in the plant-aggregate formula.
+
+    This assertion guards against an over-eager FR-2 fix that also forces
+    target-side n_mod=1 (which would incorrectly keep the override at the
+    reference plant value instead of scaling to the target plant value).
+    """
+    model = CostModel(concept=ConfinementConcept.TOKAMAK, fuel=Fuel.DT)
+    n_mod_run = 1000.0 / _TWO_KNOB_P_NATIVE
+    override_val = 7940.0
+
+    result = model.forward(
+        net_electric_mw=1000.0,
+        n_mod=n_mod_run,
+        override_reference_mw=_TWO_KNOB_P_NATIVE,
+        cost_overrides={"CAS22": override_val},
+        **_TWO_KNOB_BASE,
+    )
+    ratio = result.costs.cas22 / override_val
+    # Should be approximately n_mod (3.83), allowing for multi-unit labor
+    # learning savings; not 1.0 (which would indicate the fix went too far).
+    assert 0.8 * n_mod_run < ratio < n_mod_run, (
+        f"CAS22 plant-aggregate override expected to scale by roughly n_mod "
+        f"({n_mod_run:.2f}) minus multi-unit labor savings; got ratio {ratio:.3f}"
+    )

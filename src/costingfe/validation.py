@@ -87,7 +87,9 @@ class CostingInput(BaseModel):
     # versus port-limited toroidal access. Override by passing a value.
     availability: float | None = Field(default=None, gt=0, le=1)
     lifetime_yr: float = Field(default=40.0, gt=0)
-    n_mod: int = Field(default=1, ge=1, strict=True)
+    # FR-1 of costingfe-library-preconditions spec: non-integer n_mod is
+    # required for the two-knob projection (n_mod = 1000 / P_native).
+    n_mod: float = Field(default=1.0, gt=0)
     construction_time_yr: float = Field(default=6.0, gt=0)
     interest_rate: float = Field(default=0.07, gt=0)
     inflation_rate: float = 0.02

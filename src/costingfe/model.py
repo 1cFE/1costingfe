@@ -1002,11 +1002,19 @@ class CostModel:
         the computed cost for each overridden account, then applies the
         ratio as a multiplier to the user's override values.
 
+        FR-2 of costingfe-library-preconditions: the reference-side
+        forward runs at n_mod=1 so per-module overrides are framed at one
+        module at native per-module power (which is the frame the analyst
+        writes them in). The target-side forward uses the caller's n_mod
+        so plant-aggregate overrides scale to the target plant total.
+
         CAS22 sub-account overrides (C220101, etc.) are scaled using the
         CAS22 sub-account detail from the reference and target runs.
         """
         ref_result = self.forward(
-            net_electric_mw=reference_mw, cost_overrides=None, **forward_kwargs
+            net_electric_mw=reference_mw,
+            cost_overrides=None,
+            **dict(forward_kwargs, n_mod=1),
         )
         target_result = self.forward(
             net_electric_mw=target_mw, cost_overrides=None, **forward_kwargs
