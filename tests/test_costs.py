@@ -1,3 +1,4 @@
+import dataclasses
 import math as _math
 
 import pytest
@@ -137,6 +138,7 @@ def test_cas21_scales_with_power():
         p_the=500.0,
         p_th=1250.0,
         p_fus=1150.0,
+        n_mod=1,
         fuel=Fuel.DT,
         noak=True,
     )
@@ -146,6 +148,7 @@ def test_cas21_scales_with_power():
         p_the=1000.0,
         p_th=2500.0,
         p_fus=2300.0,
+        n_mod=1,
         fuel=Fuel.DT,
         noak=True,
     )
@@ -160,6 +163,7 @@ def test_cas21_fuel_differentiation():
         p_the=1150.0,
         p_th=2500.0,
         p_fus=2300.0,
+        n_mod=1,
         fuel=Fuel.DT,
         noak=True,
     )
@@ -169,12 +173,107 @@ def test_cas21_fuel_differentiation():
         p_the=1150.0,
         p_th=2500.0,
         p_fus=2300.0,
+        n_mod=1,
         fuel=Fuel.PB11,
         noak=True,
     )
     assert cost_pb < cost_dt
     # pB11 should be roughly 55-65% of DT (308/502 ~ 61%)
     assert cost_pb / cost_dt < 0.65
+
+
+def test_cas21_admin_building_scales_sqrt_of_power():
+    """The administration building is staff-driven; staff (and thus the
+    building) scales as P^0.5, matching the staffing accounts (CAS40/CAS70),
+    not linearly with power."""
+    cc = dataclasses.replace(
+        CC, building_costs={"administration": {"dt": 100.0, "scales": "staff"}}
+    )
+    ref = cas21_buildings(
+        cc,
+        p_et=1150.0,
+        p_the=0.0,
+        p_th=0.0,
+        p_fus=0.0,
+        n_mod=1,
+        fuel=Fuel.DT,
+        noak=True,
+    )
+    quad = cas21_buildings(
+        cc,
+        p_et=4600.0,
+        p_the=0.0,
+        p_th=0.0,
+        p_fus=0.0,
+        n_mod=1,
+        fuel=Fuel.DT,
+        noak=True,
+    )
+    # 4x power -> 2x cost (sqrt), not 4x. noak contingency=0 so ratio is clean.
+    assert quad / ref == pytest.approx(2.0, rel=1e-3)
+
+
+def test_cas21_n_mod_feeds_total_power():
+    """Power-scaling buildings serve the whole plant: feeding per-module power
+    with n_mod copies must equal feeding the plant-total power once."""
+    per_module = cas21_buildings(
+        CC,
+        p_et=50.0,
+        p_the=50.0,
+        p_th=125.0,
+        p_fus=115.0,
+        n_mod=20,
+        fuel=Fuel.DT,
+        noak=True,
+    )
+    total = cas21_buildings(
+        CC,
+        p_et=1000.0,
+        p_the=1000.0,
+        p_th=2500.0,
+        p_fus=2300.0,
+        n_mod=1,
+        fuel=Fuel.DT,
+        noak=True,
+    )
+    assert per_module == pytest.approx(total)
+
+
+def test_cas21_ventilation_driven_by_fusion_power():
+    """Ventilation's dominant load is confinement rad-ventilation (HEPA banks,
+    stack monitoring, negative-pressure zones for the reactor building / hot
+    cell), so it scales with fusion power, not gross electric."""
+    without = {k: v for k, v in CC.building_costs.items() if k != "ventilation_hvac"}
+    cc_no_vent = dataclasses.replace(CC, building_costs=without)
+
+    def vent(p_et, p_fus):
+        full = cas21_buildings(
+            CC,
+            p_et=p_et,
+            p_the=0.0,
+            p_th=0.0,
+            p_fus=p_fus,
+            n_mod=1,
+            fuel=Fuel.DT,
+            noak=True,
+        )
+        rest = cas21_buildings(
+            cc_no_vent,
+            p_et=p_et,
+            p_the=0.0,
+            p_th=0.0,
+            p_fus=p_fus,
+            n_mod=1,
+            fuel=Fuel.DT,
+            noak=True,
+        )
+        return full - rest
+
+    base = vent(1150.0, 2300.0)
+    double_fus = vent(1150.0, 4600.0)
+    more_et = vent(5000.0, 2300.0)
+    assert double_fus == pytest.approx(2 * base, rel=1e-3)  # tracks p_fus
+    assert more_et == pytest.approx(base, rel=1e-3)  # ignores p_et
 
 
 def test_cas23_to_26_scale_with_power():

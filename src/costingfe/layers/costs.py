@@ -69,13 +69,18 @@ def cas10_preconstruction(cc, p_net, n_mod, fuel, noak):
     return subtotal + contingency
 
 
-def cas21_buildings(cc, p_et, p_the, p_th, p_fus, fuel, noak):
+def cas21_buildings(cc, p_et, p_the, p_th, p_fus, n_mod, fuel, noak):
     """CAS21: Buildings. Returns M$.
 
     Each building is priced per fuel type with its own scaling basis.
     Fuel-dependent buildings have dt/dd/dhe3/pb11 costs (M$ at 1 GWe ref).
     Fuel-independent buildings have an 'all' cost.
     Each building specifies what it scales with (fixed, p_fus, p_et, etc).
+
+    Buildings/site serve the whole plant, not one module: the power-scaling
+    buildings are fed plant-total power (n_mod x per-module, the same total the
+    BOP accounts CAS23-26 use), so they reach plant scale under module
+    replication. Fixed buildings ignore power and are charged once per site.
 
     See docs/account_justification/CAS21_buildings.md
     """
@@ -84,6 +89,12 @@ def cas21_buildings(cc, p_et, p_the, p_th, p_fus, fuel, noak):
     P_THE_REF = 1150.0  # MW thermal electric (steam-only, = p_et when no DEC)
     P_TH_REF = 2500.0  # MW thermal
     P_FUS_REF = 2300.0  # MW fusion
+
+    # Plant-total power: the site houses every module's installed equipment.
+    p_et_tot = p_et * n_mod
+    p_the_tot = p_the * n_mod
+    p_th_tot = p_th * n_mod
+    p_fus_tot = p_fus * n_mod
 
     fuel_key = {
         Fuel.DT: "dt",
@@ -94,13 +105,14 @@ def cas21_buildings(cc, p_et, p_the, p_th, p_fus, fuel, noak):
 
     scale_map = {
         "fixed": 1.0,
-        "p_et": p_et / P_ET_REF,
-        "p_the": p_the / P_THE_REF,
-        "p_th": p_th / P_TH_REF,
-        "p_fus": p_fus / P_FUS_REF,
-        "floor_area": p_et / P_ET_REF,  # proxy
-        "staff": p_et / P_ET_REF,  # proxy (staff scales with P^0.5 but
-    }  # building area is a weaker function)
+        "p_et": p_et_tot / P_ET_REF,
+        "p_the": p_the_tot / P_THE_REF,
+        "p_th": p_th_tot / P_TH_REF,
+        "p_fus": p_fus_tot / P_FUS_REF,
+        # Administration is staff-driven; staff (and so the building) scales as
+        # P^0.5, matching the staffing accounts CAS40/CAS70.
+        "staff": jnp.sqrt(p_et_tot / P_ET_REF),
+    }
 
     total = 0.0
     for _name, entry in cc.building_costs.items():

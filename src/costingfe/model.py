@@ -641,7 +641,9 @@ class CostModel:
 
         c21 = co.get(
             "CAS21",
-            cas21_buildings(cc, pt.p_et, pt.p_the, pt.p_th, pt.p_fus, self.fuel, noak),
+            cas21_buildings(
+                cc, pt.p_et, pt.p_the, pt.p_th, pt.p_fus, n_mod, self.fuel, noak
+            ),
         )
         if "CAS21" in co:
             overridden.append("CAS21")

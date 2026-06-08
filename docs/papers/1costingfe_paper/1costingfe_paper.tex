@@ -406,22 +406,22 @@ scenario, in 2025\,USD. Recorded by
 CAS account & Description & M\$ \\
 \midrule
 CAS10        & Pre-construction (land, permits, licensing)  & 14.5 \\
-CAS21        & Buildings \& structures                      & 323.2 \\
-CAS22        & Reactor plant equipment                      & 1730.7 \\
+CAS21        & Buildings \& structures                      & 322.1 \\
+CAS22        & Reactor plant equipment                      & 1906.8 \\
 CAS23--29    & Other direct (BOP, special materials, contingency) & 235.9 \\
-CAS30        & Capitalized indirect services                & 458.0 \\
+CAS30        & Capitalized indirect services                & 492.9 \\
 CAS40        & Owner's costs                                & 23.0 \\
-CAS50        & Supplementary costs                          & 177.0 \\
-CAS60        & Interest during construction                 & 569.4 \\
+CAS50        & Supplementary costs                          & 184.5 \\
+CAS60        & Interest during construction                 & 611.2 \\
 \midrule
-\multicolumn{2}{l}{Total overnight}                          & 3531.7 \\
-\multicolumn{2}{l}{Overnight specific cost (\$/kW)}          & 3532 \\
+\multicolumn{2}{l}{Total overnight}                          & 3790.9 \\
+\multicolumn{2}{l}{Overnight specific cost (\$/kW)}          & 3791 \\
 \midrule
 CAS70 (M\$/yr) & O\&M and scheduled replacement             & 34.5 \\
 CAS80 (M\$/yr) & Fuel                                       & 256.4 \\
-CAS90 (M\$/yr) & Annualized financial (CRF $\times$ capital) & 284.6 \\
+CAS90 (M\$/yr) & Annualized financial (CRF $\times$ capital) & 305.5 \\
 \midrule
-\multicolumn{2}{l}{\textbf{LCOE (\$/MWh)}}                  & \textbf{75.5} \\
+\multicolumn{2}{l}{\textbf{LCOE (\$/MWh)}}                  & \textbf{78.2} \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -1581,10 +1581,10 @@ no fission-style containment structure.
 \toprule
 Fuel & \$/kW & M\$ at 1\,GWe & Construction grade \\
 \midrule
-D-T    & 626 & 626 & Enhanced industrial (tritium confinement, hot cell, rad-HVAC) \\
-D-D    & 573 & 573 & Enhanced industrial (reduced tritium/activation scope) \\
-D-${}^3$He & 450 & 450 & Light enhanced industrial \\
-p-${}^{11}$B & 384 & 384 & Industrial (no hot cell, no tritium, standard HVAC) \\
+D-T    & 629 & 629 & Enhanced industrial (tritium confinement, hot cell, rad-HVAC) \\
+D-D    & 576 & 576 & Enhanced industrial (reduced tritium/activation scope) \\
+D-${}^3$He & 452 & 452 & Light enhanced industrial \\
+p-${}^{11}$B & 385 & 385 & Industrial (no hot cell, no tritium, standard HVAC) \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -1621,10 +1621,21 @@ differentiators by fuel:
 \subsubsection{Scaling Basis}
 Different buildings scale with different physical drivers. The
 turbine building scales with thermal electric power $P_{\text{the}}$
-(steam cycle only, not DEC); the reactor building and hot cell scale
-with fusion power $P_{\text{fus}}$; site improvements, control room,
-and security are approximately fixed; BOP electrical buildings scale
-with gross electric $P_{\text{et}}$.
+(steam cycle only, not DEC); the reactor building, hot cell, reactor
+auxiliaries, and ventilation/HVAC scale with fusion power
+$P_{\text{fus}}$ (ventilation because its dominant load is confinement
+rad-ventilation of the reactor building, not office comfort HVAC); site
+improvements, control room, and security are approximately fixed; BOP
+electrical buildings scale with gross electric $P_{\text{et}}$. The
+administration building tracks staff and so scales sub-linearly, as
+$P^{0.5}$, consistent with the staffing-based accounts (CAS40, CAS70).
+
+All power-scaling buildings are driven by \emph{plant-total} power.
+When a plant is assembled from $n_{\text{mod}}$ replicated modules, the
+power-scaling buildings are fed $n_{\text{mod}}$ times the per-module
+power, the same total the balance-of-plant accounts (CAS23--26) use, so
+the buildings/site reach plant scale rather than being pinned to a
+single module; fixed buildings are charged once per site.
 
 \subsubsection{Comparison with Benchmarks}
 \Cref{tab:cas21-benchmarks} situates the fuel-dependent CAS21 figures
@@ -3097,8 +3108,8 @@ Coils & REBCO HTS, demountable & \\
 The published fabricated-component cost is \$5{,}560M (FY2014~USD,
 \citep{sorbom2015arc} p.~25, Section 6.6), or \$7{,}562M after
 escalation to 2025~USD. \texttt{1costingfe} predicts an overnight
-capital cost of \$2{,}804M, an overnight specific cost of
-10{,}384~\$/kWe, and an LCOE of 145.3~\$/MWh under the framework's
+capital cost of \$2{,}808M, an overnight specific cost of
+10{,}400~\$/kWe, and an LCOE of 145.4~\$/MWh under the framework's
 NOAK default assumptions. The implied delta on overnight cost is
 $-63$\,\%. Sorbom's volumetric estimate uses a single \$1.06M/tonne
 fabricated multiplier averaged across four heritage burning-plasma
@@ -3151,10 +3162,10 @@ The 1costingfe ``Overnight'' row reports CAS10+CAS21+CAS22+CAS23+CAS24+CAS25+CAS
 (everything before interest during construction); the 1costingfe
 ``Total'' row also includes CAS60 (IDC).
 
-% Direct: published 1521.1 M$ (1992) * 2.295 = 3491; 1cfe sum CAS21+22+23+24+25+26+27 = 3492
-% Overnight $/kWe: published 2441 (1992) * 2.295 = 5602; 1cfe (CAS10-50)/kWe = 4585
-% Total: published 2844 M$ (1992) * 2.295 = 6527; 1cfe total_capital = 5467
-% LCOE: published 47.53 mill/kWh (1992) * 2.295 = 109.1 $/MWh; 1cfe = 77.3
+% Direct: published 1521.1 M$ (1992) * 2.295 = 3491; 1cfe sum CAS21+22+23+24+25+26+27 = 3488
+% Overnight $/kWe: published 2441 (1992) * 2.295 = 5602; 1cfe (CAS10-50)/kWe = 4580
+% Total: published 2844 M$ (1992) * 2.295 = 6527; 1cfe total_capital = 5461
+% LCOE: published 47.53 mill/kWh (1992) * 2.295 = 109.1 $/MWh; 1cfe = 77.2
 \begin{table}[h]
 \centering
 \caption{ARIES-AT cross-walk against published top-level rollups.
@@ -3165,10 +3176,10 @@ escalated from 1992~USD to 2025~USD by a factor of 2.295.}
 \toprule
 Account & Published (2025~USD) & \texttt{1costingfe} & $\Delta$ (\%) \\
 \midrule
-Direct cost (Account 90), M\$       & 3{,}491 & 3{,}492 &  $+0.0$ \\
-Overnight specific cost, \$/kWe     & 5{,}602 & 4{,}585 & $-18.2$ \\
-Total cost (Account 99), M\$        & 6{,}527 & 5{,}467 & $-16.2$ \\
-LCOE, \$/MWh                        &   109.1 &    77.3 & $-29.2$ \\
+Direct cost (Account 90), M\$       & 3{,}491 & 3{,}488 &  $-0.1$ \\
+Overnight specific cost, \$/kWe     & 5{,}602 & 4{,}580 & $-18.2$ \\
+Total cost (Account 99), M\$        & 6{,}527 & 5{,}461 & $-16.3$ \\
+LCOE, \$/MWh                        &   109.1 &    77.2 & $-29.2$ \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -3201,8 +3212,12 @@ LCOE breakdown. All values in 2025~USD.}
 \end{figure}
 
 Both ARC and ARIES-AT produce broadly similar capital stacks dominated
-by CAS22 (reactor plant equipment), with CAS21 (buildings) the
-second-largest group in both cases. The most informative compositional
+by CAS22 (reactor plant equipment), followed by the aggregated indirect
+and owner's costs (the ``Other capital'' group, which bundles CAS30
+indirect services) and the CAS60 financial charge. CAS21 (buildings) is
+the largest single direct-equipment account after the reactor, though
+smaller than those aggregated indirect and financial groups in both
+cases. The most informative compositional
 difference is the absolute scale: ARC's compact 270\,MWe footprint
 produces a smaller absolute capital stack than the 1\,GWe ARIES-AT
 but a higher \$/kWe figure, reflecting diseconomies of scale in CAS21

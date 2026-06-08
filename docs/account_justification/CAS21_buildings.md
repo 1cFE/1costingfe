@@ -67,6 +67,8 @@ The fusion values form a gradient driven by neutron flux and tritium inventory:
 
 All values are reference costs at a 1 GWe net plant (~1.15 GW gross), in 2024\$, expressed as \$/kW of gross electric for comparability with literature. Each building scales with a different physical driver (see "Scales with" column in the Summary table) — not all scale with gross electric.
 
+**Module replication (n_mod).** Buildings/site serve the whole plant, not one module. The power-scaling buildings are driven by **plant-total** power (`n_mod x per-module`, the same total the balance-of-plant accounts CAS23-26 use), so a 1 GWe plant built from many small modules houses all of their installed equipment, not one module's worth. Fixed buildings are charged once per site regardless of `n_mod`. The lone exception is the administration building, which scales as the square root of plant-total power (see Administration, below). Note that many small modules each carry their own fixed recirculating loads, so the plant-total gross/thermal power of an N-module plant exceeds that of a single efficient machine of the same net output — the buildings track the real installed equipment, as the BOP accounts do.
+
 ### Fuel-dependent buildings
 
 **1. Site improvements** — DT: \$85M | DD: \$81M | DHe3: \$75M | pB11: \$69M
@@ -163,8 +165,9 @@ Scope: perimeter security, access control, surveillance.
 
 **8. Ventilation/HVAC** — DT: \$17M | DD: \$15M | DHe3: \$6M | pB11: \$3.5M
 
-Scales with: served floor area (driven by building sizes above). Values at 1 GWe reference.
+Scales with: fusion power (P\_fus). Values at 1 GWe reference.
 
+- The dominant load is confinement rad-ventilation for the reactor building and hot cell (HEPA banks, stack monitoring, negative-pressure zones), not comfort HVAC for offices. That load tracks activated air volume, i.e. the reactor building — so ventilation scales with P\_fus (the reactor building's own driver), fuel-dependent, and grows per reactor under module replication. The strong fuel differentiation below (DT \$17M to pB11 \$3.5M, a 5x swing) is an activation story, not a floor-area story, which is why P\_fus is the right driver rather than gross electric or a floor-area proxy.
 - DT (\$17M): nuclear-grade HVAC for tritium zones — HEPA filtration banks, continuous air monitors (CAMs), stack monitoring, emergency isolation dampers, negative-pressure confinement zones. Rad-HVAC is 3-5x conventional (Breakthrough Institute).
 - DD (\$15M): rad-HVAC needed — DD produces tritium via D(D,p)T branch, and any tritium-wetted surface requires HEPA, stack monitoring, negative pressure. Slightly smaller zones than DT due to lower tritium inventory, but still full rad-HVAC, not standard industrial.
 - DHe3 (\$6M): enhanced industrial HVAC with stack monitoring for trace tritium. Not full HEPA banks — more like a monitored exhaust with a single-stage filter. Borderline between industrial and rad-HVAC.
@@ -173,9 +176,10 @@ Scales with: served floor area (driven by building sizes above). Values at 1 GWe
 
 **9. Administration** — DT: \$9M | DD: \$8M | DHe3: \$6M | pB11: \$5M
 
-Scales with: staff count. Values at 1 GWe reference.
+Scales with: staff count, as P^0.5. Values at 1 GWe reference.
 
 - DT ~120 staff, DD ~94, DHe3 ~69, pB11 ~60 (or ~30 automated). Office space, training rooms, meeting rooms, locker rooms scale roughly with headcount.
+- Staff (and so the office building) scales sub-linearly with plant power, as P^0.5 — the same law the staffing accounts CAS40 (owner's costs) and CAS70 (O&M) use. A plant twice the size does not need twice the administrative headcount. The building is therefore costed as `base x sqrt(P_gross_total / P_ref)`, not linearly in power.
 - Previous value: \$10/kW all fuels
 
 **10. Maintenance shops** — DT: \$17M | DD: \$16M | DHe3: \$15M | pB11: \$14M
@@ -225,10 +229,10 @@ These are the same cost for all fuels — they house equipment that doesn't depe
 | Maintenance | 15 | 14 | 13 | 12 | ~fixed + staff | Decon area |
 | Service water | 8 | 8 | 8 | 8 | P\_th (thermal rejection) | Cooling water treatment |
 | Control room | 12 | 11 | 10 | 10 | ~fixed | Building structure, not consoles |
-| Administration | 8 | 7 | 5 | 4 | Staff count | Office space |
+| Administration | 8 | 7 | 5 | 4 | Staff count (P^0.5) | Office space |
 | Site services | 4 | 4 | 3 | 3 | ~fixed | Warehouse, fire station |
 | Security | 3 | 3 | 2 | 2 | ~fixed | Part 37 does not list tritium |
-| Ventilation/HVAC | 15 | 13 | 5 | 3 | Served floor area | Rad-HVAC zones |
+| Ventilation/HVAC | 15 | 13 | 5 | 3 | P\_fus (rad-ventilation) | Rad-HVAC zones |
 | Assembly hall | 18 | 18 | 18 | 18 | Component size | Pre-assembly space |
 | **TOTAL** | **502** | **446** | **339** | **308** | | |
 

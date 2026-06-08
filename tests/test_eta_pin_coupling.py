@@ -35,9 +35,15 @@ _BASE = dict(
         # blanket_fill) replacing the special_materials x fill_factor x P_net
         # model. DT/PbLi shifts are <0.5% (a fixed inventory no longer shrinks
         # with net power).
-        (C.TOKAMAK, Fuel.DT, 227.89),
-        (C.MIRROR, Fuel.DT, 186.77),
-        (C.STELLARATOR, Fuel.DT, 343.16),
+        # Re-benchmarked again after CAS21 buildings/site were fed plant-total
+        # power (n_mod x per-module) so they scale with module replication, and
+        # the staff-driven administration building moved to a P^0.5 law (was
+        # linear in power), matching the staffing accounts CAS40/CAS70. At these
+        # 200 MWe / n_mod=1 points only the admin sqrt change bites: sub-1 GWe
+        # plants pay slightly more admin building, so LCOE rises <0.1%.
+        (C.TOKAMAK, Fuel.DT, 228.07),
+        (C.MIRROR, Fuel.DT, 186.95),
+        (C.STELLARATOR, Fuel.DT, 343.34),
         # DIPOLE re-benchmarked after the radial-build inversion + spherical
         # geometry dispatch + Li2O blanket fill + C220108 divertor zeroing +
         # external stationary lift coil restructured as
@@ -45,8 +51,8 @@ _BASE = dict(
         # alignment). +7.4% here is the volumetric CAS27: the dipole's large
         # thin Li2O blanket (C220101 ~$360M) was previously costed at ~$0.6M of
         # fill; it is now ~$235M, consistent with the blanket structure.
-        (C.DIPOLE, Fuel.DHE3, 276.11),
-        (C.POLYWELL, Fuel.PB11, 52.98),
+        (C.DIPOLE, Fuel.DHE3, 276.24),
+        (C.POLYWELL, Fuel.PB11, 53.08),
     ],
 )
 def test_benchmark_lcoe_preserved(concept, fuel, expected):

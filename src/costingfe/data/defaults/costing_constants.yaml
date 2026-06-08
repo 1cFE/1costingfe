@@ -152,7 +152,7 @@ building_costs:
   fuel_storage:       {dt: 9,   dd: 7,   dhe3: 3,  pb11: 1,  scales: fixed}
   control_room:       {dt: 14,  dd: 13,  dhe3: 12, pb11: 12, scales: fixed}
   security:           {dt: 3.5, dd: 3.5, dhe3: 2.3, pb11: 2.3, scales: fixed}
-  ventilation_hvac:   {dt: 17,  dd: 15,  dhe3: 6,  pb11: 3.5, scales: floor_area}
+  ventilation_hvac:   {dt: 17,  dd: 15,  dhe3: 6,  pb11: 3.5, scales: p_fus}
   administration:     {dt: 9,   dd: 8,   dhe3: 6,  pb11: 5,  scales: staff}
   maintenance:        {dt: 17,  dd: 16,  dhe3: 15, pb11: 14, scales: fixed}
   site_services:      {dt: 5,   dd: 5,   dhe3: 3.5, pb11: 3.5, scales: fixed}

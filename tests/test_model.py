@@ -159,6 +159,21 @@ def test_compare_all_returns_ranking():
     assert lcoes == sorted(lcoes)
 
 
+def test_cas21_grows_with_module_count():
+    """CAS21 (buildings/site) must not shrink when a plant is split into more
+    (smaller) modules. A 1 GWe plant of 20 modules houses more installed
+    equipment than a single 1 GWe machine, so its buildings/site cost is
+    higher, not pinned to one small module's value."""
+    model = CostModel(concept=ConfinementConcept.TOKAMAK, fuel=Fuel.DT)
+    one = model.forward(
+        net_electric_mw=1000.0, n_mod=1, availability=0.85, lifetime_yr=30
+    )
+    many = model.forward(
+        net_electric_mw=1000.0, n_mod=20, availability=0.85, lifetime_yr=30
+    )
+    assert many.costs.cas21 > one.costs.cas21
+
+
 # ---- Cost override tests ----
 
 
