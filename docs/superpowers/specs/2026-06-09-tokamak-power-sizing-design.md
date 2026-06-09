@@ -128,17 +128,27 @@ Only f_GW is freed in this version. Freeing q95, the beta fraction, or T finds a
 better optimum but is harder to interpret and leans harder on the disruption
 model across more channels. Those are deferred until the f_GW path is trusted.
 
-Caveat on disruption severity: with the current parameters
-(disruption_damage = 0.02, downtime 72 h) the replacement penalty is small
-(single-digit percent of life across the f_GW range) while the capital savings
-from shrinking the machine are larger, so the optimum sits at the Greenwald
-boundary and optimize mode reproduces boundary-sizing. The deciding knob is
-disruption_damage. A physically severe major-disruption value (roughly 0.1 to
-0.2) produces a 30 to 40 percent life reduction and a genuine interior optimum.
-Recalibrating disruption severity is a separate justified-number task
-(account_justification) and is a prerequisite for optimize mode to be more than
-cosmetic. Optimize mode ships regardless, but its value is gated on that
-calibration.
+Disruption severity as input: the four disruption knobs
+(disruption_rate_base, disruption_steepness, disruption_damage,
+disruption_downtime) are explicit input parameters, sourced from YAML or
+defaults.py, read without any inline fallback. The current code also hardcodes
+inline params.get fallbacks for these (model.py:875-878); those are removed, so
+a missing key errors rather than silently taking a magic number, consistent with
+the placement discipline.
+
+Where the optimum lands is set entirely by these input values. With the current
+placeholder values (disruption_damage = 0.02, downtime 72 h) the replacement
+penalty is small (single-digit percent of life across the f_GW range) while the
+capital savings from shrinking the machine are larger, so the optimum sits at
+the Greenwald boundary and optimize mode reproduces boundary-sizing. The
+deciding knob is disruption_damage: a physically severe major-disruption value
+(roughly 0.1 to 0.2) produces a 30 to 40 percent life reduction and a genuine
+interior optimum. The placeholder values are not literature-grounded, so the
+location of the economic optimum is currently unjustified. Grounding these four
+inputs with a literature review (tracked as a separate task feeding an
+account_justification writeup) is what makes optimize mode quantitatively
+trustworthy. Optimize mode ships regardless, since the values are inputs; its
+output simply tracks whatever severity the inputs encode.
 
 ## Plumbing
 
@@ -223,8 +233,11 @@ knobs are inert when sizing is off.
 
 - Other concepts (stellarator, mirror, ICF, pulsed): same nesting, different
   sizing law. Deferred.
-- Disruption severity recalibration: a prerequisite for optimize mode to bite,
-  tracked as a separate justified-number task.
+- Disruption severity literature review: the four disruption inputs
+  (rate_base, steepness, damage, downtime) currently carry placeholder values.
+  A literature review grounds them and feeds an account_justification writeup.
+  This sets whether the LCOE optimum is interior or at the boundary, so it is
+  what makes optimize mode quantitatively trustworthy. Separate task.
 - Freeing more optimizer knobs (q95, beta fraction, T): after the f_GW path is
   trusted.
 - Anchor-on-raw-geometry back-out, needed for scale mode when only R0/a/B0 are
