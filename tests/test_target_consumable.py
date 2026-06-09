@@ -120,7 +120,7 @@ def test_forward_override_sets_factory_and_consumable():
     base = dict(net_electric_mw=200.0, availability=0.40, lifetime_yr=30)
     m = CostModel(concept=ConfinementConcept.MAG_TARGET, fuel=Fuel.DD)
     off = m.forward(**base)
-    on = m.forward(target_unit_cost=5.0, target_factory_capex=150.0, **base)
+    on = m.forward(target_unit_cost=5.0, target_factory_capex_fixed=150.0, **base)
     # Default: no factory, minimal (fuel-only) CAS80.
     assert float(off.cas22_detail["C220108"]) == 0.0
     # Both knobs set: factory and consumable switch on.

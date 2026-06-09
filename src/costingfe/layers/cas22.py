@@ -175,10 +175,17 @@ def cas22_reactor_plant_equipment(
     lev_coil_cryostat_cost: float | None = None,
     stationary_lift_coil_fraction: float = 0.10,
     blanket_fill: BlanketFill | None = None,
-    # Bottom-up target-factory capital at 1 GWe (CAS22.01.08, IFE/MIF), M$.
-    # Concept-specific: a precision+tritium capsule factory (laser/heavy-ion)
-    # vs a metal liner/RTL casting shop (MagLIF/Z-pinch). 0 disables the factory.
-    target_factory_capex: float = 0.0,
+    # Bottom-up target-factory capital (CAS22.01.08, IFE/MIF), M$, three terms:
+    #   cap_fixed       -- building + tritium-confinement shell + base line (fixed)
+    #   cap_per_hz       -- production lines, scale with target throughput (f_rep)
+    #   cap_per_gwfus    -- material handling / cryo / recovery, scale with mass
+    #                       flow (P_fus = yield/shot x f_rep; carries the J/shot
+    #                       dependence, which is otherwise P_fus/f_rep and not a
+    #                       free axis). All 0 disables the factory.
+    f_rep: float = 0.0,
+    target_factory_capex_fixed: float = 0.0,
+    target_factory_capex_per_hz: float = 0.0,
+    target_factory_capex_per_gwfus: float = 0.0,
 ) -> dict[str, float]:
     """Compute all CAS22 sub-accounts. Returns dict of account_code -> M$.
 
@@ -479,16 +486,28 @@ def cas22_reactor_plant_equipment(
     elif manufactured_target:
         # Pulsed concept that consumes a fabricated target/liner each shot
         # (laser/heavy-ion capsule, MagLIF/Z-pinch liner): the on-site factory
-        # that produces them is plant-dedicated capital here. The capex is a
-        # concept-specific bottom-up build-up (precision cleanroom + tritium
-        # confinement for capsules; a metal casting shop for liners), scaled
-        # with plant size. The recurring per-shot hardware lives in CAS80, so
-        # target_factory_capex must carry only capital, not the amortized
-        # per-unit cost (no double count). Gated on manufactured_target so
-        # in-situ-formation concepts (plasma-jet, FRC/theta/DPF/staged-Z,
-        # liquid-liner MTF) carry no phantom factory by default.
+        # that produces them is plant-dedicated capital here, built up from the
+        # three independent drivers of a target factory:
+        #   - cap_fixed: the building, tritium-confinement shell, and base line
+        #     (rep-rate independent);
+        #   - cap_per_hz x f_rep: precision production lines, set by target
+        #     throughput (units/s = f_rep), the axis plant power cannot see;
+        #   - cap_per_gwfus x P_fus: material handling / cryo / recovery, set by
+        #     mass-energy flow. Since (P_elec, f_rep) fix P_fus and hence
+        #     yield/shot = P_fus/f_rep, this term carries the J/shot dependence;
+        #     J/shot is not a free axis and needs no separate term.
+        # Per-module P_fus and f_rep are used so the external x n_mod scaling of
+        # this per-module account grows the throughput/handling terms with total
+        # plant throughput (the fixed term over-counts only for n_mod > 1).
+        # The recurring per-shot hardware lives in CAS80 (capital is not banked
+        # twice). Gated on manufactured_target so in-situ-formation concepts
+        # carry no phantom factory by default.
         # See docs/account_justification/CAS80_target_consumables.md
-        c220108 = target_factory_capex * (p_net / 1000.0) ** 0.7
+        c220108 = (
+            target_factory_capex_fixed
+            + target_factory_capex_per_hz * f_rep
+            + target_factory_capex_per_gwfus * (p_fus / 1000.0)
+        )
     else:
         # In-situ plasma/liner formation: no fabricated target, no factory.
         c220108 = 0.0

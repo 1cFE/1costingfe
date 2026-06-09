@@ -740,7 +740,13 @@ class CostModel:
             family=self.family,
             concept=self.concept,
             manufactured_target=manufactured_target,
-            target_factory_capex=params.get("target_factory_capex") or 0.0,
+            f_rep=params.get("f_rep") or 0.0,
+            target_factory_capex_fixed=params.get("target_factory_capex_fixed") or 0.0,
+            target_factory_capex_per_hz=params.get("target_factory_capex_per_hz")
+            or 0.0,
+            target_factory_capex_per_gwfus=(
+                params.get("target_factory_capex_per_gwfus") or 0.0
+            ),
             b_center=b_center,
             r_bore=r_bore,
             R0=params["R0"],
@@ -1164,9 +1170,11 @@ class CostModel:
             # Pulsed driver
             "p_driver",
             "e_preheat_mj",
-            # IFE/MIF target factory capital (CAS22.01.08); in-situ concepts
-            # leave it unset (0) and carry no factory.
-            "target_factory_capex",
+            # IFE/MIF target factory capital (CAS22.01.08), three-term build-up;
+            # in-situ concepts leave them unset (0) and carry no factory.
+            "target_factory_capex_fixed",
+            "target_factory_capex_per_hz",
+            "target_factory_capex_per_gwfus",
         }
     )
 

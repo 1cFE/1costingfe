@@ -16,7 +16,10 @@ p_house: 4.0         # Housekeeping power [MW]
 p_cryo: 0.3          # Cryogenic power [MW]
 p_target: 1.5        # Target/liner factory power [MW]
 target_unit_cost: 6.0    # $/shot — bottom-up dynamic-hohlraum wire-array load (~4.9) + RTL remanufacturing (~1.2, net of recycling), 2024$. Per-shot consumable; RTL remelt/recast plant amortized here. Goodin/Alexander FPA 2007, Olson 2001. See CAS80_target_consumables.md
-target_factory_capex: 150.0   # M$ at 1 GWe — wire-array/load fabrication + DT-fill shop (NOT a CVD-diamond+cryo capsule cleanroom); replaces the phantom laser-capsule factory. See CAS80_target_consumables.md
+# Target factory (CAS22.01.08), three-term build-up; design total ~147 M$ at 0.1 Hz, 3.05 GW_fus. Wire-array/load shop: fixed-dominated at low rep; replaces the phantom laser-capsule factory. See CAS80_target_consumables.md
+target_factory_capex_fixed: 130.0      # M$ — building + wire-array/load fabrication tooling + DT-fill containment + base line
+target_factory_capex_per_hz: 15.0      # M$/Hz — marginal load/RTL production line (metal forming, not precision capsule fab)
+target_factory_capex_per_gwfus: 5.0    # M$/GW_fus — debris/RTL handling (RTL remelt plant amortized per-shot in CAS80, not here)
 
 # Radial build geometry [m] (spherical chamber)
 R0: 0.0          # Not used for sphere

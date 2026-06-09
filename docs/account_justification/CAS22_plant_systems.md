@@ -63,22 +63,34 @@ flux concentration is a design parameter).
 
 **IFE/MIF:**
 
-    C220108 = target_factory_capex × (P_net / 1000)^0.7
+    C220108 = cap_fixed + cap_per_hz × f_rep + cap_per_gwfus × (P_fus / 1000)
 
-The on-site target factory, a **per-concept** capital input rather than a
-single global base: a precision + tritium-confinement capsule cleanroom
-(laser $725M, heavy-ion $780M at 1 GWe) costs ~5x a metal liner/RTL
-casting shop (MagLIF/Z-pinch $150M).  The capex is a bottom-up build-up
-(precision cleanroom + tritium hot zone + recovery back-end, divided by
-yield), de-sourced from the Miles/LIFE factory and calibrated to LIFE's
-own ~$600M target factory.  The earlier flat $244M (a pyFECONS-inherited
-number applied to every concept) double-counted the fully-loaded per-shot
-cost and phantom-costed a capsule cleanroom onto liner concepts; both are
-fixed here.
+The on-site target factory, a **per-concept** three-term build-up rather
+than a single power-scaled base.  The three terms are the factory's
+independent cost drivers: a fixed building + tritium-confinement shell
+(`cap_fixed`); precision production lines that scale with target
+throughput, i.e. the repetition rate (`cap_per_hz`); and material
+handling / cryogenics / recovery that scale with mass-energy flow, i.e.
+fusion power (`cap_per_gwfus`).  Target size (J/shot) is not an
+independent axis -- fixing plant power and rep rate fixes yield per shot
+(P_fus/f_rep) -- so it enters only through P_fus and needs no term.  This
+replaces an earlier flat $244M × (P_et/1000)^0.7: power scaling was a
+fair proxy for the handling term but blind to the rep-rate (throughput)
+term, the axis the original basis was criticized for missing.
+
+A precision + tritium-confinement capsule cleanroom (laser ~$730M,
+heavy-ion ~$781M design total) costs ~5x a metal liner/RTL casting shop
+(MagLIF/Z-pinch ~$150M, fixed-dominated at 0.1 Hz).  The coefficients are
+a bottom-up build-up de-sourced from the Miles/LIFE factory and
+calibrated so the optimistic corner reproduces LIFE's own ~$600M target
+factory.  The earlier flat $244M (a pyFECONS-inherited number applied to
+every concept) double-counted the fully-loaded per-shot cost and
+phantom-costed a capsule cleanroom onto liner concepts; both are fixed
+here.
 
 Gated on `target_unit_cost > 0` (the concept fabricates a target) **and**
-sized by `target_factory_capex`: in-situ concepts (plasma-jet MIF,
-liquid-liner magnetized-target, pulsed FRC, theta-pinch,
+sized by the `target_factory_capex_*` coefficients: in-situ concepts
+(plasma-jet MIF, liquid-liner magnetized-target, pulsed FRC, theta-pinch,
 dense-plasma-focus, staged-Z) leave both at 0 and carry C220108 = 0.  The
 recurring per-shot hardware, the recycle-vs-dispose radiological lifecycle,
 and the full bottom-up derivation are documented in

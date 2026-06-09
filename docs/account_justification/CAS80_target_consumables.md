@@ -10,7 +10,7 @@ a **fabricated target** on every shot: the capsule and hohlraum of a laser or
 heavy-ion target, the metal liner and recyclable transmission line (RTL) of a
 MagLIF or Z-pinch load. Costing this correctly requires **two** accounts, not one:
 
-- **CAS22.01.08 (`target_factory_capex`)** -- the on-site, plant-dedicated
+- **CAS22.01.08 (`target_factory_capex_*`)** -- the on-site, plant-dedicated
   factory that fabricates, fills, and fields the targets. Capital.
 - **CAS80 (`target_unit_cost`)** -- the recurring per-shot hardware consumed in
   the burn (materials, factory operating cost, waste handling). Annualized.
@@ -38,10 +38,36 @@ fuel-assembly convention puts the fabricated assembly (not just the isotope) in
 the fuel account. The DT isotope itself is costed separately, in the recycled
 fuel formula (`CAS80_annualized_fuel_cost.md`), and is not in `target_unit_cost`.
 
-## Factory capital (CAS22.01.08): bottom-up build-up
+## Factory capital (CAS22.01.08): three-term build-up
 
-`C220108 = target_factory_capex x (p_net / 1000)^0.7` -- the per-concept capex
-is the factory capital at 1 GWe; the exponent scales with plant size.
+A target factory has three independent cost drivers, so the capital is a
+three-term build-up rather than a single power-scaled number:
+
+```
+C220108 = cap_fixed + cap_per_hz x f_rep + cap_per_gwfus x (P_fus / 1000)
+```
+
+- `cap_fixed` -- building, tritium-confinement shell, base line. Rep-independent.
+- `cap_per_hz x f_rep` -- precision production lines. The factory's throughput is
+  targets/second = `f_rep`, so the line count (hence cost) scales with rep rate.
+  This is the axis plant power cannot see, and the one the original flat
+  `$244M x (p_et/1000)^0.7` was criticized for missing.
+- `cap_per_gwfus x P_fus` -- material handling, cryogenics, post-shot recovery,
+  waste. These scale with mass-energy throughput, i.e. fusion power.
+
+**Why no J/shot term.** Fixing plant electric power and rep rate fixes the fusion
+power and therefore the yield per shot (`P_fus / (f_rep x n_mod)`); target size
+is not an independent axis. It enters the factory only through `P_fus` (bigger
+targets -> more cryo/recovery mass flow), which the handling term already
+captures. The actual per-target *material* (ablator, hohlraum), which does scale
+strongly with J/shot, lives in CAS80, not here. A neat consequence: at fixed
+power, trading rep rate against yield-per-shot holds `P_fus` (and the handling
+term) constant while the fab term grows -- correct, since you make more, smaller
+pieces of the same total mass. (The terms use per-module `f_rep` and `P_fus`; the
+account is aggregated x n_mod, which grows the throughput and handling terms with
+total plant throughput. Only `cap_fixed` over-counts for n_mod > 1 -- a single
+factory can feed multiple modules -- a known limitation, immaterial at the
+default n_mod = 1.)
 
 The capsule factory (laser / heavy-ion) is a **two-zone** facility, and three
 compounding drivers set its cost on top of the raw material bill:
@@ -75,14 +101,22 @@ fully-loaded -- back out to a ~$600M target factory. That lands on the
 **optimistic corner** of the build-up below, so the floor of our range
 reproduces the most credible IFE economics study rather than being free-floating.
 
-### Per-concept values (1 GWe, dispose default)
+### Per-concept values (dispose default)
 
-| Concept | `target_factory_capex` (M$) | `target_unit_cost` ($/shot) | factory type |
-|---|---|---|---|
-| `laser_ife` | **725** (range 434-1564) | **0.50** (range 0.27-1.28) | precision + tritium capsule cleanroom |
-| `heavy_ion` | **780** | **0.62** | capsule + lead-hohlraum press/assembly |
-| `maglif` | **150** | **9.0** | metal liner stamping/machining + DT-fill shop |
-| `zpinch` | **150** | **6.0** | wire-array/load fabrication + DT-fill shop |
+Factory coefficients (`fixed` M$ / `per_hz` M$/Hz / `per_gwfus` M$/GW), the design
+f_rep, the resulting C220108 design total, and the per-shot cost:
+
+| Concept | fixed / per_hz / per_gwfus | f_rep | C220108 design (M$) | `target_unit_cost` ($/shot) | factory type |
+|---|---|---|---|---|---|
+| `laser_ife` | 290 / 33 / 36 | 10 Hz | **730** (range 434-1564) | **0.50** (range 0.27-1.28) | precision + tritium capsule cleanroom |
+| `heavy_ion` | 340 / 64 / 40 | 5 Hz | **781** | **0.62** | capsule + lead-hohlraum press/assembly |
+| `maglif` | 130 / 15 / 5 | 0.1 Hz | **149** | **9.0** | metal liner stamping/machining + DT-fill shop |
+| `zpinch` | 130 / 15 / 5 | 0.1 Hz | **147** | **6.0** | wire-array/load fabrication + DT-fill shop |
+
+Heavy-ion's higher `per_hz` (64 vs 33) reflects the extra hohlraum press, LEH, and
+assembly steps per target. The low-rep liner shops are fixed-dominated: at 0.1 Hz
+their `per_hz x f_rep` line term is negligible, so the factory is essentially the
+fixed building + base line.
 
 MagLIF/Z-pinch are **not** CVD-diamond-and-cryo capsule cleanrooms -- they form
 and fill metal liners, a far cheaper casting/machining process. Their previous
@@ -90,7 +124,7 @@ and fill metal liners, a far cheaper casting/machining process. Their previous
 concept) was a phantom; $150M reflects a real liner shop. Their per-shot cost is
 already a bottom-up liner + RTL-remanufacturing number (the RTL remelt/recast
 plant is a distinct recycling facility, amortized in `target_unit_cost`, not in
-`target_factory_capex` -- no double count).
+the factory capital (CAS22.01.08) -- no double count).
 
 ## Per-shot consumable (CAS80)
 
@@ -158,7 +192,8 @@ capacitor $/J. See `feedback_hard_noak_costing` (project memory).
 
 A concept that fabricates a consumed target declares **both**
 `target_unit_cost > 0` (the per-shot consumable + factory power) **and**
-`target_factory_capex > 0` (the factory capital). In-situ-formation concepts
+the `target_factory_capex_*` coefficients (the factory capital). In-situ-formation
+concepts
 (plasma-jet, liquid-liner MTF, FRC, theta-pinch, dense-plasma-focus, staged-Z)
 leave both at 0 and carry no factory by default. A pellet-fed MTF (e.g. NearStar)
 sets both in its own concept config. The factory magnitude is its own knob,

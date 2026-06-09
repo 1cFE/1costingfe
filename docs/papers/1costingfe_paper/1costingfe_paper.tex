@@ -93,6 +93,14 @@
 	Astera Institute \\
 	\texttt{tal.rubin@astera.org} \\
 	\And
+	Mallory Snowden \\
+	Astera Institute \\
+	\texttt{mallory.snowden@astera.org} \\
+	\And
+	Reid Westwood \\
+	Astera Institute \\
+	\texttt{westwood.reid@gmail.com} \\
+	\And
 	Damien Scott \\
 	Astera Institute \\
 	\texttt{damien.scott@astera.org} \\
@@ -1684,25 +1692,38 @@ levitated dipole has a closed-field-line topology and exhausts through
 the loss cone at the chamber openings, so it carries no manufactured
 divertor cassette and $C_{220108} = 0$. For inertial and
 magneto-inertial concepts the same sub-account instead funds the
-on-site target factory, $C_{220108} = c_{\text{fac}}\,(P_{\text{net}}/1000)^{0.7}$,
-where the capital $c_{\text{fac}}$ is a \emph{per-concept} bottom-up
-build-up rather than a single global base. A laser or heavy-ion capsule
-factory is a precision cleanroom (capsule surface and sphericity held to
-a few tenths of a percent) whose tritium-handling back half---DT fill,
-ice-layering, contained assembly and injection---adds a dual-confinement
-premium on top, and whose throughput must be oversized by the inverse
-acceptance yield; this lands at $c_{\text{fac}}\approx 725$--$780$~M\$ at
-1~GWe, calibrated so its optimistic corner reproduces the
+on-site target factory, built up from its three independent cost drivers,
+\begin{equation}
+\label{eq:target-factory}
+C_{220108} = c_{\text{fix}} + c_{\text{line}}\,f_{\text{rep}} + c_{\text{flow}}\,(P_{\text{fus}}/1000):
+\end{equation}
+a fixed building and tritium-confinement shell ($c_{\text{fix}}$);
+precision production lines that scale with target throughput, i.e. the
+repetition rate $f_{\text{rep}}$ ($c_{\text{line}}$); and material
+handling, cryogenics, and post-shot recovery that scale with mass-energy
+flow $P_{\text{fus}}$ ($c_{\text{flow}}$). These are the only two
+independent factory variables: fixing the plant electric power and rep
+rate fixes the fusion power and hence the yield per shot
+($P_{\text{fus}}/f_{\text{rep}}$ at fixed module count), so target size
+enters through $P_{\text{fus}}$ alone and needs no separate term. This
+replaces an earlier flat \$244~M scaling on electric power---a fair proxy
+for the handling term, but blind to the throughput (rep-rate) term that
+is the axis the original basis was criticized for missing.
+The coefficients are a \emph{per-concept} bottom-up build-up. A laser or
+heavy-ion capsule factory is a precision cleanroom whose tritium-handling
+back half (DT fill, ice-layering, contained assembly, injection) adds a
+dual-confinement premium and whose throughput is oversized by the inverse
+acceptance yield, totalling $\sim$725--780~M\$ at the design point and
+calibrated so its optimistic corner reproduces the
 LIFE~\cite{anklam2011life} target factory ($\sim$\$600~M, \$0.25/target).
-A MagLIF or Z-pinch load is instead formed by stamping and filling a
-metal liner, a casting-shop process costing $\sim$$150$~M\$---roughly
-five times cheaper, and not the capsule cleanroom that an earlier flat
-$c_{\text{tgt}} = 244$~M\$ phantom-applied to every concept. That flat
-number, inherited from the Miles/LIFE factory total via
-pyFECONS~\\cite{woodruff2026}, also double-counted the factory because
-the per-shot target cost (\cref{sec:cas80}) is sourced from fully-loaded
-studies that already amortize the plant; the capital and per-shot
-accounts are disentangled here so the factory is counted once.
+A MagLIF or Z-pinch load is instead a stamped-and-filled metal liner, a
+casting-shop process near $\sim$150~M\$---five times cheaper, and not the
+capsule cleanroom that the flat number phantom-applied to every concept.
+That flat figure, inherited from the Miles/LIFE factory total via
+pyFECONS~\cite{woodruff2026}, also double-counted the factory: the
+per-shot target cost (\cref{sec:cas80}) is sourced from fully-loaded
+studies that already amortize the plant, so the capital and per-shot
+accounts are disentangled here to count it once.
 Whether a concept carries a factory is gated on the per-shot target cost
 $c_{\text{target}}>0$ and sized by $c_{\text{fac}}$: concepts that form
 their plasma or liner in situ---plasma-jet MIF, the liquid-liner

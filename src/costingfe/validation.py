@@ -131,9 +131,11 @@ class CostingInput(BaseModel):
     target_unit_cost: float | None = Field(
         default=None, ge=0
     )  # $/shot consumed target hardware (CAS80)
-    target_factory_capex: float | None = Field(
-        default=None, ge=0
-    )  # M$ target-factory capital at 1 GWe (CAS22.01.08)
+    # Target-factory capital (CAS22.01.08), three-term build-up (M$):
+    # fixed building/shell + production lines (per Hz) + handling (per GW_fus).
+    target_factory_capex_fixed: float | None = Field(default=None, ge=0)
+    target_factory_capex_per_hz: float | None = Field(default=None, ge=0)
+    target_factory_capex_per_gwfus: float | None = Field(default=None, ge=0)
     # eta_pin: already declared above (shared MFE/PULSED)
     # p_coils: already declared above (shared MFE/PULSED)
 

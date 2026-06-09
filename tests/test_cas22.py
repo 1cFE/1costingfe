@@ -277,7 +277,10 @@ def _make_cas22_with_family(
         burn_fraction=0.05,
         vac_op_pressure_pa=1.0,
         manufactured_target=manufactured_target,
-        target_factory_capex=725.0 if manufactured_target else 0.0,
+        f_rep=10.0 if manufactured_target else 0.0,
+        target_factory_capex_fixed=290.0 if manufactured_target else 0.0,
+        target_factory_capex_per_hz=33.0 if manufactured_target else 0.0,
+        target_factory_capex_per_gwfus=36.0 if manufactured_target else 0.0,
     )
 
 
@@ -289,13 +292,13 @@ def test_cas220108_mfe_uses_divertor():
 
 
 def test_cas220108_ife_uses_target_factory():
-    """IFE should use the per-concept target_factory_capex (larger than divertor)."""
+    """IFE uses the three-term factory build-up (larger than divertor)."""
     mfe = _make_cas22_with_family(ConfinementFamily.STEADY_STATE)
     ife = _make_cas22_with_family(ConfinementFamily.PULSED, manufactured_target=True)
     msg = "Target factory should cost more than divertor"
     assert ife["C220108"] > mfe["C220108"], msg
-    # capex scales with plant size on p_net (1000 -> factor 1.0)
-    expected = 725.0 * (1000.0 / 1000.0) ** 0.7
+    # fixed + per-Hz x f_rep + per-GW_fus x (p_fus/1000); f_rep=10, p_fus=2300
+    expected = 290.0 + 33.0 * 10.0 + 36.0 * (2300.0 / 1000.0)
     assert abs(ife["C220108"] - expected) < 0.01
 
 
