@@ -107,21 +107,23 @@ def test_cas80_target_term_linear_in_unit_cost():
     assert float(c1) > float(c0)
 
 
-def test_forward_override_gates_factory_and_consumable_together():
-    """A forward() override of target_unit_cost must move the C220108 factory
-    and the CAS80 consumable in lockstep -- not turn one on without the other.
+def test_forward_override_sets_factory_and_consumable():
+    """A fabricated-target concept declares two things: the per-shot consumable
+    (target_unit_cost -> CAS80) and the factory capital (target_factory_capex ->
+    CAS22.01.08). The factory magnitude is concept-specific (a capsule cleanroom
+    differs from a liner shop), so it is its own knob rather than a global base.
 
     This is the pellet-fed MTF case (e.g. NearStar): a MAG_TARGET concept whose
-    default is in-situ (0) but which fabricates a target and sets a positive
-    per-shot cost via its own config.
+    default is in-situ (both 0) but which fabricates a target and sets both in
+    its config; here we simulate that via forward() overrides.
     """
     base = dict(net_electric_mw=200.0, availability=0.40, lifetime_yr=30)
     m = CostModel(concept=ConfinementConcept.MAG_TARGET, fuel=Fuel.DD)
     off = m.forward(**base)
-    on = m.forward(target_unit_cost=5.0, **base)
+    on = m.forward(target_unit_cost=5.0, target_factory_capex=150.0, **base)
     # Default: no factory, minimal (fuel-only) CAS80.
     assert float(off.cas22_detail["C220108"]) == 0.0
-    # Override: both the factory and the consumable switch on.
+    # Both knobs set: factory and consumable switch on.
     assert float(on.cas22_detail["C220108"]) > 0.0
     assert float(on.costs.cas80) > float(off.costs.cas80)
 

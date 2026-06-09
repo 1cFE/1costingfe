@@ -145,8 +145,9 @@ class CostingConstants:
     e_fus_mev_pb11: float = 8.7
     power_supplies_base: float = 80.0
     divertor_base: float = 60.0
-    # IFE/MIF target factory capital (M$ at 1 GWe reference)
-    target_factory_base: float = 244.0
+    # IFE/MIF target-factory capital is a per-concept input (target_factory_capex,
+    # CAS22.01.08), not a global constant — a precision+tritium capsule factory
+    # and a metal-liner casting shop differ by ~5x. See CAS80_target_consumables.md.
 
     # C220109: DEC add-on for linear devices
     # Source: docs/account_justification/CAS220109_direct_energy_converter.md

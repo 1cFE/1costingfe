@@ -76,7 +76,8 @@ e_fus_mev_dhe3: 18.3
 e_fus_mev_pb11: 8.7
 power_supplies_base: 80.0    # M$ at 1 GWe (power-scaled)
 divertor_base: 60.0          # M$ at 1 GWth (power-scaled)
-target_factory_base: 244.0   # M$ at 1 GWe ref (IFE/MIF target factory capital)
+# IFE/MIF target-factory capital (CAS22.01.08) is per-concept: target_factory_capex
+# in each pulsed YAML (capsule factory vs liner shop). See CAS80_target_consumables.md.
 
 # Heating source efficiency by method (wall-plug -> delivered). Combined with
 # per-concept eta_couple (concept YAML) as eta_pin = eta_source x eta_couple.

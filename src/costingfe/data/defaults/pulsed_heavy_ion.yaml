@@ -14,7 +14,8 @@ p_trit: 10.0         # Tritium processing power [MW]
 p_house: 4.0         # Housekeeping power [MW]
 p_cryo: 0.5          # Cryogenic power [MW]
 p_target: 0.8        # Target factory power [MW]
-target_unit_cost: 0.65   # $/shot — NOAK indirect-drive hohlraum+capsule, 2024$ (hohlraum hardware drives the ~2x vs laser direct-drive). Rickman/Goodin GA 2003. See CAS80_target_consumables.md
+target_unit_cost: 0.62   # $/shot — bottom-up materials+opex / yield, incl. lead hohlraum + extra press/assembly step (capital in CAS22.01.08). Dispose default. See CAS80_target_consumables.md
+target_factory_capex: 780.0   # M$ at 1 GWe — capsule factory + hohlraum press/assembly + lead handling, precision+tritium / yield. See CAS80_target_consumables.md
 
 # Radial build geometry [m] (spherical chamber)
 R0: 0.0          # Not used for sphere

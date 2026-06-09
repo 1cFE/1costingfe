@@ -1684,19 +1684,31 @@ levitated dipole has a closed-field-line topology and exhausts through
 the loss cone at the chamber openings, so it carries no manufactured
 divertor cassette and $C_{220108} = 0$. For inertial and
 magneto-inertial concepts the same sub-account instead funds the
-target factory, $C_{220108} = c_{\text{tgt}}\,(P_{\text{et}}/1000)^{0.7}$
-with $c_{\text{tgt}} = 244$~M\$, applied to the concepts that fabricate
-a consumed target or liner every shot (laser and heavy-ion IFE, MagLIF,
-and the wire-array / dynamic-hohlraum Z-pinch). Whether a concept
-carries this factory is set by the single per-shot target cost
-$c_{\text{target}}$ (\cref{sec:cas80}): concepts that form their plasma
-or liner in situ---plasma-jet MIF (the imploding liner is itself
-plasma), the liquid-liner magnetized-target loop, pulsed FRC, theta
-pinch, dense plasma focus, and sheared-flow / staged Z-pinch---set
-$c_{\text{target}} = 0$ and carry $C_{220108} = 0$. The same knob
-governs the target-factory power draw, so an in-situ concept incurs
-neither the factory capital nor its recirculating power, with no cost
-override required.
+on-site target factory, $C_{220108} = c_{\text{fac}}\,(P_{\text{net}}/1000)^{0.7}$,
+where the capital $c_{\text{fac}}$ is a \emph{per-concept} bottom-up
+build-up rather than a single global base. A laser or heavy-ion capsule
+factory is a precision cleanroom (capsule surface and sphericity held to
+a few tenths of a percent) whose tritium-handling back half---DT fill,
+ice-layering, contained assembly and injection---adds a dual-confinement
+premium on top, and whose throughput must be oversized by the inverse
+acceptance yield; this lands at $c_{\text{fac}}\approx 725$--$780$~M\$ at
+1~GWe, calibrated so its optimistic corner reproduces the
+LIFE~\cite{anklam2011life} target factory ($\sim$\$600~M, \$0.25/target).
+A MagLIF or Z-pinch load is instead formed by stamping and filling a
+metal liner, a casting-shop process costing $\sim$$150$~M\$---roughly
+five times cheaper, and not the capsule cleanroom that an earlier flat
+$c_{\text{tgt}} = 244$~M\$ phantom-applied to every concept. That flat
+number, inherited from the Miles/LIFE factory total via
+pyFECONS~\\cite{woodruff2026}, also double-counted the factory because
+the per-shot target cost (\cref{sec:cas80}) is sourced from fully-loaded
+studies that already amortize the plant; the capital and per-shot
+accounts are disentangled here so the factory is counted once.
+Whether a concept carries a factory is gated on the per-shot target cost
+$c_{\text{target}}>0$ and sized by $c_{\text{fac}}$: concepts that form
+their plasma or liner in situ---plasma-jet MIF, the liquid-liner
+magnetized-target loop, pulsed FRC, theta pinch, dense plasma focus, and
+sheared-flow / staged Z-pinch---set both to zero and carry
+$C_{220108} = 0$, with no cost override required.
 
 Sub-account CAS22.01.01 (first wall + blanket) follows the pyFECONS
 volume $\times$ thermal-intensity $\times$ fuel-dependent unit-cost
@@ -2973,17 +2985,31 @@ burn-fraction correction below does not apply to $A_{\text{target}}$:
 the target is consumed whole each shot regardless of fuel burnup.
 $c_{\text{target}}$ is a per-concept input, zero for magnetic concepts
 and for in-situ-formation pulsed concepts (\cref{sec:cas22-inherited}),
-and it is the single knob that also switches on the
-target factory $C_{220108}$. NOAK mass-production estimates span
-\$0.25--0.70/shot for laser and heavy-ion capsules (where the
-fabricated shell is a few percent of LCOE) up to several dollars per
-shot for liner-plus-transmission-line loads, the transmission-line cost
-being net of in-situ material recycling. Because the rep rate enters
+and it carries only the \emph{non-capital} per-shot cost---materials,
+factory operating labour, and post-shot radiological handling, divided
+by the acceptance yield---because the factory capital is funded once, in
+$C_{220108}$. This separation matters: published NOAK target costs
+(\$0.20--0.30/shot~\cite{anklam2011life}) are fully-loaded values that
+already amortize the plant, so charging them in CAS80 \emph{and} a
+standalone factory capital double-counts the factory. Disentangled and
+built up from first principles---sub-cent materials (a diamond ablator
+shell, or a $\sim$3~g lead hohlraum) marked up by tritium-confined
+handling and divided by yield---the per-shot cost is $\sim$\$0.50--0.62
+for laser and heavy-ion capsules and several dollars for the
+liner-plus-transmission-line loads (the transmission line being net of
+in-situ recycling). A subtlety the prior treatment omitted is that all
+post-shot debris is tritiated and neutron-activated, so it must be either
+recovered in a contained hot cell or conditioned and disposed as
+low-level waste; for the LIFE-standard lead hohlraum the recovered metal
+is worth less than the recovery facility, so single-use disposal is the
+default and is competitive with recycling. Because the rep rate enters
 linearly, a high-rep laser plant at $f_{\text{rep}} = 10$~Hz consumes
 $\sim$$2.7\times10^{8}$ targets per year, so even a sub-dollar capsule
-contributes a multiple-percent share of LCOE, whereas a $\sim$0.1~Hz
-liner concept is dominated by its per-unit hardware cost at far lower
-annual throughput.
+contributes a multiple-percent share of LCOE; once the factory capital
+and these radiological premiums are costed honestly rather than
+amortized into an optimistic sub-dollar number, the high-rep capsule
+concepts sit above their magnetic counterparts in LCOE, as the
+inertial-fusion economics literature expects.
 
 \subsubsection{Burn Fraction and Fuel Recovery}
 \Cref{eq:cas80-base} implicitly assumes that all injected fuel

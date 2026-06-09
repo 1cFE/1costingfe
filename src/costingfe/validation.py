@@ -131,6 +131,9 @@ class CostingInput(BaseModel):
     target_unit_cost: float | None = Field(
         default=None, ge=0
     )  # $/shot consumed target hardware (CAS80)
+    target_factory_capex: float | None = Field(
+        default=None, ge=0
+    )  # M$ target-factory capital at 1 GWe (CAS22.01.08)
     # eta_pin: already declared above (shared MFE/PULSED)
     # p_coils: already declared above (shared MFE/PULSED)
 

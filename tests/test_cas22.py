@@ -277,6 +277,7 @@ def _make_cas22_with_family(
         burn_fraction=0.05,
         vac_op_pressure_pa=1.0,
         manufactured_target=manufactured_target,
+        target_factory_capex=725.0 if manufactured_target else 0.0,
     )
 
 
@@ -288,12 +289,13 @@ def test_cas220108_mfe_uses_divertor():
 
 
 def test_cas220108_ife_uses_target_factory():
-    """IFE should use target_factory_base (larger than divertor)."""
+    """IFE should use the per-concept target_factory_capex (larger than divertor)."""
     mfe = _make_cas22_with_family(ConfinementFamily.STEADY_STATE)
     ife = _make_cas22_with_family(ConfinementFamily.PULSED, manufactured_target=True)
     msg = "Target factory should cost more than divertor"
     assert ife["C220108"] > mfe["C220108"], msg
-    expected = CC.target_factory_base * (1100.0 / 1000.0) ** 0.7
+    # capex scales with plant size on p_net (1000 -> factor 1.0)
+    expected = 725.0 * (1000.0 / 1000.0) ** 0.7
     assert abs(ife["C220108"] - expected) < 0.01
 
 

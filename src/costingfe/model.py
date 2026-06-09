@@ -740,6 +740,7 @@ class CostModel:
             family=self.family,
             concept=self.concept,
             manufactured_target=manufactured_target,
+            target_factory_capex=params.get("target_factory_capex") or 0.0,
             b_center=b_center,
             r_bore=r_bore,
             R0=params["R0"],
@@ -1163,6 +1164,9 @@ class CostModel:
             # Pulsed driver
             "p_driver",
             "e_preheat_mj",
+            # IFE/MIF target factory capital (CAS22.01.08); in-situ concepts
+            # leave it unset (0) and carry no factory.
+            "target_factory_capex",
         }
     )
 
