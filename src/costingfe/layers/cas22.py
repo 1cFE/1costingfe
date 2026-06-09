@@ -175,6 +175,10 @@ def cas22_reactor_plant_equipment(
     lev_coil_cryostat_cost: float | None = None,
     stationary_lift_coil_fraction: float = 0.10,
     blanket_fill: BlanketFill | None = None,
+    # Bottom-up target-factory capital at 1 GWe (CAS22.01.08, IFE/MIF), M$.
+    # Concept-specific: a precision+tritium capsule factory (laser/heavy-ion)
+    # vs a metal liner/RTL casting shop (MagLIF/Z-pinch). 0 disables the factory.
+    target_factory_capex: float = 0.0,
 ) -> dict[str, float]:
     """Compute all CAS22 sub-accounts. Returns dict of account_code -> M$.
 
@@ -474,12 +478,17 @@ def cas22_reactor_plant_equipment(
             c220108 = cc.divertor_base * (p_th / 1000.0) ** 0.5
     elif manufactured_target:
         # Pulsed concept that consumes a fabricated target/liner each shot
-        # (laser/heavy-ion capsule, MagLIF/Z-pinch liner): high-rep-rate
-        # target manufacturing infrastructure. Gated on manufactured_target
-        # rather than the concept enum so in-situ-formation concepts
-        # (plasma-jet, FRC/theta/DPF/staged-Z, liquid-liner MTF) carry no
-        # phantom target factory by default — no cost override required.
-        c220108 = cc.target_factory_base * (p_et / 1000.0) ** 0.7
+        # (laser/heavy-ion capsule, MagLIF/Z-pinch liner): the on-site factory
+        # that produces them is plant-dedicated capital here. The capex is a
+        # concept-specific bottom-up build-up (precision cleanroom + tritium
+        # confinement for capsules; a metal casting shop for liners), scaled
+        # with plant size. The recurring per-shot hardware lives in CAS80, so
+        # target_factory_capex must carry only capital, not the amortized
+        # per-unit cost (no double count). Gated on manufactured_target so
+        # in-situ-formation concepts (plasma-jet, FRC/theta/DPF/staged-Z,
+        # liquid-liner MTF) carry no phantom factory by default.
+        # See docs/account_justification/CAS80_target_consumables.md
+        c220108 = target_factory_capex * (p_net / 1000.0) ** 0.7
     else:
         # In-situ plasma/liner formation: no fabricated target, no factory.
         c220108 = 0.0

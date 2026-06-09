@@ -17,7 +17,7 @@ At reference parameters (1 GWe DT tokamak):
 | Account | Description | Cost (M$) | Method |
 |---------|-------------|----------:|--------|
 | C220107 | Power supplies | 89 | Power-scaled (0.7) |
-| C220108 | Divertor / target factory | 96 | Power-scaled (0.5 MFE / 0.7 IFE) |
+| C220108 | Divertor / target factory | 103 (MFE) / 150–780 (IFE/MIF) | Power-scaled; IFE/MIF capex per-concept |
 | C220109 | Direct energy converter | 0 | Excluded |
 | C220110 | Remote handling | 162 | Fuel + concept dependent |
 | C220111 | Installation labor | 286 | 14% of reactor subtotal |
@@ -63,20 +63,26 @@ flux concentration is a design parameter).
 
 **IFE/MIF:**
 
-    C220108 = $244M × (P_et / 1000)^0.7
+    C220108 = target_factory_capex × (P_net / 1000)^0.7
 
-Target factory for inertial/magneto-inertial concepts.  Higher cost
-than MFE divertor due to high-repetition-rate target manufacturing
-infrastructure.
+The on-site target factory, a **per-concept** capital input rather than a
+single global base: a precision + tritium-confinement capsule cleanroom
+(laser $725M, heavy-ion $780M at 1 GWe) costs ~5x a metal liner/RTL
+casting shop (MagLIF/Z-pinch $150M).  The capex is a bottom-up build-up
+(precision cleanroom + tritium hot zone + recovery back-end, divided by
+yield), de-sourced from the Miles/LIFE factory and calibrated to LIFE's
+own ~$600M target factory.  The earlier flat $244M (a pyFECONS-inherited
+number applied to every concept) double-counted the fully-loaded per-shot
+cost and phantom-costed a capsule cleanroom onto liner concepts; both are
+fixed here.
 
-Applied only to concepts that fabricate a consumed target/liner each
-shot (laser and heavy-ion IFE, MagLIF, wire-array/dynamic-hohlraum
-Z-pinch).  Gated on the per-shot `target_unit_cost` knob: concepts that
-form their plasma or liner in-situ (plasma-jet MIF, liquid-liner
-magnetized-target, pulsed FRC, theta-pinch, dense-plasma-focus,
-staged-Z) set it to 0 and carry C220108 = 0 and zero target-factory
-power by default, with no cost override.  The per-shot target consumable
-is costed in CAS80; see `CAS80_target_consumables.md`.
+Gated on `target_unit_cost > 0` (the concept fabricates a target) **and**
+sized by `target_factory_capex`: in-situ concepts (plasma-jet MIF,
+liquid-liner magnetized-target, pulsed FRC, theta-pinch,
+dense-plasma-focus, staged-Z) leave both at 0 and carry C220108 = 0.  The
+recurring per-shot hardware, the recycle-vs-dispose radiological lifecycle,
+and the full bottom-up derivation are documented in
+`CAS80_target_consumables.md`.
 
 ### C220109: Direct Energy Converter
 
