@@ -187,3 +187,48 @@ def test_sizing_overrides_accepted():
         beta_N_max=3.5,
         H_factor=1.0,
     )
+
+
+def test_sizing_runs_end_to_end_and_sets_geometry():
+    m = CostModel(ConfinementConcept.TOKAMAK, Fuel.DT)
+    r = m.forward(
+        net_electric_mw=500.0,
+        availability=0.85,
+        lifetime_yr=30.0,
+        size_from_power=True,
+        aspect_ratio=3.1,
+        beta_N_max=3.5,
+        coil_material="rebco_hts",
+    )
+    assert r.costs.lcoe > 0.0
+    assert m._plasma_state is not None
+
+
+def test_pinning_R0_in_sizing_mode_raises():
+    m = CostModel(ConfinementConcept.TOKAMAK, Fuel.DT)
+    with pytest.raises(ValueError, match="cannot be pinned"):
+        m.forward(
+            net_electric_mw=500.0,
+            availability=0.85,
+            lifetime_yr=30.0,
+            size_from_power=True,
+            R0=3.0,
+        )
+
+
+def test_coil_cost_scales_with_power():
+    # The core issue: C220103 (coils) must move with power.
+    m = CostModel(ConfinementConcept.TOKAMAK, Fuel.DT)
+    common = dict(
+        availability=0.85,
+        lifetime_yr=30.0,
+        size_from_power=True,
+        aspect_ratio=3.1,
+        beta_N_max=3.5,
+        coil_material="rebco_hts",
+    )
+    lo = m.forward(net_electric_mw=200.0, **common)
+    hi = m.forward(net_electric_mw=1500.0, **common)
+    c_lo = lo.cas22_detail["C220103"]
+    c_hi = hi.cas22_detail["C220103"]
+    assert c_hi > c_lo * 1.2

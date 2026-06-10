@@ -443,6 +443,47 @@ class CostModel:
         self._plasma_state = plasma_state
         return pt
 
+    def _size_tokamak(self, params, n_mod):
+        """Solve geometry from the power target, inject it into params, and
+        return the power table. Mutates params with solved R0/a/B/b_center."""
+        from costingfe.defaults import get_magnet_properties
+        from costingfe.layers.tokamak import _plasma_volume, tokamak_size_from_power
+
+        props = get_magnet_properties(params["coil_material"])
+        # Derive eta_pin (heating wall-plug efficiency) exactly as _power_balance
+        # does, so both the sizing solve and the final 0D forward balance use it.
+        params["eta_pin"] = self._effective_eta_pin(params)
+        solve_params = dict(params)
+        solve_params["b_max"] = props.b_max
+        solve_params["recirc_power_factor"] = props.recirc_power_factor
+        # The sizing solver reads dhe3_f_He3 raw (it is derived, not in YAML).
+        solve_params["dhe3_f_He3"] = self._dhe3_f_He3_eff(params)
+        # Size one module to the per-module net power.
+        solve_params["net_electric_mw"] = params["net_electric_mw"] / n_mod
+
+        result = tokamak_size_from_power(solve_params, self.fuel)
+
+        # Inject solved geometry so downstream geometry and coil cost use it.
+        params["R0"] = result.R0
+        params["plasma_t"] = result.a
+        params["B"] = result.B0
+        params["b_center"] = result.B0
+        params["T_e"] = result.T_e
+        self._last_R0 = result.R0
+
+        # Keep the final power balance consistent with the sizing solve: add the
+        # resistive-coil recirculation term (zero for superconductors) to p_coils
+        # using the solved geometry, matching net_electric_at_R0.
+        V_plasma = float(_plasma_volume(result.R0, result.a, params["elon"]))
+        params["p_coils"] = (
+            params["p_coils"] + props.recirc_power_factor * result.B0**2 * V_plasma
+        )
+
+        # Re-run the forward 0D power balance at the solved point to produce the
+        # full PowerTable and plasma state for the rest of the pipeline.
+        params["0d_mode"] = "forward"
+        return self._power_balance_0d(params, n_mod)
+
     def forward(
         self,
         net_electric_mw: float,
@@ -603,8 +644,19 @@ class CostModel:
                 if k not in overrides:
                     params[k] = v
 
-        # Layer 2: Power balance (dispatched by family)
-        pt = self._power_balance(params, n_mod)
+        # Layer 2: Power balance (dispatched by family), or sizing solve.
+        if params.get("size_from_power", False):
+            if self.concept != ConfinementConcept.TOKAMAK:
+                raise ValueError("size_from_power is implemented for TOKAMAK only")
+            pinned = [k for k in ("R0", "plasma_t", "b_center", "B") if k in overrides]
+            if pinned:
+                raise ValueError(
+                    f"{pinned} cannot be pinned in size_from_power mode; they are "
+                    "solved. Remove them or set size_from_power=False."
+                )
+            pt = self._size_tokamak(params, n_mod)
+        else:
+            pt = self._power_balance(params, n_mod)
 
         # Layer 3: Geometry (radial build -> component volumes)
         from dataclasses import fields as dc_fields
