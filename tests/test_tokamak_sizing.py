@@ -267,6 +267,25 @@ def test_optimize_returns_valid_fgw_and_lcoe():
     assert 0.0 < m._sizing_fgw <= 1.0
 
 
+def test_optimize_implies_size_from_power():
+    # Passing optimize_lcoe without size_from_power must still size the machine,
+    # not silently fall back to the fixed-geometry power balance.
+    m = CostModel(ConfinementConcept.TOKAMAK, Fuel.DT)
+    m.forward(
+        net_electric_mw=500.0,
+        availability=0.85,
+        lifetime_yr=30.0,
+        optimize_lcoe=True,
+        aspect_ratio=3.1,
+        beta_N_max=3.5,
+        coil_material="rebco_hts",
+        disruption_rate_base=1.0,
+        disruption_damage=0.1,
+    )
+    assert m._last_R0 > 0.0  # sizing actually happened
+    assert 0.0 < m._sizing_fgw <= 1.0
+
+
 def test_optimize_lcoe_no_worse_than_default_fgw():
     m = CostModel(ConfinementConcept.TOKAMAK, Fuel.DT)
     common = dict(

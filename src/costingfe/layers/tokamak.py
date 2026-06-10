@@ -874,7 +874,6 @@ def net_electric_at_R0(R0, params, fuel, return_state=False):
     pn, beta = _net_at_R0_T(R0, T_star, params, fuel)
     if return_state:
         return pn, T_star, beta
-    beta_cap = params["beta_N_max"]
     beta_tol = 1e-4 * beta_cap
     if beta > beta_cap + beta_tol:
         return -_BETA_PENALTY * (beta - beta_cap)

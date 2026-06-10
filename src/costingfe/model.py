@@ -664,6 +664,11 @@ class CostModel:
                 },
             )
 
+        # optimize_lcoe implies size_from_power (you can only optimize the
+        # sized machine's operating point).
+        if params.get("optimize_lcoe", False):
+            params["size_from_power"] = True
+
         # Note: sizing mode does NOT force use_0d_model. The disruption penalty
         # keys off self._plasma_state (which _size_tokamak sets), so it is active
         # for sized machines regardless. Leaving use_0d_model alone keeps the
@@ -711,7 +716,12 @@ class CostModel:
                         noak=noak,
                         cost_overrides=cost_overrides,
                         override_reference_mw=override_reference_mw,
-                        **{**overrides, "optimize_lcoe": False, "f_GW": fgw},
+                        **{
+                            **overrides,
+                            "size_from_power": True,
+                            "optimize_lcoe": False,
+                            "f_GW": fgw,
+                        },
                     ).costs.lcoe
 
                 best_fgw = self._optimize_fgw(_lcoe_at)
@@ -727,7 +737,12 @@ class CostModel:
                     noak=noak,
                     cost_overrides=cost_overrides,
                     override_reference_mw=override_reference_mw,
-                    **{**overrides, "optimize_lcoe": False, "f_GW": best_fgw},
+                    **{
+                        **overrides,
+                        "size_from_power": True,
+                        "optimize_lcoe": False,
+                        "f_GW": best_fgw,
+                    },
                 )
             self._sizing_fgw = params["f_GW"]
             pt = self._size_tokamak(params, n_mod)
@@ -1279,7 +1294,7 @@ class CostModel:
     # and the costing-constant fields). Keep in sync when a new params.get()
     # input is added; an omission surfaces as a spurious "unknown parameter".
     # Golden-section iterations for LCOE-over-f_GW optimization (optimize_lcoe).
-    _FGW_OPT_ITERS = 20
+    _FGW_OPT_ITERS = 12
 
     _OPTIONAL_OVERRIDE_KEYS = frozenset(
         {
