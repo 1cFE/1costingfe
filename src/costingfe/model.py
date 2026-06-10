@@ -44,7 +44,12 @@ from costingfe.layers.physics import (
     pulsed_thermal_forward,
     pulsed_thermal_inverse,
 )
+from costingfe.layers.reactivity import (
+    n_i_over_n_e,
+    z_eff_fuel,
+)
 from costingfe.layers.tokamak import (
+    _T_BRACKET_DEFAULTS,
     DisruptionModel,
     apply_disruption_penalty,
     aux_heating_from_confinement,
@@ -357,14 +362,19 @@ class CostModel:
             fw_area=params.get("fw_area", 0.0),
         )
 
-        fuel_frac_kw = dict(
+        base_frac_kw = dict(
             dd_f_T=params["dd_f_T"],
             dd_f_He3=params["dd_f_He3"],
-            dhe3_dd_frac=params["dhe3_dd_frac"],
             dhe3_f_T=params["dhe3_f_T"],
             dhe3_f_He3=self._dhe3_f_He3_eff(params),
             pb11_f_alpha_n=params["pb11_f_alpha_n"],
             pb11_f_p_n=params["pb11_f_p_n"],
+        )
+
+        kernel_kw = dict(
+            T_i_over_T_e=params["T_i_over_T_e"],
+            dhe3_fuel_ratio=params["dhe3_fuel_ratio"],
+            pb11_fuel_ratio=params["pb11_fuel_ratio"],
         )
 
         if mode == "forward":
@@ -381,7 +391,14 @@ class CostModel:
                 M_ion=params.get("M_ion", 2.5),
                 Z_eff=params.get("Z_eff", 1.5),
                 lambda_q=params.get("lambda_q", 0.002),
-                **fuel_frac_kw,
+                dhe3_dd_frac=params["dhe3_dd_frac_pin"],
+                **base_frac_kw,
+                **kernel_kw,
+            )
+            pb_frac = (
+                plasma_state.dhe3_dd_frac_eff
+                if self.fuel == Fuel.DHE3
+                else params["dhe3_dd_frac"]
             )
             pt = mfe_forward_power_balance(
                 p_fus=plasma_state.p_fus,
@@ -409,7 +426,8 @@ class CostModel:
                 a_minor=a,
                 kappa=kappa,
                 R_w=params["R_w"],
-                **fuel_frac_kw,
+                dhe3_dd_frac=pb_frac,
+                **base_frac_kw,
                 **impurity_kw,
             )
         else:
@@ -441,7 +459,10 @@ class CostModel:
                 p_house=params["p_house"],
                 p_cryo=params["p_cryo"],
                 n_mod=n_mod,
-                **fuel_frac_kw,
+                dhe3_dd_frac=params["dhe3_dd_frac"],
+                dhe3_dd_frac_pin=params["dhe3_dd_frac_pin"],
+                **base_frac_kw,
+                **kernel_kw,
             )
 
         self._plasma_state = plasma_state
@@ -507,11 +528,14 @@ class CostModel:
             lambda_q=params["lambda_q"],
             dd_f_T=params["dd_f_T"],
             dd_f_He3=params["dd_f_He3"],
-            dhe3_dd_frac=params["dhe3_dd_frac"],
+            dhe3_dd_frac=params["dhe3_dd_frac_pin"],
             dhe3_f_T=params["dhe3_f_T"],
             dhe3_f_He3=self._dhe3_f_He3_eff(params),
             pb11_f_alpha_n=params["pb11_f_alpha_n"],
             pb11_f_p_n=params["pb11_f_p_n"],
+            T_i_over_T_e=params["T_i_over_T_e"],
+            dhe3_fuel_ratio=params["dhe3_fuel_ratio"],
+            pb11_fuel_ratio=params["pb11_fuel_ratio"],
         )
         p_aux = float(
             aux_heating_from_confinement(
@@ -526,6 +550,10 @@ class CostModel:
                 result.a,
                 params["elon"],
                 params["M_ion"],
+                T_i=params["T_i_over_T_e"] * float(ps.T_e),
+                n_i_frac=n_i_over_n_e(
+                    self.fuel, params["dhe3_fuel_ratio"], params["pb11_fuel_ratio"]
+                ),
             )
         )
         old_input = params["p_input"]
@@ -749,6 +777,23 @@ class CostModel:
             for k, v in rb_derived.items():
                 if k not in overrides:
                     params[k] = v
+
+        # Multi-fuel kernel inputs for the tokamak 0D/sizing paths: effective
+        # Z_eff (fuel-ion contribution + impurity excess over hydrogenic), the
+        # dhe3_dd_frac pin (explicit user override -> pinned; otherwise derived
+        # at the operating point), and non-DT operating-temperature brackets.
+        if (use_0d or params.get("size_from_power", False)) and (
+            self.concept == ConfinementConcept.TOKAMAK
+        ):
+            if self.fuel != Fuel.DT:
+                params["Z_eff"] = z_eff_fuel(
+                    self.fuel, params["dhe3_fuel_ratio"], params["pb11_fuel_ratio"]
+                ) + (params["Z_eff"] - 1.0)
+                if "T_min" not in overrides:
+                    params["T_min"] = _T_BRACKET_DEFAULTS[self.fuel][0]
+                if "T_max" not in overrides:
+                    params["T_max"] = _T_BRACKET_DEFAULTS[self.fuel][1]
+            params["dhe3_dd_frac_pin"] = overrides.get("dhe3_dd_frac")
 
         # Layer 2: Power balance (dispatched by family), or sizing solve.
         if params.get("size_from_power", False):

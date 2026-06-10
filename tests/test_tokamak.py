@@ -30,6 +30,9 @@ _DT_FUEL_FRAC = dict(
     dhe3_f_He3=0.1,
     pb11_f_alpha_n=0.0,
     pb11_f_p_n=0.0,
+    T_i_over_T_e=1.0,
+    dhe3_fuel_ratio=1.0,
+    pb11_fuel_ratio=0.15,
 )
 
 # Default physics params for power balance tests
@@ -263,6 +266,7 @@ class TestInverseMode:
             B=5.0,
             q95=3.5,
             f_GW=0.85,
+            dhe3_dd_frac_pin=None,
             **_DT_FUEL_FRAC,
         )
         # T_e should be recovered approximately (radiation coupling
@@ -516,7 +520,9 @@ class TestJAXAutodiff:
         """beta_N should have finite gradient w.r.t. T_e."""
 
         def beta_fn(T):
-            return compute_beta_N(n_e=1e20, T_i=T, B=5.0, I_p_MA=15.0, a=2.0)
+            return compute_beta_N(
+                n_e=1e20, T_e=T, T_i=T, n_i_frac=1.0, B=5.0, I_p_MA=15.0, a=2.0
+            )
 
         g = jax.grad(beta_fn)(15.0)
         assert jnp.isfinite(g)

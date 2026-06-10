@@ -103,6 +103,10 @@ def _base_sizing_params():
         dhe3_f_He3=0.5,
         pb11_f_alpha_n=0.0,
         pb11_f_p_n=0.0,
+        T_i_over_T_e=1.0,
+        dhe3_fuel_ratio=1.0,
+        pb11_fuel_ratio=0.15,
+        dhe3_dd_frac_pin=None,
     )
 
 

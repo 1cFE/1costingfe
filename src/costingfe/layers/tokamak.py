@@ -16,6 +16,11 @@ from costingfe.layers.physics import (
     mfe_forward_power_balance,
     mfe_inverse_power_balance,
 )
+from costingfe.layers.reactivity import (
+    fusion_power,
+    n_i_over_n_e,
+    sigv_dt,
+)
 from costingfe.types import Fuel, WallMaterial
 
 # ---------------------------------------------------------------------------
@@ -57,40 +62,15 @@ class PlasmaState:
     div_heat_flux: float  # Divertor heat flux estimate [MW/m^2]
     H_factor: float  # tau_E_actual / tau_E_scaling
     disruption_rate: float = 0.0  # Disruptions per FPY
+    dhe3_dd_frac_eff: float = 0.0  # effective D-D side-channel fraction (D-He3)
 
 
 # ---------------------------------------------------------------------------
 # Bosch-Hale DT reactivity
 # ---------------------------------------------------------------------------
-# Coefficients from Bosch & Hale, Nuclear Fusion 32 (1992) 611
-# Valid for 0.2 keV < T < 100 keV
-_BH_C1 = 1.17302e-9
-_BH_C2 = 1.51361e-2
-_BH_C3 = 7.51886e-2
-_BH_C4 = 4.60643e-3
-_BH_C5 = 1.35000e-2
-_BH_C6 = -1.06750e-4
-_BH_C7 = 1.36600e-5
-
-_BH_BG = 34.3827  # Gamow constant [keV^(1/2)]
-_BH_MRC2 = 1124656.0  # Reduced mass * c^2 [keV]
-
-
-def sigma_v_dt(T_keV):
-    """Bosch-Hale DT reactivity <sigma*v> [m^3/s].
-
-    Smooth analytic parameterization valid 1-100 keV.
-    Uses JAX operations for differentiability.
-    """
-    theta = T_keV / (
-        1.0
-        - T_keV
-        * (_BH_C2 + T_keV * (_BH_C4 + T_keV * _BH_C6))
-        / (1.0 + T_keV * (_BH_C3 + T_keV * (_BH_C5 + T_keV * _BH_C7)))
-    )
-    xi = (_BH_BG**2 / (4.0 * theta)) ** (1.0 / 3.0)
-    sigma_v = _BH_C1 * theta * jnp.sqrt(xi / (_BH_MRC2 * T_keV**3)) * jnp.exp(-3.0 * xi)
-    return sigma_v * 1e-6  # cm^3/s -> m^3/s
+# Bosch-Hale DT reactivity now lives in costingfe.layers.reactivity;
+# re-exported because tests and downstream code import it from here.
+sigma_v_dt = sigv_dt
 
 
 # ---------------------------------------------------------------------------
@@ -127,16 +107,16 @@ def compute_fusion_power(n_e, T_i, V_plasma):
     return 0.25 * rate * n_e * E_fus_J * V_plasma * 1e-6  # W -> MW
 
 
-def compute_beta_N(n_e, T_i, B, I_p_MA, a):
-    """Normalized beta [%·m·T/MA].
+def compute_beta_N(n_e, T_e, T_i, n_i_frac, B, I_p_MA, a):
+    """Normalized beta [%·m·T/MA] from electron + fuel-ion pressure.
 
-    beta_t = 2 * mu_0 * n_e * T_i [J] / B^2  (dimensionless)
-    beta_N = beta_t * (a * B / I_p_MA)  with beta_t in %, i.e. * 100
+    beta_t = mu_0 * n_e * (T_e + n_i_frac * T_i) [J] / B^2
+    For DT/DD (n_i = n_e, T_i = T_e) this reduces to the historical
+    2*mu_0*n_e*T/B^2 convention exactly.
     """
-    T_J = T_i * KEV_TO_J
-    beta_t = 2.0 * MU_0 * n_e * T_J / B**2  # dimensionless fraction
-    beta_N = beta_t * 100.0 * a * B / I_p_MA  # %·m·T/MA
-    return beta_N
+    p_J = (T_e + n_i_frac * T_i) * KEV_TO_J
+    beta_t = MU_0 * n_e * p_J / B**2
+    return beta_t * 100.0 * a * B / I_p_MA
 
 
 def compute_tau_E_ipb98y2(I_p_MA, B, n_e19, P_heat_MW, R, a, kappa, M):
@@ -224,7 +204,20 @@ def b0_from_radial_build(R0, a, b_max, blanket_t, ht_shield_t, structure_t, vess
 # Auxiliary heating from confinement requirement (sizing mode)
 # ---------------------------------------------------------------------------
 def aux_heating_from_confinement(
-    H_factor, I_p, B0, n_e, T_e, V_plasma, p_alpha, R0, a, kappa, M_ion
+    H_factor,
+    I_p,
+    B0,
+    n_e,
+    T_e,
+    V_plasma,
+    p_alpha,
+    R0,
+    a,
+    kappa,
+    M_ion,
+    *,
+    T_i,
+    n_i_frac,
 ):
     """Auxiliary heating power [MW] required to sustain the operating point at a
     given confinement quality H_factor.
@@ -236,7 +229,7 @@ def aux_heating_from_confinement(
     """
     n_e19 = n_e / 1e19
     K = compute_tau_E_ipb98y2(I_p, B0, n_e19, 1.0, R0, a, kappa, M_ion)
-    W_th_MW = 3.0 * n_e * T_e * KEV_TO_J * V_plasma * 1e-6
+    W_th_MW = 1.5 * n_e * (T_e + n_i_frac * T_i) * KEV_TO_J * V_plasma * 1e-6
     P_heat = (W_th_MW / (H_factor * K)) ** (1.0 / 0.31)
     return jnp.maximum(0.0, P_heat - p_alpha)
 
@@ -260,11 +253,14 @@ def tokamak_0d_forward(
     *,
     dd_f_T: float,
     dd_f_He3: float,
-    dhe3_dd_frac: float,
+    dhe3_dd_frac: float | None,
     dhe3_f_T: float,
     dhe3_f_He3: float,
     pb11_f_alpha_n: float,
     pb11_f_p_n: float,
+    T_i_over_T_e: float,
+    dhe3_fuel_ratio: float,
+    pb11_fuel_ratio: float,
 ):
     """Forward 0D tokamak model: machine params -> PlasmaState.
 
@@ -285,10 +281,23 @@ def tokamak_0d_forward(
     V_plasma = _plasma_volume(R, a, kappa)
     fw_area = _first_wall_area(R, a, kappa)
 
-    # 4. Fusion power
-    # TODO: separate T_i from T_e for non-DT fuels (p-B11: T_i >> T_e)
-    T_i = T_e  # DT assumption: T_i ≈ T_e
-    p_fus = compute_fusion_power(n_e, T_i, V_plasma)
+    # 4. Fusion power (T_i from the hot-ion ratio; fuel-aware reactivity)
+    T_i = T_i_over_T_e * T_e
+    p_fus, dhe3_dd_frac_eff = fusion_power(
+        fuel,
+        n_e,
+        T_i,
+        V_plasma,
+        dhe3_fuel_ratio=dhe3_fuel_ratio,
+        pb11_fuel_ratio=pb11_fuel_ratio,
+        dhe3_dd_frac_pin=dhe3_dd_frac,
+        dd_f_T=dd_f_T,
+        dd_f_He3=dd_f_He3,
+        dhe3_f_T=dhe3_f_T,
+        dhe3_f_He3=dhe3_f_He3,
+        pb11_f_alpha_n=pb11_f_alpha_n,
+        pb11_f_p_n=pb11_f_p_n,
+    )
 
     # 5. Alpha power and neutron split
     p_alpha, p_neutron = ash_neutron_split(
@@ -296,7 +305,7 @@ def tokamak_0d_forward(
         fuel,
         dd_f_T=dd_f_T,
         dd_f_He3=dd_f_He3,
-        dhe3_dd_frac=dhe3_dd_frac,
+        dhe3_dd_frac=dhe3_dd_frac_eff,
         dhe3_f_T=dhe3_f_T,
         dhe3_f_He3=dhe3_f_He3,
         pb11_f_alpha_n=pb11_f_alpha_n,
@@ -314,14 +323,15 @@ def tokamak_0d_forward(
     n_e19 = n_e / 1e19
     tau_E_scaling = compute_tau_E_ipb98y2(I_p, B, n_e19, p_heat, R, a, kappa, M_ion)
 
-    # 9. Actual confinement: W_th = 1.5 * n_e * T * V (electrons + ions)
-    W_th_J = 3.0 * n_e * T_e * KEV_TO_J * V_plasma  # factor 3 = 1.5*(n_e+n_i), n_i~n_e
+    # 9. Actual confinement: W_th = 1.5 * (n_e T_e + n_i T_i) * V
+    n_i_frac = n_i_over_n_e(fuel, dhe3_fuel_ratio, pb11_fuel_ratio)
+    W_th_J = 1.5 * n_e * (T_e + n_i_frac * T_i) * KEV_TO_J * V_plasma
     W_th_MW = W_th_J * 1e-6  # J -> MJ
     tau_E_actual = W_th_MW / p_heat  # s (W in MJ, P in MW -> s)
     H_factor = tau_E_actual / tau_E_scaling
 
     # 10. Beta
-    beta_N = compute_beta_N(n_e, T_i, B, I_p, a)
+    beta_N = compute_beta_N(n_e, T_e, T_i, n_i_frac, B, I_p, a)
 
     # 11. Wall loading
     wall_loading = compute_wall_loading(p_neutron, fw_area)
@@ -351,23 +361,28 @@ def tokamak_0d_forward(
         div_heat_flux=div_heat_flux,
         H_factor=H_factor,
         disruption_rate=disruption_rate,
+        dhe3_dd_frac_eff=dhe3_dd_frac_eff,
     )
 
 
 # ---------------------------------------------------------------------------
 # Inverse mode: find T_e that produces target p_fus
 # ---------------------------------------------------------------------------
-def _find_T_for_pfus(target_pfus, n_e, V_plasma, T_lo=1.0, T_hi=100.0, n_iter=60):
-    """Bisection to find T_i [keV] that yields target fusion power.
+def _find_T_for_pfus(
+    target_pfus, n_e, V_plasma, fuel, fpd_kwargs, T_lo, T_hi, n_iter=60
+):
+    """Bisection for the T_e [keV] yielding the target fusion power.
 
-    Uses jnp.where for JAX differentiability (no Python control flow).
-    Returns T_i; caller sets T_e = T_i (DT assumption).
+    fpd_kwargs are the fusion_power keyword args (mix ratios, pin, burn
+    fractions) plus T_i_over_T_e, which is applied to the trial T_e here.
     """
+    ratio = fpd_kwargs["T_i_over_T_e"]
+    kw = {k: v for k, v in fpd_kwargs.items() if k != "T_i_over_T_e"}
 
     def body(i, state):
         lo, hi = state
         mid = 0.5 * (lo + hi)
-        p_mid = compute_fusion_power(n_e, mid, V_plasma)  # mid = T_i
+        p_mid, _ = fusion_power(fuel, n_e, ratio * mid, V_plasma, **kw)
         lo = jnp.where(p_mid < target_pfus, mid, lo)
         hi = jnp.where(p_mid >= target_pfus, mid, hi)
         return (lo, hi)
@@ -427,6 +442,10 @@ def tokamak_0d_inverse(
     dhe3_f_He3: float,
     pb11_f_alpha_n: float,
     pb11_f_p_n: float,
+    T_i_over_T_e: float,
+    dhe3_fuel_ratio: float,
+    pb11_fuel_ratio: float,
+    dhe3_dd_frac_pin: float | None,
     # Impurity / synchrotron params for power balance
     wall_material=None,
     T_edge: float = 0.05,
@@ -449,72 +468,92 @@ def tokamak_0d_inverse(
     n_e = f_GW * n_GW * 1e20
     V_plasma = _plasma_volume(R, a, kappa)
 
-    # Get required p_fus from the existing inverse power balance
-    p_fus_required = mfe_inverse_power_balance(
-        p_net_target=p_net_per_mod,
-        fuel=fuel,
-        p_input=p_input,
-        mn=mn,
-        eta_th=eta_th,
-        eta_p=eta_p,
-        eta_pin=eta_pin,
-        eta_de=eta_de,
-        f_sub=f_sub,
-        f_dec=f_dec,
-        p_coils=p_coils,
-        p_cool=p_cool,
-        p_pump=p_pump,
-        p_trit=p_trit,
-        p_house=p_house,
-        p_cryo=p_cryo,
-        n_e=n_e,
-        T_e=15.0,
-        Z_eff=Z_eff,
-        plasma_volume=V_plasma,
-        B=B,
-        R_major=R,
-        a_minor=a,
-        kappa=kappa,
-        R_w=R_w,
-        wall_material=wall_material,
-        T_edge=T_edge,
-        tau_ratio=tau_ratio,
-        fw_area=fw_area,
+    fpd_kwargs = dict(
+        T_i_over_T_e=T_i_over_T_e,
+        dhe3_fuel_ratio=dhe3_fuel_ratio,
+        pb11_fuel_ratio=pb11_fuel_ratio,
+        dhe3_dd_frac_pin=dhe3_dd_frac_pin,
         dd_f_T=dd_f_T,
         dd_f_He3=dd_f_He3,
-        dhe3_dd_frac=dhe3_dd_frac,
         dhe3_f_T=dhe3_f_T,
         dhe3_f_He3=dhe3_f_He3,
         pb11_f_alpha_n=pb11_f_alpha_n,
         pb11_f_p_n=pb11_f_p_n,
     )
+    T_lo, T_hi = _T_BRACKET_DEFAULTS[fuel]
 
-    # Step 2: Find T_i that produces this p_fus (T_e = T_i for DT)
-    # TODO: separate T_i from T_e for non-DT fuels (p-B11: T_i >> T_e)
-    T_e = _find_T_for_pfus(p_fus_required, n_e, V_plasma)
-
-    # Step 3: Build full plasma state at found T_e
-    plasma_state = tokamak_0d_forward(
-        R=R,
-        a=a,
-        kappa=kappa,
-        B=B,
-        q95=q95,
-        f_GW=f_GW,
-        T_e=T_e,
-        p_input=p_input,
-        fuel=fuel,
-        M_ion=M_ion,
-        Z_eff=Z_eff,
-        lambda_q=lambda_q,
-        dd_f_T=dd_f_T,
-        dd_f_He3=dd_f_He3,
-        dhe3_dd_frac=dhe3_dd_frac,
-        dhe3_f_T=dhe3_f_T,
-        dhe3_f_He3=dhe3_f_He3,
-        pb11_f_alpha_n=pb11_f_alpha_n,
-        pb11_f_p_n=pb11_f_p_n,
-    )
+    # Two-pass fixed point: the required p_fus depends on the energy
+    # partition, whose D-He3 side-channel fraction depends on the solved T.
+    # One refinement suffices at costing fidelity.
+    frac = dhe3_dd_frac if dhe3_dd_frac_pin is None else dhe3_dd_frac_pin
+    for _ in range(2):
+        p_fus_required = mfe_inverse_power_balance(
+            p_net_target=p_net_per_mod,
+            fuel=fuel,
+            p_input=p_input,
+            mn=mn,
+            eta_th=eta_th,
+            eta_p=eta_p,
+            eta_pin=eta_pin,
+            eta_de=eta_de,
+            f_sub=f_sub,
+            f_dec=f_dec,
+            p_coils=p_coils,
+            p_cool=p_cool,
+            p_pump=p_pump,
+            p_trit=p_trit,
+            p_house=p_house,
+            p_cryo=p_cryo,
+            n_e=n_e,
+            T_e=15.0,
+            Z_eff=Z_eff,
+            plasma_volume=V_plasma,
+            B=B,
+            R_major=R,
+            a_minor=a,
+            kappa=kappa,
+            R_w=R_w,
+            wall_material=wall_material,
+            T_edge=T_edge,
+            tau_ratio=tau_ratio,
+            fw_area=fw_area,
+            dd_f_T=dd_f_T,
+            dd_f_He3=dd_f_He3,
+            dhe3_dd_frac=frac,
+            dhe3_f_T=dhe3_f_T,
+            dhe3_f_He3=dhe3_f_He3,
+            pb11_f_alpha_n=pb11_f_alpha_n,
+            pb11_f_p_n=pb11_f_p_n,
+        )
+        T_e = _find_T_for_pfus(
+            p_fus_required, n_e, V_plasma, fuel, fpd_kwargs, T_lo, T_hi
+        )
+        plasma_state = tokamak_0d_forward(
+            R=R,
+            a=a,
+            kappa=kappa,
+            B=B,
+            q95=q95,
+            f_GW=f_GW,
+            T_e=T_e,
+            p_input=p_input,
+            fuel=fuel,
+            M_ion=M_ion,
+            Z_eff=Z_eff,
+            lambda_q=lambda_q,
+            dd_f_T=dd_f_T,
+            dd_f_He3=dd_f_He3,
+            dhe3_dd_frac=dhe3_dd_frac_pin,
+            dhe3_f_T=dhe3_f_T,
+            dhe3_f_He3=dhe3_f_He3,
+            pb11_f_alpha_n=pb11_f_alpha_n,
+            pb11_f_p_n=pb11_f_p_n,
+            T_i_over_T_e=T_i_over_T_e,
+            dhe3_fuel_ratio=dhe3_fuel_ratio,
+            pb11_fuel_ratio=pb11_fuel_ratio,
+        )
+        if fuel == Fuel.DHE3:
+            frac = plasma_state.dhe3_dd_frac_eff
 
     # Step 4: Build power table using actual p_fus
     pt = mfe_forward_power_balance(
@@ -549,7 +588,7 @@ def tokamak_0d_inverse(
         fw_area=fw_area,
         dd_f_T=dd_f_T,
         dd_f_He3=dd_f_He3,
-        dhe3_dd_frac=dhe3_dd_frac,
+        dhe3_dd_frac=frac,
         dhe3_f_T=dhe3_f_T,
         dhe3_f_He3=dhe3_f_He3,
         pb11_f_alpha_n=pb11_f_alpha_n,
@@ -725,6 +764,16 @@ _RADIAL_BUILD_DEFAULTS = {
 }
 
 
+# Operating-temperature solve brackets [keV] by fuel. DT preserves the
+# historical values (inverse bisection 1-100; sizing reads YAML T_min/T_max).
+_T_BRACKET_DEFAULTS = {
+    Fuel.DT: (1.0, 100.0),
+    Fuel.DD: (5.0, 100.0),
+    Fuel.DHE3: (20.0, 200.0),
+    Fuel.PB11: (50.0, 400.0),
+}
+
+
 def derive_radial_build(fuel, **overrides):
     """Physics-based radial build thickness defaults by fuel type.
 
@@ -770,10 +819,9 @@ def _net_at_R0_T(R0, T_e, params, fuel):
         params["vessel_t"],
     )
 
-    fuel_frac_kw = dict(
+    base_frac_kw = dict(
         dd_f_T=params["dd_f_T"],
         dd_f_He3=params["dd_f_He3"],
-        dhe3_dd_frac=params["dhe3_dd_frac"],
         dhe3_f_T=params["dhe3_f_T"],
         dhe3_f_He3=params["dhe3_f_He3"],
         pb11_f_alpha_n=params["pb11_f_alpha_n"],
@@ -794,7 +842,11 @@ def _net_at_R0_T(R0, T_e, params, fuel):
         M_ion=M_ion,
         Z_eff=params["Z_eff"],
         lambda_q=params["lambda_q"],
-        **fuel_frac_kw,
+        dhe3_dd_frac=params["dhe3_dd_frac_pin"],
+        T_i_over_T_e=params["T_i_over_T_e"],
+        dhe3_fuel_ratio=params["dhe3_fuel_ratio"],
+        pb11_fuel_ratio=params["pb11_fuel_ratio"],
+        **base_frac_kw,
     )
 
     # Solve the auxiliary heating from the confinement requirement so that
@@ -812,6 +864,10 @@ def _net_at_R0_T(R0, T_e, params, fuel):
             a,
             kappa,
             M_ion,
+            T_i=params["T_i_over_T_e"] * float(ps.T_e),
+            n_i_frac=n_i_over_n_e(
+                fuel, params["dhe3_fuel_ratio"], params["pb11_fuel_ratio"]
+            ),
         )
     )
 
@@ -824,6 +880,8 @@ def _net_at_R0_T(R0, T_e, params, fuel):
     if wm_raw is not None:
         wall_mat = WallMaterial(wm_raw) if isinstance(wm_raw, str) else wm_raw
 
+    pb_frac = ps.dhe3_dd_frac_eff if fuel == Fuel.DHE3 else params["dhe3_dd_frac"]
+    pb_frac_kw = dict(**base_frac_kw, dhe3_dd_frac=pb_frac)
     pt = mfe_forward_power_balance(
         p_fus=ps.p_fus,
         fuel=fuel,
@@ -855,7 +913,7 @@ def _net_at_R0_T(R0, T_e, params, fuel):
         T_edge=params["T_edge"],
         tau_ratio=params["tau_ratio"],
         fw_area=ps.fw_area,
-        **fuel_frac_kw,
+        **pb_frac_kw,
     )
 
     return float(pt.p_net), float(ps.beta_N)
