@@ -3484,6 +3484,49 @@ power requirement, the framework determines the plasma conditions,
 checks them against stability and engineering limits, and computes
 the resulting LCOE in a single differentiable pass.
 
+\subsection{Power-to-Geometry Sizing}
+\label{sec:tokamak-sizing}
+
+For cost analyses that must scale with the power target, the framework
+provides a sizing solve that maps a target net electric power to tokamak
+geometry $(R_0, a, B_0)$, driving the geometry-dependent accounts
+(C220103 coils, blanket, vessel) from physics rather than from pinned
+inputs.
+
+The on-axis toroidal field is derived from the conductor's peak-field
+ceiling $B_{\max}$ and the inboard radial build:
+\begin{equation}
+\label{eq:b0-sizing}
+B_0 = B_{\max} \frac{R_{\text{coil,i}}}{R_0},
+\qquad
+R_{\text{coil,i}} = R_0 - a - d_{\text{in}},
+\end{equation}
+where $d_{\text{in}} = d_{\text{bk}} + d_{\text{sh}} + d_{\text{str}} +
+d_{\text{vv}}$ is the sum of the inboard blanket, shield, structure, and
+vessel thicknesses. Because these layers are fixed in metres, the ratio
+$B_0/B_{\max}$ falls as $R_0$ decreases, making high-field conductor
+more advantageous at small machine size.
+
+At each trial $R_0$ the operating point is determined at the constraint
+boundary: plasma current from \cref{eq:ip} with the $q_{95}$ floor,
+density from \cref{eq:greenwald} at the Greenwald fraction $f_{\text{GW}}$,
+and temperature from a bounded maximization of net power over a per-fuel
+interval $[T_{\min}, T_{\max}]$, subject to the Troyon limit
+$\beta_N \le \beta_{N,\max}$. Net power is then evaluated with the
+full power balance, including resistive recirculation for copper coils.
+Net power is monotonic increasing in $R_0$ at the boundary operating
+point, so $R_0$ is located by bisection; if the maximum search radius
+$R_{0,\max}$ cannot deliver the target, the solve raises a
+\texttt{SizingInfeasible} error.
+
+The solve supports four usage modes: \emph{pin} (existing behavior,
+sizing off), \emph{size} (solve $R_0$ from design knobs), \emph{scale}
+(anchor a reference machine's knobs, change the power target), and
+\emph{optimize} (minimize LCOE over $f_{\text{GW}}$ with $R_0$ slaved to
+the power target, using the disruption model of \cref{sec:tokamak-model}).
+Both sizing flags default to false, so existing configurations are
+unaffected. The D-T Bosch-Hale reactivity is the current scope; extension
+to other fuel reactivities is a follow-on.
 
 \section{Synchrotron radiation model details}
 \label{app:synchrotron}
