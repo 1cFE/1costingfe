@@ -247,3 +247,39 @@ def test_coil_cost_scales_with_power():
     c_lo = lo.cas22_detail["C220103"]
     c_hi = hi.cas22_detail["C220103"]
     assert c_hi > c_lo * 1.2
+
+
+def test_optimize_returns_valid_fgw_and_lcoe():
+    m = CostModel(ConfinementConcept.TOKAMAK, Fuel.DT)
+    r = m.forward(
+        net_electric_mw=500.0,
+        availability=0.85,
+        lifetime_yr=30.0,
+        size_from_power=True,
+        optimize_lcoe=True,
+        aspect_ratio=3.1,
+        beta_N_max=3.5,
+        coil_material="rebco_hts",
+        disruption_rate_base=1.0,
+        disruption_damage=0.1,
+    )
+    assert r.costs.lcoe > 0.0
+    assert 0.0 < m._sizing_fgw <= 1.0
+
+
+def test_optimize_lcoe_no_worse_than_default_fgw():
+    m = CostModel(ConfinementConcept.TOKAMAK, Fuel.DT)
+    common = dict(
+        net_electric_mw=500.0,
+        availability=0.85,
+        lifetime_yr=30.0,
+        size_from_power=True,
+        aspect_ratio=3.1,
+        beta_N_max=3.5,
+        coil_material="rebco_hts",
+        disruption_rate_base=1.0,
+        disruption_damage=0.1,
+    )
+    fixed = m.forward(f_GW=0.85, **common)
+    opt = m.forward(optimize_lcoe=True, **common)
+    assert opt.costs.lcoe <= fixed.costs.lcoe + 1e-6

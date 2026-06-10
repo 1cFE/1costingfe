@@ -864,10 +864,21 @@ def net_electric_at_R0(R0, params, fuel, return_state=False):
     # penalty so an all-infeasible point reads strongly negative rather than a
     # deceptive positive. return_state still exposes the TRUE state for
     # diagnostics.
+    #
+    # The beta-constrained optimum sits ON the cap, so T_star routinely lands a
+    # sub-epsilon above beta_cap in float32. Penalizing that microscopic overshoot
+    # would return a near-zero negative for a genuinely feasible point and corrupt
+    # the outer R0 bisection (it would read the point as failing the target and
+    # walk R0 too high). Apply a small tolerance: report true net power when beta
+    # is within tol of the cap; penalize only a real violation beyond it.
     pn, beta = _net_at_R0_T(R0, T_star, params, fuel)
     if return_state:
         return pn, T_star, beta
-    return feasible_net(T_star)
+    beta_cap = params["beta_N_max"]
+    beta_tol = 1e-4 * beta_cap
+    if beta > beta_cap + beta_tol:
+        return -_BETA_PENALTY * (beta - beta_cap)
+    return pn
 
 
 # ---------------------------------------------------------------------------

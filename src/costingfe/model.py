@@ -492,6 +492,33 @@ class CostModel:
         params["0d_mode"] = "forward"
         return self._power_balance_0d(params, n_mod)
 
+    def _optimize_fgw(self, lcoe_of_fgw):
+        """Golden-section minimize LCOE over f_GW in (0.3, 1.0].
+
+        lcoe_of_fgw is a callable mapping a trial f_GW to the resulting LCOE
+        (it runs the full sizing+cost pipeline). Returns the minimizing f_GW.
+        """
+        invphi = (5**0.5 - 1) / 2
+        invphi2 = (3 - 5**0.5) / 2
+        lo, hi = 0.3, 1.0
+        h = hi - lo
+        c = lo + invphi2 * h
+        d = lo + invphi * h
+        fc = lcoe_of_fgw(c)
+        fd = lcoe_of_fgw(d)
+        for _ in range(self._FGW_OPT_ITERS):
+            if fc < fd:  # minimizing: keep [lo, d]
+                hi, d, fd = d, c, fc
+                h = hi - lo
+                c = lo + invphi2 * h
+                fc = lcoe_of_fgw(c)
+            else:
+                lo, c, fc = c, d, fd
+                h = hi - lo
+                d = lo + invphi * h
+                fd = lcoe_of_fgw(d)
+        return 0.5 * (lo + hi)
+
     def forward(
         self,
         net_electric_mw: float,
@@ -669,6 +696,40 @@ class CostModel:
                     f"{pinned} cannot be pinned in size_from_power mode; they are "
                     "solved. Remove them or set size_from_power=False."
                 )
+            if params.get("optimize_lcoe", False):
+                # Re-run the full sizing+cost pipeline per trial f_GW (recursive
+                # forward with optimize_lcoe off) and keep the LCOE-minimizing one.
+                def _lcoe_at(fgw):
+                    return self.forward(
+                        net_electric_mw=net_electric_mw,
+                        availability=availability,
+                        lifetime_yr=lifetime_yr,
+                        n_mod=n_mod,
+                        construction_time_yr=construction_time_yr,
+                        interest_rate=interest_rate,
+                        inflation_rate=inflation_rate,
+                        noak=noak,
+                        cost_overrides=cost_overrides,
+                        override_reference_mw=override_reference_mw,
+                        **{**overrides, "optimize_lcoe": False, "f_GW": fgw},
+                    ).costs.lcoe
+
+                best_fgw = self._optimize_fgw(_lcoe_at)
+                self._sizing_fgw = best_fgw
+                return self.forward(
+                    net_electric_mw=net_electric_mw,
+                    availability=availability,
+                    lifetime_yr=lifetime_yr,
+                    n_mod=n_mod,
+                    construction_time_yr=construction_time_yr,
+                    interest_rate=interest_rate,
+                    inflation_rate=inflation_rate,
+                    noak=noak,
+                    cost_overrides=cost_overrides,
+                    override_reference_mw=override_reference_mw,
+                    **{**overrides, "optimize_lcoe": False, "f_GW": best_fgw},
+                )
+            self._sizing_fgw = params["f_GW"]
             pt = self._size_tokamak(params, n_mod)
         else:
             pt = self._power_balance(params, n_mod)
@@ -1217,6 +1278,9 @@ class CostModel:
     # validates override kwargs against this set (plus the concept's YAML keys
     # and the costing-constant fields). Keep in sync when a new params.get()
     # input is added; an omission surfaces as a spurious "unknown parameter".
+    # Golden-section iterations for LCOE-over-f_GW optimization (optimize_lcoe).
+    _FGW_OPT_ITERS = 20
+
     _OPTIONAL_OVERRIDE_KEYS = frozenset(
         {
             # Power-cycle / coupling knobs injected or derived by forward()
