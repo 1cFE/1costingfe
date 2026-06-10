@@ -6,7 +6,7 @@ import pytest
 
 from costingfe.layers.physics import ash_neutron_split, event_energies
 from costingfe.layers.reactivity import (
-    fusion_power_density,
+    fusion_power,
     n_i_over_n_e,
     sigv_dd_n,
     sigv_dd_p,
@@ -88,6 +88,21 @@ class TestFitPhysics:
             assert jnp.isfinite(g)
             assert float(fn(T)) > 0.0
 
+    def test_fits_finite_positive_at_bracket_edges(self):
+        for fn, T in [
+            (sigv_dt, 1.0),
+            (sigv_dt, 100.0),
+            (sigv_dd_n, 5.0),
+            (sigv_dd_p, 100.0),
+            (sigv_dhe3, 20.0),
+            (sigv_dhe3, 200.0),
+            (sigv_pb11, 50.0),
+            (sigv_pb11, 400.0),
+        ]:
+            v = float(fn(T))
+            assert jnp.isfinite(v)
+            assert v > 0.0
+
 
 _FRACS = dict(
     dd_f_T=0.969,
@@ -151,12 +166,12 @@ class TestFusionPowerDensity:
         """DT must reproduce compute_fusion_power exactly (bit-identical path)."""
         from costingfe.layers.tokamak import compute_fusion_power
 
-        p, frac = fusion_power_density(Fuel.DT, 1.0e20, 13.0, 830.0, **self._KW)
+        p, frac = fusion_power(Fuel.DT, 1.0e20, 13.0, 830.0, **self._KW)
         assert float(p) == float(compute_fusion_power(1.0e20, 13.0, 830.0))
         assert float(frac) == 0.0
 
     def test_dhe3_derives_side_channel_fraction(self):
-        p, frac = fusion_power_density(Fuel.DHE3, 1.0e20, 70.0, 830.0, **self._KW)
+        p, frac = fusion_power(Fuel.DHE3, 1.0e20, 70.0, 830.0, **self._KW)
         # r=1: n_D = n_e/3, n_He3 = n_e/3
         n_D = 1.0e20 / 3.0
         R_dhe3 = n_D * n_D * float(sigv_dhe3(70.0))
@@ -167,11 +182,11 @@ class TestFusionPowerDensity:
     def test_dhe3_pin_overrides_derived(self):
         kw = dict(self._KW)
         kw["dhe3_dd_frac_pin"] = 0.25
-        _, frac = fusion_power_density(Fuel.DHE3, 1.0e20, 70.0, 830.0, **kw)
+        _, frac = fusion_power(Fuel.DHE3, 1.0e20, 70.0, 830.0, **kw)
         assert float(frac) == pytest.approx(0.25)
 
     def test_pb11_dilution_suppresses_power(self):
-        p, _ = fusion_power_density(Fuel.PB11, 1.0e20, 300.0, 830.0, **self._KW)
+        p, _ = fusion_power(Fuel.PB11, 1.0e20, 300.0, 830.0, **self._KW)
         # Undiluted n_e^2/4 estimate must overshoot the quasineutral result:
         # n_p*n_B = 0.15*n_e^2/(1.75^2) ~ 0.049 n_e^2 < 0.25 n_e^2
         E_total, _ = event_energies(Fuel.PB11, **_FRACS)
@@ -187,3 +202,32 @@ class TestFusionPowerDensity:
         )
         assert float(p) < 0.3 * undiluted
         assert float(p) > 0.0
+
+    def test_dd_rate_and_zero_fraction(self):
+        from costingfe.layers.physics import event_energies
+
+        p, frac = fusion_power(Fuel.DD, 1.0e20, 40.0, 830.0, **self._KW)
+        E_total, _ = event_energies(Fuel.DD, **_FRACS)
+        expected = (
+            0.5
+            * 1.0e20
+            * float(sigv_dd_n(40.0) + sigv_dd_p(40.0))
+            * 1.0e20
+            * float(E_total)
+            * 1.602176634e-13
+            * 830.0
+            * 1e-6
+        )
+        assert float(p) == pytest.approx(expected, rel=1e-5)
+        assert float(frac) == 0.0
+
+    def test_dhe3_dispatch_differentiable(self):
+        import jax
+
+        def p_of_T(T):
+            p, _ = fusion_power(Fuel.DHE3, 1.0e20, T, 830.0, **self._KW)
+            return p
+
+        g = float(jax.grad(p_of_T)(70.0))
+        assert jnp.isfinite(g)
+        assert g > 0.0  # below the D-He3 peak, power rises with T_i

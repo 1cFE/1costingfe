@@ -20,7 +20,7 @@ Sources:
 
 import jax.numpy as jnp
 
-from costingfe.layers.physics import event_energies
+from costingfe.layers.physics import MEV_TO_JOULES, event_energies
 from costingfe.types import Fuel
 
 
@@ -173,11 +173,9 @@ def z_eff_fuel(fuel, dhe3_fuel_ratio, pb11_fuel_ratio):
 # ---------------------------------------------------------------------------
 # Rate -> fusion power dispatch
 # ---------------------------------------------------------------------------
-_EV = 1.602176634e-19  # J per eV (exact by 2019 SI redefinition)
-_MEV_TO_J = _EV * 1e6  # 1 MeV in J  (= 1.602176634e-13 J)
 
 
-def fusion_power_density(
+def fusion_power(
     fuel,
     n_e,
     T_i,
@@ -194,7 +192,7 @@ def fusion_power_density(
     pb11_f_p_n,
 ):
     """Fusion power [MW] and effective D-D side-channel fraction for a
-    thermal plasma at ion temperature T_i [keV].
+    thermal plasma at ion temperature T_i [keV] and volume V_plasma [m^3].
 
     Reactant densities follow quasineutrality with the fuel-mix ratio knobs.
     Per-event energies come from physics.event_energies, so the result is
@@ -209,22 +207,22 @@ def fusion_power_density(
 
     def _power(rate_density, E_total_mev):
         # rate_density already split as (n * sv) * n to stay in range
-        return rate_density * E_total_mev * _MEV_TO_J * V_plasma * 1e-6
+        return rate_density * E_total_mev * MEV_TO_JOULES * V_plasma * 1e-6
 
     if fuel == Fuel.DT:
         # Bit-identical to compute_fusion_power in tokamak.py:
         #   rate = n_e * sv; return 0.25 * rate * n_e * E_fus_J * V * 1e-6
         E_total, _ = event_energies(
             fuel,
-            dd_f_T,
-            dd_f_He3,
-            0.0,
-            dhe3_f_T,
-            dhe3_f_He3,
-            pb11_f_alpha_n,
-            pb11_f_p_n,
+            dd_f_T=dd_f_T,
+            dd_f_He3=dd_f_He3,
+            dhe3_dd_frac=0.0,
+            dhe3_f_T=dhe3_f_T,
+            dhe3_f_He3=dhe3_f_He3,
+            pb11_f_alpha_n=pb11_f_alpha_n,
+            pb11_f_p_n=pb11_f_p_n,
         )
-        E_fus_J = E_total * _MEV_TO_J
+        E_fus_J = E_total * MEV_TO_JOULES
         sv = sigv_dt(T_i)
         rate = n_e * sv
         return 0.25 * rate * n_e * E_fus_J * V_plasma * 1e-6, 0.0
@@ -232,13 +230,13 @@ def fusion_power_density(
     if fuel == Fuel.DD:
         E_total, _ = event_energies(
             fuel,
-            dd_f_T,
-            dd_f_He3,
-            0.0,
-            dhe3_f_T,
-            dhe3_f_He3,
-            pb11_f_alpha_n,
-            pb11_f_p_n,
+            dd_f_T=dd_f_T,
+            dd_f_He3=dd_f_He3,
+            dhe3_dd_frac=0.0,
+            dhe3_f_T=dhe3_f_T,
+            dhe3_f_He3=dhe3_f_He3,
+            pb11_f_alpha_n=pb11_f_alpha_n,
+            pb11_f_p_n=pb11_f_p_n,
         )
         n_D = n_e
         rate = 0.5 * (n_D * (sigv_dd_n(T_i) + sigv_dd_p(T_i))) * n_D
@@ -254,13 +252,13 @@ def fusion_power_density(
         frac = derived if dhe3_dd_frac_pin is None else dhe3_dd_frac_pin
         E_total, _ = event_energies(
             fuel,
-            dd_f_T,
-            dd_f_He3,
-            frac,
-            dhe3_f_T,
-            dhe3_f_He3,
-            pb11_f_alpha_n,
-            pb11_f_p_n,
+            dd_f_T=dd_f_T,
+            dd_f_He3=dd_f_He3,
+            dhe3_dd_frac=frac,
+            dhe3_f_T=dhe3_f_T,
+            dhe3_f_He3=dhe3_f_He3,
+            pb11_f_alpha_n=pb11_f_alpha_n,
+            pb11_f_p_n=pb11_f_p_n,
         )
         return _power(R_dhe3 + R_dd, E_total), frac
 
@@ -270,13 +268,13 @@ def fusion_power_density(
         n_B = r * n_p
         E_total, _ = event_energies(
             fuel,
-            dd_f_T,
-            dd_f_He3,
-            0.0,
-            dhe3_f_T,
-            dhe3_f_He3,
-            pb11_f_alpha_n,
-            pb11_f_p_n,
+            dd_f_T=dd_f_T,
+            dd_f_He3=dd_f_He3,
+            dhe3_dd_frac=0.0,
+            dhe3_f_T=dhe3_f_T,
+            dhe3_f_He3=dhe3_f_He3,
+            pb11_f_alpha_n=pb11_f_alpha_n,
+            pb11_f_p_n=pb11_f_p_n,
         )
         rate = (n_p * sigv_pb11(T_i)) * n_B
         return _power(rate, E_total), 0.0

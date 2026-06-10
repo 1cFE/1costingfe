@@ -70,10 +70,10 @@ def event_energies(
     dhe3_f_He3: float,
     pb11_f_alpha_n: float,
     pb11_f_p_n: float,
-):
+) -> tuple[float, float]:
     """Per-fusion-event total and neutron energies [MeV] for each fuel,
     including the secondary-burn channels. Single source of truth shared by
-    ash_neutron_split (partition) and fusion_power_density (rate -> power).
+    ash_neutron_split (partition) and fusion_power (rate -> power).
     """
     if fuel == Fuel.DT:
         E_total = Q_DT
