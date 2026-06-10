@@ -528,3 +528,35 @@ POWER_CYCLE_DEFAULTS: dict[PowerCycle, dict[str, float]] = {
         "heat_rej_per_mw": 0.018,
     },
 }
+
+
+@dataclass(frozen=True)
+class MagnetProperties:
+    """Physical properties carried by a coil-conductor selection."""
+
+    b_max: float  # Peak field ceiling at the conductor [T]
+    recirc_power_factor: float  # Recirculating power as MW per (T^2 * m^3) of coil
+    # volume-field product; 0 for superconductors, nonzero for resistive copper.
+    cryo_temp_k: float  # Coil operating temperature [K]
+
+
+# Peak-field ceilings: REBCO HTS ~23 T, Nb3Sn ~13 T, NbTi ~9 T (superconductors,
+# zero recirculating power). Copper is resistive: stress/cooling-limited field,
+# continuous dissipation. Values are engineering ceilings, sourced here rather
+# than inline in any solver.
+MAGNET_TABLE: dict[str, MagnetProperties] = {
+    "rebco_hts": MagnetProperties(
+        b_max=23.0, recirc_power_factor=0.0, cryo_temp_k=20.0
+    ),
+    "nb3sn": MagnetProperties(b_max=13.0, recirc_power_factor=0.0, cryo_temp_k=4.5),
+    "nbti": MagnetProperties(b_max=9.0, recirc_power_factor=0.0, cryo_temp_k=4.5),
+    "copper": MagnetProperties(
+        b_max=8.0, recirc_power_factor=2.0e-4, cryo_temp_k=300.0
+    ),
+}
+
+
+def get_magnet_properties(coil_material: str) -> MagnetProperties:
+    """Look up magnet properties by conductor selection. Raises KeyError on
+    an unknown material rather than substituting a default."""
+    return MAGNET_TABLE[coil_material]
