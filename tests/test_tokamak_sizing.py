@@ -302,3 +302,67 @@ def test_optimize_lcoe_no_worse_than_default_fgw():
     fixed = m.forward(f_GW=0.85, **common)
     opt = m.forward(optimize_lcoe=True, **common)
     assert opt.costs.lcoe <= fixed.costs.lcoe + 1e-6
+
+
+def test_backward_compat_sizing_off_unchanged():
+    # With size_from_power absent/false, the default tokamak path is unchanged.
+    m = CostModel(ConfinementConcept.TOKAMAK, Fuel.DT)
+    r = m.forward(net_electric_mw=500.0, availability=0.85, lifetime_yr=30.0)
+    assert r.costs.lcoe > 0.0
+    # FREEZE the reference: run this once, read the printed LCOE, and replace
+    # REF below with that exact value, so this test guards against drift.
+    REF = 124.343605
+    if REF is not None:
+        assert r.costs.lcoe == pytest.approx(REF, rel=1e-9)
+
+
+def test_arc_validation_reproduces_size():
+    # Inject ARC-like design knobs; solved R0 should be compact (ARC R0 ~3.3 m).
+    m = CostModel(ConfinementConcept.TOKAMAK, Fuel.DT)
+    m.forward(
+        net_electric_mw=270.0,
+        availability=0.85,
+        lifetime_yr=30.0,
+        size_from_power=True,
+        coil_material="rebco_hts",
+        aspect_ratio=3.0,
+        elon=1.85,
+        beta_N_max=3.0,
+        q95=3.5,
+        f_GW=0.85,
+    )
+    assert 2.5 < m._last_R0 < 4.5  # ARC R0 ~3.3 m, allow modeling spread
+
+
+def test_magnet_differentiation_rebco_smaller_than_nb3sn():
+    m = CostModel(ConfinementConcept.TOKAMAK, Fuel.DT)
+    common = dict(
+        net_electric_mw=500.0,
+        availability=0.85,
+        lifetime_yr=30.0,
+        size_from_power=True,
+        aspect_ratio=3.1,
+        beta_N_max=3.5,
+    )
+    m.forward(coil_material="rebco_hts", **common)
+    r_rebco = m._last_R0
+    m.forward(coil_material="nb3sn", **common)
+    r_nb3sn = m._last_R0
+    assert r_rebco < r_nb3sn  # higher field -> smaller machine
+
+
+def test_scale_mode_grows_R0_with_power():
+    m = CostModel(ConfinementConcept.TOKAMAK, Fuel.DT)
+    common = dict(
+        availability=0.85,
+        lifetime_yr=30.0,
+        size_from_power=True,
+        coil_material="rebco_hts",
+        aspect_ratio=3.0,
+        beta_N_max=3.0,
+    )
+    m.forward(net_electric_mw=270.0, **common)
+    r_small = m._last_R0
+    m.forward(net_electric_mw=1000.0, **common)
+    r_large = m._last_R0
+    assert r_large > r_small
