@@ -123,7 +123,12 @@ def test_size_scales_with_power():
     r1 = tokamak_size_from_power({**p, "net_electric_mw": 250.0}, Fuel.DT)
     r2 = tokamak_size_from_power({**p, "net_electric_mw": 2000.0}, Fuel.DT)
     assert r2.R0 > r1.R0  # bigger machine for more power
-    assert 1.5 < (r2.R0 / r1.R0) < 3.0  # roughly R0 ~ P^(1/3): 8x power -> ~2x R0
+    # 8x power grows R0 by well under the 2x that fixed-operating-point P ~ R0^3
+    # would imply: on-axis field rises with R0 (fixed-meter blanket is a smaller
+    # fraction of a larger machine), which relaxes the beta limit and lets the
+    # bigger machine run hotter and more reactive. Power therefore scales steeper
+    # than R0^3, so R0 grows sub-cubically with power (strong economy of scale).
+    assert 1.1 < (r2.R0 / r1.R0) < 2.0
 
 
 def test_infeasible_raises():
