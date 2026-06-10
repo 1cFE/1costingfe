@@ -192,6 +192,13 @@ def _first_wall_area(R, a, kappa):
     return 4.0 * jnp.pi**2 * R * a * kappa
 
 
+def resistive_recirc_power(recirc_power_factor, B0, R0, a, kappa):
+    """Continuous power drawn by resistive coils [MW]. Zero for superconductors
+    (recirc_power_factor = 0). Scales with stored-field energy density (B0^2)
+    times plasma volume."""
+    return recirc_power_factor * B0**2 * _plasma_volume(R0, a, kappa)
+
+
 def b0_from_radial_build(R0, a, b_max, blanket_t, ht_shield_t, structure_t, vessel_t):
     """On-axis toroidal field [T] from the peak-field ceiling and the inboard
     radial build.
@@ -204,6 +211,12 @@ def b0_from_radial_build(R0, a, b_max, blanket_t, ht_shield_t, structure_t, vess
     """
     inboard = blanket_t + ht_shield_t + structure_t + vessel_t
     r_coil_inner = R0 - a - inboard
+    # Floor at a small positive field: when the fixed-meter inboard build exceeds
+    # the available radius (very small R0), r_coil_inner goes negative, which is
+    # geometrically infeasible. Returning a tiny positive B0 keeps the 0D physics
+    # real-valued (no sqrt of a negative field) and makes such points read as
+    # essentially zero net power, so the R0 bisection moves away from them.
+    r_coil_inner = jnp.maximum(r_coil_inner, 1e-3)
     return b_max * r_coil_inner / R0
 
 
@@ -761,7 +774,9 @@ def _net_at_R0_T(R0, T_e, params, fuel):
         **fuel_frac_kw,
     )
 
-    p_coils = params["p_coils"] + params["recirc_power_factor"] * B0**2 * ps.V_plasma
+    p_coils = params["p_coils"] + resistive_recirc_power(
+        params["recirc_power_factor"], B0, R0, a, kappa
+    )
 
     wm_raw = params.get("wall_material")
     wall_mat = None

@@ -11,6 +11,7 @@ from costingfe.defaults import (
     POWER_CYCLE_DEFAULTS,
     CostingConstants,
     cc_float_fields,
+    get_magnet_properties,
     load_costing_constants,
     load_engineering_defaults,
 )
@@ -47,8 +48,10 @@ from costingfe.layers.tokamak import (
     DisruptionModel,
     apply_disruption_penalty,
     derive_radial_build,
+    resistive_recirc_power,
     tokamak_0d_forward,
     tokamak_0d_inverse,
+    tokamak_size_from_power,
 )
 from costingfe.types import (
     CONCEPT_DEFAULT_CONVERSION,
@@ -445,10 +448,10 @@ class CostModel:
 
     def _size_tokamak(self, params, n_mod):
         """Solve geometry from the power target, inject it into params, and
-        return the power table. Mutates params with solved R0/a/B/b_center."""
-        from costingfe.defaults import get_magnet_properties
-        from costingfe.layers.tokamak import _plasma_volume, tokamak_size_from_power
-
+        return the power table. Mutates params with the solved geometry and the
+        derived operating point: R0, plasma_t (a), B, b_center, T_e, eta_pin, and
+        p_coils (recirc term added). Also sets 0d_mode="forward", which forces the
+        forward control-flow branch of the 0D power balance."""
         props = get_magnet_properties(params["coil_material"])
         # Derive eta_pin (heating wall-plug efficiency) exactly as _power_balance
         # does, so both the sizing solve and the final 0D forward balance use it.
@@ -469,14 +472,19 @@ class CostModel:
         params["B"] = result.B0
         params["b_center"] = result.B0
         params["T_e"] = result.T_e
-        self._last_R0 = result.R0
+        self._last_R0 = result.R0  # exposed for inspection and integration tests
 
         # Keep the final power balance consistent with the sizing solve: add the
         # resistive-coil recirculation term (zero for superconductors) to p_coils
         # using the solved geometry, matching net_electric_at_R0.
-        V_plasma = float(_plasma_volume(result.R0, result.a, params["elon"]))
-        params["p_coils"] = (
-            params["p_coils"] + props.recirc_power_factor * result.B0**2 * V_plasma
+        params["p_coils"] = params["p_coils"] + float(
+            resistive_recirc_power(
+                props.recirc_power_factor,
+                result.B0,
+                result.R0,
+                result.a,
+                params["elon"],
+            )
         )
 
         # Re-run the forward 0D power balance at the solved point to produce the
@@ -628,6 +636,11 @@ class CostModel:
                     }
                 },
             )
+
+        # Sizing requires the 0D physics path (radial build derivation and the
+        # disruption penalty both key off use_0d_model).
+        if params.get("size_from_power", False):
+            params["use_0d_model"] = True
 
         # 0D radial build: derive thicknesses from fuel before geometry
         self._plasma_state = None
