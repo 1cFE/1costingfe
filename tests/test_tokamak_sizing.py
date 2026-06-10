@@ -1,7 +1,12 @@
 import pytest
 
 from costingfe.defaults import MAGNET_TABLE, get_magnet_properties
-from costingfe.layers.tokamak import b0_from_radial_build, net_electric_at_R0
+from costingfe.layers.tokamak import (
+    SizingInfeasible,
+    b0_from_radial_build,
+    net_electric_at_R0,
+    tokamak_size_from_power,
+)
 
 
 def test_magnet_table_has_expected_materials():
@@ -96,6 +101,38 @@ def _base_sizing_params():
         pb11_f_alpha_n=0.0,
         pb11_f_p_n=0.0,
     )
+
+
+def test_size_hits_target():
+    from costingfe.types import Fuel
+
+    p = _base_sizing_params()
+    p.update(R0_min=1.0, R0_max=12.0, net_electric_mw=500.0)
+    result = tokamak_size_from_power(p, Fuel.DT)
+    pn = net_electric_at_R0(result.R0, p, Fuel.DT)
+    assert pn == pytest.approx(500.0, rel=0.02)
+    assert result.a == pytest.approx(result.R0 / p["aspect_ratio"])
+    assert 0.0 < result.B0 < p["b_max"]
+
+
+def test_size_scales_with_power():
+    from costingfe.types import Fuel
+
+    p = _base_sizing_params()
+    p.update(R0_min=1.0, R0_max=15.0)
+    r1 = tokamak_size_from_power({**p, "net_electric_mw": 250.0}, Fuel.DT)
+    r2 = tokamak_size_from_power({**p, "net_electric_mw": 2000.0}, Fuel.DT)
+    assert r2.R0 > r1.R0  # bigger machine for more power
+    assert 1.5 < (r2.R0 / r1.R0) < 3.0  # roughly R0 ~ P^(1/3): 8x power -> ~2x R0
+
+
+def test_infeasible_raises():
+    from costingfe.types import Fuel
+
+    p = _base_sizing_params()
+    p.update(R0_min=1.0, R0_max=3.0, net_electric_mw=5000.0)
+    with pytest.raises(SizingInfeasible):
+        tokamak_size_from_power(p, Fuel.DT)
 
 
 def test_net_power_increases_with_R0():

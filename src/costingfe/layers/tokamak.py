@@ -30,6 +30,7 @@ KEV_TO_J = _EV * 1e3  # 1 keV -> Joules
 # Sizing golden-section search tuning
 _GSS_ITERS = 40  # Golden-section iterations to localize the optimum T_e
 _BETA_PENALTY = 1.0e6  # Penalty slope for beta-limit violations [MW per %·m·T/MA]
+_R0_BISECT_ITERS = 60  # Bisection iterations to locate the target-power radius
 
 
 # ---------------------------------------------------------------------------
@@ -852,3 +853,56 @@ def net_electric_at_R0(R0, params, fuel, return_state=False):
     if return_state:
         return pn, T_star, beta
     return feasible_net(T_star)
+
+
+# ---------------------------------------------------------------------------
+# Outer R0 bisection solver
+# ---------------------------------------------------------------------------
+class SizingInfeasible(Exception):
+    """Raised when no machine in [R0_min, R0_max] meets the power target."""
+
+
+@dataclass(frozen=True)
+class SizingResult:
+    R0: float
+    a: float
+    B0: float
+    T_e: float
+
+
+def tokamak_size_from_power(params, fuel):
+    """Solve major radius R0 so net electric power equals the target.
+
+    Net power is monotonic increasing in R0 at the boundary operating point, so
+    bisection is well posed. Raises SizingInfeasible if the target exceeds what
+    R0_max can deliver.
+    """
+    target = params["net_electric_mw"]
+    lo, hi = params["R0_min"], params["R0_max"]
+
+    pn_hi = net_electric_at_R0(hi, params, fuel)
+    if pn_hi < target:
+        raise SizingInfeasible(
+            f"net power at R0_max={hi} m is {pn_hi:.1f} MW < target {target} MW; "
+            "machine cannot reach the power with these physics inputs"
+        )
+
+    for _ in range(_R0_BISECT_ITERS):
+        mid = 0.5 * (lo + hi)
+        if net_electric_at_R0(mid, params, fuel) < target:
+            lo = mid
+        else:
+            hi = mid
+    R0 = 0.5 * (lo + hi)
+    a = R0 / params["aspect_ratio"]
+    _, T_star, _ = net_electric_at_R0(R0, params, fuel, return_state=True)
+    B0 = b0_from_radial_build(
+        R0,
+        a,
+        params["b_max"],
+        params["blanket_t"],
+        params["ht_shield_t"],
+        params["structure_t"],
+        params["vessel_t"],
+    )
+    return SizingResult(R0=R0, a=a, B0=B0, T_e=T_star)
