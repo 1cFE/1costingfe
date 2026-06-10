@@ -6,11 +6,14 @@ import pytest
 
 from costingfe.layers.physics import ash_neutron_split, event_energies
 from costingfe.layers.reactivity import (
+    fusion_power_density,
+    n_i_over_n_e,
     sigv_dd_n,
     sigv_dd_p,
     sigv_dhe3,
     sigv_dt,
     sigv_pb11,
+    z_eff_fuel,
 )
 from costingfe.types import Fuel
 
@@ -111,3 +114,76 @@ class TestEventEnergies:
         E_total, E_neutron = event_energies(Fuel.DT, **_FRACS)
         assert float(E_total) == pytest.approx(17.58, rel=1e-6)
         assert float(E_neutron) == pytest.approx(14.06, rel=1e-6)
+
+
+class TestMixAlgebra:
+    def test_dilution_factors(self):
+        assert n_i_over_n_e(Fuel.DT, 1.0, 0.15) == pytest.approx(1.0)
+        assert n_i_over_n_e(Fuel.DD, 1.0, 0.15) == pytest.approx(1.0)
+        # D-He3 at r=1: (1+r)/(1+2r) = 2/3
+        assert n_i_over_n_e(Fuel.DHE3, 1.0, 0.15) == pytest.approx(2.0 / 3.0)
+        # p-B11 at r=0.15: (1+r)/(1+5r) = 1.15/1.75
+        assert n_i_over_n_e(Fuel.PB11, 1.0, 0.15) == pytest.approx(1.15 / 1.75)
+
+    def test_z_eff_fuel(self):
+        assert z_eff_fuel(Fuel.DT, 1.0, 0.15) == pytest.approx(1.0)
+        assert z_eff_fuel(Fuel.DD, 1.0, 0.15) == pytest.approx(1.0)
+        # D-He3 at r=1: (1+4r)/(1+2r) = 5/3
+        assert z_eff_fuel(Fuel.DHE3, 1.0, 0.15) == pytest.approx(5.0 / 3.0)
+        # p-B11 at r=0.15: (1+25r)/(1+5r) = 4.75/1.75
+        assert z_eff_fuel(Fuel.PB11, 0.5, 0.15) == pytest.approx(4.75 / 1.75)
+
+
+class TestFusionPowerDensity:
+    _KW = dict(
+        dhe3_fuel_ratio=1.0,
+        pb11_fuel_ratio=0.15,
+        dhe3_dd_frac_pin=None,
+        dd_f_T=_FRACS["dd_f_T"],
+        dd_f_He3=_FRACS["dd_f_He3"],
+        dhe3_f_T=_FRACS["dhe3_f_T"],
+        dhe3_f_He3=_FRACS["dhe3_f_He3"],
+        pb11_f_alpha_n=_FRACS["pb11_f_alpha_n"],
+        pb11_f_p_n=_FRACS["pb11_f_p_n"],
+    )
+
+    def test_dt_matches_legacy_formula(self):
+        """DT must reproduce compute_fusion_power exactly (bit-identical path)."""
+        from costingfe.layers.tokamak import compute_fusion_power
+
+        p, frac = fusion_power_density(Fuel.DT, 1.0e20, 13.0, 830.0, **self._KW)
+        assert float(p) == float(compute_fusion_power(1.0e20, 13.0, 830.0))
+        assert float(frac) == 0.0
+
+    def test_dhe3_derives_side_channel_fraction(self):
+        p, frac = fusion_power_density(Fuel.DHE3, 1.0e20, 70.0, 830.0, **self._KW)
+        # r=1: n_D = n_e/3, n_He3 = n_e/3
+        n_D = 1.0e20 / 3.0
+        R_dhe3 = n_D * n_D * float(sigv_dhe3(70.0))
+        R_dd = 0.5 * n_D * n_D * float(sigv_dd_n(70.0) + sigv_dd_p(70.0))
+        assert float(frac) == pytest.approx(R_dd / (R_dd + R_dhe3), rel=1e-5)
+        assert float(p) > 0.0
+
+    def test_dhe3_pin_overrides_derived(self):
+        kw = dict(self._KW)
+        kw["dhe3_dd_frac_pin"] = 0.25
+        _, frac = fusion_power_density(Fuel.DHE3, 1.0e20, 70.0, 830.0, **kw)
+        assert float(frac) == pytest.approx(0.25)
+
+    def test_pb11_dilution_suppresses_power(self):
+        p, _ = fusion_power_density(Fuel.PB11, 1.0e20, 300.0, 830.0, **self._KW)
+        # Undiluted n_e^2/4 estimate must overshoot the quasineutral result:
+        # n_p*n_B = 0.15*n_e^2/(1.75^2) ~ 0.049 n_e^2 < 0.25 n_e^2
+        E_total, _ = event_energies(Fuel.PB11, **_FRACS)
+        undiluted = (
+            0.25
+            * 1.0e20
+            * float(sigv_pb11(300.0))
+            * 1.0e20
+            * float(E_total)
+            * 1.602176634e-13
+            * 830.0
+            * 1e-6
+        )
+        assert float(p) < 0.3 * undiluted
+        assert float(p) > 0.0

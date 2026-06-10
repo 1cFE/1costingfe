@@ -20,6 +20,9 @@ Sources:
 
 import jax.numpy as jnp
 
+from costingfe.layers.physics import event_energies
+from costingfe.types import Fuel
+
 
 def _bosch_hale(T_keV, BG, mrc2, C1, C2, C3, C4, C5, C6, C7):
     """Bosch-Hale reactivity parameterization. T in keV, returns cm^3/s
@@ -135,3 +138,138 @@ def sigv_pb11(T_keV):
         -9.1653e-6,
         9.8305e-7,
     )
+
+
+# ---------------------------------------------------------------------------
+# Quasineutrality mix algebra: n_e = sum(Z_j n_j)
+# ---------------------------------------------------------------------------
+def n_i_over_n_e(fuel, dhe3_fuel_ratio, pb11_fuel_ratio):
+    """Total fuel-ion to electron density ratio. Plain arithmetic (works on
+    floats and JAX tracers alike)."""
+    if fuel == Fuel.DT or fuel == Fuel.DD:
+        return 1.0
+    if fuel == Fuel.DHE3:
+        r = dhe3_fuel_ratio
+        return (1.0 + r) / (1.0 + 2.0 * r)
+    if fuel == Fuel.PB11:
+        r = pb11_fuel_ratio
+        return (1.0 + r) / (1.0 + 5.0 * r)
+    raise ValueError(f"Unknown fuel type: {fuel}")
+
+
+def z_eff_fuel(fuel, dhe3_fuel_ratio, pb11_fuel_ratio):
+    """Fuel-ion contribution to Z_eff = sum(n_j Z_j^2)/n_e (fully stripped)."""
+    if fuel == Fuel.DT or fuel == Fuel.DD:
+        return 1.0
+    if fuel == Fuel.DHE3:
+        r = dhe3_fuel_ratio
+        return (1.0 + 4.0 * r) / (1.0 + 2.0 * r)
+    if fuel == Fuel.PB11:
+        r = pb11_fuel_ratio
+        return (1.0 + 25.0 * r) / (1.0 + 5.0 * r)
+    raise ValueError(f"Unknown fuel type: {fuel}")
+
+
+# ---------------------------------------------------------------------------
+# Rate -> fusion power dispatch
+# ---------------------------------------------------------------------------
+_EV = 1.602176634e-19  # J per eV (exact by 2019 SI redefinition)
+_MEV_TO_J = _EV * 1e6  # 1 MeV in J  (= 1.602176634e-13 J)
+_E_FUS_DT = 17.58  # DT fusion energy [MeV]
+
+
+def fusion_power_density(
+    fuel,
+    n_e,
+    T_i,
+    V_plasma,
+    *,
+    dhe3_fuel_ratio,
+    pb11_fuel_ratio,
+    dhe3_dd_frac_pin,
+    dd_f_T,
+    dd_f_He3,
+    dhe3_f_T,
+    dhe3_f_He3,
+    pb11_f_alpha_n,
+    pb11_f_p_n,
+):
+    """Fusion power [MW] and effective D-D side-channel fraction for a
+    thermal plasma at ion temperature T_i [keV].
+
+    Reactant densities follow quasineutrality with the fuel-mix ratio knobs.
+    Per-event energies come from physics.event_energies, so the result is
+    consistent with ash_neutron_split's partition. dhe3_dd_frac_pin, when not
+    None, overrides the rate-derived side-channel fraction (and is what the
+    partition will see). Returns (p_fus_MW, dhe3_dd_frac_eff); the fraction
+    is 0.0 for fuels without a side channel.
+
+    Multiplication order keeps intermediates in float32-safe range
+    (n^2 ~ 1e40 would overflow), mirroring the original compute_fusion_power.
+    """
+
+    def _power(rate_density, E_total_mev):
+        # rate_density already split as (n * sv) * n to stay in range
+        return rate_density * E_total_mev * _MEV_TO_J * V_plasma * 1e-6
+
+    if fuel == Fuel.DT:
+        # Bit-identical to compute_fusion_power in tokamak.py:
+        #   rate = n_e * sv; return 0.25 * rate * n_e * E_fus_J * V * 1e-6
+        E_fus_J = _E_FUS_DT * _MEV_TO_J
+        sv = sigv_dt(T_i)
+        rate = n_e * sv
+        return 0.25 * rate * n_e * E_fus_J * V_plasma * 1e-6, 0.0
+
+    if fuel == Fuel.DD:
+        E_total, _ = event_energies(
+            fuel,
+            dd_f_T,
+            dd_f_He3,
+            0.0,
+            dhe3_f_T,
+            dhe3_f_He3,
+            pb11_f_alpha_n,
+            pb11_f_p_n,
+        )
+        n_D = n_e
+        rate = 0.5 * (n_D * (sigv_dd_n(T_i) + sigv_dd_p(T_i))) * n_D
+        return _power(rate, E_total), 0.0
+
+    if fuel == Fuel.DHE3:
+        r = dhe3_fuel_ratio
+        n_D = n_e / (1.0 + 2.0 * r)
+        n_He3 = r * n_D
+        R_dhe3 = (n_D * sigv_dhe3(T_i)) * n_He3
+        R_dd = 0.5 * (n_D * (sigv_dd_n(T_i) + sigv_dd_p(T_i))) * n_D
+        derived = R_dd / (R_dd + R_dhe3)
+        frac = derived if dhe3_dd_frac_pin is None else dhe3_dd_frac_pin
+        E_total, _ = event_energies(
+            fuel,
+            dd_f_T,
+            dd_f_He3,
+            frac,
+            dhe3_f_T,
+            dhe3_f_He3,
+            pb11_f_alpha_n,
+            pb11_f_p_n,
+        )
+        return _power(R_dhe3 + R_dd, E_total), frac
+
+    if fuel == Fuel.PB11:
+        r = pb11_fuel_ratio
+        n_p = n_e / (1.0 + 5.0 * r)
+        n_B = r * n_p
+        E_total, _ = event_energies(
+            fuel,
+            dd_f_T,
+            dd_f_He3,
+            0.0,
+            dhe3_f_T,
+            dhe3_f_He3,
+            pb11_f_alpha_n,
+            pb11_f_p_n,
+        )
+        rate = (n_p * sigv_pb11(T_i)) * n_B
+        return _power(rate, E_total), 0.0
+
+    raise ValueError(f"Unknown fuel type: {fuel}")
