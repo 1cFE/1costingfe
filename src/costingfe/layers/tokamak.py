@@ -16,7 +16,7 @@ from costingfe.layers.physics import (
     mfe_forward_power_balance,
     mfe_inverse_power_balance,
 )
-from costingfe.types import Fuel
+from costingfe.types import Fuel, WallMaterial
 
 # ---------------------------------------------------------------------------
 # Constants (CODATA 2018 values)
@@ -697,3 +697,133 @@ def derive_radial_build(fuel, **overrides):
         if v is not None and k in defaults:
             defaults[k] = v
     return defaults
+
+
+# ---------------------------------------------------------------------------
+# Sizing: net electric at a fixed R0 (inner operating point)
+# ---------------------------------------------------------------------------
+def _net_at_R0_T(R0, T_e, params, fuel):
+    """Net electric power [MW] at fixed R0 and operating temperature T_e.
+
+    Pins the operating point at the constraint boundary for this R0: density
+    from Greenwald (via f_GW), field from the inboard radial build, and the
+    given temperature. Wraps tokamak_0d_forward + mfe_forward_power_balance
+    exactly as the forward branch of model._power_balance_0d does.
+
+    Returns (p_net [MW], beta_N).
+    """
+    A = params["aspect_ratio"]
+    a = R0 / A
+    kappa = params["elon"]
+    b_max = params["b_max"]
+    B0 = b0_from_radial_build(
+        R0,
+        a,
+        b_max,
+        params["blanket_t"],
+        params["ht_shield_t"],
+        params["structure_t"],
+        params["vessel_t"],
+    )
+
+    fuel_frac_kw = dict(
+        dd_f_T=params["dd_f_T"],
+        dd_f_He3=params["dd_f_He3"],
+        dhe3_dd_frac=params["dhe3_dd_frac"],
+        dhe3_f_T=params["dhe3_f_T"],
+        dhe3_f_He3=params["dhe3_f_He3"],
+        pb11_f_alpha_n=params["pb11_f_alpha_n"],
+        pb11_f_p_n=params["pb11_f_p_n"],
+    )
+
+    ps = tokamak_0d_forward(
+        R=R0,
+        a=a,
+        kappa=kappa,
+        B=B0,
+        q95=params["q95"],
+        f_GW=params["f_GW"],
+        T_e=T_e,
+        p_input=params["p_input"],
+        fuel=fuel,
+        M_ion=params["M_ion"],
+        Z_eff=params["Z_eff"],
+        lambda_q=params["lambda_q"],
+        **fuel_frac_kw,
+    )
+
+    p_coils = params["p_coils"] + params["recirc_power_factor"] * B0**2 * ps.V_plasma
+
+    wm_raw = params.get("wall_material")
+    wall_mat = None
+    if wm_raw is not None:
+        wall_mat = WallMaterial(wm_raw) if isinstance(wm_raw, str) else wm_raw
+
+    pt = mfe_forward_power_balance(
+        p_fus=ps.p_fus,
+        fuel=fuel,
+        p_input=params["p_input"],
+        mn=params["mn"],
+        eta_th=params["eta_th"],
+        eta_p=params["eta_p"],
+        eta_pin=params["eta_pin"],
+        eta_de=params["eta_de"],
+        f_sub=params["f_sub"],
+        f_dec=params["f_dec"],
+        p_coils=p_coils,
+        p_cool=params["p_cool"],
+        p_pump=params["p_pump"],
+        p_trit=params["p_trit"],
+        p_house=params["p_house"],
+        p_cryo=params["p_cryo"],
+        n_e=ps.n_e,
+        T_e=ps.T_e,
+        Z_eff=params["Z_eff"],
+        plasma_volume=ps.V_plasma,
+        B=B0,
+        R_major=R0,
+        a_minor=a,
+        kappa=kappa,
+        R_w=params["R_w"],
+        wall_material=wall_mat,
+        seeded_impurities=params.get("seeded_impurities") or None,
+        T_edge=params["T_edge"],
+        tau_ratio=params["tau_ratio"],
+        fw_area=ps.fw_area,
+        **fuel_frac_kw,
+    )
+
+    return float(pt.p_net), float(ps.beta_N)
+
+
+def net_electric_at_R0(R0, params, fuel, return_state=False):
+    """Net electric power [MW] at the constraint-boundary operating point for a
+    fixed R0.
+
+    Temperature maximizes net power within [T_min, T_max] subject to
+    beta_N <= beta_N_max, via golden-section search. Runs in plain Python
+    (not under JAX tracing), so jax scalars are wrapped with float().
+    """
+    T_lo, T_hi = params["T_min"], params["T_max"]
+    beta_cap = params["beta_N_max"]
+    invphi = (5**0.5 - 1) / 2
+
+    def feasible_net(T):
+        pn, beta = _net_at_R0_T(R0, T, params, fuel)
+        if beta > beta_cap:
+            return -1e9 * (beta - beta_cap)
+        return pn
+
+    lo, hi = T_lo, T_hi
+    for _ in range(40):
+        c = hi - invphi * (hi - lo)
+        d = lo + invphi * (hi - lo)
+        if feasible_net(c) < feasible_net(d):
+            lo = c
+        else:
+            hi = d
+    T_star = 0.5 * (lo + hi)
+    pn, beta = _net_at_R0_T(R0, T_star, params, fuel)
+    if return_state:
+        return pn, T_star, beta
+    return pn

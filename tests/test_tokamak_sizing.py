@@ -1,7 +1,7 @@
 import pytest
 
 from costingfe.defaults import MAGNET_TABLE, get_magnet_properties
-from costingfe.layers.tokamak import b0_from_radial_build
+from costingfe.layers.tokamak import b0_from_radial_build, net_electric_at_R0
 
 
 def test_magnet_table_has_expected_materials():
@@ -50,3 +50,65 @@ def test_b0_formula():
     )
     expected = 20.0 * (4.0 - 1.0 - 1.0) / 4.0
     assert b == pytest.approx(expected)
+
+
+def _base_sizing_params():
+    return dict(
+        aspect_ratio=3.0,
+        elon=1.85,
+        q95=3.5,
+        f_GW=0.85,
+        b_max=23.0,
+        beta_N_max=3.5,
+        T_min=5.0,
+        T_max=60.0,
+        blanket_t=0.8,
+        ht_shield_t=0.2,
+        structure_t=0.2,
+        vessel_t=0.2,
+        p_input=50.0,
+        mn=1.1,
+        eta_th=0.45,
+        eta_p=0.5,
+        eta_pin=0.7,
+        eta_de=0.85,
+        f_sub=0.03,
+        f_dec=0.0,
+        p_coils=2.0,
+        p_cool=13.7,
+        p_pump=1.0,
+        p_trit=10.0,
+        p_house=4.0,
+        p_cryo=0.5,
+        Z_eff=1.5,
+        M_ion=2.5,
+        lambda_q=0.002,
+        R_w=0.6,
+        wall_material="W",
+        T_edge=0.05,
+        tau_ratio=3.0,
+        recirc_power_factor=0.0,
+        dd_f_T=0.969,
+        dd_f_He3=0.689,
+        dhe3_dd_frac=0.131,
+        dhe3_f_T=0.5,
+        dhe3_f_He3=0.5,
+        pb11_f_alpha_n=0.0,
+        pb11_f_p_n=0.0,
+    )
+
+
+def test_net_power_increases_with_R0():
+    from costingfe.types import Fuel
+
+    p = _base_sizing_params()
+    pn_small = net_electric_at_R0(3.0, p, Fuel.DT)
+    pn_large = net_electric_at_R0(5.0, p, Fuel.DT)
+    assert pn_large > pn_small
+
+
+def test_net_power_positive_for_reactor_scale():
+    from costingfe.types import Fuel
+
+    p = _base_sizing_params()
+    assert net_electric_at_R0(4.5, p, Fuel.DT) > 0.0
