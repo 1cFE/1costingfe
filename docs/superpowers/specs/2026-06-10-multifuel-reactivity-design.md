@@ -114,7 +114,40 @@ from YAML:
 | D-He3 | 20         | 200         |
 | p-B11 | 50         | 400         |
 
-### 6. p-B11 radiation proxy
+### 6. Fuel-aware Z_eff and photon radiation
+
+Fuel ions are fully stripped at all relevant operating temperatures, so they
+add no line radiation; their photon contribution is enhanced bremsstrahlung,
+which the existing radiation module already parametrizes through Z_eff. A new
+`z_eff_fuel(fuel, r)` in `reactivity.py` computes the fuel-ion contribution
+from the same quasineutrality mix as the dilution math:
+
+    Z_eff_fuel = sum(n_j Z_j^2) / n_e
+    DT, DD: 1.0
+    D-He3:  (1 + 4r) / (1 + 2r)   (~1.67 at r = 1)
+    p-B11:  (1 + 25r) / (1 + 5r)  (~2.71 at r = 0.15)
+
+The YAML `Z_eff` is reinterpreted as fuel + impurity excess:
+
+    Z_eff_effective = Z_eff_fuel + (Z_eff_yaml - 1)
+
+For DT with the current YAML 1.5 this gives exactly 1.5 (bit-identical), and
+the impurity content (the 0.5 excess) carries over to all fuels.
+`Z_eff_effective` feeds `compute_p_rad` and the power balance wherever Z_eff
+is consumed today. Seeded impurities and wall material stay user inputs and
+add their line radiation through the existing module, unchanged. The power
+balance's radiation branches are already mutually exclusive, so when
+`f_rad_fus` is set (the p-B11 proxy below) it replaces the computed p_rad —
+no double count.
+
+The module's bremsstrahlung is non-relativistic; at D-He3 operating
+temperatures (50-100 keV) this underestimates brems by roughly 20-30%
+(quantified by `brem_factor_rel` in `examples/dhe3_mix_optimization.py`).
+Applying the correction selectively would make the fuels inconsistent and
+applying it everywhere would perturb DT, so it is documented here as a known
+limitation and left out of scope.
+
+### 7. p-B11 radiation proxy
 
 No new radiation physics. p-B11 configs running 0D/sizing set
 `f_rad_fus: 0.83` (bremsstrahlung at 83% of fusion power, the Putvinski-class
@@ -122,7 +155,7 @@ optimum; the power balance already supports `f_rad_fus`). The validator warns
 when fuel is PB11 with `use_0d_model` or `size_from_power` enabled and
 `f_rad_fus` is unset.
 
-### 7. Tests
+### 8. Tests
 
 1. **DT regression:** existing pins bit-identical (tokamak LCOE pin 226.89,
    full suite green). DT keeps the same fit, mix, and pressure factors.
@@ -136,11 +169,16 @@ when fuel is PB11 with `use_0d_model` or `size_from_power` enabled and
    bracket.
 6. **Guard:** PB11 + 0D/sizing without `f_rad_fus` produces the validator
    warning.
+7. **Z_eff:** `z_eff_fuel` algebra per fuel; `Z_eff_effective` equals the
+   YAML value exactly for DT (1.5 stays 1.5); D-He3/p-B11 brems rises with
+   the mix-derived Z_eff through the existing radiation module.
 
 ## Out of Scope
 
 - Synchrotron radiation, explicit ion-electron coupling, hot-ion power
   balance (the `f_rad_fus` proxy stands in for p-B11).
+- Relativistic bremsstrahlung correction (`brem_factor_rel`): documented
+  limitation at D-He3 temperatures, see section 6.
 - Fast-ion burn chains (the existing secondary-burn fraction knobs stay).
 - Non-tokamak concepts; `reactivity.py` is concept-agnostic so mirror/FRC
   sizing can import it later.
