@@ -175,7 +175,6 @@ def z_eff_fuel(fuel, dhe3_fuel_ratio, pb11_fuel_ratio):
 # ---------------------------------------------------------------------------
 _EV = 1.602176634e-19  # J per eV (exact by 2019 SI redefinition)
 _MEV_TO_J = _EV * 1e6  # 1 MeV in J  (= 1.602176634e-13 J)
-_E_FUS_DT = 17.58  # DT fusion energy [MeV]
 
 
 def fusion_power_density(
@@ -215,7 +214,17 @@ def fusion_power_density(
     if fuel == Fuel.DT:
         # Bit-identical to compute_fusion_power in tokamak.py:
         #   rate = n_e * sv; return 0.25 * rate * n_e * E_fus_J * V * 1e-6
-        E_fus_J = _E_FUS_DT * _MEV_TO_J
+        E_total, _ = event_energies(
+            fuel,
+            dd_f_T,
+            dd_f_He3,
+            0.0,
+            dhe3_f_T,
+            dhe3_f_He3,
+            pb11_f_alpha_n,
+            pb11_f_p_n,
+        )
+        E_fus_J = E_total * _MEV_TO_J
         sv = sigv_dt(T_i)
         rate = n_e * sv
         return 0.25 * rate * n_e * E_fus_J * V_plasma * 1e-6, 0.0
