@@ -58,7 +58,8 @@ Reactant densities from quasineutrality, with one new YAML knob
 | p-B11 | n_B/n_p             | n_p = n_e/(1+5r), n_B = r*n_p                | n_p n_B sigv_pb11                                     |
 
 `fuel_mix_ratio` defaults: 1.0 for D-He3 (50:50), 0.15 for p-B11 (typical
-lean-boron design point); to be calibrated. Stored in concept YAML.
+lean-boron design point); to be calibrated. Declared in concept YAML only —
+no Python keyword default in any function signature.
 
 Per-event energies reuse the existing `physics.py` constants (Q_DT, Q_DD_PT,
 Q_DD_NHE3, Q_DHE3, Q_PB11, and the secondary-burn terms), so total p_fus is
@@ -82,8 +83,12 @@ fast-ion burnup physics, not thermal rates.
 
 ### 4. T_i/T_e ratio knob
 
-New YAML param `T_i_over_T_e`, default 1.0 (all current results unchanged).
-T_i = T_i_over_T_e * T_e enters reactivity, stored energy, and beta. Stored
+New param `T_i_over_T_e` with its default of 1.0 declared in the concept
+YAMLs (all current results unchanged). No Python keyword default anywhere:
+`fusion_power_density` and the 0D/sizing functions take it (and
+`fuel_mix_ratio`) as required arguments read from the merged params dict,
+same as every other physics param. T_i = T_i_over_T_e * T_e enters
+reactivity, stored energy, and beta. Stored
 energy and beta generalize with the dilution factor n_i/n_e so that DT
 reproduces today's numbers exactly:
 
