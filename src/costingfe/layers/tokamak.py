@@ -221,6 +221,27 @@ def b0_from_radial_build(R0, a, b_max, blanket_t, ht_shield_t, structure_t, vess
 
 
 # ---------------------------------------------------------------------------
+# Auxiliary heating from confinement requirement (sizing mode)
+# ---------------------------------------------------------------------------
+def aux_heating_from_confinement(
+    H_factor, I_p, B0, n_e, T_e, V_plasma, p_alpha, R0, a, kappa, M_ion
+):
+    """Auxiliary heating power [MW] required to sustain the operating point at a
+    given confinement quality H_factor.
+
+    From tau_E = H_factor * tau_E_scaling (IPB98y2, P_heat^-0.69) and the model
+    convention tau_E = W_th / P_heat, the heating power is closed-form:
+        P_heat = (W_th / (H_factor * K))^(1/0.31),  K = IPB98 coeff at P_heat=1
+    The auxiliary part is P_heat - p_alpha, floored at 0 (0 = ignited).
+    """
+    n_e19 = n_e / 1e19
+    K = compute_tau_E_ipb98y2(I_p, B0, n_e19, 1.0, R0, a, kappa, M_ion)
+    W_th_MW = 3.0 * n_e * T_e * KEV_TO_J * V_plasma * 1e-6
+    P_heat = (W_th_MW / (H_factor * K)) ** (1.0 / 0.31)
+    return jnp.maximum(0.0, P_heat - p_alpha)
+
+
+# ---------------------------------------------------------------------------
 # Forward mode
 # ---------------------------------------------------------------------------
 def tokamak_0d_forward(
@@ -759,6 +780,7 @@ def _net_at_R0_T(R0, T_e, params, fuel):
         pb11_f_p_n=params["pb11_f_p_n"],
     )
 
+    M_ion = params["M_ion"]
     ps = tokamak_0d_forward(
         R=R0,
         a=a,
@@ -769,10 +791,28 @@ def _net_at_R0_T(R0, T_e, params, fuel):
         T_e=T_e,
         p_input=params["p_input"],
         fuel=fuel,
-        M_ion=params["M_ion"],
+        M_ion=M_ion,
         Z_eff=params["Z_eff"],
         lambda_q=params["lambda_q"],
         **fuel_frac_kw,
+    )
+
+    # Solve the auxiliary heating from the confinement requirement so that
+    # H_factor (not a fixed p_input) sets the recirculating power.
+    p_aux = float(
+        aux_heating_from_confinement(
+            params["H_factor"],
+            ps.I_p,
+            B0,
+            ps.n_e,
+            ps.T_e,
+            ps.V_plasma,
+            ps.p_alpha,
+            R0,
+            a,
+            kappa,
+            M_ion,
+        )
     )
 
     p_coils = params["p_coils"] + resistive_recirc_power(
@@ -787,7 +827,7 @@ def _net_at_R0_T(R0, T_e, params, fuel):
     pt = mfe_forward_power_balance(
         p_fus=ps.p_fus,
         fuel=fuel,
-        p_input=params["p_input"],
+        p_input=p_aux,
         mn=params["mn"],
         eta_th=params["eta_th"],
         eta_p=params["eta_p"],

@@ -67,6 +67,7 @@ def _base_sizing_params():
         f_GW=0.85,
         b_max=23.0,
         beta_N_max=3.5,
+        H_factor=1.0,
         T_min=5.0,
         T_max=60.0,
         blanket_t=0.8,
@@ -330,6 +331,7 @@ def test_arc_validation_reproduces_size():
         beta_N_max=3.0,
         q95=3.5,
         f_GW=0.85,
+        H_factor=1.8,  # ARC operates at high confinement (H ~ 1.8)
     )
     assert 2.5 < m._last_R0 < 4.5  # ARC R0 ~3.3 m, allow modeling spread
 
@@ -366,3 +368,37 @@ def test_scale_mode_grows_R0_with_power():
     m.forward(net_electric_mw=1000.0, **common)
     r_large = m._last_R0
     assert r_large > r_small
+
+
+def test_higher_H_factor_gives_smaller_machine():
+    # Better confinement (higher H) needs less aux heating -> less recirculating
+    # power -> more net power -> a smaller machine for the same target.
+    from costingfe.types import Fuel
+
+    p_lo = _base_sizing_params()
+    p_lo.update(R0_min=1.0, R0_max=15.0, net_electric_mw=500.0, H_factor=1.0)
+    p_hi = _base_sizing_params()
+    p_hi.update(R0_min=1.0, R0_max=15.0, net_electric_mw=500.0, H_factor=1.6)
+    r_lo = tokamak_size_from_power(p_lo, Fuel.DT)
+    r_hi = tokamak_size_from_power(p_hi, Fuel.DT)
+    assert r_hi.R0 < r_lo.R0  # higher confinement -> smaller machine
+
+
+def test_H_factor_affects_lcoe_end_to_end():
+    # H_factor must change the costed result (it is no longer a dead knob).
+    m = CostModel(ConfinementConcept.TOKAMAK, Fuel.DT)
+    common = dict(
+        net_electric_mw=500.0,
+        availability=0.85,
+        lifetime_yr=30.0,
+        size_from_power=True,
+        aspect_ratio=3.1,
+        beta_N_max=3.5,
+        coil_material="rebco_hts",
+    )
+    r1 = m.forward(H_factor=1.0, **common)
+    r1_R0 = m._last_R0
+    r2 = m.forward(H_factor=1.6, **common)
+    r2_R0 = m._last_R0
+    assert r2_R0 < r1_R0
+    assert r1.costs.lcoe != r2.costs.lcoe

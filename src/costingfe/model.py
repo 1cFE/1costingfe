@@ -47,6 +47,7 @@ from costingfe.layers.physics import (
 from costingfe.layers.tokamak import (
     DisruptionModel,
     apply_disruption_penalty,
+    aux_heating_from_confinement,
     derive_radial_build,
     resistive_recirc_power,
     tokamak_0d_forward,
@@ -486,6 +487,63 @@ class CostModel:
                 params["elon"],
             )
         )
+
+        # Solve the auxiliary heating from the confinement requirement at the
+        # solved operating point, so H_factor drives recirculating power and the
+        # C220104 driver cost. Run one forward at the solved point to get I_p,
+        # n_e, V_plasma, p_alpha, then close the form via aux_heating_from_confinement.
+        ps = tokamak_0d_forward(
+            R=result.R0,
+            a=result.a,
+            kappa=params["elon"],
+            B=result.B0,
+            q95=params["q95"],
+            f_GW=params["f_GW"],
+            T_e=result.T_e,
+            p_input=params["p_input"],
+            fuel=self.fuel,
+            M_ion=params.get("M_ion", 2.5),
+            Z_eff=params.get("Z_eff", 1.5),
+            lambda_q=params.get("lambda_q", 0.002),
+            dd_f_T=params["dd_f_T"],
+            dd_f_He3=params["dd_f_He3"],
+            dhe3_dd_frac=params["dhe3_dd_frac"],
+            dhe3_f_T=params["dhe3_f_T"],
+            dhe3_f_He3=self._dhe3_f_He3_eff(params),
+            pb11_f_alpha_n=params["pb11_f_alpha_n"],
+            pb11_f_p_n=params["pb11_f_p_n"],
+        )
+        p_aux = float(
+            aux_heating_from_confinement(
+                params["H_factor"],
+                ps.I_p,
+                result.B0,
+                ps.n_e,
+                ps.T_e,
+                ps.V_plasma,
+                ps.p_alpha,
+                result.R0,
+                result.a,
+                params["elon"],
+                params.get("M_ion", 2.5),
+            )
+        )
+        old_input = params["p_input"]
+        params["p_input"] = p_aux
+        # Rescale the heating mix so the driver cost reflects the solved aux power.
+        # Mirror the eta_pin defaulting convention: p_nbi defaults to the old
+        # p_input when absent, the others to 0.
+        old_mix = (
+            params.get("p_nbi", old_input)
+            + params.get("p_ecrh", 0.0)
+            + params.get("p_icrf", 0.0)
+            + params.get("p_lhcd", 0.0)
+        )
+        if old_mix > 0:
+            scale = p_aux / old_mix
+            params["p_nbi"] = params.get("p_nbi", old_input) * scale
+            for k in ("p_ecrh", "p_icrf", "p_lhcd"):
+                params[k] = params.get(k, 0.0) * scale
 
         # Re-run the forward 0D power balance at the solved point to produce the
         # full PowerTable and plasma state for the rest of the pipeline.
