@@ -4,6 +4,7 @@ import jax
 import jax.numpy as jnp
 import pytest
 
+from costingfe.layers.physics import ash_neutron_split, event_energies
 from costingfe.layers.reactivity import (
     sigv_dd_n,
     sigv_dd_p,
@@ -11,6 +12,7 @@ from costingfe.layers.reactivity import (
     sigv_dt,
     sigv_pb11,
 )
+from costingfe.types import Fuel
 
 # Reference values computed in float64 from the Bosch-Hale (1992) coefficients
 # as transcribed in examples/dhe3_mix_optimization.py (verified against the
@@ -82,3 +84,30 @@ class TestFitPhysics:
             g = float(jax.grad(fn)(T))
             assert jnp.isfinite(g)
             assert float(fn(T)) > 0.0
+
+
+_FRACS = dict(
+    dd_f_T=0.969,
+    dd_f_He3=0.689,
+    dhe3_dd_frac=0.131,
+    dhe3_f_T=0.5,
+    dhe3_f_He3=0.05,
+    pb11_f_alpha_n=0.0,
+    pb11_f_p_n=0.0,
+)
+
+
+class TestEventEnergies:
+    @pytest.mark.parametrize("fuel", [Fuel.DT, Fuel.DD, Fuel.DHE3, Fuel.PB11])
+    def test_consistent_with_ash_neutron_split(self, fuel):
+        """ash_neutron_split's split must equal the event_energies ratio."""
+        E_total, E_neutron = event_energies(fuel, **_FRACS)
+        p_ash, p_neutron = ash_neutron_split(100.0, fuel, **_FRACS)
+        assert float(p_neutron) == pytest.approx(
+            100.0 * float(E_neutron) / float(E_total), rel=1e-6
+        )
+
+    def test_dt_event_energy(self):
+        E_total, E_neutron = event_energies(Fuel.DT, **_FRACS)
+        assert float(E_total) == pytest.approx(17.58, rel=1e-6)
+        assert float(E_neutron) == pytest.approx(14.06, rel=1e-6)

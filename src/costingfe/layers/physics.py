@@ -61,8 +61,7 @@ _E_NEUTRON_PRIMARY_DD = 0.5 * E_N_DD  # ~1.225
 _E_TOTAL_PRIMARY_DD = 0.5 * Q_DD_PT + 0.5 * Q_DD_NHE3  # ~3.65
 
 
-def ash_neutron_split(
-    p_fus: float,
+def event_energies(
     fuel: Fuel,
     dd_f_T: float,
     dd_f_He3: float,
@@ -71,21 +70,22 @@ def ash_neutron_split(
     dhe3_f_He3: float,
     pb11_f_alpha_n: float,
     pb11_f_p_n: float,
-) -> tuple[float, float]:
-    """Compute charged-particle (ash) and neutron power from fusion power.
-
-    Returns (p_ash, p_neutron) in MW. All paths are JAX-differentiable.
-
-    Source: pyFECONs fuel_physics.py:compute_ash_neutron_split
+):
+    """Per-fusion-event total and neutron energies [MeV] for each fuel,
+    including the secondary-burn channels. Single source of truth shared by
+    ash_neutron_split (partition) and fusion_power_density (rate -> power).
     """
     if fuel == Fuel.DT:
-        ash_frac = E_ALPHA_DT / Q_DT
+        E_total = Q_DT
+        E_neutron = E_N_DT
+        return E_total, E_neutron
     elif fuel == Fuel.DD:
         E_charged = (
             _E_CHARGED_PRIMARY_DD + 0.5 * dd_f_T * E_ALPHA_DT + 0.5 * dd_f_He3 * Q_DHE3
         )
         E_total = _E_TOTAL_PRIMARY_DD + 0.5 * dd_f_T * Q_DT + 0.5 * dd_f_He3 * Q_DHE3
-        ash_frac = E_charged / E_total
+        E_neutron = E_total - E_charged
+        return E_total, E_neutron
     elif fuel == Fuel.DHE3:
         # Energy-weighted ash fraction: total charged energy / total fusion energy.
         # D-He3 events release Q_DHE3 = 18.35 MeV (all charged); D-D events release
@@ -103,7 +103,8 @@ def ash_neutron_split(
         E_DD_event = E_n_dd + E_c_dd
         E_charged = (1 - dhe3_dd_frac) * Q_DHE3 + dhe3_dd_frac * E_c_dd
         E_total = (1 - dhe3_dd_frac) * Q_DHE3 + dhe3_dd_frac * E_DD_event
-        ash_frac = E_charged / E_total
+        E_neutron = E_total - E_charged
+        return E_total, E_neutron
     elif fuel == Fuel.PB11:
         # Side reaction 1: 11B(alpha,n)14N
         # Each p+11B produces 3 alphas (~2.89 MeV each). Each alpha has
@@ -128,10 +129,39 @@ def ash_neutron_split(
         # Total energy and neutron energy per primary event
         E_total = Q_PB11 + n_alpha_n * Q_ALPHA_N_PB11 + pb11_f_p_n * Q_P_N_PB11
         E_neutron = n_alpha_n * E_n_alpha + pb11_f_p_n * E_n_pn
-        ash_frac = (E_total - E_neutron) / E_total
+        return E_total, E_neutron
     else:
         raise ValueError(f"Unknown fuel type: {fuel}")
 
+
+def ash_neutron_split(
+    p_fus: float,
+    fuel: Fuel,
+    dd_f_T: float,
+    dd_f_He3: float,
+    dhe3_dd_frac: float,
+    dhe3_f_T: float,
+    dhe3_f_He3: float,
+    pb11_f_alpha_n: float,
+    pb11_f_p_n: float,
+) -> tuple[float, float]:
+    """Compute charged-particle (ash) and neutron power from fusion power.
+
+    Returns (p_ash, p_neutron) in MW. All paths are JAX-differentiable.
+
+    Source: pyFECONs fuel_physics.py:compute_ash_neutron_split
+    """
+    E_total, E_neutron = event_energies(
+        fuel,
+        dd_f_T,
+        dd_f_He3,
+        dhe3_dd_frac,
+        dhe3_f_T,
+        dhe3_f_He3,
+        pb11_f_alpha_n,
+        pb11_f_p_n,
+    )
+    ash_frac = (E_total - E_neutron) / E_total
     p_ash = p_fus * ash_frac
     p_neutron = p_fus * (1.0 - ash_frac)
     return p_ash, p_neutron
