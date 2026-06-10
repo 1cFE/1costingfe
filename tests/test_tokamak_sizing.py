@@ -112,3 +112,18 @@ def test_net_power_positive_for_reactor_scale():
 
     p = _base_sizing_params()
     assert net_electric_at_R0(4.5, p, Fuel.DT) > 0.0
+
+
+def test_recirc_reduces_net_power():
+    from costingfe.types import Fuel
+
+    p_zero = _base_sizing_params()
+    p_zero["recirc_power_factor"] = 0.0
+
+    p_recirc = _base_sizing_params()
+    p_recirc["recirc_power_factor"] = 1.0e-3
+
+    pn_zero = net_electric_at_R0(4.5, p_zero, Fuel.DT)
+    pn_recirc = net_electric_at_R0(4.5, p_recirc, Fuel.DT)
+    # Resistive coils draw continuous power, so net electric must drop.
+    assert pn_recirc < pn_zero

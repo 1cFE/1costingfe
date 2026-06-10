@@ -27,6 +27,10 @@ E_FUS_DT = 17.58  # DT fusion energy [MeV]
 MEV_TO_J = _EV * 1e6  # 1 MeV -> Joules
 KEV_TO_J = _EV * 1e3  # 1 keV -> Joules
 
+# Sizing golden-section search tuning
+_GSS_ITERS = 40  # Golden-section iterations to localize the optimum T_e
+_BETA_PENALTY = 1.0e6  # Penalty slope for beta-limit violations [MW per %·m·T/MA]
+
 
 # ---------------------------------------------------------------------------
 # PlasmaState
@@ -710,6 +714,10 @@ def _net_at_R0_T(R0, T_e, params, fuel):
     given temperature. Wraps tokamak_0d_forward + mfe_forward_power_balance
     exactly as the forward branch of model._power_balance_0d does.
 
+    Note: this sizing path is DT-scoped. The D-He3 effective-He3 coupling
+    (model._dhe3_f_He3_eff) is NOT applied here; params["dhe3_f_He3"] is passed
+    through raw. It must be threaded in when this path is extended to D-He3.
+
     Returns (p_net [MW], beta_N).
     """
     A = params["aspect_ratio"]
@@ -806,24 +814,41 @@ def net_electric_at_R0(R0, params, fuel, return_state=False):
     """
     T_lo, T_hi = params["T_min"], params["T_max"]
     beta_cap = params["beta_N_max"]
-    invphi = (5**0.5 - 1) / 2
+    invphi = (5**0.5 - 1) / 2  # 1/phi, the golden-section ratio
+    invphi2 = (3 - 5**0.5) / 2  # 1/phi^2
 
     def feasible_net(T):
         pn, beta = _net_at_R0_T(R0, T, params, fuel)
         if beta > beta_cap:
-            return -1e9 * (beta - beta_cap)
+            return -_BETA_PENALTY * (beta - beta_cap)
         return pn
 
-    lo, hi = T_lo, T_hi
-    for _ in range(40):
-        c = hi - invphi * (hi - lo)
-        d = lo + invphi * (hi - lo)
-        if feasible_net(c) < feasible_net(d):
-            lo = c
-        else:
-            hi = d
-    T_star = 0.5 * (lo + hi)
+    # Golden-section search for the MAXIMUM that recycles one probe per
+    # iteration (about _GSS_ITERS evals rather than 2x that).
+    a, b = T_lo, T_hi
+    h = b - a
+    c = a + invphi2 * h
+    d = a + invphi * h
+    fc = feasible_net(c)
+    fd = feasible_net(d)
+    for _ in range(_GSS_ITERS):
+        if fc > fd:  # maximizing: max is in [a, d]
+            b, d, fd = d, c, fc
+            h = b - a
+            c = a + invphi2 * h
+            fc = feasible_net(c)
+        else:  # max is in [c, b]
+            a, c, fc = c, d, fd
+            h = b - a
+            d = a + invphi * h
+            fd = feasible_net(d)
+    T_star = 0.5 * (a + b)
+
+    # The scalar return the outer solver bisects on must carry the beta
+    # penalty so an all-infeasible point reads strongly negative rather than a
+    # deceptive positive. return_state still exposes the TRUE state for
+    # diagnostics.
     pn, beta = _net_at_R0_T(R0, T_star, params, fuel)
     if return_state:
         return pn, T_star, beta
-    return pn
+    return feasible_net(T_star)
