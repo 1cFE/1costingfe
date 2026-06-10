@@ -91,3 +91,15 @@ pb11_f_p_n: 0.0
 # Blanket configuration
 blanket_form: liquid_metal
 blanket_fill: pbli
+
+# Power-to-geometry sizing (active when size_from_power=true). When enabled,
+# R0/plasma_t/B/b_center become solved outputs and must not be pinned.
+size_from_power: false   # Solve R0 from net_electric_mw instead of using R0
+optimize_lcoe: false     # Wrap sizing with an outer LCOE minimization over f_GW
+aspect_ratio: 3.0        # A = R0 / a (conventional ~3, spherical ~1.7)
+beta_N_max: 3.5          # Troyon normalized-beta limit (binding constraint)
+H_factor: 1.0            # Assumed confinement quality (IPB98y2 multiplier)
+R0_min: 1.0              # Lower bound for the R0 search [m]
+R0_max: 12.0             # Upper bound for the R0 search [m]
+T_min: 5.0               # Lower bound for the operating-temperature search [keV]
+T_max: 60.0              # Upper bound for the operating-temperature search [keV]

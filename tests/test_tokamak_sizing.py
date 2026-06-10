@@ -7,6 +7,8 @@ from costingfe.layers.tokamak import (
     net_electric_at_R0,
     tokamak_size_from_power,
 )
+from costingfe.model import CostModel
+from costingfe.types import ConfinementConcept, Fuel
 
 
 def test_magnet_table_has_expected_materials():
@@ -169,3 +171,19 @@ def test_recirc_reduces_net_power():
     pn_recirc = net_electric_at_R0(4.5, p_recirc, Fuel.DT)
     # Resistive coils draw continuous power, so net electric must drop.
     assert pn_recirc < pn_zero
+
+
+def test_sizing_overrides_accepted():
+    m = CostModel(ConfinementConcept.TOKAMAK, Fuel.DT)
+    # Must not raise "unknown parameter": these are sizing knobs. (size_from_power
+    # is not yet gated, so forward() runs the normal path; we only assert that
+    # override validation accepts the keys.)
+    m.forward(
+        net_electric_mw=500.0,
+        availability=0.85,
+        lifetime_yr=30.0,
+        size_from_power=True,
+        aspect_ratio=3.1,
+        beta_N_max=3.5,
+        H_factor=1.0,
+    )

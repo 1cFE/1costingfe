@@ -1162,6 +1162,16 @@ class CostModel:
             "use_0d_model",
             "0d_mode",
             "fw_area",
+            # Power-to-geometry sizing (TOKAMAK)
+            "size_from_power",
+            "optimize_lcoe",
+            "aspect_ratio",
+            "beta_N_max",
+            "H_factor",
+            "R0_min",
+            "R0_max",
+            "T_min",
+            "T_max",
             # Coil / magnet knobs not in every concept YAML
             "n_coils",
             "lev_coil_markup",
