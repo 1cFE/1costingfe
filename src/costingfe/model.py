@@ -637,10 +637,12 @@ class CostModel:
                 },
             )
 
-        # Sizing requires the 0D physics path (radial build derivation and the
-        # disruption penalty both key off use_0d_model).
-        if params.get("size_from_power", False):
-            params["use_0d_model"] = True
+        # Note: sizing mode does NOT force use_0d_model. The disruption penalty
+        # keys off self._plasma_state (which _size_tokamak sets), so it is active
+        # for sized machines regardless. Leaving use_0d_model alone keeps the
+        # design's radial build (YAML or overrides) instead of clobbering it with
+        # the generic fuel-derived build, which would suppress on-axis field on a
+        # compact high-field machine.
 
         # 0D radial build: derive thicknesses from fuel before geometry
         self._plasma_state = None
