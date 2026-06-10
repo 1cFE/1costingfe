@@ -37,9 +37,7 @@ Pure JAX functions, one per channel:
   alternative; not the default.
 
 All take T_i in keV, return `<sigma*v>` in m^3/s, and are JAX-differentiable
-(`jnp` ops only). The example scripts (`dhe3_mix_optimization.py`,
-`dhe3_burn_fractions.py`) are refactored to import these from the package so
-the coefficients exist in exactly one place.
+(`jnp` ops only). The example scripts (`dhe3_mix_optimization.py`, `dhe3_burn_fractions.py`) keep their own numpy/float64 implementations as independent cross-checks (the package runs JAX float32; importing it would silently change example outputs). A unit test pins the package fits against float64 reference values computed from the example's coefficients.
 
 ### 2. Fuel dispatch and dilution: `fusion_power_density`
 
@@ -47,8 +45,7 @@ the coefficients exist in exactly one place.
 `compute_fusion_power`. Dispatch is a Python branch on `fuel` (static per
 model instance), so JAX tracing is unaffected.
 
-Reactant densities from quasineutrality, with one new YAML knob
-`fuel_mix_ratio` (`r`):
+Reactant densities from quasineutrality, with new fuel-specific YAML mix knobs (`r` below): `dhe3_fuel_ratio` and `pb11_fuel_ratio`:
 
 | Fuel  | Meaning of r        | Densities                                   | Rate(s)                                              |
 |-------|---------------------|---------------------------------------------|------------------------------------------------------|
@@ -57,9 +54,7 @@ Reactant densities from quasineutrality, with one new YAML knob
 | D-He3 | n_He3/n_D           | n_D = n_e/(1+2r), n_He3 = r*n_D              | n_D n_He3 sigv_dhe3 + (1/2) n_D^2 (sigv_dd_n+sigv_dd_p) |
 | p-B11 | n_B/n_p             | n_p = n_e/(1+5r), n_B = r*n_p                | n_p n_B sigv_pb11                                     |
 
-`fuel_mix_ratio` defaults: 1.0 for D-He3 (50:50), 0.15 for p-B11 (typical
-lean-boron design point); to be calibrated. Declared in concept YAML only —
-no Python keyword default in any function signature.
+Mix knobs follow the existing fuel-specific key pattern (`dd_f_T`, `dhe3_dd_frac`, `pb11_f_alpha_n`): `dhe3_fuel_ratio` (n_He3/n_D, default 1.0) and `pb11_fuel_ratio` (n_B/n_p, default 0.15, typical lean-boron design point; to be calibrated), declared in `steady_state_tokamak.yaml` only — no Python keyword default in any function signature.
 
 Per-event energies reuse the existing `physics.py` constants (Q_DT, Q_DD_PT,
 Q_DD_NHE3, Q_DHE3, Q_PB11, and the secondary-burn terms), so total p_fus is
@@ -85,8 +80,7 @@ fast-ion burnup physics, not thermal rates.
 
 New param `T_i_over_T_e` with its default of 1.0 declared in the concept
 YAMLs (all current results unchanged). No Python keyword default anywhere:
-`fusion_power_density` and the 0D/sizing functions take it (and
-`fuel_mix_ratio`) as required arguments read from the merged params dict,
+`fusion_power_density` and the 0D/sizing functions take it (and the mix-ratio knobs (`dhe3_fuel_ratio`, `pb11_fuel_ratio`)) as required arguments read from the merged params dict,
 same as every other physics param. T_i = T_i_over_T_e * T_e enters
 reactivity, stored energy, and beta. Stored
 energy and beta generalize with the dilution factor n_i/n_e so that DT
