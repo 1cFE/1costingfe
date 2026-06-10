@@ -864,6 +864,8 @@ class SizingInfeasible(Exception):
 
 @dataclass(frozen=True)
 class SizingResult:
+    """Solved tokamak geometry and operating point from a power target."""
+
     R0: float
     a: float
     B0: float
