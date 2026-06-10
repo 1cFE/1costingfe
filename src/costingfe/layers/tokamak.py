@@ -187,6 +187,21 @@ def _first_wall_area(R, a, kappa):
     return 4.0 * jnp.pi**2 * R * a * kappa
 
 
+def b0_from_radial_build(R0, a, b_max, blanket_t, ht_shield_t, structure_t, vessel_t):
+    """On-axis toroidal field [T] from the peak-field ceiling and the inboard
+    radial build.
+
+    The toroidal field falls as 1/R from the inboard TF leg to the axis:
+        B0 = B_max * R_coil_inner / R0
+    where R_coil_inner = R0 - a - (blanket + ht_shield + structure + vessel) is
+    the major radius of the inboard coil leg. Fixed-meter inboard layers penalize
+    small machines on field.
+    """
+    inboard = blanket_t + ht_shield_t + structure_t + vessel_t
+    r_coil_inner = R0 - a - inboard
+    return b_max * r_coil_inner / R0
+
+
 # ---------------------------------------------------------------------------
 # Forward mode
 # ---------------------------------------------------------------------------
