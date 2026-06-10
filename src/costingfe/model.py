@@ -492,15 +492,16 @@ class CostModel:
         params["0d_mode"] = "forward"
         return self._power_balance_0d(params, n_mod)
 
-    def _optimize_fgw(self, lcoe_of_fgw):
-        """Golden-section minimize LCOE over f_GW in (0.3, 1.0].
+    def _optimize_fgw(self, lcoe_of_fgw, fgw_lo, fgw_hi):
+        """Golden-section minimize LCOE over f_GW in [fgw_lo, fgw_hi].
 
         lcoe_of_fgw is a callable mapping a trial f_GW to the resulting LCOE
         (it runs the full sizing+cost pipeline). Returns the minimizing f_GW.
+        fgw_lo and fgw_hi come from params["f_GW_min"] and params["f_GW_max"].
         """
         invphi = (5**0.5 - 1) / 2
         invphi2 = (3 - 5**0.5) / 2
-        lo, hi = 0.3, 1.0
+        lo, hi = fgw_lo, fgw_hi
         h = hi - lo
         c = lo + invphi2 * h
         d = lo + invphi * h
@@ -724,7 +725,9 @@ class CostModel:
                         },
                     ).costs.lcoe
 
-                best_fgw = self._optimize_fgw(_lcoe_at)
+                best_fgw = self._optimize_fgw(
+                    _lcoe_at, params["f_GW_min"], params["f_GW_max"]
+                )
                 self._sizing_fgw = best_fgw
                 return self.forward(
                     net_electric_mw=net_electric_mw,
@@ -1318,6 +1321,8 @@ class CostModel:
             "R0_max",
             "T_min",
             "T_max",
+            "f_GW_min",
+            "f_GW_max",
             # Coil / magnet knobs not in every concept YAML
             "n_coils",
             "lev_coil_markup",

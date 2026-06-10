@@ -103,3 +103,5 @@ R0_min: 1.0              # Lower bound for the R0 search [m]
 R0_max: 12.0             # Upper bound for the R0 search [m]
 T_min: 5.0               # Lower bound for the operating-temperature search [keV]
 T_max: 60.0              # Upper bound for the operating-temperature search [keV]
+f_GW_min: 0.30           # Lower bound for the LCOE-optimizer f_GW search
+f_GW_max: 1.00           # Upper bound for the LCOE-optimizer f_GW search

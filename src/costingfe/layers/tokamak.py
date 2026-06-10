@@ -728,9 +728,10 @@ def _net_at_R0_T(R0, T_e, params, fuel):
     given temperature. Wraps tokamak_0d_forward + mfe_forward_power_balance
     exactly as the forward branch of model._power_balance_0d does.
 
-    Note: this sizing path is DT-scoped. The D-He3 effective-He3 coupling
-    (model._dhe3_f_He3_eff) is NOT applied here; params["dhe3_f_He3"] is passed
-    through raw. It must be threaded in when this path is extended to D-He3.
+    Note: this function consumes whatever dhe3_f_He3 the caller places in params.
+    _size_tokamak sets it to the effective bred-He3 value (_dhe3_f_He3_eff) before
+    calling, so for D-He3 sizing the caller is responsible for providing the
+    effective value (as the model's sizing path does).
 
     Returns (p_net [MW], beta_N).
     """
