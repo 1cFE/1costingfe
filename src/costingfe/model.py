@@ -502,9 +502,9 @@ class CostModel:
             T_e=result.T_e,
             p_input=params["p_input"],
             fuel=self.fuel,
-            M_ion=params.get("M_ion", 2.5),
-            Z_eff=params.get("Z_eff", 1.5),
-            lambda_q=params.get("lambda_q", 0.002),
+            M_ion=params["M_ion"],
+            Z_eff=params["Z_eff"],
+            lambda_q=params["lambda_q"],
             dd_f_T=params["dd_f_T"],
             dd_f_He3=params["dd_f_He3"],
             dhe3_dd_frac=params["dhe3_dd_frac"],
@@ -525,7 +525,7 @@ class CostModel:
                 result.R0,
                 result.a,
                 params["elon"],
-                params.get("M_ion", 2.5),
+                params["M_ion"],
             )
         )
         old_input = params["p_input"]
