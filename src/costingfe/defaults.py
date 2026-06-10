@@ -535,8 +535,7 @@ class MagnetProperties:
     """Physical properties carried by a coil-conductor selection."""
 
     b_max: float  # Peak field ceiling at the conductor [T]
-    recirc_power_factor: float  # Recirculating power as MW per (T^2 * m^3) of coil
-    # volume-field product; 0 for superconductors, nonzero for resistive copper.
+    recirc_power_factor: float  # Recirculating power [MW / (T^2 * m^3)]; 0 for SC
     cryo_temp_k: float  # Coil operating temperature [K]
 
 
