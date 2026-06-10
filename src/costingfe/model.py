@@ -939,10 +939,10 @@ class CostModel:
         avail_eff = availability
         if self._plasma_state is not None:
             dm = DisruptionModel(
-                rate_base=params.get("disruption_rate_base", 0.1),
-                steepness=params.get("disruption_steepness", 15.0),
-                damage_per_disruption=params.get("disruption_damage", 0.02),
-                downtime_per_disruption=params.get("disruption_downtime", 72.0),
+                rate_base=params["disruption_rate_base"],
+                steepness=params["disruption_steepness"],
+                damage_per_disruption=params["disruption_damage"],
+                downtime_per_disruption=params["disruption_downtime"],
             )
             core_lt, avail_eff = apply_disruption_penalty(
                 core_lt,

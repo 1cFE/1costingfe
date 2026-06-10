@@ -158,6 +158,21 @@ def test_net_power_positive_for_reactor_scale():
     assert net_electric_at_R0(4.5, p, Fuel.DT) > 0.0
 
 
+def test_missing_disruption_key_errors_not_silent():
+    # When the 0D model is active, a missing disruption input must error rather
+    # than silently fall back to a magic default.
+    m = CostModel(ConfinementConcept.TOKAMAK, Fuel.DT)
+    m._eng_defaults = dict(m._eng_defaults)
+    m._eng_defaults.pop("disruption_damage")
+    with pytest.raises(KeyError):
+        m.forward(
+            net_electric_mw=400.0,
+            availability=0.85,
+            lifetime_yr=30.0,
+            use_0d_model=True,
+        )
+
+
 def test_recirc_reduces_net_power():
     from costingfe.types import Fuel
 
