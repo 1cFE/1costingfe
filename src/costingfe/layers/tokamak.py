@@ -11,6 +11,9 @@ from dataclasses import dataclass
 import jax
 import jax.numpy as jnp
 
+from costingfe.layers.physics import (  # Re-exported for existing importers.
+    OperatingPointInfeasible as OperatingPointInfeasible,  # noqa: F401
+)
 from costingfe.layers.physics import (
     ash_neutron_split,
     compute_p_rad,
@@ -644,11 +647,6 @@ class PlasmaLimits:
     q95_min: float = 2.0  # Kink stability
     wall_loading_max: float = 5.0  # [MW/m^2]
     div_heat_flux_max: float = 10.0  # [MW/m^2]
-
-
-class OperatingPointInfeasible(Exception):
-    """Raised when the operating point implied by a stated net power at a
-    stated geometry violates an error-severity plasma limit (inverse mode)."""
 
 
 def check_plasma_limits(state: PlasmaState, limits: PlasmaLimits = None):

@@ -61,6 +61,14 @@ _E_NEUTRON_PRIMARY_DD = 0.5 * E_N_DD  # ~1.225
 _E_TOTAL_PRIMARY_DD = 0.5 * Q_DD_PT + 0.5 * Q_DD_NHE3  # ~3.65
 
 
+# ---------------------------------------------------------------------------
+# Exceptions
+# ---------------------------------------------------------------------------
+class OperatingPointInfeasible(Exception):
+    """Raised when the operating point implied by a stated net power at a
+    stated geometry violates an error-severity plasma limit (inverse mode)."""
+
+
 def event_energies(
     fuel: Fuel,
     dd_f_T: float,
