@@ -1,0 +1,8 @@
+availability             -0.89
+interest_rate            +0.65
+R0                       +0.40
+construction_time_yr     +0.30
+elon                     +0.29
+eta_th                   -0.28
+blanket_t                +0.25
+plasma_t                 +0.20

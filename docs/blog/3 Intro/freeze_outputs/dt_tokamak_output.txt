@@ -1,0 +1,100 @@
+DT Tokamak (CATF ref) — 1 GWe, 85% availability, 30 yr lifetime
+LCOE: 82.9 $/MWh | Overnight: 5834 $/kW
+Fusion: 2304 MW | Net: 1000 MW | Q_eng: 7.0
+
+Code     Account                              M$
+------------------------------------------------
+CAS10    Preconstruction                    18.5
+CAS21    Buildings                         580.9
+CAS22    Reactor Plant Equipment          2667.2
+CAS23    Turbine Plant                     230.8
+CAS24    Electrical Plant                   98.3
+CAS25    Miscellaneous                      59.8
+CAS26    Heat Rejection                     86.7
+CAS27    Special Materials                  15.1
+CAS28    Digital Twin                        5.0
+CAS29    Contingency                         0.0
+CAS30    Indirect Costs                    748.8
+CAS40    Owner's Costs                      39.0
+CAS50    Supplementary                     342.9
+CAS60    IDC                               940.5
+CAS70    O&M (annualized)                  146.6
+CAS80    Fuel (annualized)                   0.7
+CAS90    Financial                         470.1
+------------------------------------------------
+         Total Capital                    5833.6
+
+Sensitivity (elasticity = %LCOE / %param)
+------------------------------------------------
+
+Engineering levers:
+  availability                         -0.8986
+  R0                                   +0.3895
+  construction_time_yr                 +0.3016
+  elon                                 +0.2758
+  eta_th                               -0.2558
+  blanket_t                            +0.2362
+  plasma_t                             +0.1944
+  b_center                             +0.1137
+  mn                                   -0.0465
+  vessel_t                             +0.0440
+  ht_shield_t                          +0.0410
+  eta_couple                           -0.0364
+  p_input                              +0.0353
+  p_nbi                                +0.0309
+  p_ecrh                               +0.0185
+  structure_t                          +0.0182
+  fuel_recovery                        -0.0172
+  f_sub                                +0.0125
+  p_icrf                               +0.0120
+  p_cool                               +0.0049
+  p_trit                               +0.0036
+  p_cryo                               +0.0017
+  p_house                              +0.0014
+  p_coils                              +0.0007
+  p_pump                               +0.0003
+  burn_fraction                        -0.0003
+  eta_p                                -0.0000
+  dd_f_T                               +0.0000
+  dd_f_He3                             +0.0000
+  dhe3_dd_frac                         +0.0000
+  dhe3_f_T                             +0.0000
+  eta_de                               +0.0000
+  q95                                  +0.0000
+  f_GW                                 +0.0000
+  B                                    +0.0000
+  T_e                                  +0.0000
+  n_e                                  +0.0000
+  Z_eff                                +0.0000
+  plasma_volume                        +0.0000
+  R_w                                  +0.0000
+  T_edge                               +0.0000
+  tau_ratio                            +0.0000
+  r_bore                               +0.0000
+  M_ion                                +0.0000
+  lambda_q                             +0.0000
+  disruption_rate_base                 +0.0000
+  disruption_steepness                 +0.0000
+  disruption_damage                    +0.0000
+  disruption_downtime                  +0.0000
+
+Financial:
+  interest_rate                        +0.6382
+  inflation_rate                       +0.0525
+
+Costing constants (top 15):
+  blanket_unit_cost_dt                 +0.1758
+  om_cost_dt                           +0.1256
+  indirect_fraction                    +0.1183
+  core_lifetime_dt                     -0.1004
+  shield_unit_cost                     +0.0576
+  installation_frac                    +0.0534
+  divertor_base                        +0.0431
+  remote_handling_dt_base              +0.0357
+  vessel_unit_cost                     +0.0333
+  heating_nbi_per_mw                   +0.0312
+  fuel_handling_dt_base                +0.0232
+  decom_provision_dt                   +0.0198
+  power_supplies_base                  +0.0197
+  electric_per_mw                      +0.0195
+  heating_ecrh_per_mw                  +0.0165

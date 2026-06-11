@@ -1,0 +1,76 @@
+Sensitivity Tornado — DT Tokamak, 1 GWe
+Baseline LCOE: 86.0 $/MWh
+
+Parameter                Elasticity                 ← cost decrease | cost increase →
+---------------------------------------------------------------------------------------------------
+availability                -0.8939  ██████████████████████████████ | 
+interest_rate               +0.6373                                 | █████████████████████
+R0                          +0.3950                                 | █████████████
+construction_time_yr        +0.3010                                 | ██████████
+elon                        +0.2855                                 | █████████
+eta_th                      -0.2728                       █████████ | 
+blanket_t                   +0.2437                                 | ████████
+plasma_t                    +0.1987                                 | ██████
+blanket_unit_cost_dt        +0.1842                                 | ██████
+om_cost_dt                  +0.1211                                 | ████
+indirect_fraction           +0.1184                                 | ███
+b_center                    +0.1095                                 | ███
+core_lifetime_dt            -0.1049                             ███ | 
+shield_unit_cost            +0.0603                                 | ██
+installation_frac           +0.0531                                 | █
+mn                          -0.0516                               █ | 
+inflation_rate              +0.0507                                 | █
+divertor_base               +0.0446                                 | █
+vessel_t                    +0.0425                                 | █
+ht_shield_t                 +0.0420                                 | █
+eta_couple                  -0.0375                               █ | 
+p_input                     +0.0363                                 | █
+remote_handling_dt_base     +0.0344                                 | █
+vessel_unit_cost            +0.0321                                 | █
+heating_nbi_per_mw          +0.0300                                 | █
+p_nbi                       +0.0298                                 | 
+fuel_handling_dt_base       +0.0224                                 | 
+fuel_recovery               -0.0191                                 | 
+decom_provision_dt          +0.0190                                 | 
+power_supplies_base         +0.0190                                 | 
+electric_per_mw             +0.0188                                 | 
+p_ecrh                      +0.0180                                 | 
+structure_t                 +0.0177                                 | 
+heating_ecrh_per_mw         +0.0159                                 | 
+heating_icrf_per_mw         +0.0132                                 | 
+f_sub                       +0.0129                                 | 
+p_icrf                      +0.0115                                 | 
+misc_per_mw                 +0.0114                                 | 
+construction_insurance_frac    +0.0105                                 | 
+shipping_frac               +0.0087                                 | 
+startup_fuel_dt             +0.0060                                 | 
+structure_unit_cost         +0.0060                                 | 
+owner_cost_dt               +0.0058                                 | 
+tax_frac                    +0.0058                                 | 
+p_cool                      +0.0050                                 | 
+p_trit                      +0.0037                                 | 
+spare_parts_frac_dt         +0.0023                                 | 
+p_cryo                      +0.0017                                 | 
+p_house                     +0.0015                                 | 
+digital_twin                +0.0010                                 | 
+licensing_cost_dt           +0.0007                                 | 
+p_coils                     +0.0007                                 | 
+u_li6                       +0.0007                                 | 
+plant_studies_noak          +0.0006                                 | 
+u_deuterium                 +0.0005                                 | 
+site_permits                +0.0004                                 | 
+land_cost                   +0.0004                                 | 
+land_intensity              +0.0004                                 | 
+burn_fraction               -0.0004                                 | 
+p_pump                      +0.0004                                 | 
+plant_permits               +0.0003                                 | 
+pump_gas_temp_k             +0.0002                                 | 
+vac_op_pressure_pa          -0.0002                                 | 
+pump_unit_cost              +0.0002                                 | 
+pump_ion_per_reaction       +0.0002                                 | 
+e_fus_mev_dt                -0.0002                                 | 
+plant_reports               +0.0001                                 | 
+other_precon                +0.0001                                 | 
+
+Elasticity = % change in LCOE per 1% change in parameter.
+Top lever: availability (-0.8939)

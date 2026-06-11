@@ -1,0 +1,2 @@
+LCOE: $84.6/MWh
+Overridden accounts: ['C220103']
