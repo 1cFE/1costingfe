@@ -3343,11 +3343,11 @@ laws. The model is fully differentiable, enabling gradient-based
 sensitivity analysis of LCOE with respect to machine-level design
 choices ($R$, $a$, $B$, $q_{95}$, etc.).
 
-\subsection{D-T Reactivity}
+\subsection{Fusion Reactivity}
+\label{sec:reactivity}
 
-The D-T fusion reactivity $\langle\sigma v\rangle$ is evaluated using
-the analytic parameterization of \citet{boschhale1992}, valid for
-$0.2 \leq T \leq 100$~keV:
+The fusion reactivity $\langle\sigma v\rangle$ is evaluated per fuel
+with analytic parameterizations of the common form
 
 \begin{equation}
 \label{eq:sigma-v}
@@ -3357,9 +3357,30 @@ $0.2 \leq T \leq 100$~keV:
 \end{equation}
 
 \noindent where $\theta = T / (1 - T(C_2 + T(C_4 + TC_6))/(1 + T(C_3 + T(C_5 + TC_7))))$,
-$\xi = (B_G^2 / 4\theta)^{1/3}$, $B_G = 34.38$~keV$^{1/2}$ is the
-Gamow constant, and $C_1$--$C_7$ are the tabulated coefficients from
-\citet{boschhale1992}. The reactivity peaks near $T \approx 65$~keV.
+$\xi = (B_G^2 / 4\theta)^{1/3}$, $B_G$ is the Gamow constant of the
+reaction, and $C_1$--$C_7$ are tabulated fit coefficients. D-T
+($B_G = 34.38$~keV$^{1/2}$, valid $0.2 \leq T \leq 100$~keV, peak near
+$T \approx 65$~keV), both D-D branches, and D-${}^3$He (valid to
+190~keV) use the coefficients of \citet{boschhale1992}; p-B11 uses the
+high-temperature fit of \citet{nevinsswain2000} (valid
+$50 \leq T \leq 500$~keV) as tabulated by \citet{tentoribelloni2023},
+with the higher-reactivity revision of \citet{putvinski2019} available
+as the optimistic alternative.
+
+Reactant densities follow quasineutrality from the electron density and
+a fuel-mix ratio input ($n_{{}^3\text{He}}/n_\text{D}$ or
+$n_\text{B}/n_\text{p}$): the higher fuel-ion charges of the advanced
+fuels dilute the reactant densities, reduce the total ion pressure
+entering the stored energy and $\beta_N$, and raise $Z_{\text{eff}}$
+(and with it bremsstrahlung), with the configured $Z_{\text{eff}}$
+interpreted as the hydrogenic-plus-impurity baseline. For D-${}^3$He
+the D-D side-channel fraction is derived from the rate ratio at the
+operating point (an explicit input pins it); the ion temperature can
+exceed the electron temperature through a hot-ion ratio
+$T_i/T_e \geq 1$; and the operating-temperature search interval is
+fuel-specific, bounded by each fit's validity range. For D-${}^3$He and
+p-B11 the radiated power defaults to the same fixed-fraction-of-fusion
+proxy used by the energy-balance path, keeping the two paths consistent.
 
 \subsection{Plasma Equilibrium}
 
@@ -3482,7 +3503,15 @@ bisection, returning both the plasma state and the complete power
 table. The inverse mode enables target-driven design: given a net
 power requirement, the framework determines the plasma conditions,
 checks them against stability and engineering limits, and computes
-the resulting LCOE in a single differentiable pass.
+the resulting LCOE in a single differentiable pass. The implied
+operating point must be admissible: a violation of an error-severity
+stability limit (Greenwald fraction, Troyon $\beta_N$, kink safety
+factor) raises an \texttt{OperatingPointInfeasible} error carrying the
+diagnosis, rather than costing a plasma that cannot exist; an explicit
+flag (\texttt{enforce\_plasma\_limits}) disables the check for
+exploratory runs. Far beyond the limits the disruption-rate model is
+numerically capped and the disruption-penalized availability floored at
+zero, so no operating point can produce non-finite cost components.
 
 \subsection{Power-to-Geometry Sizing}
 \label{sec:tokamak-sizing}
@@ -3525,8 +3554,11 @@ sizing off), \emph{size} (solve $R_0$ from design knobs), \emph{scale}
 \emph{optimize} (minimize LCOE over $f_{\text{GW}}$ with $R_0$ slaved to
 the power target, using the disruption model of \cref{sec:tokamak-model}).
 Both sizing flags default to false, so existing configurations are
-unaffected. The D-T Bosch-Hale reactivity is the current scope; extension
-to other fuel reactivities is a follow-on.
+unaffected. The solve is fuel-aware through the per-fuel reactivities,
+mix dilution, and radiation treatment of \cref{sec:reactivity}, with
+fuel-specific temperature search intervals; sized D-${}^3$He machines
+are larger than D-T at equal net power, and p-B11 does not reach
+positive net power within the search radius and fails as infeasible.
 
 \section{Synchrotron radiation model details}
 \label{app:synchrotron}

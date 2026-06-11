@@ -18,3 +18,4 @@ build/
 *.synctex.gz
 *.toc
 *.pdf
+!docs/papers/1costingfe_paper/1costingfe_paper.pdf
