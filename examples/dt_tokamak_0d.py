@@ -11,6 +11,7 @@ Two modes are shown:
 
 from costingfe import ConfinementConcept, CostModel, Fuel
 from costingfe.layers.tokamak import (
+    OperatingPointInfeasible,
     apply_disruption_penalty,
     check_plasma_limits,
 )
@@ -96,6 +97,43 @@ else:
 print("\nCost")
 print(f"  LCOE:         {float(r_inv.costs.lcoe):8.1f} $/MWh")
 print(f"  Overnight:    {float(r_inv.costs.overnight_cost):8.0f} $/kW")
+
+# ── 1 GWe: the implied operating point must be allowed ────────────────
+# Asking this machine for 1 GWe implies beta_N = 3.8, past the Troyon
+# limit; the model refuses to cost the claim rather than returning a
+# number for a plasma that cannot exist. A machine that can do 1 GWe
+# has to be bigger.
+print()
+print("=" * 64)
+print("  1 GWe TARGET: feasibility is checked, then a machine that works")
+print("=" * 64)
+
+try:
+    model.forward(
+        net_electric_mw=1000.0,
+        availability=0.85,
+        lifetime_yr=30,
+        use_0d_model=True,
+        **MACHINE,
+    )
+except OperatingPointInfeasible as e:
+    print(f"\n  Same machine, 1 GWe: {e}")
+
+MACHINE_1GW = dict(MACHINE, R0=3.6, plasma_t=1.3, B=5.5)
+r_1gw = model.forward(
+    net_electric_mw=1000.0,
+    availability=0.85,
+    lifetime_yr=30,
+    use_0d_model=True,
+    **MACHINE_1GW,
+)
+ps_1gw = r_1gw.plasma_state
+print("\n  Upsized machine (R0=3.6 m, a=1.3 m, B=5.5 T), 1 GWe:")
+print(f"  T_e:          {float(ps_1gw.T_e):8.1f} keV")
+print(f"  beta_N:       {float(ps_1gw.beta_N):8.2f} %*m*T/MA")
+print(f"  P_fus:        {float(ps_1gw.p_fus):8.0f} MW")
+print(f"  LCOE:         {float(r_1gw.costs.lcoe):8.1f} $/MWh")
+print(f"  Overnight:    {float(r_1gw.costs.overnight_cost):8.0f} $/kW")
 
 # ── Forward mode: specify T_e, see what comes out ─────────────────────
 print()
