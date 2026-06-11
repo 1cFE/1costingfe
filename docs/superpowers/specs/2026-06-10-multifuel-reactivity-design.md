@@ -162,7 +162,21 @@ thermal D-He3 and p-B11 tokamaks at every temperature (no positive-net
 operating point exists), which the implementation surfaces loudly: p-B11
 sizing raises `SizingInfeasible`.
 
-### 8. Tests
+### 8. Inverse-mode feasibility gate (added post-design)
+
+The inverse solve answers "what operating point does the stated power imply
+at this geometry" unconditionally; advanced fuels made it easy to imply
+points far past the stability limits (D-He3 at ARC size implies beta_N ~ 16+),
+which the disruption penalty then turned into -inf/nan costs. Now:
+`tokamak_0d_inverse` checks the implied state with `check_plasma_limits` and
+raises `OperatingPointInfeasible` on any error-severity violation, carrying
+the diagnosis (the useful output for claim auditing). Escape hatch:
+`enforce_plasma_limits: false` (YAML/override, default true) returns the
+implied point anyway. Defense in depth for any path: the disruption rate is
+ceiled at 1e6/FPY and the disruption-penalized availability floored at 0, so
+no operating point can emit NaN or -inf cost components.
+
+### 9. Tests
 
 1. **DT regression:** existing pins bit-identical (tokamak LCOE pin 226.89,
    full suite green). DT keeps the same fit, mix, and pressure factors.

@@ -90,6 +90,7 @@ pb11_f_p_n: 0.0
 T_i_over_T_e: 1.0     # Ion-to-electron temperature ratio (hot-ion mode > 1; reactivity, W_th, beta)
 dhe3_fuel_ratio: 1.0  # D-He3 mix n_He3/n_D (quasineutrality dilution; 1.0 = 50:50)
 pb11_fuel_ratio: 0.15 # p-B11 mix n_B/n_p (lean boron; to be calibrated)
+enforce_plasma_limits: true # Inverse mode: error when the implied operating point breaks a stability limit
 
 # Blanket configuration
 blanket_form: liquid_metal

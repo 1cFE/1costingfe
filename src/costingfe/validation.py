@@ -160,6 +160,7 @@ class CostingInput(BaseModel):
     M_ion: float | None = None
     lambda_q: float | None = None
     size_from_power: bool = False
+    enforce_plasma_limits: bool = True
     # Multi-fuel kernel knobs (tokamak 0D/sizing); defaults live in the
     # concept YAML, the per-fuel f_rad_fus proxy in CostingConstants.
     T_i_over_T_e: float | None = Field(default=None, gt=0)

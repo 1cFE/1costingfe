@@ -465,6 +465,7 @@ class CostModel:
                 dhe3_dd_frac=params["dhe3_dd_frac"],
                 dhe3_dd_frac_pin=params["dhe3_dd_frac_pin"],
                 f_rad_fus=params.get("f_rad_fus"),
+                enforce_plasma_limits=params["enforce_plasma_limits"],
                 **base_frac_kw,
                 **kernel_kw,
             )

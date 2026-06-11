@@ -8,6 +8,7 @@ All core functions are pure and JAX-differentiable.
 
 from dataclasses import dataclass
 
+import jax
 import jax.numpy as jnp
 
 from costingfe.layers.physics import (
@@ -457,13 +458,20 @@ def tokamak_0d_inverse(
     # roundtrip self-consistent (the required-p_fus step otherwise evaluates
     # radiation at its fixed seed temperature).
     f_rad_fus: float | None = None,
+    # Behavior flag: the solved operating point is the one the stated power
+    # IMPLIES at this geometry; by default an implied point that violates an
+    # error-severity plasma limit raises OperatingPointInfeasible rather than
+    # being costed. False is the explicit escape hatch for exploration runs
+    # that want to inspect the implied (unphysical) point anyway.
+    enforce_plasma_limits: bool = True,
 ):
     """Inverse 0D tokamak: p_net target -> PlasmaState + PowerTable.
 
     1. Use existing mfe_inverse_power_balance to get required p_fus
     2. Compute I_p, n_e from machine geometry
     3. Bisect on T_e to match target p_fus
-    4. Return (PlasmaState, PowerTable)
+    4. Check the implied operating point against the plasma limits
+    5. Return (PlasmaState, PowerTable)
     """
     p_net_per_mod = p_net_target / n_mod
 
@@ -565,7 +573,23 @@ def tokamak_0d_inverse(
             break
         frac = plasma_state.dhe3_dd_frac_eff
 
-    # Step 4: Build power table using actual p_fus
+    # Step 4: The solved point is what the stated power implies at this
+    # geometry. An implied point beyond an error-severity stability limit is
+    # a verdict on the claim, not an operating point: refuse to cost it.
+    # Skipped under JAX tracing (sensitivity), where values are abstract.
+    if enforce_plasma_limits and not isinstance(plasma_state.beta_N, jax.core.Tracer):
+        errors = [
+            msg for sev, msg in check_plasma_limits(plasma_state) if sev == "error"
+        ]
+        if errors:
+            raise OperatingPointInfeasible(
+                f"net target {float(p_net_target):.1f} MW at this geometry "
+                f"implies an operating point beyond stability limits: "
+                f"{'; '.join(errors)}. Pass enforce_plasma_limits=False to "
+                "inspect the implied point anyway."
+            )
+
+    # Step 5: Build power table using actual p_fus
     pt = mfe_forward_power_balance(
         p_fus=plasma_state.p_fus,
         fuel=fuel,
@@ -620,6 +644,11 @@ class PlasmaLimits:
     q95_min: float = 2.0  # Kink stability
     wall_loading_max: float = 5.0  # [MW/m^2]
     div_heat_flux_max: float = 10.0  # [MW/m^2]
+
+
+class OperatingPointInfeasible(Exception):
+    """Raised when the operating point implied by a stated net power at a
+    stated geometry violates an error-severity plasma limit (inverse mode)."""
 
 
 def check_plasma_limits(state: PlasmaState, limits: PlasmaLimits = None):
@@ -718,7 +747,11 @@ def compute_disruption_rate(f_GW, beta_N, q95, model=None):
     rate_beta = model.rate_base * jnp.exp(-model.steepness * margin_beta)
     rate_kink = model.rate_base * jnp.exp(-model.steepness * margin_kink)
 
-    return rate_GW + rate_beta + rate_kink
+    # Numerical ceiling: far past the limits the exponentials overflow
+    # float32 to inf, which poisons the lifetime/replacement math into NaN.
+    # 1e6 disruptions/FPY already zeroes availability and floors component
+    # life; beyond it every point is equally "never runs".
+    return jnp.minimum(rate_GW + rate_beta + rate_kink, 1.0e6)
 
 
 def apply_disruption_penalty(core_lifetime, availability, disruption_rate, model=None):
@@ -739,7 +772,13 @@ def apply_disruption_penalty(core_lifetime, availability, disruption_rate, model
     disruption_downtime_fraction = (
         disruption_rate * model.downtime_per_disruption / 8760.0
     )
-    effective_availability = availability * (1.0 - disruption_downtime_fraction)
+    # Floor at zero: an operating point deep past the stability limits would
+    # otherwise drive availability arbitrarily negative and cascade -inf/nan
+    # through the cost stack; zero availability reads as an unambiguous
+    # "this plant never runs" instead.
+    effective_availability = jnp.maximum(
+        0.0, availability * (1.0 - disruption_downtime_fraction)
+    )
 
     return effective_core_lifetime, effective_availability
 

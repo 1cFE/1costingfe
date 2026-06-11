@@ -79,7 +79,10 @@ class TestInverseBrackets:
         # f_rad_fus proxies the radiation model (the model layer defaults it
         # from cc.f_rad_fus for D-He3/p-B11). Without a proxy the full
         # brems+synchrotron model is radiation-dominated for thermal D-He3 at
-        # any temperature and no positive-net solution exists.
+        # any temperature and no positive-net solution exists. This test
+        # verifies the solver contract only, so the feasibility gate is off
+        # (the implied point at this compact geometry is beta-infeasible,
+        # which TestFeasibilityGate pins separately).
         ps, pt = tokamak_0d_inverse(
             p_net_target=50.0,
             **_GEOM,
@@ -87,6 +90,7 @@ class TestInverseBrackets:
             dhe3_dd_frac=0.131,
             dhe3_dd_frac_pin=None,
             f_rad_fus=0.24,
+            enforce_plasma_limits=False,
             **_FRACS,
             **_NEW,
         )
@@ -107,15 +111,26 @@ class TestMultiFuelModel:
         assert m_dhe3._last_R0 > m_dt._last_R0
 
     def test_explicit_dhe3_dd_frac_override_pins_partition(self):
+        # Fraction-plumbing test; the default geometry's implied D-He3 point
+        # is beta-infeasible, so the gate is explicitly off.
         m = CostModel(ConfinementConcept.TOKAMAK, Fuel.DHE3)
         m.forward(
-            net_electric_mw=200.0, use_0d_model=True, dhe3_dd_frac=0.25, **self._KW
+            net_electric_mw=200.0,
+            use_0d_model=True,
+            dhe3_dd_frac=0.25,
+            enforce_plasma_limits=False,
+            **self._KW,
         )
         assert float(m._plasma_state.dhe3_dd_frac_eff) == pytest.approx(0.25)
 
     def test_dhe3_derives_fraction_without_override(self):
         m = CostModel(ConfinementConcept.TOKAMAK, Fuel.DHE3)
-        m.forward(net_electric_mw=200.0, use_0d_model=True, **self._KW)
+        m.forward(
+            net_electric_mw=200.0,
+            use_0d_model=True,
+            enforce_plasma_limits=False,
+            **self._KW,
+        )
         frac = float(m._plasma_state.dhe3_dd_frac_eff)
         assert 0.0 < frac < 1.0
         assert abs(frac - 0.131) > 1e-3  # not the YAML seed
@@ -168,3 +183,45 @@ class TestMultiFuelModel:
                 H_factor=2.0,
                 **self._KW,
             )
+
+
+class TestFeasibilityGate:
+    _KW = dict(availability=0.85, lifetime_yr=30.0)
+
+    def test_infeasible_implied_point_raises(self):
+        # 200 MWe of D-He3 from an ARC-size machine implies beta_N far over
+        # Troyon; the inverse must refuse to cost the claim.
+        from costingfe.layers.tokamak import OperatingPointInfeasible
+
+        m = CostModel(ConfinementConcept.TOKAMAK, Fuel.DHE3)
+        with pytest.raises(OperatingPointInfeasible, match="beta"):
+            m.forward(net_electric_mw=200.0, use_0d_model=True, **self._KW)
+
+    def test_escape_hatch_returns_without_nan(self):
+        import jax.numpy as jnp
+
+        m = CostModel(ConfinementConcept.TOKAMAK, Fuel.DHE3)
+        r = m.forward(
+            net_electric_mw=200.0,
+            use_0d_model=True,
+            enforce_plasma_limits=False,
+            **self._KW,
+        )
+        # The floored availability turns the absurd point into an absurd
+        # (possibly infinite) LCOE, never NaN/-inf cost components.
+        assert not bool(jnp.isnan(r.costs.lcoe))
+        assert not bool(jnp.isneginf(r.costs.cas80))
+
+    def test_dt_at_sane_point_unaffected(self):
+        m = CostModel(ConfinementConcept.TOKAMAK, Fuel.DT)
+        r = m.forward(net_electric_mw=200.0, use_0d_model=True, **self._KW)
+        import jax.numpy as jnp
+
+        assert bool(jnp.isfinite(r.costs.lcoe))
+
+    def test_availability_floor(self):
+        from costingfe.layers.tokamak import apply_disruption_penalty
+
+        life, avail = apply_disruption_penalty(10.0, 0.85, disruption_rate=1.0e6)
+        assert float(avail) == 0.0
+        assert float(life) > 0.0

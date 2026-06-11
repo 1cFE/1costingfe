@@ -441,9 +441,13 @@ class TestRadialBuild:
 class TestEndToEnd:
     def test_forward_with_0d_produces_lcoe(self):
         """CostModel.forward(use_0d_model=True) should produce valid LCOE."""
+        # 500 MW: the implied operating point stays inside the Troyon limit
+        # (1000 MW at this geometry implies beta_N = 4.2 and now raises
+        # OperatingPointInfeasible, see TestFeasibilityGate in
+        # test_multifuel_0d.py).
         m = CostModel(ConfinementConcept.TOKAMAK, Fuel.DT)
         r = m.forward(
-            1000,
+            500,
             0.85,
             30,
             use_0d_model=True,
@@ -588,9 +592,10 @@ class TestDisruptionPenalty:
     def test_end_to_end_disruption_increases_lcoe(self):
         """Disruption penalty should increase LCOE vs zero-penalty baseline."""
         m = CostModel(ConfinementConcept.TOKAMAK, Fuel.DT)
-        # With disruption penalty (default params)
+        # With disruption penalty (default params). 500 MW keeps the implied
+        # point inside the stability limits (the gate errors past them).
         r_with = m.forward(
-            1000,
+            500,
             0.85,
             30,
             use_0d_model=True,
@@ -599,7 +604,7 @@ class TestDisruptionPenalty:
         )
         # Without disruption penalty (zero damage and downtime)
         r_without = m.forward(
-            1000,
+            500,
             0.85,
             30,
             use_0d_model=True,
