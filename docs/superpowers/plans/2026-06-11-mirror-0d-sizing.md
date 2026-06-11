@@ -244,35 +244,66 @@ READ FIRST: model.py `_power_balance` (the `use_0d` branch near line 163), the m
 
 ---
 
-### Task 5: Length sizing and optimize mode
+### Task 5: Length-scaling coil cost (C220103)
+
+**Files:**
+- Modify: `src/costingfe/layers/cas22.py`, `src/costingfe/model.py` (plumb L), `src/costingfe/data/defaults/steady_state_mirror.yaml`, `docs/account_justification/CAS22_reactor_components.md`
+- Test: `tests/test_cas22.py` (or wherever the existing mirror coil tests live - grep `n_coils`)
+
+Spec section "Coil cost must scale with length". READ the current mirror
+branch of the coil cost in cas22.py first (`_COIL_DEFAULTS`, `n_coils: 10`,
+G = n_coils * 4*pi) and the coil-markup entry in costing_constants.yaml.
+
+- [ ] Step 5.1: Tests first: (a) at the YAML reference point (L = 50,
+  coil_spacing = 5, n_plug_coils = 4) the mirror C220103 cost equals the
+  current master value to 1e-6 relative (pin the number from a master run
+  first); (b) doubling chamber_length doubles the central-cell coil
+  contribution while the plug contribution is unchanged; (c) JAX
+  differentiability of the coil cost w.r.t. chamber_length.
+- [ ] Step 5.2: Implement the two-class structure: n_central = L /
+  coil_spacing (continuous), central coils at b_center with the vessel
+  bore; n_plug_coils at b_plug = R_m * B with the plug bore (reuse r_bore
+  for the plug bore initially - document). Recalibrate the mirror
+  coil_markup ONCE so the reference point reproduces the current cost;
+  record the derivation in CAS22_reactor_components.md (no pyFECONS
+  values; anchor on the existing doc-validated mirror baseline).
+- [ ] Step 5.3: Full suite (existing mirror cost pins must hold via the
+  calibration-neutrality construction); commit:
+  `Scale mirror coil cost with central-cell length (plug + solenoid classes)`
+
+---
+
+### Task 6: Length sizing and optimize mode
 
 **Files:**
 - Modify: `src/costingfe/layers/mirror.py`, `src/costingfe/model.py`, `steady_state_mirror.yaml`
 - Test: `tests/test_mirror.py`
 
-- [ ] Step 5.1: Tests first: sized L grows with net power target (200 vs 600 MWe); density equals the f_beta closed form at the solved point; pinning `chamber_length` in sizing mode raises; unreachable target raises `SizingInfeasible`; optimize mode returns f_beta within bounds; DHE3 sizes longer than DT at equal power (with the proxy and a fuel-appropriate no-blanket build, mirroring the tokamak example's treatment).
-- [ ] Step 5.2: Implement per the spec's "Length sizing" section: `net_electric_at_L` (GSS over T_i under the fuel bracket; density from f_beta; reuse the tokamak's GSS constants), `mirror_size_from_power` (bisection on [L_min, L_max], `SizingInfeasible` contract), model.py gate (`size_from_power` for MIRROR routes here; forbid pinning `chamber_length`; optimize_lcoe wraps over f_beta via the existing `_optimize_fgw` golden-section helper, renamed or parameterized if needed). YAML: `f_beta: 0.85`, `L_min: 1.0`, `L_max: 200.0`, `f_beta_min: 0.3`, `f_beta_max: 1.0`.
-- [ ] Step 5.3: Full suite; commit: `Add mirror length sizing and LCOE-over-f_beta optimize mode`
+(Depends on Task 5: without length-scaling coils, sizing would grow the machine for free.)
+
+- [ ] Step 6.1: Tests first: sized L grows with net power target (200 vs 600 MWe); sized LCOE reflects the larger coil set (coil account grows with solved L); density equals the f_beta closed form at the solved point; pinning `chamber_length` in sizing mode raises; unreachable target raises `SizingInfeasible`; optimize mode returns f_beta within bounds; DHE3 sizes longer than DT at equal power (with the proxy and a fuel-appropriate no-blanket build, mirroring the tokamak example's treatment).
+- [ ] Step 6.2: Implement per the spec's "Length sizing" section: `net_electric_at_L` (GSS over T_i under the fuel bracket; density from f_beta; reuse the tokamak's GSS constants), `mirror_size_from_power` (bisection on [L_min, L_max], `SizingInfeasible` contract), model.py gate (`size_from_power` for MIRROR routes here; forbid pinning `chamber_length`; optimize_lcoe wraps over f_beta via the existing `_optimize_fgw` golden-section helper, renamed or parameterized if needed). YAML: `f_beta: 0.85`, `L_min: 1.0`, `L_max: 200.0`, `f_beta_min: 0.3`, `f_beta_max: 1.0`.
+- [ ] Step 6.3: Full suite; commit: `Add mirror length sizing and LCOE-over-f_beta optimize mode`
 
 ---
 
-### Task 6: Validation anchors (research step)
+### Task 7: Validation anchors (research step)
 
 **Files:**
 - Create: `docs/account_justification/mirror_confinement.md`
 - Modify: `tests/test_mirror.py`
 
-- [ ] Step 6.1: Gather published parameters for GDT (measured: beta up to ~0.6, gas-dynamic confinement scaling, machine dimensions and fields) and WHAM (design: field, mirror ratio, predicted density/temperature/confinement) from primary sources via web search. Record every number with its citation in `mirror_confinement.md` (sources, methodology, validity caveats per the account-justification house style).
-- [ ] Step 6.2: Add `TestAnchors`: forward-model confinement within a documented factor (start at 2x; tighten only with justification) of the anchor values for (a) GDT in the gas-dynamic regime, (b) WHAM in the Pastukhov regime. These tests pin the model to literature, not to itself.
-- [ ] Step 6.3: Commit: `Validate mirror confinement against GDT and WHAM anchors`
+- [ ] Step 7.1: Gather published parameters for GDT (measured: beta up to ~0.6, gas-dynamic confinement scaling, machine dimensions and fields) and WHAM (design: field, mirror ratio, predicted density/temperature/confinement) from primary sources via web search. Record every number with its citation in `mirror_confinement.md` (sources, methodology, validity caveats per the account-justification house style).
+- [ ] Step 7.2: Add `TestAnchors`: forward-model confinement within a documented factor (start at 2x; tighten only with justification) of the anchor values for (a) GDT in the gas-dynamic regime, (b) WHAM in the Pastukhov regime. These tests pin the model to literature, not to itself.
+- [ ] Step 7.3: Commit: `Validate mirror confinement against GDT and WHAM anchors`
 
 ---
 
-### Task 7: Examples, docs, final review
+### Task 8: Examples, docs, final review
 
-- [ ] Step 7.1: New `examples/dt_mirror_0d.py` mirroring `dt_tokamak_0d.py` (forward, inverse, gate refusal, sizing, fuel comparison with D-He3 — the physically interesting case). Run it end to end.
-- [ ] Step 7.2: Docs: spec status -> Implemented; paper appendix section for the mirror model (present-state, no history), parallel to the tokamak appendix; recompile the paper and commit the PDF (it is tracked now). Check `grep -rn "tokamak only\|TOKAMAK concept" docs/ src/` for claims falsified by the mirror dispatch.
-- [ ] Step 7.3: Full suite + ruff; final review pass (spec compliance, then quality); merge decision per the user.
+- [ ] Step 8.1: New `examples/dt_mirror_0d.py` mirroring `dt_tokamak_0d.py` (forward, inverse, gate refusal, sizing, fuel comparison with D-He3 — the physically interesting case). Run it end to end.
+- [ ] Step 8.2: Docs: spec status -> Implemented; paper appendix section for the mirror model (present-state, no history), parallel to the tokamak appendix; recompile the paper and commit the PDF (it is tracked now). Check `grep -rn "tokamak only\|TOKAMAK concept" docs/ src/` for claims falsified by the mirror dispatch.
+- [ ] Step 8.3: Full suite + ruff; final review pass (spec compliance, then quality); merge decision per the user.
 
 ---
 

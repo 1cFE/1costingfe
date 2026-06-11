@@ -35,7 +35,7 @@ mirror ratio R_m as a single lumped parameter.
 
 | Parameter | Symbol | Units | Typical range | Notes |
 |-----------|--------|-------|---------------|-------|
-| Central cell length | L | m | 3 - 50 | Axial extent of confinement region |
+| Central cell length | L | m | 3 - 200 | Axial extent of confinement region. Realta's Hammir tandem mirror baselines a 50 m center cell for Q > 5 and explicitly proposes longer cells for Q > 10+ (Forest et al., arXiv:2411.06644, table 1; Realta 2025 announcements), so the model must remain valid well past 50 m |
 | Plasma radius | a | m | 0.1 - 1.5 | At midplane |
 | Mirror ratio | R_m | - | 2 - 100 | B_max / B_min |
 | Ion temperature | T_i | keV | 5 - 80 | Volume-averaged |
@@ -527,3 +527,30 @@ density from f_beta (designing a machine at the beta boundary).
 **New YAML keys** (steady_state_mirror.yaml): f_beta: 0.85, L_min: 1.0,
 L_max: 200.0, f_beta_min: 0.3, f_beta_max: 1.0, plus size_from_power and
 optimize_lcoe flags (default false).
+
+## Coil cost must scale with length (C220103)
+
+The current mirror coil costing uses a FIXED n_coils = 10 in cas22.py,
+calibrated to a Hammir-class 50 m central cell. Under length sizing that
+fixed count would freeze the coil account while the machine grows - the
+same defect length sizing exists to fix. Replace the single count with a
+two-class structure matching the Realta architecture (4 high-field HTS
+end-plug magnets - 25 T throats in Hammir, 17 T CFS-built in WHAM - plus
+central-cell solenoid coils at 2.4-5.0 T, "significantly cheaper", whose
+number grows with the cell):
+
+    n_central = L / coil_spacing          (continuous, JAX-differentiable;
+                                           a costing aggregate, not a
+                                           physical config knob)
+    n_plug    = n_plug_coils              (YAML; 4 for a tandem mirror,
+                                           2 for a simple mirror)
+
+Central-cell coils carry ampere-meters at b_center (the midplane-class
+field); plug coils at b_plug = R_m * B (the throat field), with their
+smaller bore. New YAML keys: coil_spacing: 5.0 [m], n_plug_coils: 4.
+CALIBRATION NEUTRALITY REQUIRED: at the YAML reference point (L = 50 m,
+spacing 5 m -> n_central = 10, matching today's n_coils = 10 plus the
+plug-coil contribution), the new structure must reproduce the current
+C220103 mirror cost by construction (recalibrate the markup once,
+documented in the account justification), so existing mirror results are
+unchanged at the defaults while sized machines scale.
