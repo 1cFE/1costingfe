@@ -48,10 +48,13 @@ solver raises `SizingInfeasible` rather than diverging silently. Feasibility
 couples to both magnet and fuel: aneutronic fuels at conventional field and
 beta do not close (e.g., p-B11 on copper is infeasible).
 
-**D-T scope.** The 0D model's reactivity is currently D-T only (Bosch-Hale
-parameterization). The solver is written fuel-generally (no D-T constants in
-the bisection logic), but extending to other fuel reactivities is a tracked
-follow-on task.
+**Fuel scope.** The 0D model's reactivity is fuel-aware (Bosch-Hale fits for
+D-T, both D-D branches, and D-He3; Nevins-Swain high-temperature branch for
+p-B11, all in `layers/reactivity.py`), with quasineutrality dilution,
+fuel-derived Z_eff, per-fuel operating-temperature brackets, and the
+CostingConstants `f_rad_fus` radiation proxies applied to D-He3/p-B11 as in
+the non-0D path. Sized D-He3 machines solve (larger than D-T at equal power);
+p-B11 remains infeasible under these physics and raises `SizingInfeasible`.
 
 ## On-Axis Field Relation
 

@@ -159,6 +159,14 @@ class CostingInput(BaseModel):
     f_GW: float | None = None
     M_ion: float | None = None
     lambda_q: float | None = None
+    size_from_power: bool = False
+    enforce_plasma_limits: bool = True
+    # Multi-fuel kernel knobs (tokamak 0D/sizing); defaults live in the
+    # concept YAML, the per-fuel f_rad_fus proxy in CostingConstants.
+    T_i_over_T_e: float | None = Field(default=None, gt=0)
+    dhe3_fuel_ratio: float | None = Field(default=None, gt=0)
+    pb11_fuel_ratio: float | None = Field(default=None, gt=0)
+    f_rad_fus: float | None = Field(default=None, ge=0, le=1)
 
     # Blanket configuration (YAML-driven, validated below)
     blanket_form: BlanketForm | None = None

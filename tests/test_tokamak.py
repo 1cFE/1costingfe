@@ -25,11 +25,13 @@ from costingfe.layers.tokamak import (
 _DT_FUEL_FRAC = dict(
     dd_f_T=0.969,
     dd_f_He3=0.689,
-    dhe3_dd_frac=0.07,
     dhe3_f_T=0.5,
     dhe3_f_He3=0.1,
     pb11_f_alpha_n=0.0,
     pb11_f_p_n=0.0,
+    T_i_over_T_e=1.0,
+    dhe3_fuel_ratio=1.0,
+    pb11_fuel_ratio=0.15,
 )
 
 # Default physics params for power balance tests
@@ -182,6 +184,7 @@ class TestForwardMode:
             f_GW=0.85,
             T_e=15.0,
             p_input=50.0,
+            dhe3_dd_frac_pin=0.07,
             **_DT_FUEL_FRAC,
         )
         assert isinstance(ps, PlasmaState)
@@ -201,6 +204,7 @@ class TestForwardMode:
             f_GW=0.85,
             T_e=15.0,
             p_input=50.0,
+            dhe3_dd_frac_pin=0.07,
             **_DT_FUEL_FRAC,
         )
         assert ps.p_fus > 0
@@ -224,6 +228,7 @@ class TestInverseMode:
             f_GW=0.85,
             T_e=15.0,
             p_input=50.0,
+            dhe3_dd_frac_pin=0.07,
             **_DT_FUEL_FRAC,
         )
         # Use the forward p_net as target for inverse
@@ -263,6 +268,8 @@ class TestInverseMode:
             B=5.0,
             q95=3.5,
             f_GW=0.85,
+            dhe3_dd_frac=0.07,
+            dhe3_dd_frac_pin=None,
             **_DT_FUEL_FRAC,
         )
         # T_e should be recovered approximately (radiation coupling
@@ -434,9 +441,13 @@ class TestRadialBuild:
 class TestEndToEnd:
     def test_forward_with_0d_produces_lcoe(self):
         """CostModel.forward(use_0d_model=True) should produce valid LCOE."""
+        # 500 MW: the implied operating point stays inside the Troyon limit
+        # (1000 MW at this geometry implies beta_N = 4.2 and now raises
+        # OperatingPointInfeasible, see TestFeasibilityGate in
+        # test_multifuel_0d.py).
         m = CostModel(ConfinementConcept.TOKAMAK, Fuel.DT)
         r = m.forward(
-            1000,
+            500,
             0.85,
             30,
             use_0d_model=True,
@@ -516,7 +527,9 @@ class TestJAXAutodiff:
         """beta_N should have finite gradient w.r.t. T_e."""
 
         def beta_fn(T):
-            return compute_beta_N(n_e=1e20, T_i=T, B=5.0, I_p_MA=15.0, a=2.0)
+            return compute_beta_N(
+                n_e=1e20, T_e=T, T_i=T, n_i_frac=1.0, B=5.0, I_p_MA=15.0, a=2.0
+            )
 
         g = jax.grad(beta_fn)(15.0)
         assert jnp.isfinite(g)
@@ -579,9 +592,10 @@ class TestDisruptionPenalty:
     def test_end_to_end_disruption_increases_lcoe(self):
         """Disruption penalty should increase LCOE vs zero-penalty baseline."""
         m = CostModel(ConfinementConcept.TOKAMAK, Fuel.DT)
-        # With disruption penalty (default params)
+        # With disruption penalty (default params). 500 MW keeps the implied
+        # point inside the stability limits (the gate errors past them).
         r_with = m.forward(
-            1000,
+            500,
             0.85,
             30,
             use_0d_model=True,
@@ -590,7 +604,7 @@ class TestDisruptionPenalty:
         )
         # Without disruption penalty (zero damage and downtime)
         r_without = m.forward(
-            1000,
+            500,
             0.85,
             30,
             use_0d_model=True,
