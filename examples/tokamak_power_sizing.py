@@ -122,17 +122,32 @@ show(model, r)
 # ── 6. Fuel matters: D-He3 sizes to a bigger machine ──────────────────
 # The kernel is fuel-aware: weaker D-He3 reactivity plus dilution means a
 # larger machine at equal net power (radiation enters via the f_rad_fus
-# proxy, as in the non-0D path). p-B11 does not close at any R0 <= R0_max
-# and would raise SizingInfeasible.
+# proxy, as in the non-0D path). The D-He3 case gets a fuel-appropriate
+# build: no breeding blanket (sizing keeps the concept YAML's radial build
+# unless overridden, and the tokamak YAML's 0.80 m PbLi blanket is a D-T
+# design choice). p-B11 does not close at any R0 <= R0_max and would
+# raise SizingInfeasible.
 print()
 print("=" * 64)
 print("  FUEL CHOICE at 200 MWe: D-T vs D-He3 (H = 1.8)")
 print("=" * 64)
 
-for fuel in (Fuel.DT, Fuel.DHE3):
+DHE3_BUILD = dict(
+    blanket_form="none",
+    blanket_fill="none",
+    blanket_t=0.0,
+    ht_shield_t=0.1,
+    structure_t=0.15,
+    vessel_t=0.10,
+)
+for fuel, extra in ((Fuel.DT, {}), (Fuel.DHE3, DHE3_BUILD)):
+    print(f"\n  {fuel.value}:")
     model = CostModel(concept=ConfinementConcept.TOKAMAK, fuel=fuel)
     r = model.forward(
-        net_electric_mw=200.0, size_from_power=True, H_factor=1.8, **CUSTOMER
+        net_electric_mw=200.0,
+        size_from_power=True,
+        H_factor=1.8,
+        **extra,
+        **CUSTOMER,
     )
-    print(f"\n  {fuel.value}:")
     show(model, r)
