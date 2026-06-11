@@ -216,7 +216,7 @@ def aux_heating_from_confinement(
     kappa,
     M_ion,
     *,
-    T_i,
+    T_i_over_T_e,
     n_i_frac,
 ):
     """Auxiliary heating power [MW] required to sustain the operating point at a
@@ -229,6 +229,7 @@ def aux_heating_from_confinement(
     """
     n_e19 = n_e / 1e19
     K = compute_tau_E_ipb98y2(I_p, B0, n_e19, 1.0, R0, a, kappa, M_ion)
+    T_i = T_i_over_T_e * T_e
     W_th_MW = 1.5 * n_e * (T_e + n_i_frac * T_i) * KEV_TO_J * V_plasma * 1e-6
     P_heat = (W_th_MW / (H_factor * K)) ** (1.0 / 0.31)
     return jnp.maximum(0.0, P_heat - p_alpha)
@@ -253,7 +254,7 @@ def tokamak_0d_forward(
     *,
     dd_f_T: float,
     dd_f_He3: float,
-    dhe3_dd_frac: float | None,
+    dhe3_dd_frac_pin: float | None,
     dhe3_f_T: float,
     dhe3_f_He3: float,
     pb11_f_alpha_n: float,
@@ -290,7 +291,7 @@ def tokamak_0d_forward(
         V_plasma,
         dhe3_fuel_ratio=dhe3_fuel_ratio,
         pb11_fuel_ratio=pb11_fuel_ratio,
-        dhe3_dd_frac_pin=dhe3_dd_frac,
+        dhe3_dd_frac_pin=dhe3_dd_frac_pin,
         dd_f_T=dd_f_T,
         dd_f_He3=dd_f_He3,
         dhe3_f_T=dhe3_f_T,
@@ -369,20 +370,18 @@ def tokamak_0d_forward(
 # Inverse mode: find T_e that produces target p_fus
 # ---------------------------------------------------------------------------
 def _find_T_for_pfus(
-    target_pfus, n_e, V_plasma, fuel, fpd_kwargs, T_lo, T_hi, n_iter=60
+    target_pfus, n_e, V_plasma, fuel, T_i_over_T_e, fpd_kwargs, T_lo, T_hi, n_iter=60
 ):
     """Bisection for the T_e [keV] yielding the target fusion power.
 
-    fpd_kwargs are the fusion_power keyword args (mix ratios, pin, burn
-    fractions) plus T_i_over_T_e, which is applied to the trial T_e here.
+    fpd_kwargs are exactly fusion_power's remaining keyword args (mix ratios,
+    pin, burn fractions).
     """
-    ratio = fpd_kwargs["T_i_over_T_e"]
-    kw = {k: v for k, v in fpd_kwargs.items() if k != "T_i_over_T_e"}
 
     def body(i, state):
         lo, hi = state
         mid = 0.5 * (lo + hi)
-        p_mid, _ = fusion_power(fuel, n_e, ratio * mid, V_plasma, **kw)
+        p_mid, _ = fusion_power(fuel, n_e, T_i_over_T_e * mid, V_plasma, **fpd_kwargs)
         lo = jnp.where(p_mid < target_pfus, mid, lo)
         hi = jnp.where(p_mid >= target_pfus, mid, hi)
         return (lo, hi)
@@ -452,6 +451,12 @@ def tokamak_0d_inverse(
     tau_ratio: float = 3.0,
     fw_area: float = 0.0,
     R_w: float = 0.6,
+    # Genuine optional override (keeps default), mirroring the power-balance
+    # functions: when set, p_rad = f_rad_fus * p_fus replaces the computed
+    # radiation model on BOTH sides of the solve, which also makes the
+    # roundtrip self-consistent (the required-p_fus step otherwise evaluates
+    # radiation at its fixed seed temperature).
+    f_rad_fus: float | None = None,
 ):
     """Inverse 0D tokamak: p_net target -> PlasmaState + PowerTable.
 
@@ -469,7 +474,6 @@ def tokamak_0d_inverse(
     V_plasma = _plasma_volume(R, a, kappa)
 
     fpd_kwargs = dict(
-        T_i_over_T_e=T_i_over_T_e,
         dhe3_fuel_ratio=dhe3_fuel_ratio,
         pb11_fuel_ratio=pb11_fuel_ratio,
         dhe3_dd_frac_pin=dhe3_dd_frac_pin,
@@ -484,7 +488,9 @@ def tokamak_0d_inverse(
 
     # Two-pass fixed point: the required p_fus depends on the energy
     # partition, whose D-He3 side-channel fraction depends on the solved T.
-    # One refinement suffices at costing fidelity.
+    # One refinement suffices at costing fidelity. No residual check is
+    # performed, and the final table's p_fus was solved against the pass-1
+    # fraction, so p_net carries a small uncorrected residual for D-He3.
     frac = dhe3_dd_frac if dhe3_dd_frac_pin is None else dhe3_dd_frac_pin
     for _ in range(2):
         p_fus_required = mfe_inverse_power_balance(
@@ -524,9 +530,10 @@ def tokamak_0d_inverse(
             dhe3_f_He3=dhe3_f_He3,
             pb11_f_alpha_n=pb11_f_alpha_n,
             pb11_f_p_n=pb11_f_p_n,
+            f_rad_fus=f_rad_fus,
         )
         T_e = _find_T_for_pfus(
-            p_fus_required, n_e, V_plasma, fuel, fpd_kwargs, T_lo, T_hi
+            p_fus_required, n_e, V_plasma, fuel, T_i_over_T_e, fpd_kwargs, T_lo, T_hi
         )
         plasma_state = tokamak_0d_forward(
             R=R,
@@ -543,7 +550,7 @@ def tokamak_0d_inverse(
             lambda_q=lambda_q,
             dd_f_T=dd_f_T,
             dd_f_He3=dd_f_He3,
-            dhe3_dd_frac=dhe3_dd_frac_pin,
+            dhe3_dd_frac_pin=dhe3_dd_frac_pin,
             dhe3_f_T=dhe3_f_T,
             dhe3_f_He3=dhe3_f_He3,
             pb11_f_alpha_n=pb11_f_alpha_n,
@@ -552,8 +559,11 @@ def tokamak_0d_inverse(
             dhe3_fuel_ratio=dhe3_fuel_ratio,
             pb11_fuel_ratio=pb11_fuel_ratio,
         )
-        if fuel == Fuel.DHE3:
-            frac = plasma_state.dhe3_dd_frac_eff
+        # Only an unpinned D-He3 run can change frac between passes; everyone
+        # else gets identical passes, so skip the redundant second one.
+        if fuel != Fuel.DHE3 or dhe3_dd_frac_pin is not None:
+            break
+        frac = plasma_state.dhe3_dd_frac_eff
 
     # Step 4: Build power table using actual p_fus
     pt = mfe_forward_power_balance(
@@ -593,6 +603,7 @@ def tokamak_0d_inverse(
         dhe3_f_He3=dhe3_f_He3,
         pb11_f_alpha_n=pb11_f_alpha_n,
         pb11_f_p_n=pb11_f_p_n,
+        f_rad_fus=f_rad_fus,
     )
 
     return plasma_state, pt
@@ -769,7 +780,7 @@ _RADIAL_BUILD_DEFAULTS = {
 _T_BRACKET_DEFAULTS = {
     Fuel.DT: (1.0, 100.0),
     Fuel.DD: (5.0, 100.0),
-    Fuel.DHE3: (20.0, 200.0),
+    Fuel.DHE3: (20.0, 190.0),  # Bosch-Hale D-He3 fit validity tops out at 190
     Fuel.PB11: (50.0, 400.0),
 }
 
@@ -842,7 +853,7 @@ def _net_at_R0_T(R0, T_e, params, fuel):
         M_ion=M_ion,
         Z_eff=params["Z_eff"],
         lambda_q=params["lambda_q"],
-        dhe3_dd_frac=params["dhe3_dd_frac_pin"],
+        dhe3_dd_frac_pin=params["dhe3_dd_frac_pin"],
         T_i_over_T_e=params["T_i_over_T_e"],
         dhe3_fuel_ratio=params["dhe3_fuel_ratio"],
         pb11_fuel_ratio=params["pb11_fuel_ratio"],
@@ -864,7 +875,7 @@ def _net_at_R0_T(R0, T_e, params, fuel):
             a,
             kappa,
             M_ion,
-            T_i=params["T_i_over_T_e"] * float(ps.T_e),
+            T_i_over_T_e=params["T_i_over_T_e"],
             n_i_frac=n_i_over_n_e(
                 fuel, params["dhe3_fuel_ratio"], params["pb11_fuel_ratio"]
             ),
@@ -881,7 +892,11 @@ def _net_at_R0_T(R0, T_e, params, fuel):
         wall_mat = WallMaterial(wm_raw) if isinstance(wm_raw, str) else wm_raw
 
     pb_frac = ps.dhe3_dd_frac_eff if fuel == Fuel.DHE3 else params["dhe3_dd_frac"]
-    pb_frac_kw = dict(**base_frac_kw, dhe3_dd_frac=pb_frac)
+    pb_frac_kw = dict(
+        **base_frac_kw,
+        dhe3_dd_frac=pb_frac,
+        f_rad_fus=params.get("f_rad_fus"),
+    )
     pt = mfe_forward_power_balance(
         p_fus=ps.p_fus,
         fuel=fuel,

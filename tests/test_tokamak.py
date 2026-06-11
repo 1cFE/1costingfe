@@ -25,7 +25,6 @@ from costingfe.layers.tokamak import (
 _DT_FUEL_FRAC = dict(
     dd_f_T=0.969,
     dd_f_He3=0.689,
-    dhe3_dd_frac=0.07,
     dhe3_f_T=0.5,
     dhe3_f_He3=0.1,
     pb11_f_alpha_n=0.0,
@@ -185,6 +184,7 @@ class TestForwardMode:
             f_GW=0.85,
             T_e=15.0,
             p_input=50.0,
+            dhe3_dd_frac_pin=0.07,
             **_DT_FUEL_FRAC,
         )
         assert isinstance(ps, PlasmaState)
@@ -204,6 +204,7 @@ class TestForwardMode:
             f_GW=0.85,
             T_e=15.0,
             p_input=50.0,
+            dhe3_dd_frac_pin=0.07,
             **_DT_FUEL_FRAC,
         )
         assert ps.p_fus > 0
@@ -227,6 +228,7 @@ class TestInverseMode:
             f_GW=0.85,
             T_e=15.0,
             p_input=50.0,
+            dhe3_dd_frac_pin=0.07,
             **_DT_FUEL_FRAC,
         )
         # Use the forward p_net as target for inverse
@@ -266,6 +268,7 @@ class TestInverseMode:
             B=5.0,
             q95=3.5,
             f_GW=0.85,
+            dhe3_dd_frac=0.07,
             dhe3_dd_frac_pin=None,
             **_DT_FUEL_FRAC,
         )

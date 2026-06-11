@@ -18,10 +18,23 @@ Sources:
   and are the optimistic alternatives; Nevins-Swain is the default.
 """
 
+import jax.lax
 import jax.numpy as jnp
 
 from costingfe.layers.physics import MEV_TO_JOULES, event_energies
 from costingfe.types import Fuel
+
+
+def _density_1e10(n_e):
+    """Density scaled by 1e-10, behind an optimization barrier.
+
+    The barrier keeps XLA from reassociating the product back into
+    n_e * n_e (~1e40, inf in float32) by pulling the 1e-10 constants out;
+    without it the DD/DHE3/PB11 rates silently become inf (or zero,
+    depending on how the constants gather) under jit. Differentiable and
+    an identity in eager mode.
+    """
+    return jax.lax.optimization_barrier(n_e * 1e-10)
 
 
 def _bosch_hale(T_keV, BG, mrc2, C1, C2, C3, C4, C5, C6, C7):
@@ -201,13 +214,18 @@ def fusion_power(
     partition will see). Returns (p_fus_MW, dhe3_dd_frac_eff); the fraction
     is 0.0 for fuels without a side channel.
 
-    Multiplication order keeps intermediates in float32-safe range
-    (n^2 ~ 1e40 would overflow), mirroring the original compute_fusion_power.
+    float32 safety in the DD/DHE3/PB11 branches: XLA's algebraic simplifier
+    reassociates multiplicative chains freely, which can either gather the
+    tiny scaling constants ((1e-20)^2 * 1e-6 ~ 1e-47 folds to zero) or pull
+    them out and form n_e * n_e ~ 1e40 = inf; both silently corrupt the rate
+    under jit. Defenses: density enters via _density_1e10 (scaled once,
+    behind an optimization barrier so XLA cannot reassociate across it),
+    reactivities are used in 1e-22 units so the derived-fraction quotient is
+    O(1) (whose VJP would otherwise square a ~1e-23 denominator into
+    underflow and emit NaN gradients), and the residual exponent folds into
+    one benign constant per branch. The DT branch keeps the legacy
+    multiplication order bit-pinned to compute_fusion_power.
     """
-
-    def _power(rate_density, E_total_mev):
-        # rate_density already split as (n * sv) * n to stay in range
-        return rate_density * E_total_mev * MEV_TO_JOULES * V_plasma * 1e-6
 
     if fuel == Fuel.DT:
         # Bit-identical to compute_fusion_power in tokamak.py:
@@ -238,17 +256,21 @@ def fusion_power(
             pb11_f_alpha_n=pb11_f_alpha_n,
             pb11_f_p_n=pb11_f_p_n,
         )
-        n_D = n_e
-        rate = 0.5 * (n_D * (sigv_dd_n(T_i) + sigv_dd_p(T_i))) * n_D
-        return _power(rate, E_total), 0.0
+        # m10^2 carries n^2 * 1e-20, sv22 the reactivity in 1e-22 units; the
+        # residual exponent 1e20 * 1e-22 * 1e-6 = 1e-8 folds into the constant.
+        m10_D = _density_1e10(n_e)
+        sv22 = (sigv_dd_n(T_i) + sigv_dd_p(T_i)) * 1e22
+        const = 0.5 * E_total * (MEV_TO_JOULES * 1e-8) * V_plasma
+        return m10_D * m10_D * sv22 * const, 0.0
 
     if fuel == Fuel.DHE3:
         r = dhe3_fuel_ratio
-        n_D = n_e / (1.0 + 2.0 * r)
-        n_He3 = r * n_D
-        R_dhe3 = (n_D * sigv_dhe3(T_i)) * n_He3
-        R_dd = 0.5 * (n_D * (sigv_dd_n(T_i) + sigv_dd_p(T_i))) * n_D
-        derived = R_dd / (R_dd + R_dhe3)
+        sv3_22 = sigv_dhe3(T_i) * 1e22
+        svt_22 = (sigv_dd_n(T_i) + sigv_dd_p(T_i)) * 1e22
+        # Rate ratio R_dd/R_dhe3: densities cancel (n_D^2 vs r*n_D^2), leaving
+        # a pure O(1) reactivity ratio whose quotient VJP cannot underflow.
+        x = 0.5 * svt_22 / (r * sv3_22)
+        derived = x / (1.0 + x)
         frac = derived if dhe3_dd_frac_pin is None else dhe3_dd_frac_pin
         E_total, _ = event_energies(
             fuel,
@@ -260,12 +282,15 @@ def fusion_power(
             pb11_f_alpha_n=pb11_f_alpha_n,
             pb11_f_p_n=pb11_f_p_n,
         )
-        return _power(R_dhe3 + R_dd, E_total), frac
+        # Total rate = R_dhe3*(1+x), physical regardless of any pin (the pin
+        # moves the partition via E_total, not the reaction rates).
+        m10 = _density_1e10(n_e)
+        mix = r / ((1.0 + 2.0 * r) ** 2)
+        const = (mix * (MEV_TO_JOULES * 1e-8)) * E_total * V_plasma
+        return m10 * m10 * sv3_22 * (1.0 + x) * const, frac
 
     if fuel == Fuel.PB11:
         r = pb11_fuel_ratio
-        n_p = n_e / (1.0 + 5.0 * r)
-        n_B = r * n_p
         E_total, _ = event_energies(
             fuel,
             dd_f_T=dd_f_T,
@@ -276,7 +301,10 @@ def fusion_power(
             pb11_f_alpha_n=pb11_f_alpha_n,
             pb11_f_p_n=pb11_f_p_n,
         )
-        rate = (n_p * sigv_pb11(T_i)) * n_B
-        return _power(rate, E_total), 0.0
+        m10 = _density_1e10(n_e)
+        sv22 = sigv_pb11(T_i) * 1e22
+        mix = r / ((1.0 + 5.0 * r) ** 2)
+        const = (mix * (MEV_TO_JOULES * 1e-8)) * E_total * V_plasma
+        return m10 * m10 * sv22 * const, 0.0
 
     raise ValueError(f"Unknown fuel type: {fuel}")

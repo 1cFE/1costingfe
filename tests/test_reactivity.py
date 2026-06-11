@@ -231,3 +231,18 @@ class TestFusionPowerDensity:
         g = float(jax.grad(p_of_T)(70.0))
         assert jnp.isfinite(g)
         assert g > 0.0  # below the D-He3 peak, power rises with T_i
+
+    def test_jit_matches_eager_all_fuels(self):
+        import jax
+
+        for fuel in [Fuel.DT, Fuel.DD, Fuel.DHE3, Fuel.PB11]:
+            T = {Fuel.DT: 15.0, Fuel.DD: 40.0, Fuel.DHE3: 70.0, Fuel.PB11: 300.0}[fuel]
+
+            def p_of(n_e, T_i, V):
+                p, _ = fusion_power(fuel, n_e, T_i, V, **self._KW)
+                return p
+
+            eager = float(p_of(1.0e20, T, 830.0))
+            jitted = float(jax.jit(p_of)(1.0e20, T, 830.0))
+            assert jnp.isfinite(jitted)
+            assert jitted == pytest.approx(eager, rel=1e-4)

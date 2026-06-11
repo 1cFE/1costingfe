@@ -371,6 +371,8 @@ class CostModel:
             pb11_f_p_n=params["pb11_f_p_n"],
         )
 
+        # Kernel-only knobs: the 0D plasma model consumes these; the
+        # mfe_*_power_balance functions must never receive them.
         kernel_kw = dict(
             T_i_over_T_e=params["T_i_over_T_e"],
             dhe3_fuel_ratio=params["dhe3_fuel_ratio"],
@@ -391,7 +393,7 @@ class CostModel:
                 M_ion=params.get("M_ion", 2.5),
                 Z_eff=params.get("Z_eff", 1.5),
                 lambda_q=params.get("lambda_q", 0.002),
-                dhe3_dd_frac=params["dhe3_dd_frac_pin"],
+                dhe3_dd_frac_pin=params["dhe3_dd_frac_pin"],
                 **base_frac_kw,
                 **kernel_kw,
             )
@@ -427,6 +429,7 @@ class CostModel:
                 kappa=kappa,
                 R_w=params["R_w"],
                 dhe3_dd_frac=pb_frac,
+                f_rad_fus=params.get("f_rad_fus"),
                 **base_frac_kw,
                 **impurity_kw,
             )
@@ -461,6 +464,7 @@ class CostModel:
                 n_mod=n_mod,
                 dhe3_dd_frac=params["dhe3_dd_frac"],
                 dhe3_dd_frac_pin=params["dhe3_dd_frac_pin"],
+                f_rad_fus=params.get("f_rad_fus"),
                 **base_frac_kw,
                 **kernel_kw,
             )
@@ -528,7 +532,7 @@ class CostModel:
             lambda_q=params["lambda_q"],
             dd_f_T=params["dd_f_T"],
             dd_f_He3=params["dd_f_He3"],
-            dhe3_dd_frac=params["dhe3_dd_frac_pin"],
+            dhe3_dd_frac_pin=params["dhe3_dd_frac_pin"],
             dhe3_f_T=params["dhe3_f_T"],
             dhe3_f_He3=self._dhe3_f_He3_eff(params),
             pb11_f_alpha_n=params["pb11_f_alpha_n"],
@@ -550,7 +554,7 @@ class CostModel:
                 result.a,
                 params["elon"],
                 params["M_ion"],
-                T_i=params["T_i_over_T_e"] * float(ps.T_e),
+                T_i_over_T_e=params["T_i_over_T_e"],
                 n_i_frac=n_i_over_n_e(
                     self.fuel, params["dhe3_fuel_ratio"], params["pb11_fuel_ratio"]
                 ),
@@ -781,7 +785,9 @@ class CostModel:
         # Multi-fuel kernel inputs for the tokamak 0D/sizing paths: effective
         # Z_eff (fuel-ion contribution + impurity excess over hydrogenic), the
         # dhe3_dd_frac pin (explicit user override -> pinned; otherwise derived
-        # at the operating point), and non-DT operating-temperature brackets.
+        # at the operating point), non-DT operating-temperature brackets, and
+        # the per-fuel radiation proxy (mirrors the non-0D path: pb11/dhe3
+        # default to cc.f_rad_fus, DT/DD to None -> full radiation model).
         if (use_0d or params.get("size_from_power", False)) and (
             self.concept == ConfinementConcept.TOKAMAK
         ):
@@ -794,6 +800,8 @@ class CostModel:
                 if "T_max" not in overrides:
                     params["T_max"] = _T_BRACKET_DEFAULTS[self.fuel][1]
             params["dhe3_dd_frac_pin"] = overrides.get("dhe3_dd_frac")
+            if "f_rad_fus" not in params:
+                params["f_rad_fus"] = self.cc.f_rad_fus(self.fuel)
 
         # Layer 2: Power balance (dispatched by family), or sizing solve.
         if params.get("size_from_power", False):
@@ -1169,6 +1177,13 @@ class CostModel:
         else:
             target_unit_cost = 0.0
             n_targets_per_year = 0.0
+        # The fuel bill must price the same plasma as the power partition:
+        # 0D/sized D-He3 runs use the kernel's effective side-channel fraction
+        # (derived or pinned); non-0D runs keep the YAML value, matching their
+        # partition.
+        dhe3_frac_cost = params["dhe3_dd_frac"]
+        if self.fuel == Fuel.DHE3 and self._plasma_state is not None:
+            dhe3_frac_cost = self._plasma_state.dhe3_dd_frac_eff
         c80 = cas80_fuel(
             cc,
             pt.p_fus,
@@ -1182,7 +1197,7 @@ class CostModel:
             noak,
             dd_f_T=params["dd_f_T"],
             dd_f_He3=params["dd_f_He3"],
-            dhe3_dd_frac=params["dhe3_dd_frac"],
+            dhe3_dd_frac=dhe3_frac_cost,
             dhe3_f_T=params["dhe3_f_T"],
             dhe3_f_He3=self._dhe3_f_He3_eff(params),
             burn_fraction=params["burn_fraction"],
