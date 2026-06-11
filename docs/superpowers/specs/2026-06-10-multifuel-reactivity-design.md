@@ -1,7 +1,7 @@
 # Multi-Fuel Reactivity for the Tokamak 0D/Sizing Kernel
 
 **Date:** 2026-06-10
-**Status:** Approved design, pending implementation
+**Status:** Implemented (feat/multifuel-reactivity)
 
 ## Problem
 
@@ -39,11 +39,16 @@ Pure JAX functions, one per channel:
 All take T_i in keV, return `<sigma*v>` in m^3/s, and are JAX-differentiable
 (`jnp` ops only). The example scripts (`dhe3_mix_optimization.py`, `dhe3_burn_fractions.py`) keep their own numpy/float64 implementations as independent cross-checks (the package runs JAX float32; importing it would silently change example outputs). A unit test pins the package fits against float64 reference values computed from the example's coefficients.
 
-### 2. Fuel dispatch and dilution: `fusion_power_density`
+### 2. Fuel dispatch and dilution: `fusion_power`
 
-`fusion_power_density(fuel, n_e, T_i, mix_ratio, ...)` replaces the body of
-`compute_fusion_power`. Dispatch is a Python branch on `fuel` (static per
-model instance), so JAX tracing is unaffected.
+`fusion_power(fuel, n_e, T_i, V_plasma, ...)` supersedes the DT-only
+`compute_fusion_power` (which stays as the bit-pinned DT legacy kernel).
+Dispatch is a Python branch on `fuel` (static per model instance), so JAX
+tracing is unaffected. float32 hardening (found in review): density enters
+behind a `jax.lax.optimization_barrier` in 1e-10 scaling and reactivities are
+used in 1e-22 units, because XLA's constant gathering otherwise either
+underflows the rate to zero or forms n_e^2 = inf under jit, and the
+derived-fraction quotient VJP would underflow to NaN gradients.
 
 Reactant densities from quasineutrality, with new fuel-specific YAML mix knobs (`r` below): `dhe3_fuel_ratio` and `pb11_fuel_ratio`:
 
@@ -80,7 +85,7 @@ fast-ion burnup physics, not thermal rates.
 
 New param `T_i_over_T_e` with its default of 1.0 declared in the concept
 YAMLs (all current results unchanged). No Python keyword default anywhere:
-`fusion_power_density` and the 0D/sizing functions take it (and the mix-ratio knobs (`dhe3_fuel_ratio`, `pb11_fuel_ratio`)) as required arguments read from the merged params dict,
+`fusion_power` and the 0D/sizing functions take it (and the mix-ratio knobs (`dhe3_fuel_ratio`, `pb11_fuel_ratio`)) as required arguments read from the merged params dict,
 same as every other physics param. T_i = T_i_over_T_e * T_e enters
 reactivity, stored energy, and beta. Stored
 energy and beta generalize with the dilution factor n_i/n_e so that DT
@@ -105,7 +110,7 @@ from YAML:
 | Fuel  | T_min [keV] | T_max [keV] |
 |-------|------------|-------------|
 | DD    | 5          | 100         |
-| D-He3 | 20         | 200         |
+| D-He3 | 20         | 190         |
 | p-B11 | 50         | 400         |
 
 ### 6. Fuel-aware Z_eff and photon radiation
@@ -141,13 +146,21 @@ Applying the correction selectively would make the fuels inconsistent and
 applying it everywhere would perturb DT, so it is documented here as a known
 limitation and left out of scope.
 
-### 7. p-B11 radiation proxy
+### 7. Advanced-fuel radiation proxies (revised in implementation)
 
-No new radiation physics. p-B11 configs running 0D/sizing set
-`f_rad_fus: 0.83` (bremsstrahlung at 83% of fusion power, the Putvinski-class
-optimum; the power balance already supports `f_rad_fus`). The validator warns
-when fuel is PB11 with `use_0d_model` or `size_from_power` enabled and
-`f_rad_fus` is unset.
+No new radiation physics. CostingConstants already carries per-fuel radiation
+proxies (`f_rad_fus_pb11 = 0.83`, the Putvinski-class optimum;
+`f_rad_fus_dhe3 = 0.24`, the brems-minimum from the D-He3 mix study) that the
+non-0D power balance applies automatically. Implementation threads the same
+resolution through the 0D forward/inverse and sizing paths, so 0D
+advanced-fuel runs default to the proxy exactly like non-0D runs; an explicit
+`f_rad_fus` override wins, and DT/DD resolve to None (full radiation model,
+bit-identical). The originally planned "warn when unset" validator is moot
+with the default applied; the validator instead range-checks the new fields.
+Without a proxy the full brems+synchrotron model is radiation-dominated for
+thermal D-He3 and p-B11 tokamaks at every temperature (no positive-net
+operating point exists), which the implementation surfaces loudly: p-B11
+sizing raises `SizingInfeasible`.
 
 ### 8. Tests
 
@@ -159,10 +172,10 @@ when fuel is PB11 with `use_0d_model` or `size_from_power` enabled and
 4. **Derived `dhe3_dd_frac`:** matches `examples/dhe3_mix_optimization.py`
    at its published operating points; explicit override wins.
 5. **Sizing per fuel:** D-He3 sizes a larger machine than DT at equal net
-   electric power; p-B11 solves with the brems proxy inside a 50-400 keV
-   bracket.
-6. **Guard:** PB11 + 0D/sizing without `f_rad_fus` produces the validator
-   warning.
+   electric power; the fuel-mix knob moves both the derived fraction and the
+   CAS80 fuel bill; p-B11 sizing raises `SizingInfeasible` loudly.
+6. **jit safety:** `fusion_power` under `jax.jit` matches eager for all four
+   fuels; the D-He3 dispatch has a finite positive gradient.
 7. **Z_eff:** `z_eff_fuel` algebra per fuel; `Z_eff_effective` equals the
    YAML value exactly for DT (1.5 stays 1.5); D-He3/p-B11 brems rises with
    the mix-derived Z_eff through the existing radiation module.
