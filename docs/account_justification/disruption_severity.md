@@ -26,10 +26,8 @@ inputs (YAML or defaults.py), not hardcoded constants.
 | disruption_damage | 0.002 | 0.01 | 0.05 | fraction PFC life/disruption | Low-Medium |
 | disruption_downtime | 12 | 72 | 720 | hours/disruption | Low-Medium |
 
-Current YAML defaults (`steady_state_tokamak.yaml`) are rate_base 0.1,
-steepness 15.0, damage 0.02, downtime 72.0. The review supports raising
-rate_base by about a factor of 10 (to about 1.0); the other three current values
-sit inside the recommended ranges.
+The YAML defaults (`steady_state_tokamak.yaml`) adopt the base column:
+rate_base 1.0, steepness 12.0, damage 0.01, downtime 72.0.
 
 ## Rationale
 
@@ -95,17 +93,26 @@ physically justified rather than a modeling shortcut (the stellarator YAML alrea
 disables it). This does not automatically extend to current-carrying or pulsed
 concepts, which must be assessed individually.
 
-## Implication for the sizing optimize mode
+## Implication for the sizing optimize mode (measured)
 
-The LCOE-optimal Greenwald fraction depends on whether the disruption penalty is
-strong enough to offset the capital saving from running closer to the density
-limit. At the current default rate_base of 0.1/FPY the penalty is weak and the
-optimum sits at the Greenwald boundary. At the literature-grounded base
-(rate_base about 1.0, damage about 0.01) the penalty is about an order of
-magnitude stronger: for a core life of about 30 FPY the effective-life reduction
-near the limit is roughly 20 to 30 percent, comparable to the capital saving.
-With grounded values the LCOE optimum is therefore likely interior, so the sizing
-optimize mode is quantitatively meaningful rather than cosmetic.
+This review originally predicted that grounded values would make the
+LCOE-optimal Greenwald fraction interior. Measurement says otherwise: with the
+grounded values adopted, the optimum still sits at the f_GW search floor
+(0.30), because the LCOE landscape over f_GW is dominated by
+confinement-power economics rather than disruption proximity. At a 400 MWe
+sizing solve with H = 1, Q_eng falls from 7.8 at f_GW = 0.30 to 1.65 at 0.95:
+high density raises the stored energy, the IPB98 closed-form heating
+requirement scales as W^(1/0.31), and the recirculating power swamps the
+disruption availability penalty (at most about 0.5 percent at f_GW = 0.95).
+The disruption penalty is now an order of magnitude more realistic, but it is
+a second-order term in the optimum's location.
+
+The low-density preference itself deserves scrutiny: the model has no
+density-coupled costs that favor high density (no current-drive efficiency
+penalty at low density, no L-H power threshold, no pedestal physics), so the
+landscape may be missing the physics that pushes real designs toward
+f_GW of 0.5 or higher. That is a model-fidelity question, not a disruption
+calibration question, and is tracked as a follow-up.
 
 ## Sources and confidence note
 

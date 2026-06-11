@@ -719,9 +719,9 @@ class DisruptionModel:
     lifetime and plant availability.
     """
 
-    rate_base: float = 0.1  # Baseline disruptions/FPY far from limits
-    steepness: float = 15.0  # Exponential steepness parameter
-    damage_per_disruption: float = 0.02  # Fraction of component life per disruption
+    rate_base: float = 1.0  # Baseline disruptions/FPY far from limits
+    steepness: float = 12.0  # Exponential steepness parameter
+    damage_per_disruption: float = 0.01  # Fraction of component life per disruption
     downtime_per_disruption: float = 72.0  # Hours of downtime per disruption
     beta_N_max: float = 3.5  # Troyon limit
     q95_min: float = 2.0  # Kink limit

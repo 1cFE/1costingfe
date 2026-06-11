@@ -102,13 +102,15 @@ except SizingInfeasible as e:
     print(f"\n  SizingInfeasible: {e}")
 
 # ── 5. Optimize mode: LCOE over the Greenwald fraction ────────────────
-# Pushing density raises fusion power per unit machine but walks toward
-# the disruption-prone edge; the disruption penalty (availability, core
-# life) sets the trade-off. With the current disruption_rate_base (about
-# 10x below the literature survey in docs/account_justification/
-# disruption_severity.md) the optimum sits at the f_GW_min bound; grounded
-# disruption rates move it interior. Slowest section (re-runs the full
-# sizing+cost pipeline per trial f_GW).
+# Pushing density raises fusion power per unit machine but raises the
+# stored energy, and with it the IPB98 heating requirement (~W^(1/0.31)),
+# so Q_eng degrades sharply toward high f_GW; the disruption penalty
+# (grounded values, docs/account_justification/disruption_severity.md)
+# is second-order against that. The optimum currently sits at the
+# f_GW_min bound; whether that low-density preference is physical or a
+# missing-physics artifact (no current-drive or L-H-threshold density
+# coupling) is an open model question. Slowest section (re-runs the
+# full sizing+cost pipeline per trial f_GW).
 print()
 print("=" * 64)
 print("  OPTIMIZE MODE at 400 MWe: LCOE-optimal f_GW")

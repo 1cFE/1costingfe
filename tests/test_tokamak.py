@@ -540,9 +540,14 @@ class TestJAXAutodiff:
 # ---------------------------------------------------------------------------
 class TestDisruptionRate:
     def test_safe_point_negligible(self):
-        """Safe operating point (far from limits) has negligible rate."""
+        """Safe operating point (far from limits) has negligible rate.
+
+        With the literature-grounded base (1.0/FPY at the limits, see
+        docs/account_justification/disruption_severity.md) the safe-point
+        rate is ~0.04/FPY: a ~0.03% availability hit, still negligible.
+        """
         rate = float(compute_disruption_rate(f_GW=0.70, beta_N=2.0, q95=4.0))
-        assert rate < 0.01, f"Safe point rate = {rate}"
+        assert rate < 0.05, f"Safe point rate = {rate}"
 
     def test_aggressive_point_significant(self):
         """Aggressive operating point has significant rate."""
@@ -550,9 +555,9 @@ class TestDisruptionRate:
         assert rate > 0.05, f"Aggressive point rate = {rate}"
 
     def test_at_limit_rate(self):
-        """All margins = 0 -> rate = 3 * rate_base."""
+        """All margins = 0 -> rate = 3 * rate_base (grounded base 1.0/FPY)."""
         rate = float(compute_disruption_rate(f_GW=1.0, beta_N=3.5, q95=2.0))
-        assert abs(rate - 0.3) < 0.001, f"At-limit rate = {rate}, expected 0.3"
+        assert abs(rate - 3.0) < 0.001, f"At-limit rate = {rate}, expected 3.0"
 
     def test_monotonicity_f_GW(self):
         """Higher f_GW -> higher disruption rate (other params fixed)."""
