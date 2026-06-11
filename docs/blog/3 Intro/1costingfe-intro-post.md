@@ -24,9 +24,15 @@ Treat it as the appetizer. The explorer shows one design point at a time through
 
 ![The explorer: a D-T tokamak at 1 GWe, with the account breakdown, elasticity tornado, and the advanced input tabs](explorer_screenshot.png)
 
-## Clone and run
+## Install and run
 
-Installation is a clone and an editable install:
+The library is one command away:
+
+```bash
+pip install 1costingfe
+```
+
+For the full experience (the example scripts, the account justification documents, the tests), clone at the tag and install editable instead:
 
 ```bash
 git clone --branch v0.1.0-alpha.1 https://github.com/1cFE/1costingfe
