@@ -7,7 +7,8 @@ from costingfe.layers.tokamak import (
     tokamak_0d_forward,
     tokamak_0d_inverse,
 )
-from costingfe.types import Fuel
+from costingfe.model import CostModel
+from costingfe.types import ConfinementConcept, Fuel
 
 _GEOM = dict(R=3.3, a=1.13, kappa=1.84, B=9.2, q95=3.05, f_GW=0.85)
 _FRACS = dict(
@@ -91,3 +92,79 @@ class TestInverseBrackets:
         )
         assert float(pt.p_net) == pytest.approx(50.0, rel=0.05)
         assert 20.0 <= float(ps.T_e) <= 190.0
+
+
+class TestMultiFuelModel:
+    _KW = dict(availability=0.85, lifetime_yr=30.0)
+
+    def test_dhe3_sizes_larger_machine_than_dt_at_equal_power(self):
+        m_dt = CostModel(ConfinementConcept.TOKAMAK, Fuel.DT)
+        m_dt.forward(net_electric_mw=200.0, size_from_power=True, **self._KW)
+        m_dhe3 = CostModel(ConfinementConcept.TOKAMAK, Fuel.DHE3)
+        m_dhe3.forward(
+            net_electric_mw=200.0, size_from_power=True, H_factor=1.8, **self._KW
+        )
+        assert m_dhe3._last_R0 > m_dt._last_R0
+
+    def test_explicit_dhe3_dd_frac_override_pins_partition(self):
+        m = CostModel(ConfinementConcept.TOKAMAK, Fuel.DHE3)
+        m.forward(
+            net_electric_mw=200.0, use_0d_model=True, dhe3_dd_frac=0.25, **self._KW
+        )
+        assert float(m._plasma_state.dhe3_dd_frac_eff) == pytest.approx(0.25)
+
+    def test_dhe3_derives_fraction_without_override(self):
+        m = CostModel(ConfinementConcept.TOKAMAK, Fuel.DHE3)
+        m.forward(net_electric_mw=200.0, use_0d_model=True, **self._KW)
+        frac = float(m._plasma_state.dhe3_dd_frac_eff)
+        assert 0.0 < frac < 1.0
+        assert abs(frac - 0.131) > 1e-3  # not the YAML seed
+
+    def test_fuel_mix_moves_fuel_cost_with_partition(self):
+        # The CAS80 fuel bill must follow the derived side-channel fraction,
+        # which moves with the He3:D mix ratio. Sizing path: it enforces the
+        # beta cap, so the operating point (and its disruption-penalized
+        # availability) is physical.
+        fracs, costs = [], []
+        for ratio in (0.5, 2.0):
+            m = CostModel(ConfinementConcept.TOKAMAK, Fuel.DHE3)
+            r = m.forward(
+                net_electric_mw=200.0,
+                size_from_power=True,
+                H_factor=1.8,
+                dhe3_fuel_ratio=ratio,
+                **self._KW,
+            )
+            fracs.append(float(m._plasma_state.dhe3_dd_frac_eff))
+            costs.append(float(r.costs.cas80))
+        # More He3 (higher ratio) -> fewer D-D side events
+        assert fracs[1] < fracs[0]
+        assert costs[0] != pytest.approx(costs[1], rel=1e-3)
+
+    def test_dt_results_unchanged_by_multifuel_knobs(self):
+        m = CostModel(ConfinementConcept.TOKAMAK, Fuel.DT)
+        base = m.forward(net_electric_mw=200.0, use_0d_model=True, **self._KW)
+        knob = m.forward(
+            net_electric_mw=200.0,
+            use_0d_model=True,
+            dhe3_fuel_ratio=3.0,
+            pb11_fuel_ratio=0.5,
+            **self._KW,
+        )
+        assert float(base.costs.lcoe) == float(knob.costs.lcoe)
+
+    def test_pb11_sizing_fails_loudly_not_silently(self):
+        # Under the current physics (Nevins-Swain reactivity, f_rad_fus=0.83
+        # proxy, recirc structure) no tokamak up to R0_max nets positive
+        # p-B11 power; the contract is a loud SizingInfeasible, not silent
+        # garbage costs.
+        from costingfe.layers.tokamak import SizingInfeasible
+
+        m = CostModel(ConfinementConcept.TOKAMAK, Fuel.PB11)
+        with pytest.raises(SizingInfeasible):
+            m.forward(
+                net_electric_mw=100.0,
+                size_from_power=True,
+                H_factor=2.0,
+                **self._KW,
+            )
