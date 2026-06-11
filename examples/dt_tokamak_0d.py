@@ -5,7 +5,7 @@ plasma current, confinement time, and stability limits from machine
 parameters — rather than asserting p_net and working backwards.
 
 Two modes are shown:
-  1. Inverse: "I want 1 GWe net — what plasma does this machine produce?"
+  1. Inverse: "I want 500 MWe net — what operating point does that imply?"
   2. Forward: "Given these machine params and T_e, what comes out?"
 """
 
@@ -31,7 +31,6 @@ MACHINE = dict(
     mn=1.1,
     eta_th=0.46,
     eta_p=0.5,
-    eta_pin=0.5,
     eta_de=0.85,
     f_sub=0.03,
     f_dec=0.0,
@@ -45,13 +44,13 @@ MACHINE = dict(
 
 model = CostModel(concept=ConfinementConcept.TOKAMAK, fuel=Fuel.DT)
 
-# ── Inverse mode: target 1 GWe net ───────────────────────────────────
+# ── Inverse mode: target 500 MWe net ──────────────────────────────────
 print("=" * 64)
-print("  INVERSE MODE: 1 GWe target -> find required T_e")
+print("  INVERSE MODE: 500 MWe target -> find required T_e")
 print("=" * 64)
 
 r_inv = model.forward(
-    net_electric_mw=1000.0,
+    net_electric_mw=500.0,
     availability=0.85,
     lifetime_yr=30,
     use_0d_model=True,
@@ -105,7 +104,7 @@ print("  FORWARD MODE: specify T_e=15 keV, see what the machine produces")
 print("=" * 64)
 
 r_fwd = model.forward(
-    net_electric_mw=1000.0,
+    net_electric_mw=500.0,
     availability=0.85,
     lifetime_yr=30,
     use_0d_model=True,
@@ -131,7 +130,7 @@ print("  COMPARISON: same target, no 0D model (energy balance only)")
 print("=" * 64)
 
 r_base = model.forward(
-    net_electric_mw=1000.0,
+    net_electric_mw=500.0,
     availability=0.85,
     lifetime_yr=30,
     **MACHINE,
@@ -162,7 +161,7 @@ operating_points = [
 for label, overrides in operating_points:
     machine = dict(MACHINE, **overrides)
     r = model.forward(
-        net_electric_mw=1000.0,
+        net_electric_mw=500.0,
         availability=0.85,
         lifetime_yr=30,
         use_0d_model=True,
