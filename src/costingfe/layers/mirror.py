@@ -9,11 +9,19 @@ classical (Bing & Roberts 1961), Pastukhov electrostatic plugging
 """
 
 import math
+import warnings
 from dataclasses import dataclass
 
+import jax
 import jax.numpy as jnp
 
-from costingfe.layers.physics import ash_neutron_split, compute_p_rad
+from costingfe.layers.physics import (
+    OperatingPointInfeasible,
+    ash_neutron_split,
+    compute_p_rad,
+    mfe_forward_power_balance,
+    mfe_inverse_power_balance,
+)
 from costingfe.layers.reactivity import (
     fusion_power,
     n_i_over_n_e,
@@ -30,6 +38,7 @@ _MU_0 = 1.25663706127e-06  # Vacuum permeability [T*m/A]
 
 _LN_LAMBDA = 17.0  # Coulomb logarithm, fusion-relevant plasmas
 _M_P_OVER_M_E = 1836.15267  # Proton-to-electron mass ratio
+_WALL_LOADING_MAX = 5.0  # MW/m^2, matches tokamak PlasmaLimits.wall_loading_max
 
 # Ion-ion collision time prefactor [s] for T in keV, n in m^-3.
 # Derived from NRL formula: tau_ii = 2.09e13 * A^0.5 * T_eV^1.5 / (n * lnL)
@@ -327,3 +336,272 @@ def mirror_0d_forward(
         collisionality=collisionality,
         dhe3_dd_frac_eff=dhe3_dd_frac_eff,
     )
+
+
+# ---------------------------------------------------------------------------
+# Inverse mode: bisect T_i to match required fusion power
+# ---------------------------------------------------------------------------
+
+# Fuel-keyed T_i brackets [keV] for the mirror inverse bisection.
+# Ranges reflect mirror operating regimes and fit validity.
+_T_BRACKET_MIRROR = {
+    Fuel.DT: (2.0, 80.0),
+    Fuel.DD: (5.0, 100.0),
+    Fuel.DHE3: (20.0, 100.0),
+    Fuel.PB11: (50.0, 300.0),
+}
+
+# Number of bisection iterations (same as tokamak _find_T_for_pfus)
+_T_BISECT_ITERS = 60
+
+
+def _find_T_i_for_pfus(
+    target_pfus,
+    n_e,
+    V_plasma,
+    fuel,
+    fpd_kwargs,
+    T_lo,
+    T_hi,
+    n_iter=_T_BISECT_ITERS,
+):
+    """Bisect on T_i [keV] to match the target fusion power.
+
+    T_e is held fixed; T_i is the only free variable. fusion_power is
+    monotonically increasing in T_i across all fuels at mirror-relevant
+    temperatures, so bisection is well-posed.
+    """
+
+    def body(i, state):
+        lo, hi = state
+        mid = 0.5 * (lo + hi)
+        p_mid, _ = fusion_power(fuel, n_e, mid, V_plasma, **fpd_kwargs)
+        lo = jnp.where(p_mid < target_pfus, mid, lo)
+        hi = jnp.where(p_mid >= target_pfus, mid, hi)
+        return (lo, hi)
+
+    lo, hi = jax.lax.fori_loop(0, n_iter, body, (T_lo, T_hi))
+    return 0.5 * (lo + hi)
+
+
+def mirror_0d_inverse(
+    p_net_target,
+    L,
+    a,
+    B_min,
+    R_m,
+    n_e,
+    T_e,
+    fuel=Fuel.DT,
+    M_ion=2.5,
+    Z_eff=1.5,
+    R_w=0.4,
+    # Power balance params (passed through to mfe_inverse/forward)
+    p_input=50.0,
+    mn=1.1,
+    eta_th=0.46,
+    eta_p=0.5,
+    eta_pin=0.5,
+    eta_de=0.85,
+    f_sub=0.03,
+    f_dec=0.0,
+    p_coils=2.0,
+    p_cool=13.7,
+    p_pump=1.0,
+    p_trit=10.0,
+    p_house=4.0,
+    p_cryo=0.5,
+    n_mod=1,
+    *,
+    dd_f_T: float,
+    dd_f_He3: float,
+    dhe3_dd_frac: float,
+    dhe3_f_T: float,
+    dhe3_f_He3: float,
+    pb11_f_alpha_n: float,
+    pb11_f_p_n: float,
+    dhe3_fuel_ratio: float,
+    pb11_fuel_ratio: float,
+    dhe3_dd_frac_pin: float | None,
+    # Impurity / synchrotron params for power balance
+    wall_material=None,
+    T_edge: float = 0.05,
+    tau_ratio: float = 3.0,
+    R_w_pb: float | None = None,
+    # Advanced fuel radiation proxy (when set, p_rad = f_rad_fus * p_fus)
+    f_rad_fus: float | None = None,
+    # Required: beta feasibility limit. No default; comes from YAML.
+    beta_max: float,
+    # Behavior flag: False is the escape hatch for exploration runs.
+    enforce_plasma_limits: bool = True,
+):
+    """Inverse 0D mirror: p_net target -> (MirrorPlasmaState, PowerTable).
+
+    Single-pass (f_dec is a fixed input; no outer self-consistency loop):
+    1. Call mfe_inverse_power_balance with the YAML f_dec to get required p_fus.
+    2. Bisect on T_i to match that p_fus (T_e is held fixed).
+    3. Run mirror_0d_forward at the solved T_i to get the full plasma state.
+    4. Apply beta feasibility gate (error-severity; wall loading is warning-only).
+    5. Call mfe_forward_power_balance with the solved p_fus to build the PowerTable.
+    6. Return (MirrorPlasmaState, PowerTable).
+    """
+    p_net_per_mod = p_net_target / n_mod
+
+    # Step 1: Geometry (fixed inputs; L,a,B_min are not solved here).
+    V_plasma = jnp.pi * a**2 * L
+    fw_area = 2.0 * jnp.pi * a * L
+    # Synchrotron geometry: R_eff = L / (2*pi) maps cylinder to equivalent torus.
+    R_eff = L / (2.0 * jnp.pi)
+
+    # Step 2: Required p_fus from MFE energy balance.
+    # T_e used as the seed temperature for radiation at this stage.
+    # Use dhe3_dd_frac_pin when pinned; otherwise use the YAML-sourced seed
+    # (single-pass, so no refinement loop for D-He3).
+    frac = dhe3_dd_frac if dhe3_dd_frac_pin is None else dhe3_dd_frac_pin
+    R_w_inv = R_w_pb if R_w_pb is not None else R_w
+    p_fus_required = mfe_inverse_power_balance(
+        p_net_target=p_net_per_mod,
+        fuel=fuel,
+        p_input=p_input,
+        mn=mn,
+        eta_th=eta_th,
+        eta_p=eta_p,
+        eta_pin=eta_pin,
+        eta_de=eta_de,
+        f_sub=f_sub,
+        f_dec=f_dec,
+        p_coils=p_coils,
+        p_cool=p_cool,
+        p_pump=p_pump,
+        p_trit=p_trit,
+        p_house=p_house,
+        p_cryo=p_cryo,
+        n_e=n_e,
+        T_e=T_e,
+        Z_eff=Z_eff,
+        plasma_volume=V_plasma,
+        B=B_min,
+        R_major=R_eff,
+        a_minor=a,
+        kappa=1.0,
+        R_w=R_w_inv,
+        wall_material=wall_material,
+        T_edge=T_edge,
+        tau_ratio=tau_ratio,
+        fw_area=fw_area,
+        dd_f_T=dd_f_T,
+        dd_f_He3=dd_f_He3,
+        dhe3_dd_frac=frac,
+        dhe3_f_T=dhe3_f_T,
+        dhe3_f_He3=dhe3_f_He3,
+        pb11_f_alpha_n=pb11_f_alpha_n,
+        pb11_f_p_n=pb11_f_p_n,
+        f_rad_fus=f_rad_fus,
+    )
+
+    # Step 3: Bisect T_i to match the required fusion power.
+    T_lo, T_hi = _T_BRACKET_MIRROR[fuel]
+    fpd_kwargs = dict(
+        dhe3_fuel_ratio=dhe3_fuel_ratio,
+        pb11_fuel_ratio=pb11_fuel_ratio,
+        dhe3_dd_frac_pin=dhe3_dd_frac_pin,
+        dd_f_T=dd_f_T,
+        dd_f_He3=dd_f_He3,
+        dhe3_f_T=dhe3_f_T,
+        dhe3_f_He3=dhe3_f_He3,
+        pb11_f_alpha_n=pb11_f_alpha_n,
+        pb11_f_p_n=pb11_f_p_n,
+    )
+    T_i_solved = _find_T_i_for_pfus(
+        p_fus_required, n_e, V_plasma, fuel, fpd_kwargs, T_lo, T_hi
+    )
+
+    # Step 4: Full plasma state at the solved T_i.
+    plasma_state = mirror_0d_forward(
+        L=L,
+        a=a,
+        B_min=B_min,
+        R_m=R_m,
+        T_i=T_i_solved,
+        T_e=T_e,
+        n_e=n_e,
+        p_input=p_input,
+        fuel=fuel,
+        M_ion=M_ion,
+        Z_eff=Z_eff,
+        R_w=R_w,
+        dd_f_T=dd_f_T,
+        dd_f_He3=dd_f_He3,
+        dhe3_dd_frac_pin=dhe3_dd_frac_pin,
+        dhe3_f_T=dhe3_f_T,
+        dhe3_f_He3=dhe3_f_He3,
+        pb11_f_alpha_n=pb11_f_alpha_n,
+        pb11_f_p_n=pb11_f_p_n,
+        dhe3_fuel_ratio=dhe3_fuel_ratio,
+        pb11_fuel_ratio=pb11_fuel_ratio,
+        f_rad_fus=f_rad_fus,
+    )
+
+    # Step 5: Feasibility gate — tracer-skip guard matches the tokamak pattern.
+    # Under JAX tracing (jit/grad), beta is an abstract tracer; skip the gate.
+    if enforce_plasma_limits and not isinstance(plasma_state.beta, jax.core.Tracer):
+        beta_val = float(plasma_state.beta)
+        if beta_val > beta_max:
+            raise OperatingPointInfeasible(
+                f"net target {float(p_net_target):.1f} MW at this mirror geometry "
+                f"implies beta = {beta_val:.4f} > beta_max = {beta_max:.4f}. "
+                f"Pass enforce_plasma_limits=False to inspect the implied point."
+            )
+        # Wall loading: warning-severity only (matches tokamak pattern of not raising)
+        wl = float(plasma_state.wall_loading)
+        if wl > _WALL_LOADING_MAX:
+            warnings.warn(
+                f"Neutron wall loading = {wl:.2f} MW/m^2 > {_WALL_LOADING_MAX} MW/m^2",
+                stacklevel=2,
+            )
+
+    # Step 6: Power table at the actual p_fus.
+    # Single-pass: p_fus was solved against the seed dhe3_dd_frac, so unpinned
+    # D-He3 p_net carries a small uncorrected residual (same caveat as tokamak).
+    frac_eff = plasma_state.dhe3_dd_frac_eff
+    pt = mfe_forward_power_balance(
+        p_fus=plasma_state.p_fus,
+        fuel=fuel,
+        p_input=p_input,
+        mn=mn,
+        eta_th=eta_th,
+        eta_p=eta_p,
+        eta_pin=eta_pin,
+        eta_de=eta_de,
+        f_sub=f_sub,
+        f_dec=f_dec,
+        p_coils=p_coils,
+        p_cool=p_cool,
+        p_pump=p_pump,
+        p_trit=p_trit,
+        p_house=p_house,
+        p_cryo=p_cryo,
+        n_e=n_e,
+        T_e=T_e,
+        Z_eff=Z_eff,
+        plasma_volume=V_plasma,
+        B=B_min,
+        R_major=R_eff,
+        a_minor=a,
+        kappa=1.0,
+        R_w=R_w_inv,
+        wall_material=wall_material,
+        T_edge=T_edge,
+        tau_ratio=tau_ratio,
+        fw_area=fw_area,
+        dd_f_T=dd_f_T,
+        dd_f_He3=dd_f_He3,
+        dhe3_dd_frac=frac_eff,
+        dhe3_f_T=dhe3_f_T,
+        dhe3_f_He3=dhe3_f_He3,
+        pb11_f_alpha_n=pb11_f_alpha_n,
+        pb11_f_p_n=pb11_f_p_n,
+        f_rad_fus=f_rad_fus,
+    )
+
+    return plasma_state, pt

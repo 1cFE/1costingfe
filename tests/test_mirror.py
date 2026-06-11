@@ -17,7 +17,9 @@ from costingfe.layers.mirror import (
     compute_tau_pastukhov,
     compute_tau_radial,
     mirror_0d_forward,
+    mirror_0d_inverse,
 )
+from costingfe.layers.physics import OperatingPointInfeasible
 from costingfe.types import Fuel
 
 _N = 1.0e20  # m^-3
@@ -277,3 +279,134 @@ class TestForward:
         assert float(ps.p_rad) == pytest.approx(f * float(ps.p_fus), rel=1e-5)
         # Confirm clamp was not active (p_rad < p_alpha)
         assert float(ps.p_rad) < float(ps.p_alpha)
+
+
+# ---------------------------------------------------------------------------
+# Shared inverse kwargs
+# ---------------------------------------------------------------------------
+# GDT/WHAM-plausible test machine for inverse mode:
+#   L=50 m central cell, a=0.4 m, B_min=3 T (midplane), R_m=20, n_e=1e20
+#   m^-3, T_e=10 keV. Forward scan confirms p_fus ~ 77-120 MW at T_i=20-30
+#   keV; the required p_fus for p_net=20 MW is ~86 MW, well inside the DT
+#   bracket [2, 80] keV (solved T_i ~ 22 keV). Beta at solution ~ 0.14,
+#   comfortably below the default beta_max=0.5.
+_INV_L = 50.0
+_INV_A = 0.4
+_INV_B = 3.0
+_INV_R_M = 20.0
+_INV_N = 1.0e20
+_INV_TE = 10.0
+_INV_BETA_MAX = 0.5
+
+# Power-balance kwargs: lighter plant loads typical for a mirror concept
+# (superconducting coils, no divertor, simpler tritium system). eta_pin=0.7
+# reflects better NBI wall-plug efficiency than the tokamak default.
+_PB_KWARGS = dict(
+    p_input=10.0,
+    mn=1.1,
+    eta_th=0.40,
+    eta_p=0.5,
+    eta_pin=0.7,
+    eta_de=0.85,
+    f_sub=0.05,
+    f_dec=0.3,
+    p_coils=1.0,
+    p_cool=2.0,
+    p_pump=1.0,
+    p_trit=2.0,
+    p_house=2.0,
+    p_cryo=0.5,
+)
+
+
+def _inverse(
+    fuel=Fuel.DT,
+    dhe3_dd_frac_pin=None,
+    f_rad_fus=None,
+    enforce_plasma_limits=True,
+    **kw,
+):
+    """Convenience wrapper for mirror_0d_inverse at the reference inverse machine."""
+    return mirror_0d_inverse(
+        p_net_target=kw.pop("p_net_target", 100.0),
+        L=kw.pop("L", _INV_L),
+        a=kw.pop("a", _INV_A),
+        B_min=kw.pop("B_min", _INV_B),
+        R_m=kw.pop("R_m", _INV_R_M),
+        n_e=kw.pop("n_e", _INV_N),
+        T_e=kw.pop("T_e", _INV_TE),
+        fuel=fuel,
+        beta_max=kw.pop("beta_max", _INV_BETA_MAX),
+        enforce_plasma_limits=enforce_plasma_limits,
+        dhe3_dd_frac=0.131,
+        dhe3_dd_frac_pin=dhe3_dd_frac_pin,
+        f_rad_fus=f_rad_fus,
+        **_FRACS,
+        **_MIX,
+        **_PB_KWARGS,
+        **kw,
+    )
+
+
+class TestInverse:
+    def test_dt_inverse_p_net_converges(self):
+        # DT inverse at a GDT/WHAM-plausible machine:
+        #   L=50 m, a=0.4 m, B=3 T, R_m=20, n_e=1e20, T_e=10 keV.
+        # Forward scan: p_fus ~ 86 MW at T_i ~ 22 keV for p_net=20 MW.
+        # The solved state should deliver p_net within 5% of the target.
+        state, pt = _inverse(fuel=Fuel.DT, p_net_target=20.0)
+        assert isinstance(state, MirrorPlasmaState)
+        assert float(pt.p_net) == pytest.approx(20.0, rel=0.05)
+        assert state.beta < 0.5  # beta_max for this test machine
+
+    def test_dt_inverse_T_i_in_bracket(self):
+        # The solved T_i must lie inside the DT fuel bracket [2, 80] keV.
+        state, pt = _inverse(fuel=Fuel.DT, p_net_target=20.0)
+        T_i = float(state.T_i)
+        assert 2.0 < T_i < 80.0
+
+    def test_beta_over_max_raises(self):
+        # Force implied beta > beta_max by using a very tight beta_max.
+        # At the reference machine T_i ~ 22 keV -> beta ~ 0.14; beta_max=0.001
+        # is well below the implied value, so OperatingPointInfeasible must fire.
+        with pytest.raises(OperatingPointInfeasible, match=r"beta = "):
+            _inverse(fuel=Fuel.DT, p_net_target=20.0, beta_max=0.001)
+
+    def test_enforce_plasma_limits_false_returns_state(self):
+        # With the tight beta_max that would raise, enforce_plasma_limits=False
+        # should return the implied (infeasible) point without raising.
+        state, pt = _inverse(
+            fuel=Fuel.DT,
+            p_net_target=20.0,
+            beta_max=0.001,
+            enforce_plasma_limits=False,
+        )
+        assert isinstance(state, MirrorPlasmaState)
+        # beta > beta_max (that was the whole point)
+        assert float(state.beta) > 0.001
+
+    def test_dhe3_inverse_converges(self):
+        # D-He3 inverse with f_rad_fus=0.24 proxy (standard advanced-fuel proxy).
+        # Machine: L=50 m, a=0.4 m, B=5 T, R_m=30, n_e=3e20, T_e=30 keV.
+        # Forward scan: T_i ~ 60 keV for p_net=20 MW (inside [20, 100] bracket).
+        # Separate power balance to reflect near-aneutronic plant (mn=1.02, f_dec=0.6).
+        _pb = {**_PB_KWARGS, "mn": 1.02, "f_dec": 0.6}  # near-aneutronic deltas
+        state, pt = mirror_0d_inverse(
+            p_net_target=20.0,
+            L=50.0,
+            a=0.4,
+            B_min=5.0,
+            R_m=30.0,
+            n_e=3.0e20,
+            T_e=30.0,
+            fuel=Fuel.DHE3,
+            beta_max=0.5,
+            dhe3_dd_frac=0.131,
+            dhe3_dd_frac_pin=None,
+            f_rad_fus=0.24,
+            **_FRACS,
+            **_MIX,
+            **_pb,
+        )
+        assert isinstance(state, MirrorPlasmaState)
+        assert float(pt.p_net) == pytest.approx(20.0, rel=0.05)
