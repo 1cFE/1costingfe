@@ -17,6 +17,7 @@ import jax.numpy as jnp
 
 from costingfe.layers.physics import (
     OperatingPointInfeasible,
+    SizingInfeasible,  # noqa: F401 — re-exported so tests can import from mirror
     ash_neutron_split,
     compute_p_rad,
     mfe_forward_power_balance,
@@ -620,10 +621,6 @@ _GSS_ITERS = 40  # Golden-section iterations to locate the optimum T_i
 _L_BISECT_ITERS = 60  # Bisection iterations to locate the target-power length
 
 
-class SizingInfeasible(Exception):
-    """Raised when no mirror length in [L_min, L_max] meets the power target."""
-
-
 def _density_from_f_beta(
     T_i, T_e, f_beta, beta_max, B_min, fuel, dhe3_fuel_ratio, pb11_fuel_ratio
 ):
@@ -645,7 +642,7 @@ def _net_at_L_T(L, T_i, params, fuel):
     """Net electric power [MW] at fixed L and T_i.
 
     Derives density from the f_beta closed form, runs mirror_0d_forward, then
-    mfe_forward_power_balance. Returns (p_net [MW],).
+    mfe_forward_power_balance. Returns (p_net [MW], n_e [m^-3], T_i [keV]).
     T_e is held fixed from params (the spec: GSS scans T_i with T_e from YAML).
     """
     T_e = params["T_e"]

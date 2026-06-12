@@ -13,6 +13,7 @@ from costingfe.layers.mirror import (
     _V_THI_PREFACTOR,
     MirrorPlasmaState,
     SizingInfeasible,
+    _density_from_f_beta,
     compute_ambipolar_potential,
     compute_tau_classical,
     compute_tau_gas_dynamic,
@@ -888,7 +889,6 @@ class TestMirrorSizing:
             mn=1.1,
             f_dec=0.3,
             p_trit=10.0,
-            enforce_plasma_limits=True,
             f_rad_fus=None,
         )
         p_dhe3 = dict(
@@ -896,7 +896,6 @@ class TestMirrorSizing:
             mn=1.02,
             f_dec=0.6,
             p_trit=0.0,
-            enforce_plasma_limits=False,
             f_rad_fus=0.24,
         )
         L_dt = mirror_size_from_power(p_dt, Fuel.DT)
@@ -905,3 +904,41 @@ class TestMirrorSizing:
             f"D-He3 should need longer chamber than DT, "
             f"got L_DT={L_dt:.1f} m, L_DHE3={L_dhe3:.1f} m"
         )
+
+    @pytest.mark.parametrize(
+        "fuel,T_i,T_e",
+        [
+            (Fuel.DT, 20.0, 20.0),
+            (Fuel.DD, 30.0, 30.0),
+            (Fuel.DHE3, 70.0, 70.0),
+            (Fuel.PB11, 200.0, 200.0),
+        ],
+    )
+    def test_density_from_f_beta_jit_matches_eager_all_fuels(self, fuel, T_i, T_e):
+        """_density_from_f_beta: jit matches eager (rel 1e-4) and gradient is finite."""
+        f_beta = 0.85
+        beta_max = 0.5
+        B_min = 3.0
+        dhe3_fuel_ratio = 1.0
+        pb11_fuel_ratio = 0.15
+
+        def kernel(T_i_arr):
+            return _density_from_f_beta(
+                T_i_arr,
+                T_e,
+                f_beta,
+                beta_max,
+                B_min,
+                fuel,
+                dhe3_fuel_ratio,
+                pb11_fuel_ratio,
+            )
+
+        T_i_arr = jnp.array(T_i)
+        eager_val = float(kernel(T_i_arr))
+        jit_val = float(jax.jit(kernel)(T_i_arr))
+        assert jnp.isfinite(jit_val)
+        assert jit_val == pytest.approx(eager_val, rel=1e-4)
+
+        grad_val = float(jax.grad(kernel)(T_i_arr))
+        assert jnp.isfinite(grad_val)

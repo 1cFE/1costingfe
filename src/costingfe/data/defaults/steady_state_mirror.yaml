@@ -66,7 +66,7 @@ size_from_power: false  # Solve chamber_length from net_electric_mw
 optimize_lcoe: false    # Wrap sizing with an outer LCOE minimization over f_beta
 f_beta: 0.85            # Fraction of beta_max at the sizing operating point
 L_min: 1.0              # Minimum chamber length for bisection [m]
-L_max: 200.0            # Maximum chamber length for bisection [m]
+L_max: 200.0            # Maximum chamber length for bisection [m]; advanced fuels (e.g. D-He3) may need a larger value at comparable power
 f_beta_min: 0.3         # Lower bound for the LCOE-optimizer f_beta search
 f_beta_max: 1.0         # Upper bound for the LCOE-optimizer f_beta search
 

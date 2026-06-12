@@ -69,6 +69,11 @@ class OperatingPointInfeasible(Exception):
     stated geometry violates an error-severity plasma limit (inverse mode)."""
 
 
+class SizingInfeasible(Exception):
+    """Raised when no machine geometry in the search range [x_min, x_max]
+    can deliver the requested net electric power target (sizing mode)."""
+
+
 def event_energies(
     fuel: Fuel,
     dd_f_T: float,

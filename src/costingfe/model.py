@@ -692,6 +692,7 @@ class CostModel:
         L_solved = mirror_size_from_power(solve_params, self.fuel)
 
         # Recover the operating density at the solved L (f_beta boundary).
+        # Re-solve at L_solved because the bisection discards the inner GSS state.
         _pn, _T_star, n_e_star = net_electric_at_L(
             L_solved, solve_params, self.fuel, return_state=True
         )
@@ -737,10 +738,6 @@ class CostModel:
                 d = lo + invphi * h
                 fd = lcoe_of_param(d)
         return 0.5 * (lo + hi)
-
-    # Keep the old name as an alias so any external callers (tests, notebooks)
-    # that reference _optimize_fgw continue to work unchanged.
-    _optimize_fgw = _optimize_gss
 
     def forward(
         self,
@@ -1003,7 +1000,14 @@ class CostModel:
                         "it is solved. Remove it or set size_from_power=False."
                     )
                 if params.get("optimize_lcoe", False):
-                    # Golden-section over f_beta minimizing LCOE
+                    # Outer GSS over f_beta minimizing LCOE.
+                    # Solve-cost profile: _GSS_OPT_ITERS (12) outer f_beta
+                    # evaluations, each triggering a full mirror sizing run
+                    # (_L_BISECT_ITERS=60 bisection steps x _GSS_ITERS=40 T_i
+                    # GSS steps), yielding roughly 30k eager forward/power-balance
+                    # calls per optimize_lcoe run.  Tune _GSS_OPT_ITERS (outer)
+                    # and the sizing knobs in mirror.py to trade off precision
+                    # against wall-clock time.
                     def _lcoe_at_fb(fb):
                         return self.forward(
                             net_electric_mw=net_electric_mw,
@@ -1621,7 +1625,6 @@ class CostModel:
     # input is added; an omission surfaces as a spurious "unknown parameter".
     # Golden-section iterations for LCOE optimization (optimize_lcoe).
     _GSS_OPT_ITERS = 12
-    _FGW_OPT_ITERS = _GSS_OPT_ITERS  # Alias for backward compatibility
 
     _OPTIONAL_OVERRIDE_KEYS = frozenset(
         {

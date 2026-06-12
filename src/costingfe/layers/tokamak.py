@@ -11,8 +11,11 @@ from dataclasses import dataclass
 import jax
 import jax.numpy as jnp
 
-from costingfe.layers.physics import (  # Re-exported for existing importers.
-    OperatingPointInfeasible as OperatingPointInfeasible,  # noqa: F401
+from costingfe.layers.physics import (
+    OperatingPointInfeasible as OperatingPointInfeasible,  # noqa: F401 — re-exported for existing importers
+)
+from costingfe.layers.physics import (
+    SizingInfeasible as SizingInfeasible,  # noqa: F401 — re-exported for existing importers
 )
 from costingfe.layers.physics import (
     ash_neutron_split,
@@ -1034,10 +1037,6 @@ def net_electric_at_R0(R0, params, fuel, return_state=False):
 # ---------------------------------------------------------------------------
 # Outer R0 bisection solver
 # ---------------------------------------------------------------------------
-class SizingInfeasible(Exception):
-    """Raised when no machine in [R0_min, R0_max] meets the power target."""
-
-
 @dataclass(frozen=True)
 class SizingResult:
     """Solved tokamak geometry and operating point from a power target."""
