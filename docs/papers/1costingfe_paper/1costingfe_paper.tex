@@ -1842,11 +1842,14 @@ superconductor but does not enter the ampere-metre quantity),
 $c_{\text{kAm}}$ is the conductor cost per kA-metre, and
 $M_{\text{concept}}$ is a manufacturing markup capturing winding,
 insulation, quench protection, structural casing, cryostat, and testing.
-The mirror $n_{\text{coils}}$ default is 10, calibrated to a Realta
-HAMMIR-class tandem mirror: four end-plug HTS coils (two per end, in
-the Hammer evolution) plus six LTS solenoids discretizing the 50~m
-central cell at conservative pitch. Simple-mirror devices
-(WHAM/BEAM/Anvil) use $n_{\text{coils}} \approx 4$.
+Mirror coils are divided into two classes: $n_{\text{central}} = L /
+d_{\text{coil}}$ central-cell solenoids (continuous, spacing $d_{\text{coil}} = 5$~m
+by default) carrying ampere-metres at the coil design field
+$b_{\text{center}}$, plus $n_{\text{plug}} = 4$ high-field end-plug coils at
+the throat field $R_m B_{\min}$, where $B_{\min}$ is the plasma midplane
+field ($b_{\text{center}}$ and $B_{\min}$ are independent inputs). The
+geometry factor $G = (n_{\text{central}} + n_{\text{plug}}) \cdot 4\pi$
+accumulates over all independent solenoids.
 
 The coil-bore radius $r_{\text{coil}}$ is taken as the outer radius of the
 vacuum vessel from the device's radial build, since in a magnetic-confinement
@@ -1871,7 +1874,7 @@ Concept & Markup & Path factor & Ref.\ coil cost & Rationale \\
 \midrule
 Tokamak     &  3.09$\times$ & 1.0 & \$516M & TF+CS+PF complexity; calibrated at the SPARC-class reference ($B=12$~T, $R_0=3.0$~m, $r_{\text{coil}}=2.95$~m) \\
 Stellarator &  5.87$\times$ & 2.0 & \$2{,}130M & Non-planar 3D coils; $1.9\times$ the tokamak markup, the {NCSX} modular-coil production cost overrun \citep{neilson2010ncsx} \\
-Mirror      &  2.5$\times$ & 1.0 & \$513M & 10 simple solenoids (HAMMIR-class) \\
+Mirror      &  1.786$\times$ & 1.0 & \$513M & Two-class: $n_{\text{central}}=L/d_{\text{coil}}$ central solenoids at $b_{\text{center}}$ plus $n_{\text{plug}}=4$ plug coils at the throat field $R_m B_{\min}$; calibrated at 20~m default \\
 Pulsed FRC  &  1.5$\times$ & 1.0 & n/a & Theta-pinch formation coils \\
 Theta pinch &  1.5$\times$ & 1.0 & n/a & Compression coils \\
 Orbitron    &  1.5$\times$ & 1.0 & n/a & Electrostatic confinement \\
@@ -3765,9 +3768,10 @@ a \texttt{SizingInfeasible} error is raised.
 \label{sec:mirror-coils}
 
 Mirror coil costs are divided into two classes: (i) central-cell
-solenoid coils, with count $n_{\text{central}} = \lfloor L /
-d_{\text{coil}} \rfloor$ growing with chamber length at spacing
-$d_{\text{coil}}$ (default 5~m), and (ii) end-plug coils with fixed
+solenoid coils, with continuous count $n_{\text{central}} = L /
+d_{\text{coil}}$ growing with chamber length at spacing
+$d_{\text{coil}}$ (default 5~m, no rounding so the expression is
+JAX-differentiable), and (ii) end-plug coils with fixed
 count $n_{\text{plug}}$ (default 4, two per end).  The total coil cost
 scales as a linear combination of the two counts, calibrated at the
 YAML default chamber length of 20~m ($n_{\text{central}} = 4$,
