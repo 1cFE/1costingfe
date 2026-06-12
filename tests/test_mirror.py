@@ -942,3 +942,92 @@ class TestMirrorSizing:
 
         grad_val = float(jax.grad(kernel)(T_i_arr))
         assert jnp.isfinite(grad_val)
+
+
+class TestAnchors:
+    """Pin the confinement kernels to published GDT and WHAM literature.
+
+    Provenance and the full derivation of every number below live in
+    docs/account_justification/mirror_confinement.md. Each anchor carries its
+    primary-source citation inline. The 2x tolerance is documented there: the
+    model is a single thermal Maxwellian, while the published formulas are
+    built on beam-driven distributions, so a factor-of-2 band is the
+    appropriate validation gate (these tests pin the model to the literature,
+    not to itself).
+    """
+
+    # Deuterium mass number for both machines.
+    _A_D = 2.0
+
+    def test_gdt_gas_dynamic_anchor(self):
+        """GDT warm-plasma gas-dynamic time vs Endrizzi 2023 eq. 3.5.
+
+        GDT machine (Bagryansky et al. 2015, PRL 114, 205001): central cell
+        7 m mirror-to-mirror, R_m = 35, deuterium. Warm/target plasma in the
+        standard config: T_e = 0.25 keV (Bagryansky 2015), gas-dynamic regime.
+
+        Published value: Endrizzi et al. 2023 (J. Plasma Phys. 89, 975890501)
+        eq. 3.5, tau_GDT = 5.2 * R_m * L_p * T_e^-0.5 us with L_p the plasma
+        half-length (3.5 m). At R_m=35, L_p=3.5, T_e=0.25: 1.27 ms.
+
+        The model kernel uses full length L and ion thermal speed v_thi, so it
+        is intrinsically sqrt(2) larger than eq. 3.5 (see the doc); ratio 1.25.
+        See docs/account_justification/mirror_confinement.md.
+        """
+        gdt_R_m = 35.0  # Bagryansky et al. 2015
+        gdt_L = 7.0  # m, central cell mirror-to-mirror, Bagryansky et al. 2015
+        gdt_T_warm = 0.25  # keV, standard-config warm plasma, Bagryansky 2015
+
+        tau_model = float(
+            compute_tau_gas_dynamic(R_m=gdt_R_m, L=gdt_L, T_i=gdt_T_warm, A=self._A_D)
+        )
+
+        # Published gas-dynamic time, Endrizzi 2023 eq. 3.5 [s].
+        # 5.2 * R_m * L_p * T_e^-0.5 microseconds, L_p = half of 7 m = 3.5 m.
+        gdt_L_p = 3.5
+        tau_published = 5.2e-6 * gdt_R_m * gdt_L_p * gdt_T_warm**-0.5
+
+        ratio = tau_model / tau_published
+        assert 0.5 < ratio < 2.0, (
+            f"GDT gas-dynamic anchor: model {tau_model * 1e3:.2f} ms vs "
+            f"published {tau_published * 1e3:.2f} ms, ratio {ratio:.2f} "
+            "outside 2x; see docs/account_justification/mirror_confinement.md"
+        )
+
+    def test_wham_pastukhov_anchor(self):
+        """WHAM Pastukhov/CM confinement vs Endrizzi 2023 eq. 3.4.
+
+        WHAM design (Endrizzi et al. 2023, J. Plasma Phys. 89, 975890501):
+        17 T HTS mirrors, 0.86 T midplane -> vacuum R_m = 19.8; 25 keV NBI;
+        beta=0.2 equilibrium at n = 0.3e20 m^-3 and 10 keV mean ion energy at
+        the midplane; predicted T_e >= 1 keV.
+
+        Published value: eq. 3.4 (= Forest BEAM 2024 eq. 1.1), classical-mirror
+        scaling n_20 * tau_p = 250 * E_b,100keV^1.5 * log10(R_m) ms. At
+        n_20=0.3, E_b=25 keV, R_m=19.8: 135 ms.
+
+        Model uses a single thermal Maxwellian Pastukhov kernel at the midplane
+        thermal point (T_i=10 keV, T_e=1 keV); ratio 135/88 = 1.53, within 2x.
+        See docs/account_justification/mirror_confinement.md.
+        """
+        wham_R_m = 17.0 / 0.86  # vacuum mirror ratio, Endrizzi 2023 sec. 2.1
+        wham_n = 3.0e19  # m^-3, beta=0.2 equilibrium density, Endrizzi 2023
+        wham_T_i = 10.0  # keV, midplane mean ion energy, Endrizzi 2023
+        wham_T_e = 1.0  # keV, predicted electron temperature, Endrizzi 2023
+
+        tau_ii = compute_tau_ii(wham_n, wham_T_i, self._A_D)
+        phi = compute_ambipolar_potential(wham_T_e, self._A_D)
+        tau_model = float(compute_tau_pastukhov(tau_ii, wham_R_m, phi, wham_T_i))
+
+        # Published Pastukhov/CM time, Endrizzi 2023 eq. 3.4 [s].
+        # n_20 * tau_p = 250 * E_b,100keV^1.5 * log10(R_m) ms.
+        E_b_100 = 25.0 / 100.0  # 25 keV NBI normalized to 100 keV
+        n_20 = wham_n / 1e20
+        tau_published = (250.0 * E_b_100**1.5 * math.log10(wham_R_m) / n_20) * 1e-3
+
+        ratio = tau_published / tau_model
+        assert 0.5 < ratio < 2.0, (
+            f"WHAM Pastukhov anchor: model {tau_model * 1e3:.1f} ms vs "
+            f"published {tau_published * 1e3:.1f} ms, ratio {ratio:.2f} "
+            "outside 2x; see docs/account_justification/mirror_confinement.md"
+        )
