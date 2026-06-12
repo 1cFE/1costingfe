@@ -544,3 +544,130 @@ class TestModelIntegration:
         )
         assert isinstance(r.plasma_state, MirrorPlasmaState)
         assert float(r.plasma_state.dhe3_dd_frac_eff) == pytest.approx(0.25, rel=1e-6)
+
+
+# ---------------------------------------------------------------------------
+# Mirror coil length-scaling tests (Task 5)
+# ---------------------------------------------------------------------------
+
+
+class TestMirrorCoilLengthScaling:
+    """C220103 for the mirror must scale with central-cell length.
+
+    Two-class structure:
+      n_central = chamber_length / coil_spacing  (continuous aggregate)
+      n_plug_coils  at throat field b_plug = R_m * B
+
+    Markup recalibrated so that at the YAML defaults (L=20, coil_spacing=5,
+    n_plug=4, R_m=10, B=3 -> b_plug=30 T) the cost reproduces the
+    doc-validated 513.375 M$ exactly (calibration-neutrality invariant).
+    """
+
+    def _base(self, **overrides):
+        """Mirror forward() at YAML defaults; override any subset of params."""
+        m = CostModel(ConfinementConcept.MIRROR, Fuel.DT)
+        kw = dict(net_electric_mw=500.0, availability=0.87, lifetime_yr=40.0)
+        kw.update(overrides)
+        return m.forward(**kw)
+
+    def test_calibration_neutrality_pin(self):
+        """At YAML defaults (L=20, coil_spacing=5, n_plug=4) C220103 == 513.375.
+
+        Calibration-neutrality pin: the two-class markup is solved so that the
+        YAML default machine reproduces the doc-validated 513.375 M$ exactly.
+        Any change to this number means the calibration algebra is wrong: STOP.
+        """
+        r = self._base()
+        assert r.cas22_detail["C220103"] == pytest.approx(513.375, rel=1e-6)
+
+    def test_lcoe_pin_unchanged(self):
+        """The LCOE pinned value must be preserved exactly after the coil refactor.
+
+        If this fails the calibration is wrong and nothing else can be trusted.
+        """
+        r = self._base()
+        assert r.costs.lcoe == pytest.approx(_MIRROR_DT_PINNED_LCOE, rel=1e-12)
+
+    def test_doubling_length_doubles_central_contribution(self):
+        """Doubling chamber_length doubles the central-coil kA*m (and cost share).
+
+        The plug contribution (fixed n_plug_coils, fixed b_plug) must be
+        UNCHANGED.  We test the contributions, not just the total.
+        """
+        import math
+
+        from costingfe.types import CoilMaterial
+
+        MU0 = 4 * math.pi * 1e-7
+        b_center = 12.0  # from steady_state_mirror.yaml
+        r_bore = 1.85
+        B = 3.0
+        R_m = 10.0
+        b_plug = R_m * B  # 30.0 T
+        n_plug = 4
+        coil_spacing = 5.0
+        cost_per_kAm = CoilMaterial.REBCO_HTS.default_cost_per_kAm  # 50.0
+
+        def _central_cost(L):
+            n_c = L / coil_spacing
+            G = n_c * 4 * math.pi
+            kAm = G * b_center * r_bore**2 / (MU0 * 1000)
+            return kAm * cost_per_kAm / 1e6
+
+        def _plug_cost():
+            G = n_plug * 4 * math.pi
+            kAm = G * b_plug * r_bore**2 / (MU0 * 1000)
+            return kAm * cost_per_kAm / 1e6
+
+        central_20 = _central_cost(20.0)
+        central_40 = _central_cost(40.0)
+        plug = _plug_cost()
+
+        # Central contribution doubles exactly
+        assert abs(central_40 / central_20 - 2.0) < 1e-10, (
+            f"central contribution ratio={central_40 / central_20}, expected 2.0"
+        )
+        # Plug contribution is fixed (same n_plug, same b_plug)
+        assert abs(plug) > 0  # sanity: plug cost is non-zero
+        # Verify the contributions are additive in the full model
+        r_base = self._base(chamber_length=20.0)
+        r_double = self._base(chamber_length=40.0)
+        # Delta from L=20 to L=40 equals one extra central_20 worth (times markup).
+        # (C220103_L40 - C220103_L20) == central_20 * markup
+        from costingfe.defaults import load_costing_constants
+
+        cc = load_costing_constants()
+        markup = cc.coil_markup["mirror"]
+
+        delta_model = float(r_double.cas22_detail["C220103"]) - float(
+            r_base.cas22_detail["C220103"]
+        )
+        delta_expected = central_20 * markup  # one extra n_central's worth
+        assert abs(delta_model - delta_expected) < 1.0, (
+            f"delta={delta_model:.4f} M$, expected {delta_expected:.4f} M$"
+        )
+
+    def test_jax_grad_chamber_length_finite_positive(self):
+        """jax.grad of C220103 w.r.t. chamber_length must be finite and positive.
+
+        Tests via model.sensitivity (reverse-mode AD through the full cost graph)
+        AND via a finite-difference check to confirm direction.
+        """
+        m = CostModel(ConfinementConcept.MIRROR, Fuel.DT)
+        r = m.forward(net_electric_mw=500.0, availability=0.87, lifetime_yr=40.0)
+        # JAX sensitivity: dLCOE/d(chamber_length) should be finite.
+        # chamber_length enters C220103 linearly so the gradient is well-defined.
+        sens = m.sensitivity(r.params)
+        grad_L = float(sens["engineering"]["chamber_length"])
+        assert math.isfinite(grad_L), f"dLCOE/d(chamber_length) is not finite: {grad_L}"
+
+        # Finite-difference check: longer machine -> higher coil cost -> higher LCOE
+        r_lo = self._base(chamber_length=20.0)
+        r_hi = self._base(chamber_length=21.0)
+        c_lo = float(r_lo.cas22_detail["C220103"])
+        c_hi = float(r_hi.cas22_detail["C220103"])
+        dC_dL = c_hi - c_lo
+        assert math.isfinite(dC_dL), "C220103 finite-diff gradient is not finite"
+        assert dC_dL > 0, (
+            f"C220103 must increase with chamber_length, got dC/dL={dC_dL}"
+        )

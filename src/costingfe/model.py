@@ -1101,6 +1101,13 @@ class CostModel:
             stationary_lift_coil_fraction=params.get(
                 "stationary_lift_coil_fraction", 0.10
             ),
+            # Mirror two-class coil params (MIRROR only; ignored for other concepts
+            # because the two-class branch in cas22 is guarded by concept==MIRROR).
+            chamber_length=params.get("chamber_length", 0.0),
+            coil_spacing=params.get("coil_spacing", 0.0),
+            n_plug_coils=int(params.get("n_plug_coils", 0)),
+            R_m=params.get("R_m", 1.0),
+            B=params.get("B", 0.0),
             p_nbi=p_nbi,
             p_ecrh=p_ecrh,
             p_icrf=p_icrf,

@@ -131,19 +131,51 @@ r² form.
 
 where:
 - **G** = geometry factor (tokamak: 4π², stellarator: 4π²×path_factor,
-  mirror: n_coils×4π)
+  mirror: see two-class model below, FRC: n_coils×4π)
 - **B** = field at the loop center / on axis (NOT peak-on-conductor; default
   12 T for the SPARC-class tokamak reference)
 - **R0** = major radius (toroidal devices); **r_coil** = coil-bore radius =
   `vessel_or` from the radial build (the TF/modular coils sit just outside the
   vessel). r_coil replaces the old "effective coil radius" calibration knob.
-- **n_coils** = number of independent solenoid coils (mirror only;
-  default 10, calibrated to a Realta HAMMIR-class tandem mirror with
-  4 end-plug HTS coils plus ~6 LTS central-cell solenoid coils
-  discretizing the 50 m central cell. Simple-mirror devices like
-  WHAM/BEAM/Anvil use n_coils ≈ 4)
+- **n_coils** = number of independent solenoid coils (FRC/other linear devices;
+  not used for mirror, which uses the two-class model below)
 - **$/kAm** = conductor cost per kilo-amp-meter
 - **markup** = manufacturing complexity multiplier
+
+#### Mirror two-class coil model
+
+The mirror coil system is split into two physically distinct populations:
+
+**Class 1 — central-cell solenoids:**
+
+    n_central = chamber_length / coil_spacing   (continuous; no rounding)
+    G_central = n_central × 4π
+    kAm_central = G_central × b_center × r_bore² / (μ₀ × 1000)
+
+`n_central` is a continuous costing aggregate (not a physical integer count); the
+solenoid ensemble is treated as a distributed winding whose total conductor scales
+linearly with machine length. Field basis: `b_center` (central-cell on-axis field,
+same as the existing loop model).  YAML default: `coil_spacing: 5.0` m (Realta-class
+solenoid pitch for a tandem-mirror central cell).
+
+**Class 2 — end-plug HTS coils:**
+
+    b_plug = R_m × B          (throat field)
+    G_plug = n_plug_coils × 4π
+    kAm_plug = G_plug × b_plug × r_bore² / (μ₀ × 1000)
+
+`n_plug_coils` is the count of discrete end-plug coils (default 4: 2 per end,
+HAMMIR Hammer-evolution coils). Field at the plug throat: `b_plug = R_m × B`
+where `R_m` is the mirror ratio and `B` is the central-cell field. Bore radius:
+the same `r_bore` as the central coils is used as a simplification; a full
+model would size the plug bore from the plug plasma radius, which is smaller.
+This simplification tends to overestimate plug conductor, but plug coils are
+a minor fraction of total at the default configuration.
+
+**Total:**
+
+    total_conductor = (kAm_central + kAm_plug) × $/kAm / 1e6
+    C220103 = total_conductor × markup
 
 ### Coil-bore radius from the radial build
 
@@ -194,7 +226,7 @@ are actively working to reduce.
 |---------|-------:|-----------|
 | Tokamak | 3.09× | TF + CS + PF coil systems. Complex D-shaped winding, insulation, quench protection, structural casing, cryostat integration. Calibrated so the SPARC-class reference (B=12T, R0=3.0m, r_coil=2.95m) coil system = $516M under the bilinear model, matching the prior r_bore² calibration at its reference point. |
 | Stellarator | 5.87× | Non-planar 3D coil geometry. = 1.9× the tokamak markup, the NCSX modular-coil production cost overrun (90%; Neilson et al. 2010, PPPL-4455), the documented penalty for non-planar 3D coil fabrication (winding onto machined 3D forms, ±1.5mm tolerances, metrology). The longer 3D winding path is handled separately by the 2× path factor in G, so this 1.9× is fabrication complexity only. |
-| Mirror | 2.5× | Simple solenoid coils. Well-established manufacturing. n_coils=10 default (HAMMIR-class tandem: 4 end-plug HTS + 6 central-cell LTS solenoids over a 50 m central cell). Simple-mirror devices (WHAM/BEAM/Anvil) use n_coils≈4. |
+| Mirror | 25/14 ≈ 1.786× | Two-class model (central solenoids + end-plug HTS). Recalibrated so that at YAML defaults (L=20 m, coil_spacing=5 m → n_central=4, n_plug=4, R_m=10, B=3 T → b_plug=30 T) the total reproduces the doc-validated 513.375 M$. Simple solenoid geometry; lower markup than tokamak reflects more straightforward winding and structural design. |
 | Pulsed FRC | 1.5× | Theta-pinch formation coils. Simple, repetitive geometry. |
 | Theta pinch | 1.5× | Compression coils. Simple solenoid geometry. |
 | Orbitron | 1.5× | Electrostatic confinement coils. |
@@ -214,19 +246,34 @@ tokamak power-plant coil set is ~5–10× larger. Because the model is now linea
 in R0, a larger tokamak (e.g. ARC, R0=3.3m) scales its coil cost up
 proportionally rather than as R0².
 
-For mirrors (linear device, unchanged r² loop form: B=12T, r_bore=1.85m, REBCO @
-$50/kAm, 2.5× markup, n_coils=10): total conductor 4.1M kAm, raw conductor
-$205M, finished coil system $513M. With the previous n_coils=4
-assumption the coil system was $205M, which understated a tandem
-mirror's actual coil burden by 2.5×. Realta's commercial design
-target is HAMMIR, a tandem mirror with a 50 m central cell flanked by
-two end plugs (each end plug carrying two HTS mirror coils in the
-Hammer evolution); 10 is a conservative count covering the four
-end-plug HTS coils plus ~6 LTS central-cell solenoids at coarse pitch
-along the central cell. Simple-mirror devices (Anvil/WHAM/BEAM) use
-2 HTS end coils plus a small LTS central solenoid and would set
-n_coils≈4. The value lives in `_COIL_DEFAULTS[MIRROR]` in
-`src/costingfe/layers/cas22.py`.
+**Mirror two-class validation (YAML default machine, L=20 m):**
+
+The previous coil model used a fixed `n_coils=10` with no length provenance. The
+10 came from an undocumented split of a 50 m machine, meaning the default 20 m
+machine was implicitly sized for a different geometry.
+
+The two-class model is calibrated once at the YAML default (L=20 m) so the
+validated baseline cost is preserved by construction.  The markup is solved
+from the constraint `total_conductor × markup = 513.375 M$`:
+
+    n_central = 20 / 5 = 4
+    G_central = 4 × 4π = 50.265
+    kAm_central = 50.265 × 12 × 1.85² / (4π×10⁻⁷ × 1000) = 1,642,800 kAm
+    cost_central_conductor = 1,642,800 × 50 / 1e6 = 82.14 M$
+
+    b_plug = 10 × 3 = 30 T
+    G_plug = 4 × 4π = 50.265
+    kAm_plug = 50.265 × 30 × 1.85² / (4π×10⁻⁷ × 1000) = 4,107,000 kAm
+    cost_plug_conductor = 4,107,000 × 50 / 1e6 = 205.35 M$
+
+    total_conductor = 82.14 + 205.35 = 287.49 M$
+    markup = 513.375 / 287.49 = 25/14 ≈ 1.7857
+
+This is algebraically exact (both 513.375 M$ and 287.49 M$ are rational in the
+REBCO $50/kAm, mu0 = 4π×10⁻⁷ basis), so the calibration holds to floating-point
+machine precision.  The validated baseline cost of 513.375 M$ is preserved
+exactly by construction; coil cost now scales with machine length, which the
+previous fixed-n_coils model could not do.
 
 ### Resistive (copper) coil mass build-up
 

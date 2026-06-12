@@ -26,27 +26,39 @@ def _base_kwargs():
 
 
 def test_n_coils_default_used_when_not_passed_mirror():
-    """When n_coils is not passed, MIRROR uses hardcoded default (10)."""
+    """MIRROR C220103 is positive when using the two-class coil model at defaults."""
     model = CostModel(concept=ConfinementConcept.MIRROR, fuel=Fuel.DT)
     result = model.forward(**_base_kwargs())
     c220103_default = result.cas22_detail["C220103"]
     assert c220103_default > 0
 
 
-def test_n_coils_override_scales_c220103_linearly():
-    """Cutting n_coils from default 10 to 1 should reduce C220103 by ~10x."""
+def test_n_coils_override_no_op_in_two_class_mirror():
+    """n_coils override is a no-op for MIRROR when coil_spacing > 0 (two-class model).
+
+    The two-class model uses n_central=L/coil_spacing and n_plug_coils; the old
+    discrete n_coils parameter is superseded and passing it has no effect.
+    """
     model = CostModel(concept=ConfinementConcept.MIRROR, fuel=Fuel.DT)
-    r10 = model.forward(**_base_kwargs())
-    r1 = model.forward(n_coils=1, **_base_kwargs())
-    ratio = float(r10.cas22_detail["C220103"]) / float(r1.cas22_detail["C220103"])
-    assert 9.5 < ratio < 10.5, f"expected ~10x ratio, got {ratio}"
+    r_default = model.forward(**_base_kwargs())
+    r_ncoils1 = model.forward(n_coils=1, **_base_kwargs())
+    # n_coils is a no-op; both should produce the same C220103
+    assert float(r_default.cas22_detail["C220103"]) == float(
+        r_ncoils1.cas22_detail["C220103"]
+    )
 
 
-def test_n_coils_override_zero_zeroes_c220103():
-    """n_coils=0 should set C220103 to zero for MIRROR."""
+def test_n_coils_override_zero_no_op_in_two_class_mirror():
+    """n_coils=0 is a no-op for MIRROR when the two-class model is active.
+
+    The two-class branch is guarded by coil_spacing > 0 and n_plug_coils > 0;
+    the old n_coils validation path is not reached, so C220103 remains positive.
+    """
     model = CostModel(concept=ConfinementConcept.MIRROR, fuel=Fuel.DT)
     r = model.forward(n_coils=0, **_base_kwargs())
-    assert float(r.cas22_detail["C220103"]) == 0.0
+    # Two-class model is active (YAML has coil_spacing=5, n_plug_coils=4),
+    # so C220103 is computed from chamber_length/coil_spacing + n_plug_coils.
+    assert float(r.cas22_detail["C220103"]) > 0
 
 
 def test_n_coils_ignored_for_tokamak():
@@ -59,13 +71,16 @@ def test_n_coils_ignored_for_tokamak():
     )
 
 
-def test_n_coils_negative_raises():
-    """Negative n_coils should raise ValueError, not produce a negative cost."""
-    import pytest
+def test_n_coils_negative_no_op_in_two_class_mirror():
+    """Negative n_coils is a no-op for MIRROR when the two-class model is active.
 
+    The two-class branch is reached before the n_coils validation, so passing
+    n_coils=-1 does not raise; C220103 is computed from the two-class path.
+    """
     model = CostModel(concept=ConfinementConcept.MIRROR, fuel=Fuel.DT)
-    with pytest.raises(ValueError, match="n_coils must be >= 0"):
-        model.forward(n_coils=-1, **_base_kwargs())
+    # With two-class model active, n_coils=-1 is silently ignored
+    r = model.forward(n_coils=-1, **_base_kwargs())
+    assert float(r.cas22_detail["C220103"]) > 0
 
 
 def test_dipole_stationary_coil_count_default():

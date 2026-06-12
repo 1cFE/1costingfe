@@ -496,17 +496,20 @@ def test_cas220103_stellarator_higher_than_tokamak():
     assert stell["C220103"] > tok["C220103"]
 
 
-def test_cas220103_mirror_comparable_to_compact_tokamak():
-    """At compact-tokamak scale (R0=3.0, the SPARC/CATF reference class) the
-    mirror's coil cost (low 2.5x markup, offset by n_coils=10 HAMMIR-class
-    solenoids on the r^2 loop model) lands within ~20% of the tokamak's; the
-    mirror's overall advantage comes from BOP/blanket simplicity, not C220103.
-    Note this is size-dependent under the bilinear toroidal model: a LARGER
-    tokamak's coils scale with R0 and come to dominate the mirror's (see
-    test_cas220103_toroidal_scales_linearly_with_R0_and_r_coil)."""
+def test_cas220103_mirror_cheaper_than_compact_tokamak():
+    """At compact-tokamak scale (R0=3.0, SPARC/CATF class) the mirror's coil
+    cost is substantially cheaper than the tokamak's under the recalibrated
+    two-class markup (25/14 vs the old 2.5).  The _make_cas22_coil helper calls
+    cas22 directly without the YAML coil-spacing params, so it exercises the
+    legacy fallback path (n_coils=10, new markup).  The mirror is cheaper
+    because the lower recalibrated markup more than offsets the n_coils=10 count
+    vs. the tokamak's bilinear R0*r_coil model at compact scale.  The
+    mirror's overall economic advantage vs. a tokamak comes from BOP and
+    blanket simplicity, not from C220103."""
     tok = _make_cas22_coil(concept=ConfinementConcept.TOKAMAK, R0=3.0)
     mir = _make_cas22_coil(concept=ConfinementConcept.MIRROR)
-    assert 0.8 < mir["C220103"] / tok["C220103"] < 1.2
+    # Mirror ~0.5-0.7x tokamak at compact scale with recalibrated markup
+    assert 0.4 < mir["C220103"] / tok["C220103"] < 0.8
 
 
 def test_cas220103_material_affects_cost():

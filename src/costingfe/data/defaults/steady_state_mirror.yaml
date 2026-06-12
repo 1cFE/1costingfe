@@ -50,6 +50,10 @@ tau_ratio: 3.0  # Impurity confinement time / energy confinement time
 seeded_impurities: {}  # Deliberate impurities, e.g. {Ar: 0.002}
 R_w: 0.4  # Wall reflectivity for synchrotron (lower — open ends)
 
+# Mirror coil geometry — central-cell length scaling
+coil_spacing: 5.0    # Central-cell solenoid spacing [m] (Realta-class pitch)
+n_plug_coils: 4      # Number of end-plug HTS coils (2 per end, HAMMIR class)
+
 # Mirror 0D model parameters
 R_m: 10.0  # Mirror ratio B_max_throat / B_min (dimensionless)
 T_i: 20.0  # Ion temperature [keV]; forward-mode 0D input (inverse mode solves T_i)

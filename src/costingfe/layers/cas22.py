@@ -175,6 +175,12 @@ def cas22_reactor_plant_equipment(
     lev_coil_cryostat_cost: float | None = None,
     stationary_lift_coil_fraction: float = 0.10,
     blanket_fill: BlanketFill | None = None,
+    # Mirror two-class coil params (MIRROR only; ignored for all other concepts)
+    chamber_length: float = 0.0,  # Central-cell length [m]
+    coil_spacing: float = 0.0,  # Central-cell solenoid spacing [m]
+    n_plug_coils: int = 0,  # Number of end-plug coils
+    R_m: float = 1.0,  # Mirror ratio B_throat / B_min (for b_plug)
+    B: float = 0.0,  # Central magnetic field [T] (for b_plug = R_m * B)
     # Bottom-up target-factory capital (CAS22.01.08, IFE/MIF), M$, three terms:
     #   cap_fixed       -- building + tritium-confinement shell + base line (fixed)
     #   cap_per_hz       -- production lines, scale with target throughput (f_rep)
@@ -314,6 +320,41 @@ def cas22_reactor_plant_equipment(
         if defaults is None:
             # No confinement magnets (IFE drivers, magnet-free pulsed)
             c220103 = 0.0
+        elif (
+            concept == ConfinementConcept.MIRROR
+            and coil_spacing > 0
+            and n_plug_coils > 0
+        ):
+            # -----------------------------------------------------------
+            # Mirror two-class coil model (length-scaling).
+            #
+            # Class 1 — central-cell solenoids:
+            #   n_central = chamber_length / coil_spacing  (continuous
+            #   aggregate; no rounding — this is a costing quantity, not a
+            #   physical integer). Field basis: b_center (central-cell field),
+            #   same as the existing loop model. G = n_central * 4*pi.
+            #
+            # Class 2 — end-plug HTS coils:
+            #   n_plug_coils at throat field b_plug = R_m * B.  Same r_bore
+            #   as central coils (simplification documented in
+            #   docs/account_justification/CAS22_reactor_components.md).
+            #   G_plug = n_plug_coils * 4*pi.
+            #
+            # Markup recalibrated (costing_constants.yaml, mirror: 25/14) so
+            # that at YAML defaults (L=20, coil_spacing=5, n_plug=4, R_m=10,
+            # B=3 -> b_plug=30 T) the total reproduces 513.375 M$ exactly
+            # (calibration-neutrality invariant; see account justification doc).
+            # -----------------------------------------------------------
+            coil_markup = cc.coil_markup[concept.value]
+            n_central = chamber_length / coil_spacing
+            b_plug = R_m * B
+            G_central = n_central * 4 * math.pi
+            G_plug = n_plug_coils * 4 * math.pi
+            kAm_central = G_central * b_center * r_bore**2 / (_MU0 * 1000)
+            kAm_plug = G_plug * b_plug * r_bore**2 / (_MU0 * 1000)
+            cond_per_kAm = coil_material.default_cost_per_kAm
+            total_conductor = (kAm_central + kAm_plug) * cond_per_kAm / 1e6
+            c220103 = total_conductor * coil_markup
         else:
             # Manufacturing markup is a calibration constant from
             # costing_constants.yaml (coil_markup), keyed by concept.
