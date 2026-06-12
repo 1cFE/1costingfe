@@ -1,72 +1,81 @@
 # Default engineering parameters for MFE mirror
 # Mirrors: simple geometry, high beta, end-loss DEC opportunity
 
-p_input: 40.0       # Heating power [MW] (NBI-dominated)
+p_input: 40.0  # Heating power [MW] (NBI-dominated)
 
 # Heating mix for CAS22 costing (must sum to p_input)
-p_nbi: 40.0         # NBI heating [MW] (primary heating for mirror)
-p_ecrh: 0.0         # ECRH heating [MW]
-p_icrf: 0.0         # ICRF heating [MW]
-p_lhcd: 0.0         # LHCD heating [MW]
+p_nbi: 40.0  # NBI heating [MW] (primary heating for mirror)
+p_ecrh: 0.0  # ECRH heating [MW]
+p_icrf: 0.0  # ICRF heating [MW]
+p_lhcd: 0.0  # LHCD heating [MW]
 
-mn: 1.1             # Neutron energy multiplier
-eta_p: 0.5          # Pumping efficiency
-eta_couple: 0.8333   # NBI coupling; eta_pin = 0.60 x 0.8333 = 0.50
-eta_de: 0.60        # DEC efficiency (end-plug DEC)
-f_sub: 0.03         # Subsystem power fraction
-f_dec: 0.3          # DEC fraction (significant end-loss recovery)
-p_coils: 5.0        # Coil power [MW] (solenoid + mirror coils)
-p_cool: 20.0        # Cooling power [MW]
-p_pump: 1.5         # Pumping power [MW]
-p_trit: 10.0        # Tritium processing power [MW]
-p_house: 4.0        # Housekeeping power [MW]
-p_cryo: 1.0         # Cryogenic power [MW]
+mn: 1.1  # Neutron energy multiplier
+eta_p: 0.5  # Pumping efficiency
+eta_couple: 0.8333  # NBI coupling; eta_pin = 0.60 x 0.8333 = 0.50
+eta_de: 0.60  # DEC efficiency (end-plug DEC)
+f_sub: 0.03  # Subsystem power fraction
+f_dec: 0.3  # DEC fraction (significant end-loss recovery)
+p_coils: 5.0  # Coil power [MW] (solenoid + mirror coils)
+p_cool: 20.0  # Cooling power [MW]
+p_pump: 1.5  # Pumping power [MW]
+p_trit: 10.0  # Tritium processing power [MW]
+p_house: 4.0  # Housekeeping power [MW]
+p_cryo: 1.0  # Cryogenic power [MW]
 
 # Coil parameters (see steady_state_tokamak.yaml for the b_center / r_bore
 # convention).
-b_center: 12.0       # Field at coil center [T]
-r_bore: 1.85         # Effective winding bore radius [m]
+b_center: 12.0  # Field at coil center [T]
+r_bore: 1.85  # Effective winding bore radius [m]
 coil_material: rebco_hts  # HTS REBCO end-plug coils (LTS central-cell folded into same conductor cost basis)
 
 # Radial build geometry [m]
-R0: 0.0          # Not used for cylinder
-plasma_t: 1.5        # Plasma radius
-elon: 1.0            # Not used for cylinder (circular cross-section)
-chamber_length: 20.0 # Chamber length
-blanket_t: 0.80      # Blanket thickness (DT breeding requirement)
-ht_shield_t: 0.20    # High-temperature shield
-structure_t: 0.15    # Primary structure
-vessel_t: 0.10       # Vacuum vessel
+R0: 0.0  # Not used for cylinder
+plasma_t: 1.5  # Plasma radius
+elon: 1.0  # Not used for cylinder (circular cross-section)
+chamber_length: 20.0  # Chamber length
+blanket_t: 0.80  # Blanket thickness (DT breeding requirement)
+ht_shield_t: 0.20  # High-temperature shield
+structure_t: 0.15  # Primary structure
+vessel_t: 0.10  # Vacuum vessel
 vac_op_pressure_pa: 0.02  # Open-field-line device: low neutral pressure to limit
-                          # charge-exchange losses -> high pumping speed required
+# charge-exchange losses -> high pumping speed required
 
 # Construction
 construction_time_yr: 5.0  # Years (simpler geometry)
 
 # Impurity model
-wall_material: W       # Wall material: W, C, Be, Mo, SiC, Li
-T_edge: 0.2            # Edge ion temperature at wall [keV] (200 eV, open field lines)
-tau_ratio: 3.0         # Impurity confinement time / energy confinement time
+wall_material: W  # Wall material: W, C, Be, Mo, SiC, Li
+T_edge: 0.2  # Edge ion temperature at wall [keV] (200 eV, open field lines)
+tau_ratio: 3.0  # Impurity confinement time / energy confinement time
 seeded_impurities: {}  # Deliberate impurities, e.g. {Ar: 0.002}
-R_w: 0.4               # Wall reflectivity for synchrotron (lower — open ends)
+R_w: 0.4  # Wall reflectivity for synchrotron (lower — open ends)
+
+# Mirror 0D model parameters
+R_m: 10.0  # Mirror ratio B_max_throat / B_min (dimensionless)
+T_i: 20.0  # Ion temperature [keV]; forward-mode 0D input (inverse mode solves T_i)
+beta_max: 0.5  # MHD stability limit on midplane beta (user constraint)
+use_0d_model: false  # Opt-in 0D mirror physics model (flip after anchor validation)
+enforce_plasma_limits: true  # Raise OperatingPointInfeasible when beta > beta_max
 
 # Plasma parameters for radiation calculation
-n_e: 5.0e+19        # Electron density [m^-3]
-T_e: 20.0           # Electron temperature [keV]
-Z_eff: 1.2          # Effective charge
-plasma_volume: 200.0 # Plasma volume [m^3]
-radiation_peaking_factor: 1.0   # Uniform profile, no emission-measure correction
-B: 3.0              # Central magnetic field [T]
+n_e: 5.0e19  # Electron density [m^-3]
+T_e: 20.0  # Electron temperature [keV]
+Z_eff: 1.2  # Effective charge
+plasma_volume: 200.0  # Plasma volume [m^3]
+radiation_peaking_factor: 1.0  # Uniform profile, no emission-measure correction
+B: 3.0  # Central magnetic field [T]
 
 # Fuel burn fraction defaults (physics.py ash_neutron_split)
-burn_fraction: 0.05      # Single-pass burn fraction (MFE-class)
-fuel_recovery: 0.99         # Fraction of unburned fuel recovered and recycled (NOAK)
+burn_fraction: 0.05  # Single-pass burn fraction (MFE-class)
+fuel_recovery: 0.99  # Fraction of unburned fuel recovered and recycled (NOAK)
 dd_f_T: 0.969
 dd_f_He3: 0.689
 dhe3_dd_frac: 0.131
 dhe3_f_T: 0.5
 pb11_f_alpha_n: 0.0
 pb11_f_p_n: 0.0
+dhe3_fuel_ratio: 1.0  # D-He3 mix n_He3/n_D (quasineutrality dilution; 1.0 = 50:50)
+pb11_fuel_ratio: 0.15  # p-B11 mix n_B/n_p (lean boron; to be calibrated)
 
 # Blanket configuration
 blanket_form: liquid_metal

@@ -36,6 +36,9 @@ from costingfe.layers.costs import (
 )
 from costingfe.layers.economics import compute_lcoe
 from costingfe.layers.geometry import RadialBuild, compute_geometry
+from costingfe.layers.mirror import (
+    mirror_0d_inverse,
+)
 from costingfe.layers.physics import (
     mfe_forward_power_balance,
     mfe_inverse_power_balance,
@@ -164,10 +167,12 @@ class CostModel:
         params = {**params, "eta_pin": self._effective_eta_pin(params)}
         p_net_per_mod = params["net_electric_mw"] / n_mod
 
-        # 0D tokamak branch
+        # 0D dispatch: tokamak or mirror branch
         use_0d = params.get("use_0d_model", False)
         if use_0d and self.concept == ConfinementConcept.TOKAMAK:
             return self._power_balance_0d(params, n_mod)
+        if use_0d and self.concept == ConfinementConcept.MIRROR:
+            return self._power_balance_mirror_0d(params, n_mod)
 
         if self.family == ConfinementFamily.STEADY_STATE:
             # Parse impurity model params
@@ -469,6 +474,80 @@ class CostModel:
                 **base_frac_kw,
                 **kernel_kw,
             )
+
+        self._plasma_state = plasma_state
+        return pt
+
+    def _power_balance_mirror_0d(self, params, n_mod):
+        """0D mirror power balance: derives p_fus from mirror plasma physics.
+
+        Maps YAML params to mirror_0d_inverse, stores the resulting
+        MirrorPlasmaState on self._plasma_state, and returns the PowerTable.
+        Parameter mapping per the spec:
+          chamber_length -> L, plasma_t -> a, B -> B_min, R_m -> R_m.
+        R_w comes from YAML (0.4 for mirrors per the open-ended radiation
+        geometry). Synchrotron geometry (R_eff = L / 2pi) is handled inside
+        mirror_0d_inverse / mirror_0d_forward; do not remap here.
+        """
+        L = params["chamber_length"]
+        a = params["plasma_t"]
+        B_min = params["B"]
+        R_m = params["R_m"]
+        T_e = params["T_e"]
+
+        def _to_num(v):
+            return float(v) if isinstance(v, str) else v
+
+        # Parse impurity model for the mirror power balance
+        wm_raw = params.get("wall_material")
+        wall_mat = None
+        if wm_raw is not None:
+            wall_mat = WallMaterial(wm_raw) if isinstance(wm_raw, str) else wm_raw
+
+        plasma_state, pt = mirror_0d_inverse(
+            p_net_target=params["net_electric_mw"],
+            L=L,
+            a=a,
+            B_min=B_min,
+            R_m=R_m,
+            n_e=_to_num(params["n_e"]),
+            T_e=_to_num(T_e),
+            fuel=self.fuel,
+            M_ion=params.get("M_ion", 2.5),
+            Z_eff=_to_num(params["Z_eff"]),
+            R_w=params["R_w"],
+            p_input=params["p_input"],
+            mn=params["mn"],
+            eta_th=params["eta_th"],
+            eta_p=params["eta_p"],
+            eta_pin=params["eta_pin"],
+            eta_de=params["eta_de"],
+            f_sub=params["f_sub"],
+            f_dec=params["f_dec"],
+            p_coils=params["p_coils"],
+            p_cool=params["p_cool"],
+            p_pump=params["p_pump"],
+            p_trit=params["p_trit"],
+            p_house=params["p_house"],
+            p_cryo=params["p_cryo"],
+            n_mod=n_mod,
+            dd_f_T=params["dd_f_T"],
+            dd_f_He3=params["dd_f_He3"],
+            dhe3_dd_frac=params["dhe3_dd_frac"],
+            dhe3_f_T=params["dhe3_f_T"],
+            dhe3_f_He3=self._dhe3_f_He3_eff(params),
+            pb11_f_alpha_n=params["pb11_f_alpha_n"],
+            pb11_f_p_n=params["pb11_f_p_n"],
+            dhe3_fuel_ratio=params["dhe3_fuel_ratio"],
+            pb11_fuel_ratio=params["pb11_fuel_ratio"],
+            dhe3_dd_frac_pin=params["dhe3_dd_frac_pin"],
+            wall_material=wall_mat,
+            T_edge=params["T_edge"],
+            tau_ratio=params["tau_ratio"],
+            f_rad_fus=params.get("f_rad_fus"),
+            beta_max=params["beta_max"],
+            enforce_plasma_limits=params["enforce_plasma_limits"],
+        )
 
         self._plasma_state = plasma_state
         return pt
@@ -783,23 +862,27 @@ class CostModel:
                 if k not in overrides:
                     params[k] = v
 
-        # Multi-fuel kernel inputs for the tokamak 0D/sizing paths: effective
-        # Z_eff (fuel-ion contribution + impurity excess over hydrogenic), the
+        # Multi-fuel kernel inputs for the 0D/sizing paths: effective Z_eff
+        # (fuel-ion contribution + impurity excess over hydrogenic), the
         # dhe3_dd_frac pin (explicit user override -> pinned; otherwise derived
         # at the operating point), non-DT operating-temperature brackets, and
-        # the per-fuel radiation proxy (mirrors the non-0D path: pb11/dhe3
-        # default to cc.f_rad_fus, DT/DD to None -> full radiation model).
+        # the per-fuel radiation proxy (pb11/dhe3 default to cc.f_rad_fus,
+        # DT/DD to None -> full radiation model).
+        # T brackets are concept-specific: tokamak uses _T_BRACKET_DEFAULTS;
+        # the mirror bracket lives inside mirror_0d_inverse (_T_BRACKET_MIRROR).
+        _0d_concepts = {ConfinementConcept.TOKAMAK, ConfinementConcept.MIRROR}
         if (use_0d or params.get("size_from_power", False)) and (
-            self.concept == ConfinementConcept.TOKAMAK
+            self.concept in _0d_concepts
         ):
             if self.fuel != Fuel.DT:
                 params["Z_eff"] = z_eff_fuel(
                     self.fuel, params["dhe3_fuel_ratio"], params["pb11_fuel_ratio"]
                 ) + (params["Z_eff"] - 1.0)
-                if "T_min" not in overrides:
-                    params["T_min"] = _T_BRACKET_DEFAULTS[self.fuel][0]
-                if "T_max" not in overrides:
-                    params["T_max"] = _T_BRACKET_DEFAULTS[self.fuel][1]
+                if self.concept == ConfinementConcept.TOKAMAK:
+                    if "T_min" not in overrides:
+                        params["T_min"] = _T_BRACKET_DEFAULTS[self.fuel][0]
+                    if "T_max" not in overrides:
+                        params["T_max"] = _T_BRACKET_DEFAULTS[self.fuel][1]
             params["dhe3_dd_frac_pin"] = overrides.get("dhe3_dd_frac")
             if "f_rad_fus" not in params:
                 params["f_rad_fus"] = self.cc.f_rad_fus(self.fuel)
@@ -1125,10 +1208,15 @@ class CostModel:
         total_capital = overnight_cost + c60
 
         # Layer 5: Economics
-        # Apply disruption penalty when 0D model is active
+        # Apply disruption penalty for tokamak 0D/sizing runs only.
+        # MirrorPlasmaState has no disruption_rate field; guard by concept so
+        # a mirror 0D run never reaches the tokamak-specific penalty path.
         core_lt = cc.core_lifetime(self.fuel)
         avail_eff = availability
-        if self._plasma_state is not None:
+        if (
+            self._plasma_state is not None
+            and self.concept == ConfinementConcept.TOKAMAK
+        ):
             dm = DisruptionModel(
                 rate_base=params["disruption_rate_base"],
                 steepness=params["disruption_steepness"],

@@ -20,7 +20,8 @@ from costingfe.layers.mirror import (
     mirror_0d_inverse,
 )
 from costingfe.layers.physics import OperatingPointInfeasible
-from costingfe.types import Fuel
+from costingfe.model import CostModel
+from costingfe.types import ConfinementConcept, Fuel
 
 _N = 1.0e20  # m^-3
 _TI = 20.0  # keV
@@ -410,3 +411,136 @@ class TestInverse:
         )
         assert isinstance(state, MirrorPlasmaState)
         assert float(pt.p_net) == pytest.approx(20.0, rel=0.05)
+
+
+# ---------------------------------------------------------------------------
+# Model-integration tests (CostModel dispatch)
+# ---------------------------------------------------------------------------
+
+# Pinned LCOE for the mirror default path (use_0d_model=False).
+# Captured from branch tip aa7eef8 before any model.py changes; guards that
+# the 0D opt-in default does NOT alter the existing non-0D path.
+_MIRROR_DT_PINNED_LCOE = 93.643616  # $/MWh at 500 MW, avail=0.87, lifetime=40 yr
+
+
+class TestModelIntegration:
+    def test_default_path_bit_identical(self):
+        """use_0d_model=False (default) must produce the pinned LCOE exactly."""
+        m = CostModel(ConfinementConcept.MIRROR, Fuel.DT)
+        r = m.forward(net_electric_mw=500.0, availability=0.87, lifetime_yr=40.0)
+        # Exact equality: same deterministic float path, no solver involved.
+        # Pinned value is float32; rel=1e-12 is tighter than float32 epsilon,
+        # so this is bit-identity in practice.
+        assert r.costs.lcoe == pytest.approx(_MIRROR_DT_PINNED_LCOE, rel=1e-12)
+
+    def test_0d_mirror_produces_finite_lcoe(self):
+        """use_0d_model=True produces a finite LCOE for DT mirror."""
+        m = CostModel(ConfinementConcept.MIRROR, Fuel.DT)
+        r = m.forward(
+            net_electric_mw=500.0,
+            availability=0.87,
+            lifetime_yr=40.0,
+            use_0d_model=True,
+            # Override geometry to match a machine that can reach 500 MW net:
+            # large central cell, adequate density, tight-enough n_e for p_fus.
+            chamber_length=80.0,
+            plasma_t=0.8,
+            B=3.0,
+            R_m=10.0,
+            n_e=2.0e20,
+            T_e=20.0,
+            T_i=20.0,
+            beta_max=0.5,
+        )
+        assert math.isfinite(r.costs.lcoe)
+        assert r.costs.lcoe > 0.0
+        assert isinstance(r.plasma_state, MirrorPlasmaState)
+
+    def test_0d_mirror_plasma_state_attached(self):
+        """ForwardResult.plasma_state is a MirrorPlasmaState when use_0d_model=True."""
+        m = CostModel(ConfinementConcept.MIRROR, Fuel.DT)
+        r = m.forward(
+            net_electric_mw=500.0,
+            availability=0.87,
+            lifetime_yr=40.0,
+            use_0d_model=True,
+            chamber_length=80.0,
+            plasma_t=0.8,
+            B=3.0,
+            R_m=10.0,
+            n_e=2.0e20,
+            T_e=20.0,
+            T_i=20.0,
+            beta_max=0.5,
+        )
+        ps = r.plasma_state
+        assert isinstance(ps, MirrorPlasmaState)
+        assert math.isfinite(float(ps.T_i))
+        assert float(ps.T_i) > 0.0
+
+    def test_0d_mirror_no_disruption_penalty(self):
+        """MirrorPlasmaState carries no disruption_rate field, and the model's
+        disruption block is concept-gated, so a mirror 0D run completes without
+        AttributeError and r.plasma_state has no disruption_rate attribute.
+        """
+        m = CostModel(ConfinementConcept.MIRROR, Fuel.DT)
+        r = m.forward(
+            net_electric_mw=500.0,
+            availability=0.87,
+            lifetime_yr=40.0,
+            use_0d_model=True,
+            chamber_length=80.0,
+            plasma_t=0.8,
+            B=3.0,
+            R_m=10.0,
+            n_e=2.0e20,
+            T_e=20.0,
+            T_i=20.0,
+            beta_max=0.5,
+        )
+        # Forward completed without AttributeError -> disruption gate is guarded.
+        # Also: plasma_state carries no disruption_rate field.
+        assert not hasattr(r.plasma_state, "disruption_rate")
+
+    def test_0d_mirror_dhe3_uses_f_rad_fus_proxy(self):
+        """D-He3 mirror 0D run uses the f_rad_fus proxy by default."""
+        m = CostModel(ConfinementConcept.MIRROR, Fuel.DHE3)
+        r = m.forward(
+            net_electric_mw=100.0,
+            availability=0.87,
+            lifetime_yr=40.0,
+            use_0d_model=True,
+            chamber_length=80.0,
+            plasma_t=0.8,
+            B=5.0,
+            R_m=30.0,
+            n_e=5.0e20,
+            T_e=50.0,
+            T_i=50.0,
+            beta_max=0.6,
+            enforce_plasma_limits=False,
+        )
+        assert isinstance(r.plasma_state, MirrorPlasmaState)
+        assert math.isfinite(r.costs.lcoe)
+
+    def test_0d_mirror_dhe3_explicit_pin(self):
+        """Explicit dhe3_dd_frac override pins the side-channel fraction."""
+        m = CostModel(ConfinementConcept.MIRROR, Fuel.DHE3)
+        r = m.forward(
+            net_electric_mw=100.0,
+            availability=0.87,
+            lifetime_yr=40.0,
+            use_0d_model=True,
+            chamber_length=80.0,
+            plasma_t=0.8,
+            B=5.0,
+            R_m=30.0,
+            n_e=5.0e20,
+            T_e=50.0,
+            T_i=50.0,
+            beta_max=0.6,
+            enforce_plasma_limits=False,
+            dhe3_dd_frac=0.25,
+        )
+        assert isinstance(r.plasma_state, MirrorPlasmaState)
+        assert float(r.plasma_state.dhe3_dd_frac_eff) == pytest.approx(0.25, rel=1e-6)

@@ -250,17 +250,22 @@ class CostingInput(BaseModel):
                 "steady-state concept requires either eta_pin or eta_couple"
             )
 
-        # 0D model requires q95 and f_GW
+        # 0D model concept restrictions and required parameters
         if self.use_0d_model:
-            if self.concept != ConfinementConcept.TOKAMAK:
-                raise ValueError("use_0d_model is only supported for TOKAMAK concept")
-            od_missing = []
-            if self.q95 is None:
-                od_missing.append("q95")
-            if self.f_GW is None:
-                od_missing.append("f_GW")
-            if od_missing:
-                raise ValueError(f"0D model requires: {', '.join(od_missing)}")
+            _SUPPORTED_0D = {ConfinementConcept.TOKAMAK, ConfinementConcept.MIRROR}
+            if self.concept not in _SUPPORTED_0D:
+                raise ValueError(
+                    f"use_0d_model is only supported for "
+                    f"{', '.join(c.value for c in _SUPPORTED_0D)} concepts"
+                )
+            if self.concept == ConfinementConcept.TOKAMAK:
+                od_missing = []
+                if self.q95 is None:
+                    od_missing.append("q95")
+                if self.f_GW is None:
+                    od_missing.append("f_GW")
+                if od_missing:
+                    raise ValueError(f"0D model requires: {', '.join(od_missing)}")
 
         return self
 
