@@ -40,10 +40,12 @@ _LN_LAMBDA = 17.0  # Coulomb logarithm, fusion-relevant plasmas
 _M_P_OVER_M_E = 1836.15267  # Proton-to-electron mass ratio
 _WALL_LOADING_MAX = 5.0  # MW/m^2, matches tokamak PlasmaLimits.wall_loading_max
 
-# Ion-ion collision time prefactor [s] for T in keV, n in m^-3.
+# Ion-ion collision time prefactor [s] for T in keV, n in 1e20 m^-3 units.
 # Derived from NRL formula: tau_ii = 2.09e13 * A^0.5 * T_eV^1.5 / (n * lnL)
-# (T_eV = T_keV * 1e3) -> multiply by (1e3)^1.5 to accept T in keV:
-_TAU_II_PREFACTOR = 2.09e13 * (1.0e3) ** 1.5  # 6.609e17 s * m^3 / (keV^1.5)
+# (T_eV = T_keV * 1e3) -> multiply by (1e3)^1.5 to accept T in keV; the 1e-20
+# density rescale folds in so the constant is benign and every intermediate
+# stays near unity in float32 (XLA constant-gathering hazard, see reactivity.py):
+_TAU_II_PREFACTOR_20 = 2.09e13 * (1.0e3) ** 1.5 * 1e-20  # 6.609e-3
 
 # Thermal ion speed prefactor [m/s per sqrt(keV/amu)].
 # v_thi = sqrt(2 * T_keV * KEV_TO_J / (A * m_p)) = _V_THI_PREFACTOR * sqrt(T_keV / A)
@@ -95,9 +97,11 @@ def compute_tau_ii(n_i, T_i, A):
     """Ion-ion collision time [s]. tau_ii ~ T^1.5 sqrt(A) / n.
 
     n_i in m^-3, T_i in [keV], A is ion mass number.
-    NRL formulary (Huba), Z = 1.
+    NRL formulary (Huba), Z = 1. Internally n is rescaled to 1e20 m^-3
+    units so all intermediates stay near unity in float32.
     """
-    return _TAU_II_PREFACTOR * T_i**1.5 * jnp.sqrt(A) / (n_i * _LN_LAMBDA)
+    n20 = n_i * 1e-20
+    return _TAU_II_PREFACTOR_20 * T_i**1.5 * jnp.sqrt(A) / (n20 * _LN_LAMBDA)
 
 
 def compute_ambipolar_potential(T_e, A):
