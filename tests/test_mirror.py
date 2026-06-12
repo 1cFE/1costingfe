@@ -7,9 +7,12 @@ import jax.numpy as jnp
 import pytest
 
 from costingfe.layers.mirror import (
+    _KEV_TO_J,
+    _MU_0,
     _RHO_I_PREFACTOR,
     _V_THI_PREFACTOR,
     MirrorPlasmaState,
+    SizingInfeasible,
     compute_ambipolar_potential,
     compute_tau_classical,
     compute_tau_gas_dynamic,
@@ -18,8 +21,11 @@ from costingfe.layers.mirror import (
     compute_tau_radial,
     mirror_0d_forward,
     mirror_0d_inverse,
+    mirror_size_from_power,
+    net_electric_at_L,
 )
 from costingfe.layers.physics import OperatingPointInfeasible
+from costingfe.layers.reactivity import n_i_over_n_e
 from costingfe.model import CostModel
 from costingfe.types import ConfinementConcept, Fuel
 
@@ -669,4 +675,233 @@ class TestMirrorCoilLengthScaling:
         assert math.isfinite(dC_dL), "C220103 finite-diff gradient is not finite"
         assert dC_dL > 0, (
             f"C220103 must increase with chamber_length, got dC/dL={dC_dL}"
+        )
+
+
+# ---------------------------------------------------------------------------
+# Mirror length sizing tests (Task 6)
+# ---------------------------------------------------------------------------
+
+# Shared sizing params: WHAM/Realta-class mirror geometry inputs (fixed).
+# The sizing solve only finds L; a, B, R_m stay as-is.
+_SZ_A = 0.4  # plasma radius [m]
+_SZ_B = 3.0  # midplane field [T]
+_SZ_R_M = 10.0  # mirror ratio
+_SZ_T_E = 20.0  # electron temperature [keV] (held fixed; GSS scans T_i)
+_SZ_F_BETA = 0.85
+_SZ_BETA_MAX = 0.5
+_SZ_L_MIN = 1.0
+_SZ_L_MAX = 200.0
+
+
+def _sz_params(
+    net_mw=200.0,
+    f_beta=_SZ_F_BETA,
+    fuel=Fuel.DT,
+    f_rad_fus=None,
+):
+    """Build a minimal sizing params dict that mirror_size_from_power accepts."""
+    return dict(
+        net_electric_mw=net_mw,
+        a=_SZ_A,
+        B_min=_SZ_B,
+        R_m=_SZ_R_M,
+        T_e=_SZ_T_E,
+        f_beta=f_beta,
+        beta_max=_SZ_BETA_MAX,
+        L_min=_SZ_L_MIN,
+        L_max=_SZ_L_MAX,
+        M_ion=2.5,
+        Z_eff=1.2,
+        R_w=0.4,
+        p_input=40.0,
+        mn=1.1,
+        eta_th=0.40,
+        eta_p=0.5,
+        eta_pin=0.7,
+        eta_de=0.85,
+        f_sub=0.03,
+        f_dec=0.3,
+        p_coils=5.0,
+        p_cool=20.0,
+        p_pump=1.5,
+        p_trit=10.0,
+        p_house=4.0,
+        p_cryo=1.0,
+        dd_f_T=0.969,
+        dd_f_He3=0.689,
+        dhe3_dd_frac=0.131,
+        dhe3_f_T=0.5,
+        dhe3_f_He3=0.05,
+        pb11_f_alpha_n=0.0,
+        pb11_f_p_n=0.0,
+        dhe3_fuel_ratio=1.0,
+        pb11_fuel_ratio=0.15,
+        dhe3_dd_frac_pin=None,
+        wall_material=None,
+        T_edge=0.2,
+        tau_ratio=3.0,
+        enforce_plasma_limits=True,
+        f_rad_fus=f_rad_fus,
+    )
+
+
+class TestMirrorSizing:
+    def test_sized_L_grows_with_net_power(self):
+        """A higher net power target requires a longer chamber."""
+        p_lo = dict(_sz_params(200.0), n_mod=1)
+        p_hi = dict(_sz_params(600.0), n_mod=1)
+        L_lo = mirror_size_from_power(p_lo, Fuel.DT)
+        L_hi = mirror_size_from_power(p_hi, Fuel.DT)
+        assert L_hi > L_lo, (
+            f"Larger target should need longer L, got L_lo={L_lo:.1f} L_hi={L_hi:.1f}"
+        )
+
+    def test_sized_density_equals_f_beta_closed_form(self):
+        """At the solved L, density matches the f_beta closed form at the GSS T_i."""
+        params = dict(_sz_params(300.0), n_mod=1)
+        L_solved = mirror_size_from_power(params, Fuel.DT)
+        # net_electric_at_L returns p_net; to recover T_i call with return_state=True
+        pn, T_i_star, n_e_star = net_electric_at_L(
+            L_solved, params, Fuel.DT, return_state=True
+        )
+        # Verify density matches the closed form
+        f_beta = params["f_beta"]
+        beta_max = params["beta_max"]
+        B = params["B_min"]
+        T_e = params["T_e"]
+        n_i_frac = n_i_over_n_e(
+            Fuel.DT, params["dhe3_fuel_ratio"], params["pb11_fuel_ratio"]
+        )
+        T_sum = T_e + n_i_frac * T_i_star
+        n20_expected = f_beta * beta_max * B**2 / (2 * _MU_0 * _KEV_TO_J * 1e20) / T_sum
+        n_e_expected = n20_expected * 1e20
+        assert n_e_star == pytest.approx(n_e_expected, rel=1e-6)
+
+    def test_sized_lcoe_reflects_coil_account(self):
+        """Larger sized machine has higher coil cost in its CAS22 account."""
+        m_lo = CostModel(ConfinementConcept.MIRROR, Fuel.DT)
+        m_hi = CostModel(ConfinementConcept.MIRROR, Fuel.DT)
+        r_lo = m_lo.forward(
+            net_electric_mw=200.0,
+            availability=0.87,
+            lifetime_yr=40.0,
+            size_from_power=True,
+        )
+        r_hi = m_hi.forward(
+            net_electric_mw=600.0,
+            availability=0.87,
+            lifetime_yr=40.0,
+            size_from_power=True,
+        )
+        # Larger machine -> longer chamber -> higher C220103
+        assert float(r_hi.cas22_detail["C220103"]) > float(r_lo.cas22_detail["C220103"])
+
+    def test_pinning_chamber_length_in_sizing_mode_raises(self):
+        """Pinning chamber_length in size_from_power mode must raise ValueError."""
+        m = CostModel(ConfinementConcept.MIRROR, Fuel.DT)
+        with pytest.raises(ValueError, match=r"chamber_length"):
+            m.forward(
+                net_electric_mw=300.0,
+                availability=0.87,
+                lifetime_yr=40.0,
+                size_from_power=True,
+                chamber_length=50.0,  # pinned — not allowed
+            )
+
+    def test_unreachable_target_raises_sizing_infeasible(self):
+        """A target beyond what L_max can deliver raises SizingInfeasible."""
+        params = dict(_sz_params(net_mw=1e8), n_mod=1)  # absurdly large
+        with pytest.raises(SizingInfeasible):
+            mirror_size_from_power(params, Fuel.DT)
+
+    def test_optimize_mode_returns_f_beta_in_bounds(self):
+        """optimize_lcoe mode returns a result; stored f_beta is within bounds."""
+        m = CostModel(ConfinementConcept.MIRROR, Fuel.DT)
+        r = m.forward(
+            net_electric_mw=200.0,
+            availability=0.87,
+            lifetime_yr=40.0,
+            size_from_power=True,
+            optimize_lcoe=True,
+        )
+        assert math.isfinite(r.costs.lcoe)
+        # _sizing_fbeta is set by the optimizer
+        best = m._sizing_fbeta
+        f_beta_min = m._eng_defaults["f_beta_min"]
+        f_beta_max = m._eng_defaults["f_beta_max"]
+        assert f_beta_min <= best <= f_beta_max
+
+    def test_dhe3_sizes_longer_than_dt(self):
+        """D-He3 mirror requires a longer chamber than DT at equal net power.
+
+        D-He3 reactivity is lower than DT at any temperature, and dilution
+        reduces n_i/n_e, so at equal f_beta density the machine needs more
+        volume (larger L) to produce the same net electric power.
+
+        Both fuels use the same geometry (B=5 T, a=0.6 m, R_m=20) to isolate
+        the fuel dependence. DHE3 uses f_rad_fus=0.24 proxy and an aneutronic
+        power balance (mn=1.02, f_dec=0.6, no tritium processing);
+        L_max is extended to 500 m to accommodate the longer DHE3 machine.
+        """
+        common = dict(
+            B_min=5.0,
+            a=0.6,
+            R_m=20.0,
+            T_e=50.0,
+            f_beta=0.85,
+            beta_max=0.5,
+            L_min=1.0,
+            L_max=500.0,
+            M_ion=2.5,
+            Z_eff=1.2,
+            R_w=0.4,
+            p_input=40.0,
+            eta_th=0.40,
+            eta_p=0.5,
+            eta_pin=0.7,
+            eta_de=0.85,
+            f_sub=0.03,
+            p_coils=5.0,
+            p_cool=20.0,
+            p_pump=1.5,
+            p_house=4.0,
+            p_cryo=1.0,
+            dd_f_T=0.969,
+            dd_f_He3=0.689,
+            dhe3_dd_frac=0.131,
+            dhe3_f_T=0.5,
+            dhe3_f_He3=0.05,
+            pb11_f_alpha_n=0.0,
+            pb11_f_p_n=0.0,
+            dhe3_fuel_ratio=1.0,
+            pb11_fuel_ratio=0.15,
+            dhe3_dd_frac_pin=None,
+            wall_material=None,
+            T_edge=0.2,
+            tau_ratio=3.0,
+            net_electric_mw=200.0,
+            n_mod=1,
+        )
+        p_dt = dict(
+            common,
+            mn=1.1,
+            f_dec=0.3,
+            p_trit=10.0,
+            enforce_plasma_limits=True,
+            f_rad_fus=None,
+        )
+        p_dhe3 = dict(
+            common,
+            mn=1.02,
+            f_dec=0.6,
+            p_trit=0.0,
+            enforce_plasma_limits=False,
+            f_rad_fus=0.24,
+        )
+        L_dt = mirror_size_from_power(p_dt, Fuel.DT)
+        L_dhe3 = mirror_size_from_power(p_dhe3, Fuel.DHE3)
+        assert L_dhe3 > L_dt, (
+            f"D-He3 should need longer chamber than DT, "
+            f"got L_DT={L_dt:.1f} m, L_DHE3={L_dhe3:.1f} m"
         )

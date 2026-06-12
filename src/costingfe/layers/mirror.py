@@ -609,3 +609,212 @@ def mirror_0d_inverse(
     )
 
     return plasma_state, pt
+
+
+# ---------------------------------------------------------------------------
+# Sizing: net electric at a fixed L (inner operating point)
+# ---------------------------------------------------------------------------
+
+# GSS iterations — same convergence parameters as the tokamak sizing solve.
+_GSS_ITERS = 40  # Golden-section iterations to locate the optimum T_i
+_L_BISECT_ITERS = 60  # Bisection iterations to locate the target-power length
+
+
+class SizingInfeasible(Exception):
+    """Raised when no mirror length in [L_min, L_max] meets the power target."""
+
+
+def _density_from_f_beta(
+    T_i, T_e, f_beta, beta_max, B_min, fuel, dhe3_fuel_ratio, pb11_fuel_ratio
+):
+    """Density at the beta boundary [m^-3].
+
+    n_e = f_beta * beta_max * B^2 / (2 * mu_0 * (T_e + n_i/n_e * T_i) * KEV_TO_J)
+
+    Internally computes n20 = ... / (T_sum) with the constant product folded in
+    float64 so the 1e-20 density rescale keeps intermediates near unity in float32.
+    """
+    n_i_frac = n_i_over_n_e(fuel, dhe3_fuel_ratio, pb11_fuel_ratio)
+    T_sum = T_e + n_i_frac * T_i
+    # Pre-fold constants in float64; T_sum is near unity (tens of keV).
+    n20 = f_beta * beta_max * B_min**2 / (2.0 * _MU_0 * _KEV_TO_J * 1e20) / T_sum
+    return n20 * 1e20
+
+
+def _net_at_L_T(L, T_i, params, fuel):
+    """Net electric power [MW] at fixed L and T_i.
+
+    Derives density from the f_beta closed form, runs mirror_0d_forward, then
+    mfe_forward_power_balance. Returns (p_net [MW],).
+    T_e is held fixed from params (the spec: GSS scans T_i with T_e from YAML).
+    """
+    T_e = params["T_e"]
+    n_e = _density_from_f_beta(
+        T_i,
+        T_e,
+        params["f_beta"],
+        params["beta_max"],
+        params["B_min"],
+        fuel,
+        params["dhe3_fuel_ratio"],
+        params["pb11_fuel_ratio"],
+    )
+    a = params["a"]
+    B_min = params["B_min"]
+    R_m = params["R_m"]
+
+    ps = mirror_0d_forward(
+        L=L,
+        a=a,
+        B_min=B_min,
+        R_m=R_m,
+        T_i=T_i,
+        T_e=T_e,
+        n_e=n_e,
+        p_input=params["p_input"],
+        fuel=fuel,
+        M_ion=params.get("M_ion", 2.5),
+        Z_eff=params.get("Z_eff", 1.2),
+        R_w=params.get("R_w", 0.4),
+        dd_f_T=params["dd_f_T"],
+        dd_f_He3=params["dd_f_He3"],
+        dhe3_dd_frac_pin=params.get("dhe3_dd_frac_pin"),
+        dhe3_f_T=params["dhe3_f_T"],
+        dhe3_f_He3=params["dhe3_f_He3"],
+        pb11_f_alpha_n=params["pb11_f_alpha_n"],
+        pb11_f_p_n=params["pb11_f_p_n"],
+        dhe3_fuel_ratio=params["dhe3_fuel_ratio"],
+        pb11_fuel_ratio=params["pb11_fuel_ratio"],
+        f_rad_fus=params.get("f_rad_fus"),
+    )
+
+    R_eff = L / (2.0 * math.pi)
+    fw_area = 2.0 * math.pi * a * L
+    wm_raw = params.get("wall_material")
+    if isinstance(wm_raw, str):
+        from costingfe.types import WallMaterial
+
+        wall_mat = WallMaterial(wm_raw)
+    else:
+        wall_mat = wm_raw
+
+    frac_eff = (
+        float(ps.dhe3_dd_frac_eff) if fuel == Fuel.DHE3 else params["dhe3_dd_frac"]
+    )
+    pt = mfe_forward_power_balance(
+        p_fus=float(ps.p_fus),
+        fuel=fuel,
+        p_input=params["p_input"],
+        mn=params["mn"],
+        eta_th=params["eta_th"],
+        eta_p=params["eta_p"],
+        eta_pin=params["eta_pin"],
+        eta_de=params["eta_de"],
+        f_sub=params["f_sub"],
+        f_dec=params["f_dec"],
+        p_coils=params["p_coils"],
+        p_cool=params["p_cool"],
+        p_pump=params["p_pump"],
+        p_trit=params["p_trit"],
+        p_house=params["p_house"],
+        p_cryo=params["p_cryo"],
+        n_e=float(ps.n_e),
+        T_e=T_e,
+        Z_eff=params.get("Z_eff", 1.2),
+        plasma_volume=float(ps.V_plasma),
+        B=B_min,
+        R_major=R_eff,
+        a_minor=a,
+        kappa=1.0,
+        R_w=params.get("R_w", 0.4),
+        wall_material=wall_mat,
+        T_edge=params.get("T_edge", 0.2),
+        tau_ratio=params.get("tau_ratio", 3.0),
+        fw_area=fw_area,
+        dd_f_T=params["dd_f_T"],
+        dd_f_He3=params["dd_f_He3"],
+        dhe3_dd_frac=frac_eff,
+        dhe3_f_T=params["dhe3_f_T"],
+        dhe3_f_He3=params["dhe3_f_He3"],
+        pb11_f_alpha_n=params["pb11_f_alpha_n"],
+        pb11_f_p_n=params["pb11_f_p_n"],
+        f_rad_fus=params.get("f_rad_fus"),
+    )
+
+    return float(pt.p_net), float(n_e), float(T_i)
+
+
+def net_electric_at_L(L, params, fuel, return_state=False):
+    """Net electric power [MW] at the constraint-boundary operating point for a fixed L.
+
+    Temperature T_i maximizes net power within the fuel-keyed bracket via
+    golden-section search with T_e held fixed from params["T_e"]. Density is
+    derived from the f_beta closed form at each T_i probe.
+
+    Returns p_net [MW] by default.
+    With return_state=True, returns (p_net, T_i_star, n_e_star).
+    """
+    T_lo, T_hi = _T_BRACKET_MIRROR[fuel]
+    invphi = (5**0.5 - 1) / 2  # golden-section ratio
+    invphi2 = (3 - 5**0.5) / 2
+
+    def feasible_net(T_i):
+        pn, _n, _T = _net_at_L_T(L, T_i, params, fuel)
+        return pn
+
+    a_gss, b_gss = T_lo, T_hi
+    h = b_gss - a_gss
+    c = a_gss + invphi2 * h
+    d = a_gss + invphi * h
+    fc = feasible_net(c)
+    fd = feasible_net(d)
+    for _ in range(_GSS_ITERS):
+        if fc > fd:  # maximizing
+            b_gss, d, fd = d, c, fc
+            h = b_gss - a_gss
+            c = a_gss + invphi2 * h
+            fc = feasible_net(c)
+        else:
+            a_gss, c, fc = c, d, fd
+            h = b_gss - a_gss
+            d = a_gss + invphi * h
+            fd = feasible_net(d)
+    T_star = 0.5 * (a_gss + b_gss)
+
+    pn, n_e_star, _ = _net_at_L_T(L, T_star, params, fuel)
+    if return_state:
+        return pn, T_star, n_e_star
+    return pn
+
+
+# ---------------------------------------------------------------------------
+# Outer L bisection solver
+# ---------------------------------------------------------------------------
+def mirror_size_from_power(params, fuel):
+    """Solve chamber length L so net electric power equals the target.
+
+    Net power is monotonic increasing in L at the f_beta boundary operating
+    point (P_fus scales with volume; tau_GD improves with L; Pastukhov
+    confinement is L-independent), so bisection is well posed.
+
+    Raises SizingInfeasible if the target exceeds what L_max can deliver.
+    Returns the solved L [m].
+    """
+    n_mod = params.get("n_mod", 1)
+    target = params["net_electric_mw"] / n_mod
+    lo, hi = params["L_min"], params["L_max"]
+
+    pn_hi = net_electric_at_L(hi, params, fuel)
+    if pn_hi < target:
+        raise SizingInfeasible(
+            f"net power at L_max={hi} m is {pn_hi:.1f} MW < target {target:.1f} MW; "
+            "machine cannot reach the power with these physics inputs"
+        )
+
+    for _ in range(_L_BISECT_ITERS):
+        mid = 0.5 * (lo + hi)
+        if net_electric_at_L(mid, params, fuel) < target:
+            lo = mid
+        else:
+            hi = mid
+    return 0.5 * (lo + hi)

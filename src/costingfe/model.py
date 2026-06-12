@@ -38,6 +38,8 @@ from costingfe.layers.economics import compute_lcoe
 from costingfe.layers.geometry import RadialBuild, compute_geometry
 from costingfe.layers.mirror import (
     mirror_0d_inverse,
+    mirror_size_from_power,
+    net_electric_at_L,
 )
 from costingfe.layers.physics import (
     mfe_forward_power_balance,
@@ -662,33 +664,83 @@ class CostModel:
         params["0d_mode"] = "forward"
         return self._power_balance_0d(params, n_mod)
 
-    def _optimize_fgw(self, lcoe_of_fgw, fgw_lo, fgw_hi):
-        """Golden-section minimize LCOE over f_GW in [fgw_lo, fgw_hi].
+    def _size_mirror(self, params, n_mod):
+        """Solve chamber_length from the power target, inject it into params, and
+        return the power table via the mirror 0D inverse path.
 
-        lcoe_of_fgw is a callable mapping a trial f_GW to the resulting LCOE
-        (it runs the full sizing+cost pipeline). Returns the minimizing f_GW.
-        fgw_lo and fgw_hi come from params["f_GW_min"] and params["f_GW_max"].
+        The sizing solve uses mirror_size_from_power (bisection over L at the
+        f_beta boundary operating point with GSS over T_i). After the solve,
+        chamber_length and the f_beta-derived n_e are written back into params so
+        that the geometry layer and the CAS22 coil account see the solved values.
+        The mirror 0D inverse path is then re-run at the solved L so the
+        MirrorPlasmaState and PowerTable are consistent.
+        """
+        # Derive eta_pin (heating wall-plug efficiency) exactly as _power_balance
+        # does, so the sizing solve and the final inverse balance use the same value.
+        params["eta_pin"] = self._effective_eta_pin(params)
+
+        # Build the solve_params dict that mirror_size_from_power expects.
+        # It needs B_min (= params["B"]) and the sizing knobs from the YAML.
+        solve_params = dict(params)
+        solve_params["B_min"] = params["B"]
+        solve_params["a"] = params["plasma_t"]
+        solve_params["dhe3_f_He3"] = self._dhe3_f_He3_eff(params)
+        # Per-module target for the bisection
+        solve_params["net_electric_mw"] = params["net_electric_mw"] / n_mod
+        solve_params["n_mod"] = 1
+
+        L_solved = mirror_size_from_power(solve_params, self.fuel)
+
+        # Recover the operating density at the solved L (f_beta boundary).
+        _pn, _T_star, n_e_star = net_electric_at_L(
+            L_solved, solve_params, self.fuel, return_state=True
+        )
+
+        # Write solved geometry and density back so all downstream layers see them.
+        # n_e_star is the f_beta-derived density at the GSS T_i; it is used as the
+        # YAML-level n_e input for the final inverse call, which then solves T_i
+        # self-consistently from the power target at that density.
+        params["chamber_length"] = L_solved
+        params["n_e"] = n_e_star
+        self._last_L = L_solved  # exposed for inspection
+
+        # Re-run the full 0D inverse at the solved L so the plasma state and
+        # power table are self-consistent. use_0d_model=True routes
+        # _power_balance to _power_balance_mirror_0d.
+        params["use_0d_model"] = True
+        return self._power_balance_mirror_0d(params, n_mod)
+
+    def _optimize_gss(self, lcoe_of_param, param_lo, param_hi):
+        """Golden-section minimize LCOE over a scalar parameter in [param_lo, param_hi].
+
+        lcoe_of_param is a callable mapping a trial parameter value to the
+        resulting LCOE (it runs the full sizing+cost pipeline). Returns the
+        minimizing parameter value. Used for both tokamak f_GW and mirror f_beta.
         """
         invphi = (5**0.5 - 1) / 2
         invphi2 = (3 - 5**0.5) / 2
-        lo, hi = fgw_lo, fgw_hi
+        lo, hi = param_lo, param_hi
         h = hi - lo
         c = lo + invphi2 * h
         d = lo + invphi * h
-        fc = lcoe_of_fgw(c)
-        fd = lcoe_of_fgw(d)
-        for _ in range(self._FGW_OPT_ITERS):
+        fc = lcoe_of_param(c)
+        fd = lcoe_of_param(d)
+        for _ in range(self._GSS_OPT_ITERS):
             if fc < fd:  # minimizing: keep [lo, d]
                 hi, d, fd = d, c, fc
                 h = hi - lo
                 c = lo + invphi2 * h
-                fc = lcoe_of_fgw(c)
+                fc = lcoe_of_param(c)
             else:
                 lo, c, fc = c, d, fd
                 h = hi - lo
                 d = lo + invphi * h
-                fd = lcoe_of_fgw(d)
+                fd = lcoe_of_param(d)
         return 0.5 * (lo + hi)
+
+    # Keep the old name as an alias so any external callers (tests, notebooks)
+    # that reference _optimize_fgw continue to work unchanged.
+    _optimize_fgw = _optimize_gss
 
     def forward(
         self,
@@ -889,18 +941,41 @@ class CostModel:
 
         # Layer 2: Power balance (dispatched by family), or sizing solve.
         if params.get("size_from_power", False):
-            if self.concept != ConfinementConcept.TOKAMAK:
-                raise ValueError("size_from_power is implemented for TOKAMAK only")
-            pinned = [k for k in ("R0", "plasma_t", "b_center", "B") if k in overrides]
-            if pinned:
-                raise ValueError(
-                    f"{pinned} cannot be pinned in size_from_power mode; they are "
-                    "solved. Remove them or set size_from_power=False."
-                )
-            if params.get("optimize_lcoe", False):
-                # Re-run the full sizing+cost pipeline per trial f_GW (recursive
-                # forward with optimize_lcoe off) and keep the LCOE-minimizing one.
-                def _lcoe_at(fgw):
+            if self.concept == ConfinementConcept.TOKAMAK:
+                pinned = [
+                    k for k in ("R0", "plasma_t", "b_center", "B") if k in overrides
+                ]
+                if pinned:
+                    raise ValueError(
+                        f"{pinned} cannot be pinned in size_from_power mode; they are "
+                        "solved. Remove them or set size_from_power=False."
+                    )
+                if params.get("optimize_lcoe", False):
+                    # Re-run the full sizing+cost pipeline per trial f_GW
+                    def _lcoe_at(fgw):
+                        return self.forward(
+                            net_electric_mw=net_electric_mw,
+                            availability=availability,
+                            lifetime_yr=lifetime_yr,
+                            n_mod=n_mod,
+                            construction_time_yr=construction_time_yr,
+                            interest_rate=interest_rate,
+                            inflation_rate=inflation_rate,
+                            noak=noak,
+                            cost_overrides=cost_overrides,
+                            override_reference_mw=override_reference_mw,
+                            **{
+                                **overrides,
+                                "size_from_power": True,
+                                "optimize_lcoe": False,
+                                "f_GW": fgw,
+                            },
+                        ).costs.lcoe
+
+                    best_fgw = self._optimize_gss(
+                        _lcoe_at, params["f_GW_min"], params["f_GW_max"]
+                    )
+                    self._sizing_fgw = best_fgw
                     return self.forward(
                         net_electric_mw=net_electric_mw,
                         availability=availability,
@@ -916,34 +991,68 @@ class CostModel:
                             **overrides,
                             "size_from_power": True,
                             "optimize_lcoe": False,
-                            "f_GW": fgw,
+                            "f_GW": best_fgw,
                         },
-                    ).costs.lcoe
+                    )
+                self._sizing_fgw = params["f_GW"]
+                pt = self._size_tokamak(params, n_mod)
+            elif self.concept == ConfinementConcept.MIRROR:
+                if "chamber_length" in overrides:
+                    raise ValueError(
+                        "['chamber_length'] cannot be pinned in size_from_power mode; "
+                        "it is solved. Remove it or set size_from_power=False."
+                    )
+                if params.get("optimize_lcoe", False):
+                    # Golden-section over f_beta minimizing LCOE
+                    def _lcoe_at_fb(fb):
+                        return self.forward(
+                            net_electric_mw=net_electric_mw,
+                            availability=availability,
+                            lifetime_yr=lifetime_yr,
+                            n_mod=n_mod,
+                            construction_time_yr=construction_time_yr,
+                            interest_rate=interest_rate,
+                            inflation_rate=inflation_rate,
+                            noak=noak,
+                            cost_overrides=cost_overrides,
+                            override_reference_mw=override_reference_mw,
+                            **{
+                                **overrides,
+                                "size_from_power": True,
+                                "optimize_lcoe": False,
+                                "f_beta": fb,
+                            },
+                        ).costs.lcoe
 
-                best_fgw = self._optimize_fgw(
-                    _lcoe_at, params["f_GW_min"], params["f_GW_max"]
+                    best_fb = self._optimize_gss(
+                        _lcoe_at_fb, params["f_beta_min"], params["f_beta_max"]
+                    )
+                    self._sizing_fbeta = best_fb
+                    return self.forward(
+                        net_electric_mw=net_electric_mw,
+                        availability=availability,
+                        lifetime_yr=lifetime_yr,
+                        n_mod=n_mod,
+                        construction_time_yr=construction_time_yr,
+                        interest_rate=interest_rate,
+                        inflation_rate=inflation_rate,
+                        noak=noak,
+                        cost_overrides=cost_overrides,
+                        override_reference_mw=override_reference_mw,
+                        **{
+                            **overrides,
+                            "size_from_power": True,
+                            "optimize_lcoe": False,
+                            "f_beta": best_fb,
+                        },
+                    )
+                self._sizing_fbeta = params["f_beta"]
+                pt = self._size_mirror(params, n_mod)
+            else:
+                raise ValueError(
+                    f"size_from_power is implemented for TOKAMAK and MIRROR only; "
+                    f"got concept={self.concept.value}"
                 )
-                self._sizing_fgw = best_fgw
-                return self.forward(
-                    net_electric_mw=net_electric_mw,
-                    availability=availability,
-                    lifetime_yr=lifetime_yr,
-                    n_mod=n_mod,
-                    construction_time_yr=construction_time_yr,
-                    interest_rate=interest_rate,
-                    inflation_rate=inflation_rate,
-                    noak=noak,
-                    cost_overrides=cost_overrides,
-                    override_reference_mw=override_reference_mw,
-                    **{
-                        **overrides,
-                        "size_from_power": True,
-                        "optimize_lcoe": False,
-                        "f_GW": best_fgw,
-                    },
-                )
-            self._sizing_fgw = params["f_GW"]
-            pt = self._size_tokamak(params, n_mod)
         else:
             pt = self._power_balance(params, n_mod)
 
@@ -1510,8 +1619,9 @@ class CostModel:
     # validates override kwargs against this set (plus the concept's YAML keys
     # and the costing-constant fields). Keep in sync when a new params.get()
     # input is added; an omission surfaces as a spurious "unknown parameter".
-    # Golden-section iterations for LCOE-over-f_GW optimization (optimize_lcoe).
-    _FGW_OPT_ITERS = 12
+    # Golden-section iterations for LCOE optimization (optimize_lcoe).
+    _GSS_OPT_ITERS = 12
+    _FGW_OPT_ITERS = _GSS_OPT_ITERS  # Alias for backward compatibility
 
     _OPTIONAL_OVERRIDE_KEYS = frozenset(
         {
@@ -1537,6 +1647,12 @@ class CostModel:
             "T_max",
             "f_GW_min",
             "f_GW_max",
+            # Mirror sizing knobs (not in tokamak YAML)
+            "f_beta",
+            "L_min",
+            "L_max",
+            "f_beta_min",
+            "f_beta_max",
             # Coil / magnet knobs not in every concept YAML
             "n_coils",
             "lev_coil_markup",
