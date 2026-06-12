@@ -594,8 +594,6 @@ class TestMirrorCoilLengthScaling:
         The plug contribution (fixed n_plug_coils, fixed b_plug) must be
         UNCHANGED.  We test the contributions, not just the total.
         """
-        import math
-
         from costingfe.types import CoilMaterial
 
         MU0 = 4 * math.pi * 1e-7
@@ -643,7 +641,7 @@ class TestMirrorCoilLengthScaling:
             r_base.cas22_detail["C220103"]
         )
         delta_expected = central_20 * markup  # one extra n_central's worth
-        assert abs(delta_model - delta_expected) < 1.0, (
+        assert delta_model == pytest.approx(delta_expected, rel=1e-6), (
             f"delta={delta_model:.4f} M$, expected {delta_expected:.4f} M$"
         )
 
@@ -660,6 +658,7 @@ class TestMirrorCoilLengthScaling:
         sens = m.sensitivity(r.params)
         grad_L = float(sens["engineering"]["chamber_length"])
         assert math.isfinite(grad_L), f"dLCOE/d(chamber_length) is not finite: {grad_L}"
+        assert grad_L > 0.0, f"dLCOE/d(chamber_length) must be positive, got {grad_L}"
 
         # Finite-difference check: longer machine -> higher coil cost -> higher LCOE
         r_lo = self._base(chamber_length=20.0)

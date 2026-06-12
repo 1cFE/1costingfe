@@ -36,8 +36,10 @@ from costingfe.types import (
 # SPARC REBCO usage. See docs/account_justification/CAS22_reactor_components.md
 # markup: manufacturing complexity multiplier over raw conductor cost
 # path_factor: extra coil path length for 3D geometries (stellarator)
-# n_coils: number of discrete coils — only used for mirror (G = n_coils * 4*pi);
-#         ignored by tokamak/stellarator branches whose G is empirical total-system
+# n_coils: number of discrete coils for FRC and other linear devices
+#         (G = n_coils * 4*pi); ignored by tokamak/stellarator branches whose
+#         G is empirical total-system. For mirror, the two-class branch fires
+#         when coil_spacing > 0 and n_plug_coils > 0; n_coils is unused there.
 # Per-concept STRUCTURAL/geometry coil parameters. The manufacturing markup is
 # a cost-calibration constant and lives in costing_constants.yaml (coil_markup),
 # alongside the copper-coil fab markups; it is read from `cc`, not from here.
@@ -49,10 +51,9 @@ _COIL_DEFAULTS = {
     # captures the ~2x longer non-planar 3D winding path in G.
     ConfinementConcept.TOKAMAK: {"path_factor": 1.0, "n_coils": 0},
     ConfinementConcept.STELLARATOR: {"path_factor": 2.0, "n_coils": 0},
-    # Mirror n_coils calibrated to Realta HAMMIR-class tandem mirror:
-    # 4 end-plug HTS coils (2 per end, Hammer evolution) + ~6 LTS central-cell
-    # solenoid coils discretizing the 50 m central cell. Simple-mirror devices
-    # (WHAM/BEAM/Anvil) would use n_coils ≈ 4.
+    # Mirror n_coils: fallback only, fires when coil_spacing <= 0 (legacy
+    # fixed-n_coils path). The normal two-class branch (coil_spacing > 0 and
+    # n_plug_coils > 0) derives coil counts from geometry; n_coils is not used.
     ConfinementConcept.MIRROR: {"path_factor": 1.0, "n_coils": 10},
     # DIPOLE: the DIPOLE branch in C220103 does NOT consume these defaults. It
     # computes the floating coil's kA*m from b_center / r_bore directly, then
@@ -347,6 +348,8 @@ def cas22_reactor_plant_equipment(
             # -----------------------------------------------------------
             coil_markup = cc.coil_markup[concept.value]
             n_central = chamber_length / coil_spacing
+            # b_plug is derived from the physics midplane field B (mirror ratio
+            # throat), independent of b_center (the costing calibration field).
             b_plug = R_m * B
             G_central = n_central * 4 * math.pi
             G_plug = n_plug_coils * 4 * math.pi
@@ -356,7 +359,9 @@ def cas22_reactor_plant_equipment(
             total_conductor = (kAm_central + kAm_plug) * cond_per_kAm / 1e6
             c220103 = total_conductor * coil_markup
         else:
-            # Manufacturing markup is a calibration constant from
+            # Mirror with coil_spacing <= 0 or n_plug_coils <= 0 falls back to
+            # the legacy fixed-n_coils model; all other non-None concepts also
+            # enter here. Manufacturing markup is a calibration constant from
             # costing_constants.yaml (coil_markup), keyed by concept.
             coil_markup = cc.coil_markup[concept.value]
             path_factor = defaults["path_factor"]
