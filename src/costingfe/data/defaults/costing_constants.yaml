@@ -49,15 +49,16 @@ coil_steel_fab_markup: 3.0           # coil-case / inter-coil support fabricatio
 # under the bilinear total_kAm = G*B*R0*r_coil model. stellarator 5.87 = 1.9x
 # the tokamak value, the NCSX modular-coil production cost overrun (90%), the
 # documented penalty for non-planar 3D coil fabrication; its longer winding
-# path is handled separately by path_factor=2. mirror 25/14 ≈ 1.7857: two-class
-# model (n_central=L/coil_spacing central solenoids + n_plug_coils end-plug HTS
-# coils at throat field b_plug=R_m*B); markup recalibrated so that at YAML
-# defaults (L=20, coil_spacing=5, n_plug=4, R_m=10, B=3 -> b_plug=30 T) the
-# total reproduces the doc-validated 513.375 M$ exactly.
+# path is handled separately by path_factor=2. mirror: two-class bore-resolved
+# model (central bore r_bore_central = vessel_or + coil_standoff, plug bore
+# r_bore_plug = plasma_t/sqrt(R_m) + plug_standoff); markup recalibrated so
+# that at YAML defaults (L=20, coil_spacing=5, n_plug=4, R_m=10, B=3,
+# r_bore_central=3.30, r_bore_plug=1.5/sqrt(10)+0.30) the total reproduces
+# 513.375 M$ exactly. See docs/account_justification/CAS22_reactor_components.md.
 coil_markup:
   tokamak: 3.09
   stellarator: 5.87
-  mirror: 1.7857142857142858
+  mirror: 1.7265803102296458
   steady_frc: 2.0
   pulsed_frc: 1.5
   theta_pinch: 1.5

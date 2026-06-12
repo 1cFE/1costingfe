@@ -605,7 +605,12 @@ class TestMirrorCoilLengthScaling:
 
         MU0 = 4 * math.pi * 1e-7
         b_center = 12.0  # from steady_state_mirror.yaml
-        r_bore = 1.85
+        # Central bore from radial build: vessel_or(3.20) + coil_standoff(0.10)
+        r_bore_central = (
+            1.5 + 0.10 + 0.05 + 0.80 + 0.20 + 0.20 + 0.15 + 0.10 + 0.10 + 0.10
+        )
+        # Plug bore from flux conservation: a/sqrt(R_m) + plug_standoff
+        r_bore_plug = 1.5 / math.sqrt(10.0) + 0.30
         B = 3.0
         R_m = 10.0
         b_plug = R_m * B  # 30.0 T
@@ -616,12 +621,12 @@ class TestMirrorCoilLengthScaling:
         def _central_cost(L):
             n_c = L / coil_spacing
             G = n_c * 4 * math.pi
-            kAm = G * b_center * r_bore**2 / (MU0 * 1000)
+            kAm = G * b_center * r_bore_central**2 / (MU0 * 1000)
             return kAm * cost_per_kAm / 1e6
 
         def _plug_cost():
             G = n_plug * 4 * math.pi
-            kAm = G * b_plug * r_bore**2 / (MU0 * 1000)
+            kAm = G * b_plug * r_bore_plug**2 / (MU0 * 1000)
             return kAm * cost_per_kAm / 1e6
 
         central_20 = _central_cost(20.0)
@@ -677,6 +682,40 @@ class TestMirrorCoilLengthScaling:
         assert dC_dL > 0, (
             f"C220103 must increase with chamber_length, got dC/dL={dC_dL}"
         )
+
+    def test_central_bore_from_radial_build(self):
+        """r_bore_central = vessel_or + coil_standoff, r_bore_plug from throat flux.
+
+        At YAML defaults the build stacks to vessel_or = 3.20 m (1.5 plasma +
+        0.10 vacuum + 0.05 FW + 0.80 blanket + 0.20 reflector + 0.20 HT shield +
+        0.15 structure + 0.10 gap1 + 0.10 vessel) and coil_standoff = 0.10,
+        so r_bore_central = 3.30 m. The plug bore comes from flux conservation:
+        a_throat = plasma_t / sqrt(R_m) = 1.5/sqrt(10); r_bore_plug = a_throat + 0.30.
+        """
+        m = CostModel(ConfinementConcept.MIRROR, Fuel.DT)
+        r = m.forward(net_electric_mw=500.0, availability=0.87, lifetime_yr=40.0)
+        assert r.cas22_detail["r_bore_central"] == pytest.approx(3.30, abs=1e-6)
+        assert r.cas22_detail["r_bore_plug"] == pytest.approx(
+            1.5 / math.sqrt(10.0) + 0.30, abs=1e-6
+        )
+
+    def test_coil_cost_responds_to_blanket_t(self):
+        """Thicker blanket -> larger central bore -> costlier coils."""
+        lo = self._base()
+        hi = self._base(blanket_t=1.2)
+        assert hi.cas22_detail["C220103"] > lo.cas22_detail["C220103"]
+
+    def test_plug_central_split_pinned(self):
+        """At YAML defaults the conductor split is pinned at the derived ratio.
+
+        central kAm / plug kAm = (b_center * r_bore_central^2) /
+                                  (b_plug * r_bore_plug^2) * n_central / n_plug
+        Exact float64 ratio derived analytically at implementation time.
+        """
+        m = CostModel(ConfinementConcept.MIRROR, Fuel.DT)
+        r = m.forward(net_electric_mw=500.0, availability=0.87, lifetime_yr=40.0)
+        split = r.cas22_detail["C220103_central"] / r.cas22_detail["C220103_plug"]
+        assert split == pytest.approx(7.2647827768, rel=1e-6)
 
 
 # ---------------------------------------------------------------------------

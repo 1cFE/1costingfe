@@ -1221,6 +1221,16 @@ class CostModel:
             n_plug_coils=int(params.get("n_plug_coils", 0)),
             R_m=params.get("R_m", 1.0),
             B=params.get("B", 0.0),
+            r_bore_central=(
+                geo.vessel_or + params["coil_standoff"]
+                if self.concept == ConfinementConcept.MIRROR
+                else 0.0
+            ),
+            r_bore_plug=(
+                params["plasma_t"] / math.sqrt(params["R_m"]) + params["plug_standoff"]
+                if self.concept == ConfinementConcept.MIRROR
+                else 0.0
+            ),
             p_nbi=p_nbi,
             p_ecrh=p_ecrh,
             p_icrf=p_icrf,
@@ -1240,6 +1250,9 @@ class CostModel:
             f_ch=getattr(pt, "f_ch", 0.0),
             eta_dec=params.get("eta_dec", 0.0),
         )
+        # Informational sub-lines in cas22_detail (C220103_central/_plug,
+        # C220106_vessel/_pump, r_bore_*) are deliberately absent from these
+        # key sets; the parent account carries the aggregated total.
         _PER_MODULE_KEYS = {
             "C220101",
             "C220102",
