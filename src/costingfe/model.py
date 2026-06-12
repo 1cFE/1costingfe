@@ -543,6 +543,7 @@ class CostModel:
             dhe3_fuel_ratio=params["dhe3_fuel_ratio"],
             pb11_fuel_ratio=params["pb11_fuel_ratio"],
             dhe3_dd_frac_pin=params["dhe3_dd_frac_pin"],
+            vacuum_t=params["vacuum_t"],
             wall_material=wall_mat,
             T_edge=params["T_edge"],
             tau_ratio=params["tau_ratio"],

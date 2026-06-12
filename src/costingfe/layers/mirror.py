@@ -186,6 +186,7 @@ def mirror_0d_forward(
     pb11_f_p_n: float,
     dhe3_fuel_ratio: float,
     pb11_fuel_ratio: float,
+    vacuum_t: float,
     f_rad_fus: float | None = None,
 ):
     """Forward 0D mirror model: machine params -> MirrorPlasmaState.
@@ -200,12 +201,16 @@ def mirror_0d_forward(
     with heating power in the mirror 0D model).
     R_w: wall reflectivity for synchrotron radiation (default 0.4, reduced
     from 0.6 for tokamaks to account for radiation escaping open ends).
+    vacuum_t: plasma-to-first-wall vacuum gap [m]; first-wall area is
+    2 pi (a + vacuum_t) L (matches the geometry layer's firstwall_area).
     f_rad_fus: when set, p_rad = f_rad_fus * p_fus (advanced fuel proxy).
     Returns MirrorPlasmaState.
     """
     # 1. Geometry
     V_plasma = jnp.pi * a**2 * L
-    fw_area = 2.0 * jnp.pi * a * L
+    # First-wall area uses (a + vacuum_t) to match the geometry layer:
+    # firstwall_area = 2 pi (a + vacuum_t) L (first-wall basis, not bare plasma).
+    fw_area = 2.0 * jnp.pi * (a + vacuum_t) * L
 
     # 2. Quasineutrality: n_i/n_e (fuel-aware dilution)
     n_i_frac = n_i_over_n_e(fuel, dhe3_fuel_ratio, pb11_fuel_ratio)
@@ -428,6 +433,8 @@ def mirror_0d_inverse(
     dhe3_fuel_ratio: float,
     pb11_fuel_ratio: float,
     dhe3_dd_frac_pin: float | None,
+    # Plasma-to-first-wall vacuum gap [m]; required (no default; comes from YAML).
+    vacuum_t: float,
     # Impurity / synchrotron params for power balance
     wall_material=None,
     T_edge: float = 0.05,
@@ -454,7 +461,8 @@ def mirror_0d_inverse(
 
     # Step 1: Geometry (fixed inputs; L,a,B_min are not solved here).
     V_plasma = jnp.pi * a**2 * L
-    fw_area = 2.0 * jnp.pi * a * L
+    # First-wall area uses (a + vacuum_t) to match the geometry layer.
+    fw_area = 2.0 * jnp.pi * (a + vacuum_t) * L
     # Synchrotron geometry: R_eff = L / (2*pi) maps cylinder to equivalent torus.
     R_eff = L / (2.0 * jnp.pi)
 
@@ -544,6 +552,7 @@ def mirror_0d_inverse(
         pb11_f_p_n=pb11_f_p_n,
         dhe3_fuel_ratio=dhe3_fuel_ratio,
         pb11_fuel_ratio=pb11_fuel_ratio,
+        vacuum_t=vacuum_t,
         f_rad_fus=f_rad_fus,
     )
 
@@ -682,11 +691,13 @@ def _net_at_L_T(L, T_i, params, fuel):
         pb11_f_p_n=params["pb11_f_p_n"],
         dhe3_fuel_ratio=params["dhe3_fuel_ratio"],
         pb11_fuel_ratio=params["pb11_fuel_ratio"],
+        vacuum_t=params["vacuum_t"],
         f_rad_fus=params.get("f_rad_fus"),
     )
 
     R_eff = L / (2.0 * math.pi)
-    fw_area = 2.0 * math.pi * a * L
+    # First-wall basis moved to a + vacuum_t
+    fw_area = 2.0 * math.pi * (a + params["vacuum_t"]) * L
     wm_raw = params.get("wall_material")
     if isinstance(wm_raw, str):
         from costingfe.types import WallMaterial

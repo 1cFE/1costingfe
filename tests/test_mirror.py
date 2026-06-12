@@ -66,6 +66,7 @@ def _forward(fuel=Fuel.DT, dhe3_dd_frac_pin=None, **kw):
         p_input=args.pop("p_input", 20.0),
         fuel=fuel,
         dhe3_dd_frac_pin=dhe3_dd_frac_pin,
+        vacuum_t=args.pop("vacuum_t", 0.10),
         **args,
     )
 
@@ -238,6 +239,7 @@ class TestForward:
                 p_input=20.0,
                 fuel=fuel,
                 dhe3_dd_frac_pin=None,
+                vacuum_t=0.10,
                 **_FRACS,
                 **_MIX,
                 **extra,
@@ -259,7 +261,8 @@ class TestForward:
     def test_volumes_correct(self):
         ps = _forward()
         V_ref = math.pi * _A**2 * _L
-        fw_ref = 2.0 * math.pi * _A * _L
+        # fw_area basis moved to a + vacuum_t (default 0.10 in _forward helper)
+        fw_ref = 2.0 * math.pi * (_A + 0.10) * _L
         assert float(ps.V_plasma) == pytest.approx(V_ref, rel=1e-5)
         assert float(ps.fw_area) == pytest.approx(fw_ref, rel=1e-5)
 
@@ -287,6 +290,17 @@ class TestForward:
         assert float(ps.p_rad) == pytest.approx(f * float(ps.p_fus), rel=1e-5)
         # Confirm clamp was not active (p_rad < p_alpha)
         assert float(ps.p_rad) < float(ps.p_alpha)
+
+    def test_fw_area_matches_geometry_layer(self):
+        # Cross-layer consistency: the 0D state's first-wall area must equal
+        # the geometry layer's (2 pi (a + vacuum_t) L), closing the audit
+        # finding that the 0D diagnostic sat on the bare plasma surface.
+        from costingfe.layers.geometry import RadialBuild, compute_geometry
+
+        rb = RadialBuild(plasma_t=1.5, chamber_length=20.0, vacuum_t=0.10)
+        geo = compute_geometry(rb, ConfinementConcept.MIRROR)
+        ps = _forward(L=20.0, a=1.5, vacuum_t=0.10)
+        assert float(ps.fw_area) == pytest.approx(geo.firstwall_area, rel=1e-6)
 
 
 # ---------------------------------------------------------------------------
@@ -348,6 +362,7 @@ def _inverse(
         enforce_plasma_limits=enforce_plasma_limits,
         dhe3_dd_frac=0.131,
         dhe3_dd_frac_pin=dhe3_dd_frac_pin,
+        vacuum_t=kw.pop("vacuum_t", 0.10),
         f_rad_fus=f_rad_fus,
         **_FRACS,
         **_MIX,
@@ -411,6 +426,7 @@ class TestInverse:
             beta_max=0.5,
             dhe3_dd_frac=0.131,
             dhe3_dd_frac_pin=None,
+            vacuum_t=0.10,
             f_rad_fus=0.24,
             **_FRACS,
             **_MIX,
@@ -782,6 +798,7 @@ def _sz_params(
         T_edge=0.2,
         tau_ratio=3.0,
         enforce_plasma_limits=True,
+        vacuum_t=0.10,
         f_rad_fus=f_rad_fus,
     )
 
@@ -921,6 +938,7 @@ class TestMirrorSizing:
             wall_material=None,
             T_edge=0.2,
             tau_ratio=3.0,
+            vacuum_t=0.10,
             net_electric_mw=200.0,
             n_mod=1,
         )
