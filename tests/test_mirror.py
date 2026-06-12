@@ -747,6 +747,7 @@ def _sz_params(
     )
 
 
+@pytest.mark.slow
 class TestMirrorSizing:
     def test_sized_L_grows_with_net_power(self):
         """A higher net power target requires a longer chamber."""

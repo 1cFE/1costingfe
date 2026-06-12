@@ -10,6 +10,10 @@ from costingfe.layers.tokamak import (
 from costingfe.model import CostModel
 from costingfe.types import ConfinementConcept, Fuel
 
+# Every test here runs a full sizing solve (GSS x bisection); the dev loop
+# skips them via -m "not slow", the full suite runs them.
+pytestmark = pytest.mark.slow
+
 
 def test_magnet_table_has_expected_materials():
     for key in ("rebco_hts", "nb3sn", "nbti", "copper"):
