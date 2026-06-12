@@ -3560,6 +3560,274 @@ fuel-specific temperature search intervals; sized D-${}^3$He machines
 are larger than D-T at equal net power, and p-B11 does not reach
 positive net power within the search radius and fails as infeasible.
 
+%% ============================================================
+
+\section{0D Mirror Model}
+\label{sec:mirror-model}
+
+The framework includes a zero-dimensional (0D) plasma model for
+axisymmetric magnetic mirrors, structurally parallel to the tokamak
+model of \cref{sec:tokamak-model}. Given machine geometry (length $L$,
+plasma radius $a$, minimum on-axis field $B_{\min}$, mirror ratio
+$R_m$) and plasma conditions ($T_i$, $T_e$, $n_e$), the model computes
+confinement times, fusion power, plasma beta, and wall loading.  The
+model is fully JAX-differentiable and float32-safe for use in
+gradient-based analysis.
+
+\subsection{Ion-Ion Collision Time}
+\label{sec:mirror-tauii}
+
+The model uses the NRL ion-ion collision time \citep{huba2016} for a
+singly charged fuel ion of mass number $A$ and charge $Z = 1$:
+%
+\begin{equation}
+\label{eq:tau-ii}
+\tau_{ii} = \frac{2.09 \times 10^{13}\,A^{1/2}\,T_i[\text{eV}]^{3/2}}
+                  {n_i\,\ln\Lambda}
+  \quad [\text{s}]
+\end{equation}
+%
+where $T_i[\text{eV}]$ is the ion temperature in eV, $n_i$ is the ion
+density in m$^{-3}$, and $\ln\Lambda = 17$ is the Coulomb logarithm.
+The implementation accepts $T_i$ in keV and $n_i$ in units of
+$10^{20}$~m$^{-3}$, folding both conversions into a single prefactor:
+%
+\begin{equation}
+\label{eq:tau-ii-prefactor}
+\tau_{ii} = \frac{(2.09 \times 10^{13})\,(10^3)^{3/2}\,10^{-20}}
+                  {\ln\Lambda}
+            \cdot \frac{A^{1/2}\,T_{i,20}^{3/2}}{n_{i,20}}
+  = \frac{6.609 \times 10^{-3}\,A^{1/2}\,T_{i,20}^{3/2}}{n_{i,20}\,\ln\Lambda}
+  \quad [\text{s}]
+\end{equation}
+%
+where $T_{i,20} = T_i$~[keV] and $n_{i,20} = n_i / 10^{20}$~m$^{-3}$.
+This convention keeps all intermediates near unity, avoiding float32
+overflow in the XLA compiler.
+
+\subsection{Ambipolar Potential}
+\label{sec:mirror-phi}
+
+Radial quasineutrality in an open-ended mirror establishes an ambipolar
+electrostatic potential at the loss cone.  For a single-species
+Maxwellian plasma the Boltzmann relation gives:
+%
+\begin{equation}
+\label{eq:phi-ambipolar}
+e\phi = T_e \ln\!\sqrt{\frac{A\,m_p}{2\pi\,m_e}}
+\end{equation}
+%
+where $m_p$ and $m_e$ are the proton and electron masses. For deuterium
+($A = 2$) this evaluates to $e\phi \approx 3.2\,T_e$, and for
+hydrogen to $\approx 3.0\,T_e$.
+
+\subsection{Confinement Time Channels}
+\label{sec:mirror-tau}
+
+The model implements three confinement channels, each physically
+distinct.
+
+\subsubsection{Classical Mirror Confinement (Bing--Roberts)}
+
+Ions trapped in a loss-cone distribution scatter into the loss cone on
+the collision time.  Following \citet{huba2016}:
+%
+\begin{equation}
+\label{eq:tau-classical}
+\tau_{\text{cl}} = 2.6\,\ln(R_m)\,\tau_{ii}
+\end{equation}
+%
+This channel is diagnostic only; it is not combined into $\tau_p$
+because the Pastukhov and gas-dynamic channels dominate in the
+parameter space of interest.
+
+\subsubsection{Pastukhov Electrostatic Plugging}
+
+The ambipolar potential $e\phi$ raises the effective loss-cone barrier.
+Ions must diffuse in energy past $e\phi + T_i$ to escape, giving an
+exponential suppression \citep{pastukhov1974,cohen1978}:
+%
+\begin{equation}
+\label{eq:tau-pastukhov}
+\tau_{\text{Pas}} = \frac{\sqrt{\pi}}{2}\,\frac{R_m + 1}{R_m}\,
+  \ln(2 R_m + 2)\,\frac{e\phi}{T_i}\,e^{e\phi/T_i}\,\tau_{ii}
+\end{equation}
+%
+The factor $\ln(2R_m+2)$ captures the logarithmic density-of-states
+weighting over the mirror throat, and $(R_m+1)/R_m$ is a
+geometric correction from the full Pastukhov 1974 derivation.
+
+\subsubsection{Gas-Dynamic Confinement}
+
+When the mean free path is shorter than the device length
+($\ell_{\text{mfp}} \lesssim L$), collisions establish a nearly
+Maxwellian distribution that leaks through the loss cone as a thermal
+gas.  The gas-dynamic confinement time \citep{mirnov1979} is:
+%
+\begin{equation}
+\label{eq:tau-gd}
+\tau_{\text{GD}} = \frac{R_m\,L}{v_{ti}},
+  \qquad v_{ti} = \sqrt{\frac{2\,T_i\,[\text{keV}]\,e_{\text{keV}}}{A\,m_p}}
+\end{equation}
+%
+where $e_{\text{keV}} = 1.602 \times 10^{-16}$~J/keV is the keV-to-J
+conversion.  In the implementation $v_{ti}$ is the ion thermal speed
+based on $T_i$; this is a factor of $\sqrt{2}$ larger than the sound
+speed $c_s = \sqrt{T_e/m_i}$ used in some formulations, an explicit
+convention documented in the validation anchors (\cref{sec:mirror-anchors}).
+
+\subsubsection{Radial Cross-Field Diffusion}
+
+Classical diffusion across field lines contributes a radial channel:
+%
+\begin{equation}
+\label{eq:tau-radial}
+\tau_{\text{rad}} = \left(\frac{a}{\rho_i}\right)^2 \tau_{ii},
+  \qquad \rho_i = \frac{\sqrt{2\,A\,m_p\,T_i\,[\text{keV}]\,e_{\text{keV}}}}{e\,B_{\min}}
+\end{equation}
+%
+where $\rho_i$ is the ion gyroradius at the midplane field $B_{\min}$.
+
+\subsubsection{Combined Confinement}
+
+The axial channels add in parallel:
+%
+\begin{equation}
+\label{eq:tau-axial}
+\frac{1}{\tau_{\text{axial}}} = \frac{1}{\tau_{\text{Pas}}} + \frac{1}{\tau_{\text{GD}}}
+\end{equation}
+%
+and the total particle confinement combines axial and radial:
+%
+\begin{equation}
+\label{eq:tau-p-mirror}
+\frac{1}{\tau_p} = \frac{1}{\tau_{\text{axial}}} + \frac{1}{\tau_{\text{rad}}}
+\end{equation}
+
+\subsection{Energy Confinement Time}
+\label{sec:mirror-taue}
+
+Particles lost axially carry the ambipolar potential energy $e\phi$ in
+addition to their thermal energy.  The energy confinement time is
+therefore shorter than the particle confinement time by the ratio of
+stored thermal energy to total loss energy per particle:
+%
+\begin{equation}
+\label{eq:tau-e-mirror}
+\tau_E = \tau_p \cdot \frac{\tfrac{3}{2}(T_i + T_e)}
+                            {2\,e\phi + T_i + T_e}
+\end{equation}
+
+\subsection{Plasma Beta and Operating Limits}
+\label{sec:mirror-beta}
+
+Midplane plasma beta is computed from the ion and electron pressures at
+the minimum field $B_{\min}$:
+%
+\begin{equation}
+\label{eq:beta-mirror}
+\beta = \frac{2\,\mu_0\,n_e\,(T_e + n_i/n_e \cdot T_i)\,e_{\text{keV}}}{B_{\min}^2}
+\end{equation}
+%
+where the $n_i/n_e$ dilution factor accounts for higher-charge advanced
+fuels.  An MHD stability constraint $\beta \le \beta_{\max}$ is
+enforced by \texttt{OperatingPointInfeasible} at error severity.
+
+\subsection{Inverse Contract and Length Sizing}
+\label{sec:mirror-inverse}
+
+The inverse mode fixes $T_e$ and $n_e$ as inputs and bisects over
+$T_i \in [T_{\min}, T_{\max}]$ (fuel-specific) to find the ion
+temperature that delivers a target net electric power $P_{\text{net}}^*$.
+A single pass is used: (i) call the MFE inverse power balance with the
+input direct-energy-conversion fraction $f_{\text{dec}}$ to obtain the
+required fusion power $P_{\text{fus}}^*$; (ii) bisect on $T_i$ until
+$P_{\text{fus}}(T_i, n_e, V) = P_{\text{fus}}^*$; (iii) run the full
+forward model at the solved $T_i$ to build the complete plasma state.
+The parameter $f_{\text{dec}}$ is an engineering input (default 0.30 for
+D-T), not derived from the plasma model.
+
+For length sizing ($P_{\text{net}} \to L$), the operating density is set
+at a fraction $f_\beta$ of the MHD stability boundary:
+%
+\begin{equation}
+\label{eq:n-fbeta}
+n_e = f_\beta\,\beta_{\max}\,
+  \frac{B_{\min}^2}{2\,\mu_0\,(T_e + n_i/n_e\cdot T_i)\,e_{\text{keV}}}
+\end{equation}
+%
+At this boundary density $P_{\text{fus}} \propto n_e^2 V \propto n_e^2 L$
+is monotonically increasing in $L$ (for fixed $n_e$), so $L$ is located
+by bisection on $[L_{\min}, L_{\max}]$. If $L_{\max}$ is insufficient,
+a \texttt{SizingInfeasible} error is raised.
+
+\subsection{Two-Class Coil Scaling}
+\label{sec:mirror-coils}
+
+Mirror coil costs are divided into two classes: (i) central-cell
+solenoid coils, with count $n_{\text{central}} = \lfloor L /
+d_{\text{coil}} \rfloor$ growing with chamber length at spacing
+$d_{\text{coil}}$ (default 5~m), and (ii) end-plug coils with fixed
+count $n_{\text{plug}}$ (default 4, two per end).  The total coil cost
+scales as a linear combination of the two counts, calibrated at the
+YAML default chamber length of 20~m ($n_{\text{central}} = 4$,
+$n_{\text{plug}} = 4$, baseline 513~M\$).
+
+\subsection{Validation Anchors}
+\label{sec:mirror-anchors}
+
+The confinement kernels are validated against two published machines
+(details in the test suite):
+
+\paragraph{GDT (gas-dynamic anchor.)}
+The Gas Dynamic Trap at Budker Institute \citep{bagryansky2015} operates
+with a 7~m central cell, $R_m = 35$, and deuterium.  In the warm-plasma
+gas-dynamic regime (no NBI, $T_e \approx 0.25$~keV,
+$n_e \approx 2 \times 10^{19}$~m$^{-3}$), \citet{endrizzi2023}
+(eq.~3.5) give $\tau_{\text{GD}} = 5.2\,R_m\,L_p\,T_e^{-1/2}$~$\mu$s,
+where $L_p$ is the half-length.  Evaluated at GDT parameters this gives
+1.27~ms.  The model kernel using the full length and the ion thermal
+speed gives 1.58~ms; the factor of $\sqrt{2}$ relative to the
+half-length/sound-speed convention is expected and documented.  Ratio
+1.25, within the 2x validation gate.
+
+\paragraph{WHAM (Pastukhov anchor.)}
+The Wisconsin HTS Axisymmetric Mirror design \citep{endrizzi2023} has
+$R_m \approx 19.8$, $n_e = 3 \times 10^{19}$~m$^{-3}$, and a
+midplane mean ion energy of 10~keV at beta~$= 0.2$.  The published
+Pastukhov/classical-mirror scaling (Endrizzi eq.~3.4) gives
+$n_{20}\,\tau_p = 250\,E_{b,100}^{3/2}\,\log_{10} R_m$~ms for a
+25~keV NBI beam, which evaluates to 135~ms.  The model Pastukhov kernel
+at the same midplane thermal point ($T_i = 10$~keV, $T_e = 1$~keV)
+gives 88~ms; the ratio 1.53 reflects the expected gap between a single
+thermal Maxwellian and the Fokker-Planck fast-ion calculation underlying
+the published scaling.  Within the 2x gate.
+
+\subsection{Assumptions and Limitations}
+\label{sec:mirror-limits}
+
+The model makes the following approximations, inherited from the 0D
+design philosophy:
+\begin{itemize}
+\item Single thermal Maxwellian distribution. No fast-ion population,
+  sloshing-ion anisotropy, or NBI slowing-down physics is included.
+  Real mirror devices (GDT, WHAM) are beam-driven; the model is
+  appropriate for a steady-state reactor operating point where the
+  alpha population thermalizes quickly compared to $\tau_p$.
+\item $T_e$ is a fixed input; there is no self-consistent electron
+  power balance.
+\item $f_{\text{dec}}$ is an engineering input, not derived from
+  $f_{\text{axial}}$ of the plasma state. The diagnostic field
+  \texttt{f\_axial\_derived} is available for post-processing.
+\item The ambipolar potential uses the simple Boltzmann relation for
+  a single ion species; multispecies effects and warm-electron corrections
+  are not modeled.
+\item MHD stability is enforced only via the $\beta \le \beta_{\max}$
+  gate; drift-resonance and mirror-mode instabilities are not modeled.
+\item Geometry is a straight cylinder; end-cell and expander regions
+  are not modeled.
+\end{itemize}
+
 \section{Synchrotron radiation model details}
 \label{app:synchrotron}
 

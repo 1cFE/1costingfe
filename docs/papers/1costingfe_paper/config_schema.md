@@ -133,7 +133,7 @@ Used by `compute_p_rad`. Required when the 0D physics path is not active.
 
 ### 3d. Tokamak 0D model
 
-Activated when `use_0d_model: true` (tokamak only).
+Activated when `use_0d_model: true` for tokamak or mirror concepts.
 
 | Column | Description | Units / Vocabulary |
 |---|---|---|

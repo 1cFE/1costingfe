@@ -1,7 +1,7 @@
 # Mirror 0D Physics Model and Length Sizing
 
 **Date:** 2026-06-11
-**Status:** Approved design, pending implementation
+**Status:** Implemented
 
 Settled decisions: f_dec stays a YAML input (derived axial share is a
 diagnostic only; the 0.3 value is untraced and owes a provenance writeup);
@@ -107,10 +107,16 @@ cone. Three regimes exist; the model computes all three and combines them.
 
 **Ion-ion collision time** (base timescale):
 
-    tau_ii = 2.09e13 * T_i[keV]^1.5 * sqrt(A) / (n_i[m^-3] * Z^4 * ln_Lambda)
+    tau_ii = 2.09e13 * T_i[eV]^1.5 * sqrt(A) / (n_i[m^-3] * Z^4 * ln_Lambda)
 
 where A is the ion mass number (2.5 for DT), Z = 1, and ln_Lambda is the
-Coulomb logarithm (taken as 17 for fusion-relevant plasmas).
+Coulomb logarithm (taken as 17 for fusion-relevant plasmas). The NRL
+coefficient 2.09e13 takes T_i in eV. The implementation accepts T_i in keV
+and n_i in m^-3; it pre-folds the unit conversions into a single float64
+constant `_TAU_II_PREFACTOR_20 = 2.09e13 * (1e3)^1.5 * 1e-20 = 6.609e-3`
+that rescales both T (eV -> keV: factor (1e3)^1.5) and density (m^-3 ->
+1e20 m^-3: factor 1e-20) so all intermediates remain near unity in float32
+(XLA constant-gathering hazard).
 
 **Classical mirror confinement** (Bing and Roberts, 1961):
 
@@ -530,14 +536,11 @@ optimize_lcoe flags (default false).
 
 ## Coil cost must scale with length (C220103)
 
-The current mirror coil costing uses a FIXED n_coils = 10 in cas22.py,
-calibrated to a Hammir-class 50 m central cell. Under length sizing that
-fixed count would freeze the coil account while the machine grows - the
-same defect length sizing exists to fix. Replace the single count with a
-two-class structure matching the Realta architecture (4 high-field HTS
-end-plug magnets - 25 T throats in Hammir, 17 T CFS-built in WHAM - plus
-central-cell solenoid coils at 2.4-5.0 T, "significantly cheaper", whose
-number grows with the cell):
+The previous mirror coil costing used a FIXED n_coils = 10 in cas22.py.
+The two-class structure matching the Realta architecture is now implemented
+(4 high-field HTS end-plug magnets - 25 T throats in Hammir, 17 T CFS-built
+in WHAM - plus central-cell solenoid coils at 2.4-5.0 T, "significantly
+cheaper", whose number grows with the cell):
 
     n_central = L / coil_spacing          (continuous, JAX-differentiable;
                                            a costing aggregate, not a
@@ -547,10 +550,13 @@ number grows with the cell):
 
 Central-cell coils carry ampere-meters at b_center (the midplane-class
 field); plug coils at b_plug = R_m * B (the throat field), with their
-smaller bore. New YAML keys: coil_spacing: 5.0 [m], n_plug_coils: 4.
-CALIBRATION NEUTRALITY REQUIRED: at the YAML reference point (L = 50 m,
-spacing 5 m -> n_central = 10, matching today's n_coils = 10 plus the
-plug-coil contribution), the new structure must reproduce the current
-C220103 mirror cost by construction (recalibrate the markup once,
-documented in the account justification), so existing mirror results are
-unchanged at the defaults while sized machines scale.
+smaller bore. YAML keys in use: coil_spacing: 5.0 [m], n_plug_coils: 4.
+
+CALIBRATION: the two-class structure is calibrated at the YAML default
+machine (chamber_length: 20.0 m, coil_spacing: 5 m -> n_central = 4,
+n_plug_coils: 4), with markups chosen to reproduce the validated 513.375 M$
+C220103 baseline at that configuration. The Realta architecture (50 m
+Hammir central cell) remains the motivating design reference, but the
+calibration anchor is the 20 m YAML default, which preserves bit-identical
+results for existing (non-sized) mirror runs while sized machines scale
+correctly with L.

@@ -6,12 +6,12 @@ Items flagged by peer review that require new analysis, code runs, or new figure
 
 - **Power-balance Sankey** for a representative configuration.
 
-## Stub appendices for non-tokamak plasma models
+## Stub appendices for remaining non-tokamak plasma models
 
-The abstract claims coverage of "all major confinement families and fuel cycles", but only the tokamak has a 0D physics layer. Either:
+The abstract claims coverage of "all major confinement families and fuel cycles". The tokamak and mirror now have 0D physics layers. Either:
 
-- Add stub 0D models for stellarator, mirror, FRC, IFE.
-- Or soften the abstract claim ("designed to support all major confinement families; a 0D tokamak model is included as a first instantiation").
+- Add stub 0D models for stellarator, FRC, IFE.
+- Or soften the abstract claim for the remaining concepts.
 
 ## Stub paragraphs for skipped CAS22 sub-accounts
 
