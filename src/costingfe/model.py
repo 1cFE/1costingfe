@@ -552,6 +552,7 @@ class CostModel:
             f_rad_fus=params.get("f_rad_fus"),
             beta_max=params["beta_max"],
             q_wall_max=params["q_wall_max"],
+            q_surface_max=params["q_surface_max"],
             enforce_plasma_limits=params["enforce_plasma_limits"],
         )
 

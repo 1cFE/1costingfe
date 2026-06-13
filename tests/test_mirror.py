@@ -14,6 +14,7 @@ from costingfe.layers.mirror import (
     MirrorPlasmaState,
     SizingInfeasible,
     _density_from_f_beta,
+    _density_from_surface_cap,
     _density_from_wall_cap,
     compute_ambipolar_potential,
     compute_tau_classical,
@@ -303,6 +304,15 @@ class TestForward:
         ps = _forward(L=20.0, a=1.5, vacuum_t=0.10)
         assert float(ps.fw_area) == pytest.approx(geo.firstwall_area, rel=1e-6)
 
+    def test_state_reports_q_surface(self):
+        # q_surface = (p_rad + p_radial) / fw_area, computed from state fields.
+        ps = _forward()
+        p_rad = float(ps.p_rad)
+        p_radial = float(ps.p_radial)
+        fw_area = float(ps.fw_area)
+        expected = (p_rad + p_radial) / fw_area
+        assert float(ps.q_surface) == pytest.approx(expected, rel=1e-6)
+
 
 # ---------------------------------------------------------------------------
 # Shared inverse kwargs
@@ -360,8 +370,9 @@ def _inverse(
         T_e=kw.pop("T_e", _INV_TE),
         fuel=fuel,
         beta_max=kw.pop("beta_max", _INV_BETA_MAX),
-        # high default; inverse tests are not wall-capped
+        # high defaults; inverse tests are not wall- or surface-capped
         q_wall_max=kw.pop("q_wall_max", 50.0),
+        q_surface_max=kw.pop("q_surface_max", 50.0),
         enforce_plasma_limits=enforce_plasma_limits,
         dhe3_dd_frac=0.131,
         dhe3_dd_frac_pin=dhe3_dd_frac_pin,
@@ -428,6 +439,7 @@ class TestInverse:
             fuel=Fuel.DHE3,
             beta_max=0.5,
             q_wall_max=50.0,  # high cap; this test is not wall-bound
+            q_surface_max=50.0,  # high cap; this test is not surface-bound
             dhe3_dd_frac=0.131,
             dhe3_dd_frac_pin=None,
             vacuum_t=0.10,
@@ -760,6 +772,7 @@ def _sz_params(
     fuel=Fuel.DT,
     f_rad_fus=None,
     q_wall_max=50.0,  # high default so existing tests are never wall-bound
+    q_surface_max=50.0,  # high default so existing tests are never surface-bound
 ):
     """Build a minimal sizing params dict that mirror_size_from_power accepts."""
     return dict(
@@ -806,6 +819,7 @@ def _sz_params(
         vacuum_t=0.10,
         f_rad_fus=f_rad_fus,
         q_wall_max=q_wall_max,
+        q_surface_max=q_surface_max,
     )
 
 
@@ -950,6 +964,7 @@ class TestMirrorSizing:
             net_electric_mw=200.0,
             n_mod=1,
             q_wall_max=50.0,  # high cap so this test is never wall-bound
+            q_surface_max=50.0,  # high cap so this test is never surface-bound
         )
         p_dt = dict(
             common,
@@ -1031,6 +1046,7 @@ _SIZING_PARAMS = dict(
     a=_SZ_A_WALL,
     B_min=_SZ_B_WALL,
     q_wall_max=50.0,  # high default; cap non-binding unless a test overrides it
+    q_surface_max=50.0,  # high default; cap non-binding unless a test overrides it
     R_m=10.0,
     T_e=20.0,
     f_beta=0.85,
@@ -1091,10 +1107,10 @@ _MIX_KWARGS_FOR = {
 }
 
 
-def _size(params):
+def _size(params, fuel=Fuel.DT):
     """Size a mirror and return (L_solved, p_net, MirrorPlasmaState) at the solution."""
-    L = mirror_size_from_power(params, Fuel.DT)
-    pn, T_star, n_e_star = net_electric_at_L(L, params, Fuel.DT, return_state=True)
+    L = mirror_size_from_power(params, fuel)
+    pn, T_star, n_e_star = net_electric_at_L(L, params, fuel, return_state=True)
     # Evaluate the state at the solved operating point.
     # n_e_star is in m^-3 (converted at the _net_at_L_T boundary).
     ps = mirror_0d_forward(
@@ -1106,7 +1122,7 @@ def _size(params):
         T_e=params["T_e"],
         n_e=float(n_e_star),
         p_input=params["p_input"],
-        fuel=Fuel.DT,
+        fuel=fuel,
         M_ion=params.get("M_ion", 2.5),
         Z_eff=params.get("Z_eff", 1.2),
         R_w=params.get("R_w", 0.4),
@@ -1187,6 +1203,141 @@ class TestWallConstraint:
         assert jitted == pytest.approx(eager, rel=1e-4)
         g = float(jax.grad(f)(20.0))
         assert jnp.isfinite(g)
+
+
+# ---------------------------------------------------------------------------
+# Surface heat-flux constraint tests (Task 4)
+# ---------------------------------------------------------------------------
+
+# p-B11 sizing params: aneutronic, f_rad_fus=0.83 (83% of fusion power radiated).
+# The surface cap (q_surface_max=1.0) must bind before the neutron and beta caps.
+# Machine: high-field compact (B=12T, a=1.0m) where at T_i~290 keV the
+# beta-limited n20=4.44 exceeds the surface-limited n20=3.41, so the surface
+# cap is the binding density constraint. At q_surface_max=1.0 and L~27 m
+# this machine produces ~50 MWe (verified at implementation).
+_PB11_SIZING_PARAMS = dict(
+    net_electric_mw=50.0,  # achievable at B=12T, a=1.0 m with surface cap
+    a=1.0,  # compact radius; high B pushes surface cap above beta cap
+    B_min=12.0,  # high field so beta-limited density exceeds surface-limited density
+    q_wall_max=50.0,  # high cap; neutron cap does not bind for aneutronic p-B11
+    q_surface_max=1.0,  # surface cap binding for p-B11 (83% radiation fraction)
+    R_m=10.0,
+    T_e=150.0,  # hot electron temperature for p-B11 hot-ion regime
+    f_beta=0.85,
+    beta_max=0.5,
+    L_min=1.0,
+    L_max=200.0,
+    M_ion=2.5,
+    Z_eff=1.2,
+    R_w=0.4,
+    p_input=40.0,
+    mn=1.02,  # near-aneutronic: no blanket multiplier
+    eta_th=0.40,
+    eta_p=0.5,
+    eta_pin=0.7,
+    eta_de=0.85,
+    f_sub=0.03,
+    f_dec=0.6,  # high DEC fraction: charged-particle dominant
+    p_coils=5.0,
+    p_cool=5.0,
+    p_pump=1.5,
+    p_trit=0.0,  # no tritium processing for p-B11
+    p_house=4.0,
+    p_cryo=1.0,
+    dd_f_T=0.969,
+    dd_f_He3=0.689,
+    dhe3_dd_frac=0.131,
+    dhe3_f_T=0.5,
+    dhe3_f_He3=0.05,
+    pb11_f_alpha_n=0.0,
+    pb11_f_p_n=0.0,
+    dhe3_fuel_ratio=1.0,
+    pb11_fuel_ratio=0.15,
+    dhe3_dd_frac_pin=None,
+    wall_material=None,
+    T_edge=0.2,
+    tau_ratio=3.0,
+    enforce_plasma_limits=True,
+    vacuum_t=0.10,
+    f_rad_fus=0.83,  # p-B11: 83% of fusion power radiated as photons
+    n_mod=1,
+)
+
+
+@pytest.mark.slow
+class TestSurfaceConstraint:
+    def test_pb11_sizing_is_surface_bound(self):
+        """p-B11 sized with q_surface_max=1.0: surface cap must bind.
+
+        p-B11 radiates 83% of fusion power; the surface cap binds before
+        both the beta boundary and the neutron cap (which barely applies
+        for an aneutronic fuel).
+        """
+        L, pnet, state = _size(_PB11_SIZING_PARAMS, fuel=Fuel.PB11)
+        # Surface cap must be at or below the threshold (with 0.1% tolerance).
+        assert float(state.q_surface) <= 1.0 * 1.001
+        # Neutron cap must not be the binding constraint (p-B11 is aneutronic).
+        assert float(state.wall_loading) < 5.0  # neutron cap slack
+        # Beta cap must not be the binding constraint either.
+        assert float(state.beta) < 0.85 * 0.5  # below f_beta * beta_max
+
+    def test_dt_audit_mode_warns_above_q_surface_max(self):
+        """Forcing a small q_surface_max triggers a UserWarning in audit mode.
+
+        The reference inverse machine at n_e=1e20, T_i~22 keV produces
+        q_surface ~ 0.008 MW/m^2. Setting q_surface_max=0.001 (below the
+        achieved value) triggers the 'surface' warning.
+        """
+        with pytest.warns(UserWarning, match=r"surface"):
+            _inverse(p_net_target=20.0, q_surface_max=0.001)
+
+    def test_surface_cap_infeasible_raises_naming_q_surface_max(self):
+        """Infeasibility under the surface cap names q_surface_max in the message."""
+        # Force a ridiculously tight surface cap so the machine cannot reach 50 MWe.
+        params = dict(_PB11_SIZING_PARAMS, q_surface_max=1e-6)
+        with pytest.raises(SizingInfeasible, match=r"q_surface_max"):
+            _size(params, fuel=Fuel.PB11)
+
+    def test_loose_surface_cap_recovers_wall_bound_or_beta_bound(self):
+        """With q_surface_max=50, the p-B11 solution is NOT surface-bound.
+
+        Raising the cap to 50 MW/m^2 allows the solver to run free; the
+        active constraint should be either the beta boundary or the neutron
+        wall cap, not the surface cap.
+        """
+        params = dict(_PB11_SIZING_PARAMS, q_surface_max=50.0, q_wall_max=50.0)
+        L, pnet, state = _size(params, fuel=Fuel.PB11)
+        # With loose caps the surface heat flux is above 1 MW/m^2 (otherwise
+        # the tight-cap test would be trivially passing).
+        assert float(state.q_surface) > 1.0
+
+    def test_density_from_surface_cap_returns_finite(self):
+        """_density_from_surface_cap returns a finite, positive n20 for each fuel.
+
+        Uses a tightly capped q_surface_max=0.01 MW/m^2 at the _SIZING_PARAMS
+        machine; the bisection must converge to a finite density for all fuels.
+        """
+        mix = _MIX_KWARGS_FOR[Fuel.DT]
+        fwd_kwargs = dict(
+            B_min=_SZ_B_WALL,
+            R_m=10.0,
+            M_ion=2.5,
+            Z_eff=1.2,
+            R_w=0.4,
+            f_rad_fus=None,  # DT: full radiation model
+        )
+        n_surf_20 = _density_from_surface_cap(
+            20.0,  # T_i
+            20.0,  # T_e
+            0.01,  # q_surface_max [MW/m^2]: tight cap
+            _SZ_A_WALL,
+            0.10,  # vacuum_t
+            Fuel.DT,
+            mix,
+            fwd_kwargs,
+        )
+        assert n_surf_20 > 0.0
+        assert n_surf_20 < 1e3  # not the sentinel (cap is binding at 0.01 MW/m^2)
 
 
 class TestAnchors:

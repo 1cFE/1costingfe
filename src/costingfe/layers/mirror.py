@@ -84,6 +84,7 @@ class MirrorPlasmaState:
     V_plasma: float  # Plasma volume [m^3]
     fw_area: float  # First-wall area [m^2]
     wall_loading: float  # Neutron wall loading [MW/m^2]
+    q_surface: float  # Surface heat-flux (photons + radial transport) on FW [MW/m^2]
     R_m: float  # Mirror ratio [-]
     collisionality: float  # L / ion mean free path diagnostic [-]
     dhe3_dd_frac_eff: float = 0.0  # Effective D-D side-channel fraction (D-He3 only)
@@ -317,6 +318,11 @@ def mirror_0d_forward(
     # 14. Wall loading
     wall_loading = p_neutron / fw_area
 
+    # 14b. Surface heat-flux: photons + radial cross-field transport onto FW.
+    # Axial end losses (p_end) exit through the throats to the expander/DEC
+    # plates and never touch the lateral first wall.
+    q_surface = (p_rad + p_radial) / fw_area
+
     # 15. Collisionality: L / ion mean free path
     # Mean free path = v_thi * tau_ii
     v_thi = _V_THI_PREFACTOR * jnp.sqrt(T_i / M_ion)
@@ -342,6 +348,7 @@ def mirror_0d_forward(
         V_plasma=V_plasma,
         fw_area=fw_area,
         wall_loading=wall_loading,
+        q_surface=q_surface,
         R_m=R_m,
         collisionality=collisionality,
         dhe3_dd_frac_eff=dhe3_dd_frac_eff,
@@ -448,6 +455,10 @@ def mirror_0d_inverse(
     # In inverse (audit) mode the computed wall loading is compared against
     # this threshold and a warning is issued when it is exceeded.
     q_wall_max: float,
+    # Required: surface heat-flux cap [MW/m^2]. No default; comes from YAML.
+    # In inverse (audit) mode the computed q_surface is compared against
+    # this threshold and a warning is issued when it is exceeded.
+    q_surface_max: float,
     # Behavior flag: False is the escape hatch for exploration runs.
     enforce_plasma_limits: bool = True,
 ):
@@ -577,6 +588,16 @@ def mirror_0d_inverse(
             warnings.warn(
                 f"Neutron wall loading = {wl:.2f} MW/m^2"
                 f" > q_wall_max = {q_wall_max:.2f} MW/m^2",
+                stacklevel=2,
+            )
+        # Surface heat-flux: warning-severity only (symmetric with wall loading).
+        # Threshold from q_surface_max (YAML-sourced required kwarg).
+        qs = float(plasma_state.q_surface)
+        if qs > q_surface_max:
+            warnings.warn(
+                f"Surface heat flux = {qs:.2f} MW/m^2"
+                f" > q_surface_max = {q_surface_max:.2f} MW/m^2"
+                " (photons + radial cross-field transport on first wall)",
                 stacklevel=2,
             )
 
@@ -733,12 +754,124 @@ def _density_from_wall_cap(T_i, T_e, q_wall_max, a, vacuum_t, fuel, params_mix):
     return n20  # [10^20 m^-3]
 
 
-def _net_at_L_T(L, T_i, params, fuel):
+def _density_from_surface_cap(
+    T_i,
+    T_e,
+    q_surface_max,
+    a,
+    vacuum_t,
+    fuel,
+    params_mix,
+    forward_kwargs,
+    n_beta_20=None,
+):
+    """Density at the surface heat-flux cap [10^20 m^-3].
+
+    Finds n20 such that q_surface(n20; T_i, T_e) == q_surface_max, where
+    q_surface = (p_rad + p_radial) / fw_area (photons + radial cross-field
+    transport onto the lateral first wall; axial end-loss exits through the
+    throats and is excluded).
+
+    Uses uniform monotone bisection on n20. Radiation (bremsstrahlung +
+    synchrotron) and radial transport both increase monotonically with density
+    at fixed T, so bisection is well-posed.
+
+    n_beta_20: optional beta-limited density ceiling [10^20 m^-3]. When
+    provided (the normal sizing path), the bisection bracket is clamped to
+    [1e-3, n_beta_20] and the early-out fires when q_surface at n_beta_20
+    is already below the cap -- at that point the surface cap cannot bind
+    (n_surf > n_beta) so returning n_beta_20 causes min(n_beta, n_surf)
+    = n_beta (the beta branch remains active). This eliminates the 40-
+    iteration bisection for the common non-binding case. When n_beta_20 is
+    None (standalone call for testing/diagnostic), the bracket is [1e-3, 1e2].
+
+    Eager-only. The function calls float() on the probe q_surface value and
+    branches on ``if q_mid < q_surface_max`` with a plain Python float, so it
+    cannot be jit-traced. This is deliberate: the entire sizing path
+    (_net_at_L_T -> GSS -> L bisection) is a Python eager loop, so no tracing
+    is ever attempted. See the jit-compiled counterpart _density_from_wall_cap
+    for the closed-form approach that is actually jit-safe.
+
+    Returns n_surf_20 in [10^20 m^-3]. Conversion to SI happens once at the
+    _net_at_L_T boundary: n_e = jnp.minimum(n_beta_20, jnp.minimum(n_wall_20,
+    n_surf_20)) * 1e20.
+    """
+
+    def _q_surface_at_n20(n20_probe):
+        # Evaluate q_surface at this density: run a mini-forward at L=1, unit volume.
+        # L cancels: q_surface = (p_rad + p_radial) / (fw_area_per_L * L), and
+        # all power terms scale with L, so we can use L=1 throughout.
+        # Read q_surface directly from the probe state -- the forward already
+        # computes it, so no local fw_area recomputation is needed.
+        n_e_probe = n20_probe * 1e20
+        ps_probe = mirror_0d_forward(
+            L=1.0,
+            a=a,
+            B_min=forward_kwargs["B_min"],
+            R_m=forward_kwargs["R_m"],
+            T_i=T_i,
+            T_e=T_e,
+            n_e=n_e_probe,
+            p_input=0.0,  # heating not needed for radiation/loss estimate
+            fuel=fuel,
+            M_ion=forward_kwargs.get("M_ion", 2.5),
+            Z_eff=forward_kwargs.get("Z_eff", 1.2),
+            R_w=forward_kwargs.get("R_w", 0.4),
+            dd_f_T=params_mix["dd_f_T"],
+            dd_f_He3=params_mix["dd_f_He3"],
+            dhe3_dd_frac_pin=params_mix["dhe3_dd_frac_pin"],
+            dhe3_f_T=params_mix["dhe3_f_T"],
+            dhe3_f_He3=params_mix["dhe3_f_He3"],
+            pb11_f_alpha_n=params_mix["pb11_f_alpha_n"],
+            pb11_f_p_n=params_mix["pb11_f_p_n"],
+            dhe3_fuel_ratio=params_mix["dhe3_fuel_ratio"],
+            pb11_fuel_ratio=params_mix["pb11_fuel_ratio"],
+            vacuum_t=vacuum_t,
+            f_rad_fus=forward_kwargs.get("f_rad_fus"),
+        )
+        return float(ps_probe.q_surface)
+
+    # Bracket: [1e-3, n_beta_20] when the ceiling is known; [1e-3, 1e2] standalone.
+    lo_n20 = 1e-3
+    hi_n20 = float(n_beta_20) if n_beta_20 is not None else 1e2
+
+    # Early-out: if q_surface at the bracket top (= n_beta_20 in the sizing path)
+    # is still below the cap, the surface cap cannot bind at any density the
+    # machine will actually operate at. Return hi_n20 as a sentinel so that
+    # min(n_beta_20, n_surf_20) = n_beta_20 (the beta branch remains active).
+    # This costs ONE forward evaluation instead of 40, which is the common case
+    # for DT/DD at modest radiation fractions and typical q_surface_max = 1 MW/m^2.
+    q_hi = _q_surface_at_n20(hi_n20)
+    if q_hi <= q_surface_max:
+        return hi_n20  # sentinel: cap not binding
+
+    # Bisection: 40 iterations, Python floats (eager-only; see docstring).
+    for _ in range(40):
+        mid_n20 = 0.5 * (lo_n20 + hi_n20)
+        q_mid = _q_surface_at_n20(mid_n20)
+        if q_mid < q_surface_max:
+            lo_n20 = mid_n20
+        else:
+            hi_n20 = mid_n20
+
+    return 0.5 * (lo_n20 + hi_n20)  # [10^20 m^-3]
+
+
+def _net_at_L_T(L, T_i, params, fuel, *, _surf_cap_cache=None):
     """Net electric power [MW] at fixed L and T_i.
 
     Derives density from the f_beta closed form, runs mirror_0d_forward, then
     mfe_forward_power_balance. Returns (p_net [MW], n_e [m^-3], T_i [keV]).
     T_e is held fixed from params (the spec: GSS scans T_i with T_e from YAML).
+
+    _surf_cap_cache: optional dict keyed by T_i (float). When provided, the
+    surface cap density n_surf_20 is looked up rather than recomputed if T_i
+    was already evaluated. Results are stored on miss. Since n_surf_20 is L-
+    independent, the same value is valid for every L at the same T_i. Across
+    the L bisection loop the GSS probes the same golden-section T_i values each
+    step (the bracket is fixed), so a shared cache across all L steps reduces
+    the total _density_from_surface_cap calls from O(L_iters x GSS_iters) to
+    O(GSS_iters) -- typically ~42 misses instead of ~4800.
     """
     T_e = params["T_e"]
     # returns [10^20 m^-3], converted at the _net_at_L_T boundary
@@ -773,7 +906,42 @@ def _net_at_L_T(L, T_i, params, fuel):
         fuel,
         params_mix,
     )
-    n_e = jnp.minimum(n_beta_20, n_wall_20) * 1e20  # Convert to m^-3
+    # Surface heat-flux branch: bisection on n20 so q_surface(n) == q_surface_max.
+    # forward_kwargs is the subset of params that _density_from_surface_cap needs.
+    forward_kwargs = dict(
+        B_min=params["B_min"],
+        R_m=params["R_m"],
+        M_ion=params.get("M_ion", 2.5),
+        Z_eff=params.get("Z_eff", 1.2),
+        R_w=params.get("R_w", 0.4),
+        f_rad_fus=params.get("f_rad_fus"),
+    )
+    # Use the cross-L cache when available (T_i is the key; n_surf_20 is L-independent).
+    cache_key = float(T_i)
+    if _surf_cap_cache is not None and cache_key in _surf_cap_cache:
+        n_surf_20 = _surf_cap_cache[cache_key]
+    else:
+        # returns [10^20 m^-3], converted at the _net_at_L_T boundary.
+        # Pass n_beta_20 as the upper bracket ceiling so the early-out fires
+        # in the common non-binding case with only ONE forward evaluation.
+        n_surf_20 = _density_from_surface_cap(
+            T_i,
+            T_e,
+            params["q_surface_max"],
+            params["a"],
+            params["vacuum_t"],
+            fuel,
+            params_mix,
+            forward_kwargs,
+            n_beta_20=float(n_beta_20),
+        )
+        if _surf_cap_cache is not None:
+            _surf_cap_cache[cache_key] = n_surf_20
+    # Three-branch density resolution: n_e = min(n_beta, n_wall, n_surf).
+    # Chained jnp.minimum preserves JAX-compatibility.
+    n_e = (
+        jnp.minimum(n_beta_20, jnp.minimum(n_wall_20, n_surf_20)) * 1e20
+    )  # Convert to m^-3
     a = params["a"]
     B_min = params["B_min"]
     R_m = params["R_m"]
@@ -861,7 +1029,7 @@ def _net_at_L_T(L, T_i, params, fuel):
     return float(pt.p_net), float(n_e), float(T_i)
 
 
-def net_electric_at_L(L, params, fuel, return_state=False):
+def net_electric_at_L(L, params, fuel, return_state=False, _surf_cap_cache=None):
     """Net electric power [MW] at the constraint-boundary operating point for a fixed L.
 
     Temperature T_i maximizes net power within the fuel-keyed bracket via
@@ -870,13 +1038,19 @@ def net_electric_at_L(L, params, fuel, return_state=False):
 
     Returns p_net [MW] by default.
     With return_state=True, returns (p_net, T_i_star, n_e_star).
+
+    _surf_cap_cache: dict shared across L bisection steps. The surface heat-flux
+    cap density n_surf_20 is L-independent and the GSS probes the same golden-
+    section T_i values each step (fixed bracket), so hits accumulate quickly and
+    reduce total _density_from_surface_cap evaluations from O(L x GSS) to O(GSS).
+    Pass the same dict to every call to benefit from cross-L reuse.
     """
     T_lo, T_hi = _T_BRACKET_MIRROR[fuel]
     invphi = (5**0.5 - 1) / 2  # golden-section ratio
     invphi2 = (3 - 5**0.5) / 2
 
     def feasible_net(T_i):
-        pn, _n, _T = _net_at_L_T(L, T_i, params, fuel)
+        pn, _n, _T = _net_at_L_T(L, T_i, params, fuel, _surf_cap_cache=_surf_cap_cache)
         return pn
 
     a_gss, b_gss = T_lo, T_hi
@@ -898,7 +1072,9 @@ def net_electric_at_L(L, params, fuel, return_state=False):
             fd = feasible_net(d)
     T_star = 0.5 * (a_gss + b_gss)
 
-    pn, n_e_star, _ = _net_at_L_T(L, T_star, params, fuel)
+    pn, n_e_star, _ = _net_at_L_T(
+        L, T_star, params, fuel, _surf_cap_cache=_surf_cap_cache
+    )
     if return_state:
         return pn, T_star, n_e_star
     return pn
@@ -923,12 +1099,21 @@ def mirror_size_from_power(params, fuel):
     target = params["net_electric_mw"] / n_mod
     lo, hi = params["L_min"], params["L_max"]
 
-    pn_hi = net_electric_at_L(hi, params, fuel)
+    # Shared surface-cap cache: n_surf_20 is L-independent, so the same value
+    # applies at every L for a given T_i. The GSS probes the same golden-section
+    # T_i values across L bisection steps (fixed bracket), so the cache rapidly
+    # fills on the first few L steps and then hits for all subsequent ones.
+    # This reduces _density_from_surface_cap calls from O(L_iters x GSS_iters)
+    # to O(GSS_iters) -- ~42 misses instead of ~4800 for a typical DT sizing run.
+    _surf_cache: dict = {}
+
+    pn_hi = net_electric_at_L(hi, params, fuel, _surf_cap_cache=_surf_cache)
     if pn_hi < target:
-        # Detect whether the wall cap was binding at L_max to give an informative
-        # error (decision b). Check by comparing n_wall vs n_beta at the GSS T_star.
+        # Detect whether the wall or surface cap was binding at L_max to give an
+        # informative error (decision b). Check by comparing n_wall/n_surf vs n_beta
+        # at the GSS T_star.
         _pn, T_star_hi, n_e_star_hi = net_electric_at_L(
-            hi, params, fuel, return_state=True
+            hi, params, fuel, return_state=True, _surf_cap_cache=_surf_cache
         )
         T_e = params["T_e"]
         # returns [10^20 m^-3]
@@ -943,10 +1128,64 @@ def mirror_size_from_power(params, fuel):
             params["pb11_fuel_ratio"],
         )
         # n_e_star_hi is m^-3 (from _net_at_L_T boundary); n_beta_hi_20 is [10^20 m^-3].
-        # 0.9999: guards against float32 equality at the non-wall-bound boundary;
-        # a real wall-bound gap is far larger than the 1e-4 relative tolerance.
-        wall_binding = float(n_e_star_hi) < float(n_beta_hi_20) * 1e20 * 0.9999
-        if wall_binding:
+        # 0.9999: guards against float32 equality at the non-cap boundary;
+        # a real cap-bound gap is far larger than the 1e-4 relative tolerance.
+        cap_binding = float(n_e_star_hi) < float(n_beta_hi_20) * 1e20 * 0.9999
+        if cap_binding:
+            # Determine which cap was the binding one: compare n_wall vs n_surf.
+            params_mix_hi = dict(
+                dd_f_T=params["dd_f_T"],
+                dd_f_He3=params["dd_f_He3"],
+                dhe3_dd_frac_pin=params.get("dhe3_dd_frac_pin"),
+                dhe3_f_T=params["dhe3_f_T"],
+                dhe3_f_He3=params["dhe3_f_He3"],
+                pb11_f_alpha_n=params["pb11_f_alpha_n"],
+                pb11_f_p_n=params["pb11_f_p_n"],
+                dhe3_fuel_ratio=params["dhe3_fuel_ratio"],
+                pb11_fuel_ratio=params["pb11_fuel_ratio"],
+            )
+            n_wall_hi_20 = float(
+                _density_from_wall_cap(
+                    T_star_hi,
+                    T_e,
+                    params["q_wall_max"],
+                    params["a"],
+                    params["vacuum_t"],
+                    fuel,
+                    params_mix_hi,
+                )
+            )
+            fwd_kwargs_hi = dict(
+                B_min=params["B_min"],
+                R_m=params["R_m"],
+                M_ion=params.get("M_ion", 2.5),
+                Z_eff=params.get("Z_eff", 1.2),
+                R_w=params.get("R_w", 0.4),
+                f_rad_fus=params.get("f_rad_fus"),
+            )
+            n_surf_hi_20 = _density_from_surface_cap(
+                T_star_hi,
+                T_e,
+                params["q_surface_max"],
+                params["a"],
+                params["vacuum_t"],
+                fuel,
+                params_mix_hi,
+                fwd_kwargs_hi,
+                n_beta_20=float(n_beta_hi_20),
+            )
+            # Surface cap is the binding one when n_surf < n_wall.
+            if n_surf_hi_20 < n_wall_hi_20 * 0.9999:
+                raise SizingInfeasible(
+                    f"net power at L_max={hi} m is {pn_hi:.1f} MW"
+                    f" < target {target:.1f} MW; "
+                    "surface heat-flux cap"
+                    f" q_surface_max={params['q_surface_max']:.2f} MW/m^2"
+                    " is binding (n_surf < n_wall < n_beta at L_max):"
+                    " the machine cannot reach the power target under this"
+                    " surface heat-flux constraint."
+                    " Raise q_surface_max or reduce the target."
+                )
             raise SizingInfeasible(
                 f"net power at L_max={hi} m is {pn_hi:.1f} MW"
                 f" < target {target:.1f} MW; "
@@ -962,7 +1201,7 @@ def mirror_size_from_power(params, fuel):
 
     for _ in range(_L_BISECT_ITERS):
         mid = 0.5 * (lo + hi)
-        if net_electric_at_L(mid, params, fuel) < target:
+        if net_electric_at_L(mid, params, fuel, _surf_cap_cache=_surf_cache) < target:
             lo = mid
         else:
             hi = mid
