@@ -14,6 +14,7 @@ from costingfe.layers.mirror import (
     MirrorPlasmaState,
     SizingInfeasible,
     _density_from_f_beta,
+    _density_from_wall_cap,
     compute_ambipolar_potential,
     compute_tau_classical,
     compute_tau_gas_dynamic,
@@ -359,6 +360,8 @@ def _inverse(
         T_e=kw.pop("T_e", _INV_TE),
         fuel=fuel,
         beta_max=kw.pop("beta_max", _INV_BETA_MAX),
+        # high default; inverse tests are not wall-capped
+        q_wall_max=kw.pop("q_wall_max", 50.0),
         enforce_plasma_limits=enforce_plasma_limits,
         dhe3_dd_frac=0.131,
         dhe3_dd_frac_pin=dhe3_dd_frac_pin,
@@ -424,6 +427,7 @@ class TestInverse:
             T_e=30.0,
             fuel=Fuel.DHE3,
             beta_max=0.5,
+            q_wall_max=50.0,  # high cap; this test is not wall-bound
             dhe3_dd_frac=0.131,
             dhe3_dd_frac_pin=None,
             vacuum_t=0.10,
@@ -755,6 +759,7 @@ def _sz_params(
     f_beta=_SZ_F_BETA,
     fuel=Fuel.DT,
     f_rad_fus=None,
+    q_wall_max=50.0,  # high default so existing tests are never wall-bound
 ):
     """Build a minimal sizing params dict that mirror_size_from_power accepts."""
     return dict(
@@ -800,6 +805,7 @@ def _sz_params(
         enforce_plasma_limits=True,
         vacuum_t=0.10,
         f_rad_fus=f_rad_fus,
+        q_wall_max=q_wall_max,
     )
 
 
@@ -823,7 +829,9 @@ class TestMirrorSizing:
         pn, T_i_star, n_e_star = net_electric_at_L(
             L_solved, params, Fuel.DT, return_state=True
         )
-        # Verify density matches the closed form
+        # Verify density matches the closed form.
+        # _density_from_f_beta returns [10^20 m^-3], converted at the
+        # _net_at_L_T boundary; n_e_star is already in m^-3 (post-conversion).
         f_beta = params["f_beta"]
         beta_max = params["beta_max"]
         B = params["B_min"]
@@ -833,7 +841,7 @@ class TestMirrorSizing:
         )
         T_sum = T_e + n_i_frac * T_i_star
         n20_expected = f_beta * beta_max * B**2 / (2 * _MU_0 * _KEV_TO_J * 1e20) / T_sum
-        n_e_expected = n20_expected * 1e20
+        n_e_expected = n20_expected * 1e20  # convert n20 -> m^-3 for comparison
         assert n_e_star == pytest.approx(n_e_expected, rel=1e-6)
 
     def test_sized_lcoe_reflects_coil_account(self):
@@ -941,6 +949,7 @@ class TestMirrorSizing:
             vacuum_t=0.10,
             net_electric_mw=200.0,
             n_mod=1,
+            q_wall_max=50.0,  # high cap so this test is never wall-bound
         )
         p_dt = dict(
             common,
@@ -973,7 +982,11 @@ class TestMirrorSizing:
         ],
     )
     def test_density_from_f_beta_jit_matches_eager_all_fuels(self, fuel, T_i, T_e):
-        """_density_from_f_beta: jit matches eager (rel 1e-4) and gradient is finite."""
+        """_density_from_f_beta: jit matches eager (rel 1e-4) and gradient is finite.
+
+        _density_from_f_beta returns [10^20 m^-3],
+        converted at the _net_at_L_T boundary.
+        """
         f_beta = 0.85
         beta_max = 0.5
         B_min = 3.0
@@ -981,6 +994,7 @@ class TestMirrorSizing:
         pb11_fuel_ratio = 0.15
 
         def kernel(T_i_arr):
+            # returns [10^20 m^-3], converted at the _net_at_L_T boundary
             return _density_from_f_beta(
                 T_i_arr,
                 T_e,
@@ -1000,6 +1014,179 @@ class TestMirrorSizing:
 
         grad_val = float(jax.grad(kernel)(T_i_arr))
         assert jnp.isfinite(grad_val)
+
+
+# ---------------------------------------------------------------------------
+# Wall-load constraint tests (Task 3)
+# ---------------------------------------------------------------------------
+
+# Shared sizing params for wall-constraint tests: a=1.5, B=3.0 machine,
+# which IS wall-bound at q_wall_max=5.0 (n_wall < n_beta at f_beta=0.85).
+# (The standard _sz_params machine a=0.4, B=3.0 is NOT wall-bound; the 1.5 m
+# radius machine reproduces the YAML-defaults geometry for this test class.)
+_SZ_A_WALL = 1.5  # plasma radius [m] — YAML defaults machine
+_SZ_B_WALL = 3.0  # midplane field [T]
+_SIZING_PARAMS = dict(
+    net_electric_mw=200.0,
+    a=_SZ_A_WALL,
+    B_min=_SZ_B_WALL,
+    q_wall_max=50.0,  # high default; cap non-binding unless a test overrides it
+    R_m=10.0,
+    T_e=20.0,
+    f_beta=0.85,
+    beta_max=0.5,
+    L_min=1.0,
+    L_max=200.0,
+    M_ion=2.5,
+    Z_eff=1.2,
+    R_w=0.4,
+    p_input=40.0,
+    mn=1.1,
+    eta_th=0.40,
+    eta_p=0.5,
+    eta_pin=0.7,
+    eta_de=0.85,
+    f_sub=0.03,
+    f_dec=0.3,
+    p_coils=5.0,
+    p_cool=20.0,
+    p_pump=1.5,
+    p_trit=10.0,
+    p_house=4.0,
+    p_cryo=1.0,
+    dd_f_T=0.969,
+    dd_f_He3=0.689,
+    dhe3_dd_frac=0.131,
+    dhe3_f_T=0.5,
+    dhe3_f_He3=0.05,
+    pb11_f_alpha_n=0.0,
+    pb11_f_p_n=0.0,
+    dhe3_fuel_ratio=1.0,
+    pb11_fuel_ratio=0.15,
+    dhe3_dd_frac_pin=None,
+    wall_material=None,
+    T_edge=0.2,
+    tau_ratio=3.0,
+    enforce_plasma_limits=True,
+    vacuum_t=0.10,
+    f_rad_fus=None,
+    n_mod=1,
+)
+
+# Per-fuel mix kwargs dict for _density_from_wall_cap parametrized test.
+# Mirrors the kwargs pattern fusion_power and ash_neutron_split expect.
+_MIX_KWARGS_FOR = {
+    fuel: dict(
+        dd_f_T=0.969,
+        dd_f_He3=0.689,
+        dhe3_dd_frac_pin=None,
+        dhe3_f_T=0.5,
+        dhe3_f_He3=0.05,
+        pb11_f_alpha_n=0.0,
+        pb11_f_p_n=0.0,
+        dhe3_fuel_ratio=1.0,
+        pb11_fuel_ratio=0.15,
+    )
+    for fuel in [Fuel.DT, Fuel.DD, Fuel.DHE3, Fuel.PB11]
+}
+
+
+def _size(params):
+    """Size a mirror and return (L_solved, p_net, MirrorPlasmaState) at the solution."""
+    L = mirror_size_from_power(params, Fuel.DT)
+    pn, T_star, n_e_star = net_electric_at_L(L, params, Fuel.DT, return_state=True)
+    # Evaluate the state at the solved operating point.
+    # n_e_star is in m^-3 (converted at the _net_at_L_T boundary).
+    ps = mirror_0d_forward(
+        L=L,
+        a=params["a"],
+        B_min=params["B_min"],
+        R_m=params["R_m"],
+        T_i=T_star,
+        T_e=params["T_e"],
+        n_e=float(n_e_star),
+        p_input=params["p_input"],
+        fuel=Fuel.DT,
+        M_ion=params.get("M_ion", 2.5),
+        Z_eff=params.get("Z_eff", 1.2),
+        R_w=params.get("R_w", 0.4),
+        dd_f_T=params["dd_f_T"],
+        dd_f_He3=params["dd_f_He3"],
+        dhe3_dd_frac_pin=params.get("dhe3_dd_frac_pin"),
+        dhe3_f_T=params["dhe3_f_T"],
+        dhe3_f_He3=params["dhe3_f_He3"],
+        pb11_f_alpha_n=params["pb11_f_alpha_n"],
+        pb11_f_p_n=params["pb11_f_p_n"],
+        dhe3_fuel_ratio=params["dhe3_fuel_ratio"],
+        pb11_fuel_ratio=params["pb11_fuel_ratio"],
+        vacuum_t=params["vacuum_t"],
+        f_rad_fus=params.get("f_rad_fus"),
+    )
+    return L, pn, ps
+
+
+@pytest.mark.slow
+class TestWallConstraint:
+    def test_sizing_respects_q_wall_max(self):
+        # Default machine (a=1.5, B=3.0) is wall-bound at q_wall_max=5.0:
+        # n_wall(T) < n_beta(T) across the GSS T_i bracket at these params.
+        params = dict(_SIZING_PARAMS, q_wall_max=5.0)
+        L, pnet, state = _size(params)
+        assert float(state.wall_loading) <= 5.0 * 1.001
+        # wall cap (5.0) is the active constraint, not beta:
+        assert float(state.wall_loading) >= 4.5
+        assert float(state.beta) < 0.85 * 0.5  # below f_beta * beta_max
+
+    def test_loose_cap_recovers_beta_bound_solution(self):
+        # q_wall_max=50 must reproduce the pre-cap (beta-bound) solution.
+        # Legacy beta-bound pin: L = 4.9773251338 m (captured at tip 5530ec8).
+        params = dict(_SIZING_PARAMS, q_wall_max=50.0)
+        L, _, _ = _size(params)
+        # Legacy L pre-cap (beta-bound): 4.9773251338 m
+        assert L == pytest.approx(4.9773251338, rel=1e-4)
+
+    def test_infeasible_under_cap_raises_naming_cap(self):
+        with pytest.raises(SizingInfeasible, match=r"q_wall_max"):
+            _size(dict(_SIZING_PARAMS, q_wall_max=0.5, net_electric_mw=600.0))
+
+    def test_optimizer_survives_tight_cap_returns_finite_lcoe(self):
+        """optimize_lcoe completes when the wall cap causes SizingInfeasible
+        at some f_beta values in the GSS sweep.
+
+        q_wall_max=5.0 with the a=1.5 m machine is wall-bound: some f_beta
+        values in [f_beta_min, f_beta_max] trigger SizingInfeasible inside
+        mirror_size_from_power.  The _lcoe_at_fb handler must catch both
+        OperatingPointInfeasible and SizingInfeasible and return the 1e8
+        sentinel so the optimizer can find the feasible region and return a
+        finite LCOE.
+        """
+        m = CostModel(ConfinementConcept.MIRROR, Fuel.DT)
+        r = m.forward(
+            net_electric_mw=200.0,
+            availability=0.87,
+            lifetime_yr=40.0,
+            size_from_power=True,
+            optimize_lcoe=True,
+            q_wall_max=5.0,  # tight cap; some f_beta values are SizingInfeasible
+        )
+        assert math.isfinite(r.costs.lcoe)
+        assert r.costs.lcoe < 1e7  # not the sentinel; a real LCOE
+
+    @pytest.mark.parametrize("fuel", [Fuel.DT, Fuel.DD, Fuel.DHE3, Fuel.PB11])
+    def test_n_wall_jit_matches_eager_all_fuels(self, fuel):
+        # Same harness as test_density_from_f_beta_jit_matches_eager_all_fuels:
+        # copy its per-fuel mix kwargs verbatim.
+        mix = _MIX_KWARGS_FOR[fuel]
+
+        def f(T):
+            return _density_from_wall_cap(T, 20.0, 5.0, 1.5, 0.10, fuel, mix)
+
+        eager = float(f(20.0))
+        jitted = float(jax.jit(f)(20.0))
+        assert jnp.isfinite(jitted)
+        assert jitted == pytest.approx(eager, rel=1e-4)
+        g = float(jax.grad(f)(20.0))
+        assert jnp.isfinite(g)
 
 
 class TestAnchors:

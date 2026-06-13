@@ -59,6 +59,9 @@ R_w: 0.4  # Wall reflectivity for synchrotron (lower — open ends)
 coil_spacing: 5.0    # Central-cell solenoid spacing [m] (Realta-class pitch)
 n_plug_coils: 4      # Number of end-plug HTS coils (2 per end, HAMMIR class)
 
+# Wall-load constraints
+q_wall_max: 5.0  # Neutron wall-load cap [MW/m^2]; sizing constraint, audit-mode warning threshold
+
 # Mirror 0D model parameters
 R_m: 10.0  # Mirror ratio B_max_throat / B_min (dimensionless)
 T_i: 20.0  # Ion temperature [keV]; forward-mode 0D input (inverse mode solves T_i)

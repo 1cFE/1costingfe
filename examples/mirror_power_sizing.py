@@ -18,7 +18,7 @@ Pin mode (stating the machine) is the default used in dt_mirror_0d.py.
 """
 
 from costingfe import ConfinementConcept, CostModel, Fuel
-from costingfe.layers.physics import SizingInfeasible
+from costingfe.layers.physics import OperatingPointInfeasible, SizingInfeasible
 
 CUSTOMER = dict(availability=0.85, lifetime_yr=30)
 
@@ -99,13 +99,20 @@ print("  " + "-" * 70)
 
 for fb in (0.5, 0.7, 0.85, 0.95):
     model = CostModel(concept=ConfinementConcept.MIRROR, fuel=Fuel.DT)
-    r = model.forward(
-        net_electric_mw=400.0,
-        size_from_power=True,
-        f_beta=fb,
-        **BASE,
-        **CUSTOMER,
-    )
+    try:
+        r = model.forward(
+            net_electric_mw=400.0,
+            size_from_power=True,
+            f_beta=fb,
+            **BASE,
+            **CUSTOMER,
+        )
+    except OperatingPointInfeasible as exc:
+        # Wall cap + beta limit simultaneously infeasible at high f_beta: the
+        # density is wall-capped below n_beta, the required T_i then exceeds
+        # beta_max. Report the condition; narration sync is Task 7.
+        print(f"  {fb:>7.2f}  infeasible: {exc}")
+        continue
     ps = model._plasma_state
     c220103 = float(r.cas22_detail["C220103"])
     row = (

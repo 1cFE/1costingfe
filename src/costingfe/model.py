@@ -42,6 +42,8 @@ from costingfe.layers.mirror import (
     net_electric_at_L,
 )
 from costingfe.layers.physics import (
+    OperatingPointInfeasible,
+    SizingInfeasible,
     mfe_forward_power_balance,
     mfe_inverse_power_balance,
     pulsed_dec_forward,
@@ -549,6 +551,7 @@ class CostModel:
             tau_ratio=params["tau_ratio"],
             f_rad_fus=params.get("f_rad_fus"),
             beta_max=params["beta_max"],
+            q_wall_max=params["q_wall_max"],
             enforce_plasma_limits=params["enforce_plasma_limits"],
         )
 
@@ -1010,24 +1013,35 @@ class CostModel:
                     # and the sizing knobs in mirror.py to trade off precision
                     # against wall-clock time.
                     def _lcoe_at_fb(fb):
-                        return self.forward(
-                            net_electric_mw=net_electric_mw,
-                            availability=availability,
-                            lifetime_yr=lifetime_yr,
-                            n_mod=n_mod,
-                            construction_time_yr=construction_time_yr,
-                            interest_rate=interest_rate,
-                            inflation_rate=inflation_rate,
-                            noak=noak,
-                            cost_overrides=cost_overrides,
-                            override_reference_mw=override_reference_mw,
-                            **{
-                                **overrides,
-                                "size_from_power": True,
-                                "optimize_lcoe": False,
-                                "f_beta": fb,
-                            },
-                        ).costs.lcoe
+                        # Two exception types signal an infeasible f_beta:
+                        #   OperatingPointInfeasible — raised by mirror_0d_inverse
+                        #     when the wall-cap density violates beta_max.
+                        #   SizingInfeasible — raised by mirror_size_from_power
+                        #     (via _size_mirror) when the wall cap prevents the
+                        #     machine from reaching the power target at any L.
+                        # Return a large sentinel LCOE so GSS steers away.
+                        try:
+                            return self.forward(
+                                net_electric_mw=net_electric_mw,
+                                availability=availability,
+                                lifetime_yr=lifetime_yr,
+                                n_mod=n_mod,
+                                construction_time_yr=construction_time_yr,
+                                interest_rate=interest_rate,
+                                inflation_rate=inflation_rate,
+                                noak=noak,
+                                cost_overrides=cost_overrides,
+                                override_reference_mw=override_reference_mw,
+                                **{
+                                    **overrides,
+                                    "size_from_power": True,
+                                    "optimize_lcoe": False,
+                                    "f_beta": fb,
+                                },
+                            ).costs.lcoe
+                        except (OperatingPointInfeasible, SizingInfeasible):
+                            # infeasible f_beta (beta gate or sizing cap)
+                            return 1e8  # steer GSS away
 
                     best_fb = self._optimize_gss(
                         _lcoe_at_fb, params["f_beta_min"], params["f_beta_max"]

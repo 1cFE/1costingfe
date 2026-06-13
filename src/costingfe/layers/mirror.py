@@ -20,6 +20,7 @@ from costingfe.layers.physics import (
     SizingInfeasible,  # noqa: F401 — re-exported so tests can import from mirror
     ash_neutron_split,
     compute_p_rad,
+    event_energies,
     mfe_forward_power_balance,
     mfe_inverse_power_balance,
 )
@@ -39,7 +40,6 @@ _MU_0 = 1.25663706127e-06  # Vacuum permeability [T*m/A]
 
 _LN_LAMBDA = 17.0  # Coulomb logarithm, fusion-relevant plasmas
 _M_P_OVER_M_E = 1836.15267  # Proton-to-electron mass ratio
-_WALL_LOADING_MAX = 5.0  # MW/m^2, matches tokamak PlasmaLimits.wall_loading_max
 
 # Ion-ion collision time prefactor [s] for T in keV, n in 1e20 m^-3 units.
 # Derived from NRL formula: tau_ii = 2.09e13 * A^0.5 * T_eV^1.5 / (n * lnL)
@@ -444,6 +444,10 @@ def mirror_0d_inverse(
     f_rad_fus: float | None = None,
     # Required: beta feasibility limit. No default; comes from YAML.
     beta_max: float,
+    # Required: neutron wall-load cap [MW/m^2]. No default; comes from YAML.
+    # In inverse (audit) mode the computed wall loading is compared against
+    # this threshold and a warning is issued when it is exceeded.
+    q_wall_max: float,
     # Behavior flag: False is the escape hatch for exploration runs.
     enforce_plasma_limits: bool = True,
 ):
@@ -566,11 +570,13 @@ def mirror_0d_inverse(
                 f"implies beta = {beta_val:.4f} > beta_max = {beta_max:.4f}. "
                 f"Pass enforce_plasma_limits=False to inspect the implied point."
             )
-        # Wall loading: warning-severity only (matches tokamak pattern of not raising)
+        # Wall loading: warning-severity only (matches tokamak pattern of not raising).
+        # Threshold from q_wall_max (YAML-sourced required kwarg; no module constant).
         wl = float(plasma_state.wall_loading)
-        if wl > _WALL_LOADING_MAX:
+        if wl > q_wall_max:
             warnings.warn(
-                f"Neutron wall loading = {wl:.2f} MW/m^2 > {_WALL_LOADING_MAX} MW/m^2",
+                f"Neutron wall loading = {wl:.2f} MW/m^2"
+                f" > q_wall_max = {q_wall_max:.2f} MW/m^2",
                 stacklevel=2,
             )
 
@@ -633,18 +639,98 @@ _L_BISECT_ITERS = 60  # Bisection iterations to locate the target-power length
 def _density_from_f_beta(
     T_i, T_e, f_beta, beta_max, B_min, fuel, dhe3_fuel_ratio, pb11_fuel_ratio
 ):
-    """Density at the beta boundary [m^-3].
+    """Density at the beta boundary [10^20 m^-3].
 
     n_e = f_beta * beta_max * B^2 / (2 * mu_0 * (T_e + n_i/n_e * T_i) * KEV_TO_J)
 
+    Returns n20 in [10^20 m^-3]. Conversion to SI happens once at the
+    _net_at_L_T boundary: n_e = n20 * 1e20.
+
     Internally computes n20 = ... / (T_sum) with the constant product folded in
-    float64 so the 1e-20 density rescale keeps intermediates near unity in float32.
+    float64 so intermediates remain near unity in float32.
     """
     n_i_frac = n_i_over_n_e(fuel, dhe3_fuel_ratio, pb11_fuel_ratio)
     T_sum = T_e + n_i_frac * T_i
     # Pre-fold constants in float64; T_sum is near unity (tens of keV).
     n20 = f_beta * beta_max * B_min**2 / (2.0 * _MU_0 * _KEV_TO_J * 1e20) / T_sum
-    return n20 * 1e20
+    return n20  # [10^20 m^-3]
+
+
+def _density_from_wall_cap(T_i, T_e, q_wall_max, a, vacuum_t, fuel, params_mix):
+    """Density at the neutron wall-load cap [10^20 m^-3].
+
+    q_n = f_n * C_fus(T) * n_e^2 * V / A_fw with V/A_fw = a^2 / (2 (a + vacuum_t))
+    (cylinder, L cancels), so
+
+        n_e = sqrt( 2 * q_wall_max * (a + vacuum_t) / (f_n * C_fus(T) * a^2) )
+
+    Work in n20 units throughout to avoid the 1e40 density-squared hazard
+    (see reactivity.py docstring). Evaluate fusion_power at n20 = 1 (n_e = 1e20
+    m^-3) with unit volume to get C_fus_20 [MW] — an order-unity number whose
+    gradient intermediates stay well within float32 range. Then:
+
+        n20 = sqrt(2 * q_wall_max * (a + vacuum_t) / (f_n * C_fus_20 * a^2))
+
+    Returns n20 in [10^20 m^-3]. Conversion to SI happens once at the
+    _net_at_L_T boundary: n_e = n20 * 1e20.
+
+    f_n is from event_energies using the effective D-He3 fraction (pin-aware:
+    resolved the same way mirror_0d_forward does). event_energies avoids
+    the VJP underflow hazard of dividing p_neutron / p_fus (whose quotient-rule
+    backward squares a tiny denominator in float32).
+    """
+    # Reference density: n20 = 1 (n_e = 1e20 m^-3). C_fus_20 is order unity
+    # (DT at 20 keV: ~3 MW/m^3), so all gradient intermediates stay in float32.
+    C_fus_20, frac_eff = fusion_power(
+        fuel,
+        1e20,  # n_e = 1e20 m^-3 (n20 = 1; order-unity C_fus_20)
+        T_i,
+        1.0,  # unit volume [m^3]
+        dhe3_fuel_ratio=params_mix["dhe3_fuel_ratio"],
+        pb11_fuel_ratio=params_mix["pb11_fuel_ratio"],
+        dhe3_dd_frac_pin=params_mix["dhe3_dd_frac_pin"],
+        dd_f_T=params_mix["dd_f_T"],
+        dd_f_He3=params_mix["dd_f_He3"],
+        dhe3_f_T=params_mix["dhe3_f_T"],
+        dhe3_f_He3=params_mix["dhe3_f_He3"],
+        pb11_f_alpha_n=params_mix["pb11_f_alpha_n"],
+        pb11_f_p_n=params_mix["pb11_f_p_n"],
+    )
+
+    # f_n = E_neutron / E_total (energy partition from event_energies).
+    # frac_eff is the effective D-He3 fraction resolved from the rate ratio
+    # (pin-aware — matches mirror_0d_forward).
+    E_total, E_neutron = event_energies(
+        fuel,
+        params_mix["dd_f_T"],
+        params_mix["dd_f_He3"],
+        frac_eff,  # effective D-He3 fraction (T_i-dependent for DHE3)
+        params_mix["dhe3_f_T"],
+        params_mix["dhe3_f_He3"],
+        params_mix["pb11_f_alpha_n"],
+        params_mix["pb11_f_p_n"],
+    )
+    f_n = E_neutron / E_total
+
+    # n20 = sqrt(2 * q * (a+v) / (f_n * C_fus_20 * a^2))
+    # C_fus_20 ~ 3 MW for DT at 20 keV -> denominator ~ 3*2.25 ~ 7 (order unity).
+    # Guard: when f_n ~ 0 (aneutronic fuel, e.g. p-B11 with no side reactions),
+    # the neutron wall cap does not apply; return a very large n20 so
+    # jnp.minimum(n_beta_20, n_wall_20) = n_beta_20 (cap is non-binding).
+    # Sentinel: n20 = 1e8 (finite in float32; far above any physical density).
+    #
+    # JAX jnp.where evaluates both branches unconditionally; the VJP of
+    # sqrt(2q(a+v) / denominator) at denominator = 0 is -inf, and
+    # 0 * (-inf) = nan in the backward pass even when the condition masks the
+    # true branch. Fix: replace denominator with 1.0 (via an inner jnp.where)
+    # before the sqrt so the true-branch VJP is finite everywhere; the outer
+    # jnp.where then selects the sentinel 1e8 with gradient 0 for the
+    # aneutronic case.
+    denominator = f_n * C_fus_20 * a**2
+    safe_denom = jnp.where(denominator > 0, denominator, jnp.ones_like(denominator))
+    n20_if_active = jnp.sqrt(2.0 * q_wall_max * (a + vacuum_t) / safe_denom)
+    n20 = jnp.where(denominator > 0, n20_if_active, jnp.array(1e8))
+    return n20  # [10^20 m^-3]
 
 
 def _net_at_L_T(L, T_i, params, fuel):
@@ -655,7 +741,8 @@ def _net_at_L_T(L, T_i, params, fuel):
     T_e is held fixed from params (the spec: GSS scans T_i with T_e from YAML).
     """
     T_e = params["T_e"]
-    n_e = _density_from_f_beta(
+    # returns [10^20 m^-3], converted at the _net_at_L_T boundary
+    n_beta_20 = _density_from_f_beta(
         T_i,
         T_e,
         params["f_beta"],
@@ -665,6 +752,28 @@ def _net_at_L_T(L, T_i, params, fuel):
         params["dhe3_fuel_ratio"],
         params["pb11_fuel_ratio"],
     )
+    params_mix = dict(
+        dd_f_T=params["dd_f_T"],
+        dd_f_He3=params["dd_f_He3"],
+        dhe3_dd_frac_pin=params.get("dhe3_dd_frac_pin"),
+        dhe3_f_T=params["dhe3_f_T"],
+        dhe3_f_He3=params["dhe3_f_He3"],
+        pb11_f_alpha_n=params["pb11_f_alpha_n"],
+        pb11_f_p_n=params["pb11_f_p_n"],
+        dhe3_fuel_ratio=params["dhe3_fuel_ratio"],
+        pb11_fuel_ratio=params["pb11_fuel_ratio"],
+    )
+    # returns [10^20 m^-3], converted at the _net_at_L_T boundary
+    n_wall_20 = _density_from_wall_cap(
+        T_i,
+        T_e,
+        params["q_wall_max"],
+        params["a"],
+        params["vacuum_t"],
+        fuel,
+        params_mix,
+    )
+    n_e = jnp.minimum(n_beta_20, n_wall_20) * 1e20  # Convert to m^-3
     a = params["a"]
     B_min = params["B_min"]
     R_m = params["R_m"]
@@ -801,11 +910,13 @@ def net_electric_at_L(L, params, fuel, return_state=False):
 def mirror_size_from_power(params, fuel):
     """Solve chamber length L so net electric power equals the target.
 
-    Net power is monotonic increasing in L at the f_beta boundary operating
+    Net power is monotonic increasing in L at the constraint-boundary operating
     point (P_fus scales with volume; tau_GD improves with L; Pastukhov
     confinement is L-independent), so bisection is well posed.
 
     Raises SizingInfeasible if the target exceeds what L_max can deliver.
+    When the wall-load cap is binding at L_max, the error message names
+    q_wall_max and the achieved p_net (decision b: no silent fallback).
     Returns the solved L [m].
     """
     n_mod = params.get("n_mod", 1)
@@ -814,6 +925,36 @@ def mirror_size_from_power(params, fuel):
 
     pn_hi = net_electric_at_L(hi, params, fuel)
     if pn_hi < target:
+        # Detect whether the wall cap was binding at L_max to give an informative
+        # error (decision b). Check by comparing n_wall vs n_beta at the GSS T_star.
+        _pn, T_star_hi, n_e_star_hi = net_electric_at_L(
+            hi, params, fuel, return_state=True
+        )
+        T_e = params["T_e"]
+        # returns [10^20 m^-3]
+        n_beta_hi_20 = _density_from_f_beta(
+            T_star_hi,
+            T_e,
+            params["f_beta"],
+            params["beta_max"],
+            params["B_min"],
+            fuel,
+            params["dhe3_fuel_ratio"],
+            params["pb11_fuel_ratio"],
+        )
+        # n_e_star_hi is m^-3 (from _net_at_L_T boundary); n_beta_hi_20 is [10^20 m^-3].
+        # 0.9999: guards against float32 equality at the non-wall-bound boundary;
+        # a real wall-bound gap is far larger than the 1e-4 relative tolerance.
+        wall_binding = float(n_e_star_hi) < float(n_beta_hi_20) * 1e20 * 0.9999
+        if wall_binding:
+            raise SizingInfeasible(
+                f"net power at L_max={hi} m is {pn_hi:.1f} MW"
+                f" < target {target:.1f} MW; "
+                f"wall-load cap q_wall_max={params['q_wall_max']:.2f} MW/m^2"
+                " is binding (n_wall < n_beta at L_max): the machine cannot"
+                " reach the power target under this neutron wall-load constraint."
+                " Raise q_wall_max or reduce the target."
+            )
         raise SizingInfeasible(
             f"net power at L_max={hi} m is {pn_hi:.1f} MW < target {target:.1f} MW; "
             "machine cannot reach the power with these physics inputs"
