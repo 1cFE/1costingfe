@@ -61,7 +61,7 @@ n_plug_coils: 4      # Number of end-plug HTS coils (2 per end, HAMMIR class)
 
 # Wall-load constraints
 q_wall_max: 5.0  # Neutron wall-load cap [MW/m^2]; sizing constraint, audit-mode warning threshold
-q_surface_max: 1.0  # Surface heat-flux cap on the first wall [MW/m^2] (photons + radial transport); provenance writeup in Task 5
+q_surface_max: 1.0  # Surface heat-flux cap on the first wall [MW/m^2] (photons + radial transport); EU-DEMO breeding-blanket steady-state limit, see docs/account_justification/wall_limits_and_fluence.md
 
 # Mirror 0D model parameters
 R_m: 10.0  # Mirror ratio B_max_throat / B_min (dimensionless)
