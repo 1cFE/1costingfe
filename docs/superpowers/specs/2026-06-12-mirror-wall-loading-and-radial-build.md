@@ -254,8 +254,8 @@ the existing per-concept treatments).
 - Surface flux: p-B11 sizing is q_surface-bound (n_surf < n_beta and
   n_surf < n_wall at the solution) with q_surface at the cap; DT default
   machine reports q_surface on the state and warns above q_surface_max
-  in audit modes; jit==eager for the advanced-fuel closed form; the
-  DT/DD inner bisection converges (monotonicity test of p_rad in n).
+  in audit modes; the n_surf uniform bisection converges across all
+  fuels (monotonicity of p_rad + p_radial in n).
 - Fluence lifetime: DT at the implied reference wall loading reproduces
   5 FPY (continuity); CAS72 grows smoothly with f_beta in sizing mode
   (finite positive gradient of LCOE w.r.t. f_beta through the
