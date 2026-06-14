@@ -91,9 +91,11 @@ for p_net in (100.0, 200.0, 400.0, 600.0):
 # density (and hence L and LCOE) stops moving: the 0.70 and 0.85 rows land
 # at the same L and LCOE because both are wall-capped. At low f_beta (0.50)
 # n_beta is the binding cap, giving a longer L and higher LCOE. At high
-# f_beta (0.95) the wall-capped density forces a T_i whose pressure exceeds
-# beta_max, so the point is infeasible. The optimizer in section 3 therefore
-# lands at an interior f_beta, not at a bound.
+# f_beta (0.95) the wall cap still binds: the operating density is wall-capped,
+# beta sits below beta_max, and the row sizes feasibly (the sized state is built
+# from the GSS optimum, so beta is bounded by construction). Above the wall-cap
+# crossover the LCOE is flat in f_beta (0.70, 0.85, 0.95 share the same L and
+# LCOE), so the optimizer in section 3 is indifferent across that plateau.
 print()
 print("=" * 64)
 print("  f_beta SWEEP at 400 MWe: density-pressure trade vs. L and LCOE")
@@ -117,9 +119,9 @@ for fb in (0.5, 0.7, 0.85, 0.95):
             **CUSTOMER,
         )
     except OperatingPointInfeasible as exc:
-        # At high f_beta the wall-capped density forces the solver to a high
-        # T_i to make the power, and the resulting pressure exceeds beta_max.
-        # The gate refuses rather than returning a cost for an unstable point.
+        # Retained for robustness: a geometry whose GSS optimum still violates
+        # beta_max would surface here. At the default machine every f_beta in
+        # this sweep sizes feasibly (beta is bounded by the GSS construction).
         print(f"  {fb:>7.2f}  infeasible: {exc}")
         continue
     ps = model._plasma_state
@@ -152,10 +154,10 @@ fb_opt = model._sizing_fbeta
 print("\n  Optimizer result:")
 print(f"  optimal f_beta:  {fb_opt:.3f}")
 show(model, r_opt)
-# The optimum is interior to [0.3, 1.0], not at a bound: the neutron wall
-# cap holds q_wall at its 5.0 MW/m^2 ceiling, so once f_beta is high enough
-# for the wall cap to bind, raising it further changes nothing until it
-# pushes the point past beta_max. The LCOE floor sits just inside that edge.
+# The neutron wall cap holds q_wall at its 5.0 MW/m^2 ceiling, so once f_beta
+# is high enough for the wall cap to bind, raising it further leaves the
+# wall-capped density (and thus L and LCOE) unchanged. The LCOE is flat across
+# that plateau, so the reported optimal f_beta is anywhere on it.
 
 # ── 4. Infeasibility demo: target beyond L_max reach ─────────────────
 # At L_max=5 m and a=1.5 m (the YAML default plasma radius) the wall-capped

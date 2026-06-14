@@ -584,7 +584,9 @@ def mirror_0d_inverse(
         # Wall loading: warning-severity only (matches tokamak pattern of not raising).
         # Threshold from q_wall_max (YAML-sourced required kwarg; no module constant).
         wl = float(plasma_state.wall_loading)
-        if wl > q_wall_max:
+        # Relative tolerance so an operating point sitting exactly AT the cap
+        # (which sizing produces) does not warn "5.00 > 5.00".
+        if wl > q_wall_max * (1 + 1e-3):
             warnings.warn(
                 f"Neutron wall loading = {wl:.2f} MW/m^2"
                 f" > q_wall_max = {q_wall_max:.2f} MW/m^2",
@@ -593,7 +595,8 @@ def mirror_0d_inverse(
         # Surface heat-flux: warning-severity only (symmetric with wall loading).
         # Threshold from q_surface_max (YAML-sourced required kwarg).
         qs = float(plasma_state.q_surface)
-        if qs > q_surface_max:
+        # Relative tolerance, symmetric with the wall-loading warning above.
+        if qs > q_surface_max * (1 + 1e-3):
             warnings.warn(
                 f"Surface heat flux = {qs:.2f} MW/m^2"
                 f" > q_surface_max = {q_surface_max:.2f} MW/m^2"
@@ -857,11 +860,15 @@ def _density_from_surface_cap(
     return 0.5 * (lo_n20 + hi_n20)  # [10^20 m^-3]
 
 
-def _net_at_L_T(L, T_i, params, fuel, *, _surf_cap_cache=None):
+def _net_at_L_T(L, T_i, params, fuel, *, _surf_cap_cache=None, return_full=False):
     """Net electric power [MW] at fixed L and T_i.
 
     Derives density from the f_beta closed form, runs mirror_0d_forward, then
     mfe_forward_power_balance. Returns (p_net [MW], n_e [m^-3], T_i [keV]).
+    With return_full=True, returns (p_net [MW], MirrorPlasmaState, PowerTable):
+    the full forward state and power table already built internally, surfaced so
+    callers (e.g. the sizing handoff) can use the GSS-optimum operating point
+    directly instead of re-solving T_i through the inverse path.
     T_e is held fixed from params (the spec: GSS scans T_i with T_e from YAML).
 
     _surf_cap_cache: optional dict keyed by T_i (float). When provided, the
@@ -1026,10 +1033,14 @@ def _net_at_L_T(L, T_i, params, fuel, *, _surf_cap_cache=None):
         f_rad_fus=params.get("f_rad_fus"),
     )
 
+    if return_full:
+        return float(pt.p_net), ps, pt
     return float(pt.p_net), float(n_e), float(T_i)
 
 
-def net_electric_at_L(L, params, fuel, return_state=False, _surf_cap_cache=None):
+def net_electric_at_L(
+    L, params, fuel, return_state=False, _surf_cap_cache=None, return_full=False
+):
     """Net electric power [MW] at the constraint-boundary operating point for a fixed L.
 
     Temperature T_i maximizes net power within the fuel-keyed bracket via
@@ -1038,6 +1049,9 @@ def net_electric_at_L(L, params, fuel, return_state=False, _surf_cap_cache=None)
 
     Returns p_net [MW] by default.
     With return_state=True, returns (p_net, T_i_star, n_e_star).
+    With return_full=True, returns (p_net, MirrorPlasmaState, PowerTable) at the
+    GSS-optimum operating point -- the full forward state and power table the
+    sizing handoff consumes directly (no inverse T re-solve).
 
     _surf_cap_cache: dict shared across L bisection steps. The surface heat-flux
     cap density n_surf_20 is L-independent and the GSS probes the same golden-
@@ -1071,6 +1085,12 @@ def net_electric_at_L(L, params, fuel, return_state=False, _surf_cap_cache=None)
             d = a_gss + invphi * h
             fd = feasible_net(d)
     T_star = 0.5 * (a_gss + b_gss)
+
+    if return_full:
+        pn, ps, pt = _net_at_L_T(
+            L, T_star, params, fuel, _surf_cap_cache=_surf_cap_cache, return_full=True
+        )
+        return pn, ps, pt
 
     pn, n_e_star, _ = _net_at_L_T(
         L, T_star, params, fuel, _surf_cap_cache=_surf_cap_cache

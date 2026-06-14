@@ -683,17 +683,19 @@ class CostModel:
 
     def _size_mirror(self, params, n_mod):
         """Solve chamber_length from the power target, inject it into params, and
-        return the power table via the mirror 0D inverse path.
+        return the power table built DIRECTLY from the GSS-optimum operating point.
 
         The sizing solve uses mirror_size_from_power (bisection over L at the
-        f_beta boundary operating point with GSS over T_i). After the solve,
-        chamber_length and the f_beta-derived n_e are written back into params so
-        that the geometry layer and the CAS22 coil account see the solved values.
-        The mirror 0D inverse path is then re-run at the solved L so the
-        MirrorPlasmaState and PowerTable are consistent.
+        constraint-boundary operating point with GSS over T_i). The final plasma
+        state and power table are taken from the same GSS forward path that the
+        bisection optimizes (net_electric_at_L with return_full=True), so the
+        reported operating point is exactly (T_star, n_e_star). This keeps beta
+        bounded by the f_beta / wall / surface construction (beta <= beta_max by
+        construction). The earlier approach re-solved T_i through the inverse at
+        fixed n_e_star, which discarded T_star and let beta drift above beta_max.
         """
         # Derive eta_pin (heating wall-plug efficiency) exactly as _power_balance
-        # does, so the sizing solve and the final inverse balance use the same value.
+        # does, so the sizing solve and the final forward state use the same value.
         params["eta_pin"] = self._effective_eta_pin(params)
 
         # Build the solve_params dict that mirror_size_from_power expects.
@@ -708,25 +710,21 @@ class CostModel:
 
         L_solved = mirror_size_from_power(solve_params, self.fuel)
 
-        # Recover the operating density at the solved L (f_beta boundary).
-        # Re-solve at L_solved because the bisection discards the inner GSS state.
-        _pn, _T_star, n_e_star = net_electric_at_L(
-            L_solved, solve_params, self.fuel, return_state=True
+        # Build the full forward state and power table at the GSS optimum. This
+        # surfaces the (MirrorPlasmaState, PowerTable) already computed inside the
+        # bisection's net_electric_at_L, so the operating point is consistent by
+        # construction and beta is bounded by the f_beta / wall / surface caps.
+        _pn, ps, pt = net_electric_at_L(
+            L_solved, solve_params, self.fuel, return_full=True
         )
 
         # Write solved geometry and density back so all downstream layers see them.
-        # n_e_star is the f_beta-derived density at the GSS T_i; it is used as the
-        # YAML-level n_e input for the final inverse call, which then solves T_i
-        # self-consistently from the power target at that density.
         params["chamber_length"] = L_solved
-        params["n_e"] = n_e_star
+        params["n_e"] = float(ps.n_e)
         self._last_L = L_solved  # exposed for inspection
+        self._plasma_state = ps
 
-        # Re-run the full 0D inverse at the solved L so the plasma state and
-        # power table are self-consistent. use_0d_model=True routes
-        # _power_balance to _power_balance_mirror_0d.
-        params["use_0d_model"] = True
-        return self._power_balance_mirror_0d(params, n_mod)
+        return pt
 
     def _optimize_gss(self, lcoe_of_param, param_lo, param_hi):
         """Golden-section minimize LCOE over a scalar parameter in [param_lo, param_hi].

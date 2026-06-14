@@ -991,6 +991,76 @@ class TestMirrorSizing:
             f"got L_DT={L_dt:.1f} m, L_DHE3={L_dhe3:.1f} m"
         )
 
+    def test_net_electric_at_L_return_full_state(self):
+        """return_full surfaces the GSS-optimum forward (state, table).
+
+        p_net and n_e must match the float-returning contract, and the
+        returned state's beta must equal the closed-form beta at (T_star,
+        n_e_star) -- i.e. it is the GSS operating point, not a re-solve.
+        """
+        params = dict(_sz_params(300.0), n_mod=1)
+        L = mirror_size_from_power(params, Fuel.DT)
+        pn_state, T_star, n_e_star = net_electric_at_L(
+            L, params, Fuel.DT, return_state=True
+        )
+        pn_full, ps, pt = net_electric_at_L(L, params, Fuel.DT, return_full=True)
+        assert pn_full == pytest.approx(pn_state, rel=1e-9)
+        assert float(ps.n_e) == pytest.approx(n_e_star, rel=1e-9)
+        assert float(ps.T_i) == pytest.approx(T_star, rel=1e-9)
+        assert float(pt.p_net) == pytest.approx(pn_full, rel=1e-9)
+
+    def test_high_f_beta_sizes_feasibly(self):
+        """Regression: f_beta=0.95 sizes (no OperatingPointInfeasible).
+
+        On the 400 MWe example machine the neutron wall cap (q_wall_max) binds
+        at f_beta=0.95, so the operating density is wall-capped and beta lands
+        just below 0.95 * beta_max but well under beta_max. The pre-fix path
+        re-solved T_i through the inverse at the fixed wall-capped n_e_star and
+        reported beta = 0.5315 > beta_max = 0.5, tripping
+        OperatingPointInfeasible. Building the state directly from the GSS
+        optimum keeps beta bounded by construction.
+        """
+        m = CostModel(ConfinementConcept.MIRROR, Fuel.DT)
+        r = m.forward(
+            net_electric_mw=400.0,
+            availability=0.85,
+            lifetime_yr=30.0,
+            size_from_power=True,
+            f_beta=0.95,
+            L_min=1.0,
+            L_max=400.0,
+        )
+        assert math.isfinite(r.costs.lcoe)
+        ps = m._plasma_state
+        beta_max = 0.5  # YAML default for the mirror machine
+        # Wall-bound here: beta is below the f_beta ceiling and below beta_max.
+        assert float(ps.beta) <= 0.95 * beta_max * (1 + 1e-6)
+        assert float(ps.beta) < beta_max
+        # Confirm the wall cap is the binding constraint (q_wall at its ceiling).
+        assert float(ps.wall_loading) == pytest.approx(5.0, rel=1e-3)
+
+    def test_sized_state_beta_within_f_beta_cap(self):
+        """Invariant the bug violated: sized-state beta <= f_beta * beta_max.
+
+        For a beta-bound sizing case the operating beta must never exceed the
+        f_beta-scaled ceiling (with float tolerance). This locks the
+        correctness-by-construction property of the GSS-optimum handoff.
+        """
+        m = CostModel(ConfinementConcept.MIRROR, Fuel.DT)
+        f_beta = 0.85
+        beta_max = 0.5
+        m.forward(
+            net_electric_mw=400.0,
+            availability=0.85,
+            lifetime_yr=30.0,
+            size_from_power=True,
+            f_beta=f_beta,
+            L_min=1.0,
+            L_max=400.0,
+        )
+        ps = m._plasma_state
+        assert float(ps.beta) <= f_beta * beta_max * (1 + 1e-6)
+
     @pytest.mark.parametrize(
         "fuel,T_i,T_e",
         [
