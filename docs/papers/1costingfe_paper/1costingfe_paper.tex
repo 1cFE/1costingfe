@@ -1858,11 +1858,20 @@ plasma--blanket--shield--vessel stack. The ARC point design places its TF
 coils beyond a 0.85~m inboard blanket/shield standoff
 \citep{sorbom2015arc}, and ARIES-CS requires 1.5--2~m (1.79~m for a regular
 breeding module) between the plasma and the middle of the coil winding pack
-\citep{najmabadi2008stellarator}; for a tandem mirror the coil radius is likewise
-the sum of the plasma radius, blanket and shield thickness, and assembly
-gaps. Deriving $r_{\text{coil}}$ from the radial build, rather than treating
-it as a free parameter, ties the magnet cost to the same geometry that sets
-the blanket and shield volumes.
+\citep{najmabadi2008stellarator}. Deriving $r_{\text{coil}}$ from the radial
+build, rather than treating it as a free parameter, ties the magnet cost to the
+same geometry that sets the blanket and shield volumes.
+
+The mirror carries two distinct bores. The central-cell solenoids enclose the
+full radial build, so their bore is the vessel outer radius plus an assembly
+standoff, $r_{\text{coil}} = r_{\text{vessel,out}} + 0.10$~m, and they sit at the
+coil design field $b_{\text{center}}$. The end-plug coils sit at the throat,
+where the plasma necks down by flux conservation and no breeding blanket
+extends, so their bore is set by the throat plasma radius plus a throat standoff,
+$r_{\text{coil}} = a/\sqrt{R_m} + 0.30$~m, and they carry the throat field
+$R_m B_{\min}$. Small-bore high-field plug coils and large-bore lower-field
+central solenoids are the cost-relevant distinction unique to the mirror's
+two-class magnet set.
 
 \begin{table}[htbp]
 \caption{CAS22.01.03 manufacturing markups and path factors by confinement concept.}
@@ -1874,7 +1883,7 @@ Concept & Markup & Path factor & Ref.\ coil cost & Rationale \\
 \midrule
 Tokamak     &  3.09$\times$ & 1.0 & \$516M & TF+CS+PF complexity; calibrated at the SPARC-class reference ($B=12$~T, $R_0=3.0$~m, $r_{\text{coil}}=2.95$~m) \\
 Stellarator &  5.87$\times$ & 2.0 & \$2{,}130M & Non-planar 3D coils; $1.9\times$ the tokamak markup, the {NCSX} modular-coil production cost overrun \citep{neilson2010ncsx} \\
-Mirror      &  1.786$\times$ & 1.0 & \$513M & Two-class: $n_{\text{central}}=L/d_{\text{coil}}$ central solenoids at $b_{\text{center}}$ plus $n_{\text{plug}}=4$ plug coils at the throat field $R_m B_{\min}$; calibrated at 20~m default \\
+Mirror      &  1.7266$\times$ & 1.0 & \$513M & Two-class: $n_{\text{central}}=L/d_{\text{coil}}$ central solenoids at $b_{\text{center}}$ with bore $r_{\text{coil}} = r_{\text{vessel,out}} + 0.10$~m plus $n_{\text{plug}}=4$ plug coils at the throat field $R_m B_{\min}$ with bore $r_{\text{coil}} = a/\sqrt{R_m} + 0.30$~m; calibrated at 20~m default \\
 Pulsed FRC  &  1.5$\times$ & 1.0 & n/a & Theta-pinch formation coils \\
 Theta pinch &  1.5$\times$ & 1.0 & n/a & Compression coils \\
 Orbitron    &  1.5$\times$ & 1.0 & n/a & Electrostatic confinement \\
@@ -2860,7 +2869,28 @@ CAS70 comprises two sub-accounts:
   a fuel-dependent base cost per MW of net electric capacity.
 \item \textbf{CAS72}: Annualized scheduled component replacement.
   Replacement costs are discounted to present value at the time of
-  each replacement event and annualized via the CRF. For pulsed
+  each replacement event and annualized via the CRF. For the
+  steady-state magnetic-confinement concepts (tokamak, stellarator,
+  mirror, steady-state FRC) the core first-wall and blanket are replaced
+  on a neutron-fluence schedule: the full-power-year lifetime is the
+  per-fuel fluence limit divided by the neutron wall loading,
+  \begin{equation}
+  \label{eq:core-lifetime}
+  L_{\text{core}} = \mathrm{clamp}\!\left(
+    \frac{\Phi_{\max}(f)}{q_{\text{wall}}},\;
+    L_{\text{floor}},\; L_{\text{plant}}\right),
+  \end{equation}
+  with $\Phi_{\max}$ the fuel-dependent fluence limit (D-T 18, D-D 36,
+  D-${}^3$He 108, p-${}^{11}$B 180~MW\,yr/m$^2$; D-T anchored to the
+  ARIES~FS 200~dpa RAFM-steel window, the others scaled by spectrum
+  hardness) and $q_{\text{wall}}$ the neutron wall loading of
+  \cref{eq:q-wall}. A higher-$q_{\text{wall}}$ machine wears its core out
+  sooner and carries a larger annualized replacement charge; the lifetime
+  is clamped between a 0.5~FPY floor (keeping the $1/q_{\text{wall}}$
+  gradient finite at extreme wall loading) and the plant full-power life
+  (nothing is replaced beyond it). Limits and sources are documented in
+  \texttt{docs/account\_justification/wall\_limits\_and\_fluence.md}. For
+  pulsed
   inductive DEC concepts, CAS72 includes capacitor bank scheduled
   replacement, whose lifetime is derived from cycle count and
   repetition rate. For the electromagnetic-gun concepts (sheared-flow
@@ -3750,19 +3780,66 @@ forward model at the solved $T_i$ to build the complete plasma state.
 The parameter $f_{\text{dec}}$ is an engineering input (default 0.30 for
 D-T), not derived from the plasma model.
 
-For length sizing ($P_{\text{net}} \to L$), the operating density is set
-at a fraction $f_\beta$ of the MHD stability boundary:
+For length sizing ($P_{\text{net}} \to L$), the operating density is the
+minimum of three caps,
+%
+\begin{equation}
+\label{eq:n-resolution}
+n_e = \min\!\left(n_\beta,\; n_{\text{wall}},\; n_{\text{surf}}\right),
+\end{equation}
+%
+each the density at which a distinct first-wall or stability limit binds.
+The beta-pressure cap sets the density at a fraction $f_\beta$ of the MHD
+stability boundary:
 %
 \begin{equation}
 \label{eq:n-fbeta}
-n_e = f_\beta\,\beta_{\max}\,
+n_\beta = f_\beta\,\beta_{\max}\,
   \frac{B_{\min}^2}{2\,\mu_0\,(T_e + n_i/n_e\cdot T_i)\,e_{\text{keV}}}
 \end{equation}
 %
-At this boundary density $P_{\text{fus}} \propto n_e^2 V \propto n_e^2 L$
-is monotonically increasing in $L$ (for fixed $n_e$), so $L$ is located
-by bisection on $[L_{\min}, L_{\max}]$. If $L_{\max}$ is insufficient,
-a \texttt{SizingInfeasible} error is raised.
+The neutron wall-load cap limits the 14.1~MeV fluence on the first wall.
+Writing the neutron wall loading as
+%
+\begin{equation}
+\label{eq:q-wall}
+q_{\text{wall}} = \frac{P_{\text{neutron}}}{A_{\text{fw}}},
+  \qquad A_{\text{fw}} = 2\pi\,(a + t_{\text{vac}})\,L,
+\end{equation}
+%
+and using $P_{\text{neutron}} = f_n\,C_{\text{fus}}(T)\,n_e^2\,V$ with the
+plasma volume $V = \pi a^2 L$ (the $L$ cancels, so the cap is set by $a$,
+$n_e$, and $T$ alone), the wall-cap density follows in closed form,
+%
+\begin{equation}
+\label{eq:n-wall}
+n_{\text{wall}} = \sqrt{\frac{2\,q_{\text{wall}}^{\max}\,(a + t_{\text{vac}})}
+  {f_n\,C_{\text{fus}}(T)\,a^2}},
+\end{equation}
+%
+where $f_n$ is the neutron energy fraction and $C_{\text{fus}}(T)$ the
+per-$n_e^2$ fusion power density coefficient. The surface heat-flux cap
+limits the photon and cross-field charged-particle load deposited in the
+first microns of the wall,
+%
+\begin{equation}
+\label{eq:q-surface}
+q_{\text{surface}} = \frac{P_{\text{rad}} + P_{\text{radial}}}{A_{\text{fw}}}
+  \le q_{\text{surface}}^{\max},
+\end{equation}
+%
+with the axial end-loss excluded (it exits through the throats to the
+expander, not the lateral wall). Because radiation plus radial transport
+is monotone increasing in density at fixed $T$, $n_{\text{surf}}$ is found
+by a single uniform bisection on $n_e$ for all fuels. The default caps are
+$q_{\text{wall}}^{\max} = 5$~MW/m$^2$ and $q_{\text{surface}}^{\max} =
+1$~MW/m$^2$, sourced in the wall-limits provenance writeup. For D-T the
+neutron cap typically binds first; for advanced fuels the surface cap is
+the governing wall constraint. At the resolved density $P_{\text{fus}}
+\propto n_e^2 V \propto n_e^2 L$ is monotonically increasing in $L$ (for
+fixed $n_e$), so $L$ is located by bisection on $[L_{\min}, L_{\max}]$. If
+$L_{\max}$ is insufficient, or if even the capped density cannot reach
+$P_{\text{net}}^*$, a \texttt{SizingInfeasible} error is raised.
 
 \subsection{Two-Class Coil Scaling}
 \label{sec:mirror-coils}
@@ -3771,11 +3848,17 @@ Mirror coil costs are divided into two classes: (i) central-cell
 solenoid coils, with continuous count $n_{\text{central}} = L /
 d_{\text{coil}}$ growing with chamber length at spacing
 $d_{\text{coil}}$ (default 5~m, no rounding so the expression is
-JAX-differentiable), and (ii) end-plug coils with fixed
-count $n_{\text{plug}}$ (default 4, two per end).  The total coil cost
-scales as a linear combination of the two counts, calibrated at the
-YAML default chamber length of 20~m ($n_{\text{central}} = 4$,
-$n_{\text{plug}} = 4$, baseline 513~M\$).
+JAX-differentiable), at the design field $b_{\text{center}}$ and a bore
+$r_{\text{coil}} = r_{\text{vessel,out}} + 0.10$~m taken from the radial
+build, and (ii) end-plug coils with fixed count $n_{\text{plug}}$ (default
+4, two per end), at the throat field $R_m B_{\min}$ and a bore
+$r_{\text{coil}} = a/\sqrt{R_m} + 0.30$~m set by throat flux conservation.
+The two bores differ in kind: the central solenoids enclose the full
+plasma--blanket--shield--vessel stack, while the plug coils sit where the
+plasma necks down and no blanket extends. The total coil cost scales as a
+linear combination of the two counts, carrying the mirror markup
+$M = 1.7266$ calibrated at the YAML default chamber length of 20~m
+($n_{\text{central}} = 4$, $n_{\text{plug}} = 4$, baseline 513~M\$).
 
 \subsection{Validation Anchors}
 \label{sec:mirror-anchors}
