@@ -85,6 +85,18 @@ from costingfe.types import (
 from costingfe.validation import CostingInput
 
 
+def _core_lifetime_fpy(cc, fuel, q_n, lifetime_yr, availability):
+    """Fluence-based core lifetime [FPY]: Phi_max / q_n, clamped to [0.5,
+    lifetime_yr * availability]. Floor of 0.5 FPY keeps the 1/q_n gradient
+    finite at extreme wall loadings; cap at lifetime_yr * availability because
+    nothing is replaced beyond plant life."""
+    return jnp.clip(
+        cc.fluence_limit(fuel) / jnp.maximum(q_n, 1e-6),
+        0.5,
+        lifetime_yr * availability,
+    )
+
+
 class CostModel:
     def __init__(
         self,
@@ -1360,7 +1372,22 @@ class CostModel:
         # Apply disruption penalty for tokamak 0D/sizing runs only.
         # MirrorPlasmaState has no disruption_rate field; guard by concept so
         # a mirror 0D run never reaches the tokamak-specific penalty path.
-        core_lt = cc.core_lifetime(self.fuel)
+        # Steady-state MFE families derive core lifetime from the neutron wall
+        # loading (fluence basis); IFE/MIF keep the fixed per-fuel constant.
+        # pt.p_neutron and geo.firstwall_area are both per-module, so q_n needs
+        # no n_mod scaling.
+        if self.family == ConfinementFamily.STEADY_STATE:
+            # jnp.maximum on the area is a defensive guard against any concept
+            # reporting firstwall_area=0 (none currently do; all steady-state
+            # concepts get a strictly positive area in geometry.py). Note that
+            # a near-zero area would drive q_n up, shortening lifetime -- the
+            # opposite of clamping. Aneutronic steady-state fuels (p-B11,
+            # D-He3) clamp to plant life via vanishing p_neutron (q_n -> 0),
+            # not via the area.
+            q_n = pt.p_neutron / jnp.maximum(geo.firstwall_area, 1e-6)
+            core_lt = _core_lifetime_fpy(cc, self.fuel, q_n, lifetime_yr, availability)
+        else:
+            core_lt = cc.core_lifetime(self.fuel)
         avail_eff = availability
         if (
             self._plasma_state is not None

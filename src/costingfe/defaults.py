@@ -251,12 +251,24 @@ class CostingConstants:
     # only the on-site labor portion (C220111) is discounted.
     multi_unit_labor_factor: float = 0.92
 
-    # Core component lifetime (FPY — full power years between replacements)
+    # Fixed core component lifetime (FPY — full power years between replacements).
+    # Used by the IFE/MIF (non-steady-state) families only; steady-state MFE
+    # concepts derive core lifetime from the fluence limits below (Phi_max / q_n).
     # Source: 20260208-fusion-reactor-subsystems-by-fuel-type.md
     core_lifetime_dt: float = 5.0  # 5-10 FPY, ~20 dpa/yr
     core_lifetime_dd: float = 10.0  # 10-15 FPY, ~7 dpa/yr
     core_lifetime_dhe3: float = 30.0  # 30+ FPY, ~1 dpa/yr
     core_lifetime_pb11: float = 50.0  # 50+ FPY, ~0.1 dpa/yr
+
+    # First-wall/blanket neutron fluence limits (MW yr/m^2). Steady-state MFE
+    # core lifetime = Phi_max / q_n, clamped to plant life. DT anchored to the
+    # ARIES FS 200 dpa limit (18 MW yr/m^2); the ladder (1:2:6:10) follows the
+    # 14 MeV >> 2.45 MeV spectrum-hardness argument and the old FPY ladder.
+    # Source: docs/account_justification/wall_limits_and_fluence.md
+    fluence_limit_dt: float = 18.0  # ARIES FS 200 dpa = 18 MW yr/m^2
+    fluence_limit_dd: float = 36.0  # 2x DT (softer 2.45 MeV spectrum)
+    fluence_limit_dhe3: float = 108.0  # 6x DT (small D-D side-channel neutrons)
+    fluence_limit_pb11: float = 180.0  # 10x DT (aneutronic; surface cap governs)
 
     # CAS22 sub-accounts that need periodic replacement (neutron/thermal damage)
     # Default: blanket/FW + divertor. Extend to include "C220103" (coils) for
@@ -402,7 +414,11 @@ class CostingConstants:
         }.get(fuel, self.licensing_time_dt)
 
     def core_lifetime(self, fuel):
-        """Core component lifetime in FPY for a given fuel type."""
+        """Fixed core component lifetime in FPY (IFE/MIF families only).
+
+        Steady-state MFE concepts use the fluence-based lifetime instead
+        (see fluence_limit and model._core_lifetime_fpy).
+        """
         from costingfe.types import Fuel
 
         return {
@@ -411,6 +427,17 @@ class CostingConstants:
             Fuel.DHE3: self.core_lifetime_dhe3,
             Fuel.PB11: self.core_lifetime_pb11,
         }.get(fuel, self.core_lifetime_dt)
+
+    def fluence_limit(self, fuel):
+        """First-wall/blanket neutron fluence limit Phi_max [MW yr/m^2]."""
+        from costingfe.types import Fuel
+
+        return {
+            Fuel.DT: self.fluence_limit_dt,
+            Fuel.DD: self.fluence_limit_dd,
+            Fuel.DHE3: self.fluence_limit_dhe3,
+            Fuel.PB11: self.fluence_limit_pb11,
+        }.get(fuel, self.fluence_limit_dt)
 
     def dec_grid_lifetime(self, fuel):
         """DEC grid replacement interval in FPY for a given fuel type."""

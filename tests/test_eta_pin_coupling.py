@@ -41,9 +41,12 @@ _BASE = dict(
         # linear in power), matching the staffing accounts CAS40/CAS70. At these
         # 200 MWe / n_mod=1 points only the admin sqrt change bites: sub-1 GWe
         # plants pay slightly more admin building, so LCOE rises <0.1%.
-        (C.TOKAMAK, Fuel.DT, 228.07),
-        (C.MIRROR, Fuel.DT, 186.95),
-        (C.STELLARATOR, Fuel.DT, 343.34),
+        # re-pinned 2026-06-13: fluence-based CAS72 basis change, see
+        # wall_limits_and_fluence.md (TOKAMAK was 228.07, MIRROR 186.95,
+        # STELLARATOR 343.34). Steady-state MFE core lifetime now tracks q_n.
+        (C.TOKAMAK, Fuel.DT, 208.41),
+        (C.MIRROR, Fuel.DT, 182.71),
+        (C.STELLARATOR, Fuel.DT, 326.77),
         # DIPOLE re-benchmarked after the radial-build inversion + spherical
         # geometry dispatch + Li2O blanket fill + C220108 divertor zeroing +
         # external stationary lift coil restructured as

@@ -6,6 +6,7 @@ import jax
 import jax.numpy as jnp
 import pytest
 
+from costingfe.defaults import load_costing_constants
 from costingfe.layers.mirror import (
     _KEV_TO_J,
     _MU_0,
@@ -29,7 +30,7 @@ from costingfe.layers.mirror import (
 )
 from costingfe.layers.physics import OperatingPointInfeasible
 from costingfe.layers.reactivity import n_i_over_n_e
-from costingfe.model import CostModel
+from costingfe.model import CostModel, _core_lifetime_fpy
 from costingfe.types import ConfinementConcept, Fuel
 
 _N = 1.0e20  # m^-3
@@ -459,7 +460,10 @@ class TestInverse:
 # Pinned LCOE for the mirror default path (use_0d_model=False).
 # Captured from branch tip aa7eef8 before any model.py changes; guards that
 # the 0D opt-in default does NOT alter the existing non-0D path.
-_MIRROR_DT_PINNED_LCOE = 93.643616  # $/MWh at 500 MW, avail=0.87, lifetime=40 yr
+# re-pinned 2026-06-13: fluence-based CAS72 basis change, see
+# wall_limits_and_fluence.md (was 93.643616).
+# $/MWh at 500 MW, avail=0.87, lifetime=40 yr
+_MIRROR_DT_PINNED_LCOE = 98.68644714355469
 
 
 class TestModelIntegration:
@@ -1427,3 +1431,49 @@ class TestAnchors:
             f"published {tau_published * 1e3:.1f} ms, ratio {ratio:.2f} "
             "outside 2x; see docs/account_justification/mirror_confinement.md"
         )
+
+
+# ---------------------------------------------------------------------------
+# Fluence-based CAS72 core lifetime (Task 6, decision d1)
+# ---------------------------------------------------------------------------
+
+
+class TestFluenceLifetime:
+    """Steady-state MFE core lifetime is Phi_max / q_n, clamped to plant life.
+
+    See docs/account_justification/wall_limits_and_fluence.md.
+    """
+
+    def test_fluence_lifetime_continuity_at_reference(self):
+        # DT at exactly q_n = Phi_max / 5 FPY reproduces the legacy 5 FPY.
+        cc = load_costing_constants()
+        q_ref = cc.fluence_limit(Fuel.DT) / 5.0
+        lifetime = float(
+            _core_lifetime_fpy(
+                cc, Fuel.DT, q_n=q_ref, lifetime_yr=40.0, availability=0.87
+            )
+        )
+        assert lifetime == pytest.approx(5.0, rel=1e-9)
+
+    def test_cas72_grows_with_wall_loading(self):
+        m = CostModel(ConfinementConcept.MIRROR, Fuel.DT)
+        lo = m.forward(net_electric_mw=300.0, availability=0.87, lifetime_yr=40.0)
+        hi = m.forward(net_electric_mw=700.0, availability=0.87, lifetime_yr=40.0)
+        # Higher power at fixed geometry -> higher q_n -> shorter life -> larger CAS72
+        assert hi.costs.cas72 > lo.costs.cas72
+
+    def test_lifetime_clamped(self):
+        cc = load_costing_constants()
+        # Floor: extreme wall loading is clamped at 0.5 FPY.
+        floor = float(
+            _core_lifetime_fpy(cc, Fuel.DT, q_n=1e6, lifetime_yr=40.0, availability=1.0)
+        )
+        assert floor >= 0.5
+        # Plant-life cap: aneutronic fuel at vanishing q_n clamps at
+        # lifetime_yr * availability = 40.0 (availability=1.0).
+        cap = float(
+            _core_lifetime_fpy(
+                cc, Fuel.PB11, q_n=1e-9, lifetime_yr=40.0, availability=1.0
+            )
+        )
+        assert cap <= 40.0

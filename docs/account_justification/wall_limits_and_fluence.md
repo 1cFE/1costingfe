@@ -315,3 +315,42 @@ binding wall constraint.
 - Zinkle, S. J., "Materials challenges in nuclear energy," Acta Materialia
   61(3) (2013) 735-758; 50-200 dpa structural-damage requirement context for
   fusion DEMO.
+
+## CAS72 basis-change impact (Task 6)
+
+Replacing the fixed per-fuel core lifetime with the fluence basis
+(`Phi_max / q_n`, clamped to plant life) moves the CAS72 scheduled-replacement
+annuity, and through it the LCOE, for every steady-state MFE concept. The
+moves below are deliberate (decision d1) and are recorded here as the
+re-pin record. The C220103 coil-calibration pin (513.375 M\$, a capital
+account) does not move.
+
+All values are per-module (n_mod = 1) DT machines except where noted. "old"
+uses the fixed 5 FPY DT constant; "new" uses `Phi_max,DT / q_n` clamped to
+`lifetime_yr * availability`.
+
+| Concept | Fuel | q_n [MW/m^2] | lifetime old [FPY] | lifetime new [FPY] | CAS72 old [M\$/yr] | CAS72 new [M\$/yr] | LCOE old [\$/MWh] | LCOE new [\$/MWh] |
+|---------|------|-------------:|-------------------:|-------------------:|-------------------:|-------------------:|------------------:|------------------:|
+| Mirror (500 MWe, avail 0.87, 40 yr) | DT | 5.574 | 5.000 | 3.229 | 27.685 | 48.173 | 93.643616 | 98.686447 |
+| Tokamak (500 MWe, avail 0.85, 30 yr) | DT | 2.746 | 5.000 | 6.556 | 53.441 | 34.936 | 124.343605 | 119.373322 |
+| Tokamak (200 MWe, avail 0.85, 30 yr, NOAK) | DT | 1.403 | 5.000 | 12.833 | 36.839 | 7.510 | 228.07 | 208.41 |
+| Mirror (200 MWe, avail 0.85, 30 yr, NOAK) | DT | 2.804 | 5.000 | 6.420 | 19.002 | 13.464 | 186.95 | 182.71 |
+| Stellarator (200 MWe, avail 0.85, 30 yr, NOAK) | DT | 1.304 | 5.000 | 13.798 | 30.488 | 5.756 | 343.34 | 326.77 |
+
+Reading the table: the higher-`q_n` machine (the 500 MWe mirror at 5.57
+MW/m^2) replaces its first wall more often than the old flat 5 FPY assumed, so
+its CAS72 and LCOE rise. The lower-`q_n` machines (tokamak and stellarator,
+which spread the same fusion power over a larger first-wall area) run their
+walls longer than 5 FPY, so their CAS72 and LCOE fall. This redistribution is
+exactly the economic signal the fluence basis was introduced to capture.
+
+Concepts whose lifetime hits the plant-life clamp (`lifetime_yr * availability`)
+show zero CAS72 core-replacement contribution: the advanced fuels
+(D-He3, p-B11) and the very-low-`q_n` machines (e.g. the dipole) replace no
+first wall over the plant life. Aneutronic steady-state fuels clamp to plant
+life via vanishing p_neutron (q_n -> 0), not via the first-wall area. All
+steady-state concepts receive a strictly positive firstwall_area in
+geometry.py; the `jnp.maximum(geo.firstwall_area, 1e-6)` guard in model.py is
+purely defensive against a future concept reporting zero area. A near-zero
+area would drive q_n up and shorten lifetime, which is the opposite of
+clamping to plant life.
