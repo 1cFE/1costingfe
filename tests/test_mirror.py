@@ -18,6 +18,7 @@ from costingfe.layers.mirror import (
     _density_from_surface_cap,
     _density_from_wall_cap,
     compute_ambipolar_potential,
+    compute_tau_axial,
     compute_tau_classical,
     compute_tau_gas_dynamic,
     compute_tau_ii,
@@ -1412,6 +1413,72 @@ class TestSurfaceConstraint:
         )
         assert n_surf_20 > 0.0
         assert n_surf_20 < 1e3  # not the sentinel (cap is binding at 0.01 MW/m^2)
+
+
+class TestRegimeBridge:
+    """Collisionality-gated bridge between gas-dynamic and Pastukhov confinement.
+
+    See docs/account_justification/mirror_confinement_regimes.md (Rognlien and
+    Cutler 1980): gas-dynamic governs when collisional, Pastukhov when
+    collisionless, transition at collisionality = 1/R_m.
+    """
+
+    def test_collisionless_uses_pastukhov_branch(self):
+        # Deeply collisionless (low n, high T): tau_axial must approach the
+        # Pastukhov time, NOT the much shorter gas-dynamic time. This is the
+        # bug guard: the old harmonic sum gave ~tau_GD here.
+        n, T, A, R_m, L = 1.0e20, 60.0, 2.5, 10.0, 20.0
+        tii = float(compute_tau_ii(n, T, A))
+        phi = float(compute_ambipolar_potential(T, A))
+        tau_p = float(compute_tau_pastukhov(tii, R_m, phi, T))
+        tau_gd = float(compute_tau_gas_dynamic(R_m, L, T, A))
+        # sanity: this point is collisionless (tau_gd << tau_p)
+        assert tau_gd < 0.01 * tau_p
+        tau_axial = float(compute_tau_axial(tii, R_m, L, T, A, phi, n))
+        # bridge must pick (near) Pastukhov, within a small factor, not tau_GD
+        assert tau_axial > 0.5 * tau_p
+
+    def test_collisional_uses_gas_dynamic_branch(self):
+        # High n, low T: collisional, gas-dynamic governs (tau_axial ~ tau_GD).
+        n, T, A, R_m, L = 5.0e20, 1.0, 2.5, 30.0, 7.0
+        tii = float(compute_tau_ii(n, T, A))
+        phi = float(compute_ambipolar_potential(T, A))
+        tau_gd = float(compute_tau_gas_dynamic(R_m, L, T, A))
+        tau_axial = float(compute_tau_axial(tii, R_m, L, T, A, phi, n))
+        assert tau_axial == pytest.approx(tau_gd, rel=0.5)
+
+    @pytest.mark.parametrize("fuel", [Fuel.DT, Fuel.DD, Fuel.DHE3, Fuel.PB11])
+    def test_bridge_jit_matches_eager_and_differentiable(self, fuel):
+        n, A, R_m, L = 1.0e20, 2.5, 10.0, 20.0
+
+        def f(T):
+            tii = compute_tau_ii(n, T, A)
+            phi = compute_ambipolar_potential(T, A)
+            return compute_tau_axial(tii, R_m, L, T, A, phi, n)
+
+        eager = float(f(30.0))
+        jitted = float(jax.jit(f)(30.0))
+        assert jnp.isfinite(jitted)
+        assert jitted == pytest.approx(eager, rel=1e-4)
+        g = float(jax.grad(f)(30.0))
+        assert jnp.isfinite(g)
+
+    def test_grad_finite_at_extreme_collisionless_point(self):
+        # Far past any physical operating point (n -> ~1e12, T -> 2000 keV) the
+        # logistic argument saturates beyond the float32 exp() overflow band, so
+        # the unclamped gate yields inf*0 = NaN in reverse mode. The clamp keeps
+        # the gradient finite. Golden-section sizing and the jax.grad sensitivity
+        # vector both traverse this function, so this tail must stay finite.
+        # Verified: without the [-30, 30] clamp this grad is NaN here.
+        n, A, R_m, L = 1.0e12, 2.5, 10.0, 20.0
+
+        def f(T):
+            tii = compute_tau_ii(n, T, A)
+            phi = compute_ambipolar_potential(T, A)
+            return compute_tau_axial(tii, R_m, L, T, A, phi, n)
+
+        g = float(jax.grad(f)(2000.0))
+        assert jnp.isfinite(g)
 
 
 class TestAnchors:

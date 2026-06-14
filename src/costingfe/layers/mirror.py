@@ -57,6 +57,19 @@ _V_THI_PREFACTOR = math.sqrt(2.0 * _KEV_TO_J / _M_P)  # 4.3769e5
 #       = _RHO_I_PREFACTOR * sqrt(A * T_keV) / B
 _RHO_I_PREFACTOR = math.sqrt(2.0 * _M_P * _KEV_TO_J) / _EV  # 4.5694e-3
 
+# Confinement-regime gate width [decades of collisionality].
+# Logistic smoothing width of the gas-dynamic-vs-Pastukhov bridge, centered on
+# the sourced boundary collisionality = 1/R_m (Rognlien and Cutler 1980: mean
+# free path reduced by the mirror ratio equals the system length). The boundary
+# is sourced; this width is a constructed smoothing parameter chosen for a smooth
+# differentiable crossover. The width is narrow enough that the suppressed
+# gas-dynamic rate falls well below the Pastukhov rate at the collisionless
+# anchors, which matters because tau_GD can be up to 1e4 shorter than
+# tau_Pastukhov so even a small residual gate leaks meaningfully. See
+# docs/account_justification/mirror_confinement_regimes.md.
+_REGIME_GATE_WIDTH_DECADES = 0.13
+_LN10 = math.log(10.0)  # natural log of 10, for log10 in JAX
+
 
 # ---------------------------------------------------------------------------
 # MirrorPlasmaState
@@ -148,6 +161,57 @@ def compute_tau_gas_dynamic(R_m, L, T_i, A):
     """
     v_thi = _V_THI_PREFACTOR * jnp.sqrt(T_i / A)
     return R_m * L / v_thi
+
+
+def compute_tau_axial(tau_ii, R_m, L, T_i, A, phi_keV, n_i):
+    """Axial confinement time [s], collisionality-gated regime bridge.
+
+    Combines the gas-dynamic (collisional) and Pastukhov (collisionless) axial
+    loss channels so the gas-dynamic channel governs only when the plasma is
+    collisional and Pastukhov governs when it is collisionless. The transition
+    follows Rognlien and Cutler 1980 (Nucl. Fusion 20, 1003): the Pastukhov
+    formula breaks down when the ion mean free path reduced by the mirror ratio
+    is of order the system length, i.e. collisionality (L/mfp) of order 1/R_m.
+
+    The gas-dynamic loss RATE is gated by a logistic function of collisionality
+    centered on collisionality = 1/R_m, then combined with the Pastukhov rate as
+    a loss-rate (harmonic) sum:
+
+        inv_tau_axial = 1/tau_Pastukhov + g(collisionality) * (1/tau_GD)
+
+    so g -> 1 (gas-dynamic present, dominant) when collisional and g -> 0
+    (gas-dynamic suppressed) when collisionless. Smooth and differentiable;
+    the logistic argument is clamped to [-30, 30] so the gate carries a finite
+    gradient at every collisionality (no NaN from a saturated logistic under
+    jax.grad). float32-safe (constants folded float64).
+
+    See docs/account_justification/mirror_confinement_regimes.md.
+
+    tau_ii [s], R_m [-], L [m], T_i [keV], A ion mass number, phi_keV = e*phi
+    [keV], n_i [m^-3] (accepted for signature parity / callers; collisionality
+    is computed from L, v_thi(T_i, A), and tau_ii).
+    """
+    tau_Pastukhov = compute_tau_pastukhov(tau_ii, R_m, phi_keV, T_i)
+    tau_GD = compute_tau_gas_dynamic(R_m, L, T_i, A)
+
+    # Collisionality L/mfp, identical to the mirror_0d_forward diagnostic.
+    v_thi = _V_THI_PREFACTOR * jnp.sqrt(T_i / A)
+    collisionality = L / (v_thi * tau_ii)
+
+    # Logistic gate in log10(collisionality), centered on the sourced boundary
+    # collisionality_crit = 1/R_m. log10(x) = ln(x)/ln(10).
+    log10_coll = jnp.log(collisionality) / _LN10
+    log10_crit = jnp.log(1.0 / R_m) / _LN10
+    # Clamp the logistic argument before exp so the saturated tails carry a finite
+    # reverse-mode gradient (an unclamped saturated logistic yields inf*0 = NaN in
+    # jax.grad). At physical collisionalities |arg| is well under 30, so the clamp
+    # leaves the gate value unchanged; it only guards the extreme-collisionless and
+    # extreme-collisional tails traversed by golden-section sizing and grad sweeps.
+    arg = jnp.clip((log10_coll - log10_crit) / _REGIME_GATE_WIDTH_DECADES, -30.0, 30.0)
+    gate = 1.0 / (1.0 + jnp.exp(-arg))
+
+    inv_tau_axial = 1.0 / tau_Pastukhov + gate / tau_GD
+    return 1.0 / inv_tau_axial
 
 
 def compute_tau_radial(tau_ii, a, T_i, A, B_min):
@@ -282,8 +346,10 @@ def mirror_0d_forward(
     tau_GD = compute_tau_gas_dynamic(R_m, L, T_i, M_ion)
     tau_radial = compute_tau_radial(tau_ii, a, T_i, M_ion, B_min)
 
-    # Combined axial: 1/tau_axial = 1/tau_Pastukhov + 1/tau_GD
-    inv_tau_axial = 1.0 / tau_Pastukhov + 1.0 / tau_GD
+    # Combined axial: collisionality-gated gas-dynamic vs Pastukhov bridge.
+    # tau_Pastukhov and tau_GD are kept above for the state diagnostic fields.
+    tau_axial = compute_tau_axial(tau_ii, R_m, L, T_i, M_ion, phi, n_i)
+    inv_tau_axial = 1.0 / tau_axial
 
     # Total particle: 1/tau_p = 1/tau_axial + 1/tau_radial
     inv_tau_p = inv_tau_axial + 1.0 / tau_radial
