@@ -131,7 +131,8 @@ print(f"  P_rad:         {float(ps.p_rad):7.0f} MW")
 print("\nGeometry and Wall Loading")
 print(f"  V_plasma:      {float(ps.V_plasma):7.0f} m^3")
 print(f"  FW area:       {float(ps.fw_area):7.0f} m^2")
-print(f"  Wall loading:  {float(ps.wall_loading):7.2f} MW/m^2")
+print(f"  q_wall:        {float(ps.wall_loading):7.2f} MW/m^2 (neutron, cap 5.0)")
+print(f"  q_surface:     {float(ps.q_surface):7.2f} MW/m^2 (surface, cap 1.0)")
 print(f"  R_m:           {float(ps.R_m):7.1f}")
 f_ax = float(ps.f_axial_derived)
 print(f"  f_axial_diag:  {f_ax:7.3f}   (axial end-loss share, diagnostic only)")
@@ -202,7 +203,9 @@ print(f"  below beta_max = {bm}, gate passes.")
 
 # ── Sizing: solve chamber length from net power target ────────────────
 # size_from_power bisects on chamber_length to match the net power target.
-# Density is derived from the beta boundary rather than specified directly.
+# Density is the minimum of three caps (beta-pressure, neutron wall load,
+# surface heat flux) rather than specified directly. At this slim a=0.4 m
+# build the beta-pressure cap binds (beta = f_beta * beta_max = 0.425).
 # The operating T_i is found by golden-section search, maximizing net power.
 print()
 print("=" * 64)

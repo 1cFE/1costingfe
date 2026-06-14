@@ -3,9 +3,12 @@
 The mirror framework solves the chamber length from the net electric power ask
 instead of costing a stated machine. With size_from_power=True, you give only
 the net power; the solver bisects on L, running a golden-section search over T_i
-at each trial L to find the operating temperature that maximises net power at the
-f_beta density boundary. Geometry-driven costs (central-cell solenoids, end-plug
-coils, blanket, vessel) then scale with the solved L.
+at each trial L to find the operating temperature that maximises net power. The
+operating density is the minimum of three caps -- the f_beta beta-pressure
+ceiling, the neutron wall-load cap (q_wall_max), and the surface heat-flux cap
+(q_surface_max) -- so the wall caps can bind below the beta boundary. Geometry-
+driven costs (central-cell solenoids, end-plug coils, blanket, vessel) then
+scale with the solved L.
 
 Shown here:
   1. Size mode across power targets   - L(P), economies of scale
@@ -39,6 +42,8 @@ def show(model, result):
     print(f"  T_i (GSS):    {float(ps.T_i):8.1f} keV")
     print(f"  n_e (f_beta): {float(ps.n_e):8.2e} m^-3")
     print(f"  beta:         {float(ps.beta):8.3f}")
+    print(f"  q_wall:       {float(ps.wall_loading):8.2f} MW/m^2 (cap 5.0)")
+    print(f"  q_surface:    {float(ps.q_surface):8.2f} MW/m^2 (cap 1.0)")
     print(f"  P_fus:        {float(ps.p_fus):8.0f} MW")
     print(f"  C220103 coil: {float(c22['C220103']):8.1f} M$")
     print(f"  LCOE:         {float(result.costs.lcoe):8.1f} $/MWh")
@@ -80,11 +85,15 @@ for p_net in (100.0, 200.0, 400.0, 600.0):
     print(row)
 
 # ── 2. f_beta sensitivity at 400 MWe ─────────────────────────────────
-# Higher f_beta packs the plasma denser (n_e proportional to f_beta).
-# That raises fusion power per unit volume, so a shorter L closes the
-# power balance. The coil cost tracks L (central-cell solenoids scale with
-# chamber_length / coil_spacing), so LCOE falls. The optimizer in section 3
-# should confirm the direction and pin the floor.
+# Higher f_beta raises the beta-pressure density ceiling, but the operating
+# density is min(n_beta, n_wall, n_surf). At D-T defaults the neutron wall
+# cap binds first, so above the f_beta where n_beta crosses n_wall the
+# density (and hence L and LCOE) stops moving: the 0.70 and 0.85 rows land
+# at the same L and LCOE because both are wall-capped. At low f_beta (0.50)
+# n_beta is the binding cap, giving a longer L and higher LCOE. At high
+# f_beta (0.95) the wall-capped density forces a T_i whose pressure exceeds
+# beta_max, so the point is infeasible. The optimizer in section 3 therefore
+# lands at an interior f_beta, not at a bound.
 print()
 print("=" * 64)
 print("  f_beta SWEEP at 400 MWe: density-pressure trade vs. L and LCOE")
@@ -108,9 +117,9 @@ for fb in (0.5, 0.7, 0.85, 0.95):
             **CUSTOMER,
         )
     except OperatingPointInfeasible as exc:
-        # Wall cap + beta limit simultaneously infeasible at high f_beta: the
-        # density is wall-capped below n_beta, the required T_i then exceeds
-        # beta_max. Report the condition; narration sync is Task 7.
+        # At high f_beta the wall-capped density forces the solver to a high
+        # T_i to make the power, and the resulting pressure exceeds beta_max.
+        # The gate refuses rather than returning a cost for an unstable point.
         print(f"  {fb:>7.2f}  infeasible: {exc}")
         continue
     ps = model._plasma_state
@@ -143,12 +152,16 @@ fb_opt = model._sizing_fbeta
 print("\n  Optimizer result:")
 print(f"  optimal f_beta:  {fb_opt:.3f}")
 show(model, r_opt)
+# The optimum is interior to [0.3, 1.0], not at a bound: the neutron wall
+# cap holds q_wall at its 5.0 MW/m^2 ceiling, so once f_beta is high enough
+# for the wall cap to bind, raising it further changes nothing until it
+# pushes the point past beta_max. The LCOE floor sits just inside that edge.
 
 # ── 4. Infeasibility demo: target beyond L_max reach ─────────────────
-# At L_max=5 m and a=1.5 m, the machine can only deliver about 190 MWe.
-# A 400 MWe ask with L_max=5 m cannot converge; the model raises
-# SizingInfeasible with the p_net at L_max so the caller knows how
-# far short the machine falls.
+# At L_max=5 m and a=1.5 m (the YAML default plasma radius) the wall-capped
+# density yields only about 30 MWe net. A 400 MWe ask with L_max=5 m cannot
+# converge; the model raises SizingInfeasible with the p_net at L_max so the
+# caller knows how far short the machine falls.
 print()
 print("=" * 64)
 print("  INFEASIBLE ASK: 400 MWe with L_max = 5 m")
