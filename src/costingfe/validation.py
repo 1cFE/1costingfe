@@ -96,6 +96,9 @@ class CostingInput(BaseModel):
     noak: bool = True
     cost_overrides: dict[str, float] = Field(default_factory=dict)
     costing_overrides: dict[str, float] = Field(default_factory=dict)
+    # When set, cost_overrides are absolute M$ valid at this reference power and
+    # scaled to net_electric_mw inside forward(); None applies them directly.
+    override_reference_mw: float | None = Field(default=None, gt=0)
 
     # --- Engineering parameters (None = use YAML template) ---
     # Common (all families)

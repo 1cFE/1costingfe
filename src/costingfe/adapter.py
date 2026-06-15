@@ -44,6 +44,9 @@ class FusionTeaInput:
     costing_overrides: dict[str, float] = field(
         default_factory=dict
     )  # CostingConstants field → value
+    # When set, cost_overrides are absolute M$ valid at this reference power and
+    # scaled to net_electric_mw. None means cost_overrides apply directly.
+    override_reference_mw: float | None = None
 
 
 @dataclass
@@ -88,6 +91,7 @@ def run_costing(inp: FusionTeaInput) -> FusionTeaOutput:
         noak=inp.noak,
         cost_overrides=inp.cost_overrides or {},
         costing_overrides=inp.costing_overrides or {},
+        override_reference_mw=inp.override_reference_mw,
     )
 
     cc = load_costing_constants()
@@ -120,6 +124,7 @@ def run_costing(inp: FusionTeaInput) -> FusionTeaOutput:
         inflation_rate=inp.inflation_rate,
         noak=inp.noak,
         cost_overrides=inp.cost_overrides or None,
+        override_reference_mw=inp.override_reference_mw,
         **inp.overrides,
     )
 

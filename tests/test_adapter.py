@@ -207,6 +207,42 @@ def test_adapter_no_overrides_unchanged():
     assert out2.overridden == []
 
 
+def test_adapter_override_reference_mw_scales_cost_override():
+    """override_reference_mw reinterprets cost_overrides as absolute M$ valid at
+    the reference power, then scales them to net_electric_mw."""
+    base = dict(
+        concept="tokamak",
+        fuel="dt",
+        net_electric_mw=500.0,
+        availability=0.85,
+        lifetime_yr=30,
+        cost_overrides={"CAS22": 100.0},
+    )
+    # Without a reference, the override applies directly at the 500 MW target.
+    direct = run_costing(FusionTeaInput(**base))
+    assert direct.costs["CAS22"] == 100.0
+
+    # With reference = 1000 MW, the 100 M$ is "valid at 1000 MW" and scaled to
+    # the 500 MW target, so it must differ from the raw override.
+    scaled = run_costing(FusionTeaInput(**base, override_reference_mw=1000.0))
+    assert scaled.costs["CAS22"] != 100.0
+
+
+def test_adapter_override_reference_mw_identity_at_target():
+    """override_reference_mw == net_electric_mw is a no-op (scaling ratio 1)."""
+    base = dict(
+        concept="tokamak",
+        fuel="dt",
+        net_electric_mw=1000.0,
+        availability=0.85,
+        lifetime_yr=30,
+        cost_overrides={"CAS21": 75.0},
+    )
+    direct = run_costing(FusionTeaInput(**base))
+    same = run_costing(FusionTeaInput(**base, override_reference_mw=1000.0))
+    assert same.costs["CAS21"] == direct.costs["CAS21"] == 75.0
+
+
 def test_adapter_resolves_laser_driver_type():
     from costingfe.adapter import FusionTeaInput, run_costing
 

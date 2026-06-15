@@ -118,6 +118,23 @@ class TestTier1FieldConstraints:
                 construction_time_yr=0.0,
             )
 
+    def test_override_reference_mw_must_be_positive(self):
+        with pytest.raises(ValidationError, match="override_reference_mw"):
+            CostingInput(
+                concept=ConfinementConcept.TOKAMAK,
+                fuel=Fuel.DT,
+                net_electric_mw=1000.0,
+                override_reference_mw=0.0,
+            )
+
+    def test_override_reference_mw_defaults_none(self):
+        inp = CostingInput(
+            concept=ConfinementConcept.TOKAMAK,
+            fuel=Fuel.DT,
+            net_electric_mw=1000.0,
+        )
+        assert inp.override_reference_mw is None
+
     def test_concept_string_accepted(self):
         """Concept can be passed as string (adapter path)."""
         inp = CostingInput(
