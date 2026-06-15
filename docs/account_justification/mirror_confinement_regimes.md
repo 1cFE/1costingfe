@@ -4,7 +4,9 @@
 **Status:** Implemented. Collisionality bridge sourced to Rognlien and Cutler
 1980 (smoothing constructed, documented honestly); tandem plug-limited
 central-cell confinement calibrated to the Realta Hammir Q>5 design point (Frank
-et al. 2024).
+et al. 2024); hot-electron plug decoupled from the coolable central cell (Fowler
+and Logan 1977; Baldwin and Logan 1979) with a fixed plug sustainment power
+calibrated to Hammir's about 30 MW (Task 2e).
 
 ## Purpose
 
@@ -202,12 +204,24 @@ re-pin (Task 6) extend this table.
 | Mirror | D-T | sized T_i (keV) | 59.77 (ignited) | 23.31 | fixed Fowler-Logan plug, hot-electron T_e (Task 2c) |
 | Mirror | D-T | sized q_sci | about 516 (near-ignited) | 8.32 | tandem-realistic driven gain (Task 2c) |
 | Mirror | D-T | sized tau_E (s) | about 2.4 (over-credited) | 18.8 | hot-electron plug; deep plugging (Task 2c) |
-| Mirror | D-T | sized LCOE ($/MWh) | 109.70 | 368.90 | genuinely driven (large recirculating P_aux) |
+| Mirror | D-T | sized LCOE ($/MWh) | 109.70 | 395.8 | genuinely driven; explicit P_plug charged (Task 2e) |
 | Mirror | D-T | non-0D default LCOE pin | 98.686 | 100.107 | YAML T_e 20->125 keV moves the radiation term |
+| Mirror | D-T | a=1.5/B=3 wall-loose sized L (m) | 69.230740 | 77.842279 | explicit P_plug = 30 MW recirculating (Task 2e) |
 
 Intermediate values from Task 2b (ratio-to-T_i plug, T_e=20 keV): sized T_i 29.86 keV,
 tau_E 0.96 s, LCOE 100.53, p_input 2.0 MW (floored). Those are superseded by the
 Task 2c fixed Fowler-Logan plug above; they are recorded only to show the trajectory.
+
+The Task 2e plug/central decoupling does NOT move the D-T operating point (the
+D-T central cell genuinely runs hot, so its T_e and the plug T_e_plug are both
+125 keV and the plug potential e*phi = 74.7 keV is unchanged). It moves the D-T
+sized LCOE from 368.9 to 395.8 $/MWh (+7.3 percent) only because the 30 MW plug
+sustainment power is now charged EXPLICITLY into the recirculating budget, which
+the earlier value omitted. The sized T_i (23.34 keV), q_sci (8.30), and tau_E
+(18.7 s) are unchanged within tolerance. The Hammir Q>5 anchor reconciles: Hammir
+already counts the 30 MW plug NBI in its published Q = P_fus/P_NBI = 5.2, so
+charging P_plug here makes the model's accounting match Hammir's rather than
+omitting the plug cost.
 
 ## Energy-balance closure (Task 2)
 
@@ -482,6 +496,147 @@ resolved by the fixed plug: confinement no longer improves for free with `T_i`, 
 the optimizer settles in the driven tandem regime on its own, with no explicit
 stability bound (Task 4 still not needed).
 
+## Decoupling the hot plug from the central cell (Task 2e)
+
+Implementing the real Fowler-Logan plug (Task 2c) forced hot electrons: the
+confining potential `e*phi = T_e * ln(n_p/n_c)` needs a high `T_e` to plug the
+central cell, so the single global mirror `T_e` was pinned to the Hammir
+hot-electron value 125 keV. That made D-T a genuinely driven tandem, but hot
+electrons radiate heavily (bremsstrahlung scales with `T_e^0.5` and the
+synchrotron term grows with `T_e`), so D-D, D-He3, and p-B11 went net-negative and
+could no longer be sized. A SINGLE electron temperature cannot serve both the plug
+(which wants hot electrons to confine) and aneutronic central-cell fusion (which
+wants cool electrons to limit radiation).
+
+### The physics: separate plug and central-cell plasmas
+
+Real advanced-fuel tandems do not run one electron population. The plug is a
+SEPARATE cell, often with a different ion (plugging) species, whose job is to hold
+the confining potential with a HOT-ELECTRON population sustained by plug ECH. The
+central cell runs the working fuel and can keep its electrons COOL, because the
+confinement is supplied by the plug potential, not by the central-cell electron
+temperature. This is the original Fowler and Logan 1977 tandem concept (and the
+Baldwin and Logan 1979 thermal-barrier refinement, which deliberately decouples
+the plug and central-cell electron populations with a potential barrier so the
+plug can run hotter than the central cell). The Hammir design point (Frank et al.
+2024 sec. 3.5) runs its plug hot-electron population at `T_e = 125` keV, set by
+the plug ECH independent of the central-cell fuel.
+
+The model captures this at costing fidelity by separating two temperatures:
+
+- `T_e_plug` (hot, YAML default 125 keV, anchored to Hammir): sets the
+  Fowler-Logan confining potential `e*phi = T_e_plug * ln(n_p/n_c)`
+  (`compute_plug_potential(T_e_plug, plug_density_ratio)`). It is the plug knob,
+  set by plug ECH and independent of the central fuel.
+- `T_e` (central-cell, YAML default 125 keV for the D-T reference machine,
+  OVERRIDDEN cool for advanced fuels): sets central-cell bremsstrahlung,
+  synchrotron, beta, and stored energy. It no longer enters the plug potential.
+
+The plug is modelled as POTENTIAL-PLUS-POWER, not a full second fusion plasma:
+the central cell does the fusion; the plug contributes the confining potential and
+its power cost. "Different species" is captured by the plug being this separate
+potential-and-power sub-system, independent of the central fuel.
+
+### Charging the plug power (P_plug, Hammir anchor)
+
+The hot-electron plug is sustained by plug ECH/NBI at a real power cost. The model
+charges a plug sustainment power `P_plug` (YAML default 30 MW) into the mirror
+recirculating budget. The value is calibrated to the Realta Hammir design point,
+which holds its hot-electron plug with about 30 MW of plug NBI/ECH (Frank et al.
+2024 sec. 3.5; the published `Q = P_fus / P_NBI = 5.2` counts exactly this 30 MW).
+
+The chosen model is a FIXED per-machine plug power, not one scaled with `n_p` or
+with the central-cell power. This is the defensible 0D choice: the 0D model does
+not solve the plug density or trapping self-consistently, the published anchor is
+a single design-point plug power, and the CAS22 coil account already commits to
+fixed plug hardware (`n_plug_coils = 4`), so the plug is costed as fixed
+hardware-plus-drive consistent with the coils. `P_plug` is also the competing
+penalty that keeps the optimizer honest: it is a recirculating load that the plant
+pays regardless of central-cell temperature, so a configuration cannot get the
+deep plug confinement for free.
+
+`P_plug` is charged on the MIRROR SIDE by folding it into the `p_coils` argument
+passed to the shared `mfe_forward_power_balance` (`p_coils_eff = p_coils +
+p_plug`). The shared recirculating sum is `p_coils + p_pump + p_sub + p_aux +
+p_cool + p_cryo + p_input_eff/eta_pin`, so this adds `P_plug` at unit recirculating
+cost without touching the shared function or the tokamak/stellarator/IFE paths. It
+is charged consistently in the inverse-solve (which sets the required `p_fus`) and
+the forward power table, and in the sizing path's power-balance call. The plug
+power does NOT enter `p_input` (the plasma energy balance), because the plug ECH
+heats the plug electrons, not the central cell.
+
+### Reconciling the Hammir Q anchor
+
+Hammir's published `Q = P_fus / P_NBI = 5.2` already counts the 30 MW plug NBI in
+the denominator. Before Task 2e the model omitted the plug power from the
+recirculating budget; charging `P_plug` explicitly makes the model's accounting
+match Hammir's rather than under-counting the plug cost. The forward Hammir anchor
+(`q_sci = P_fus / P_aux` at the published central cell) is unchanged because it
+already used the confinement-required sustainment power; the new explicit `P_plug`
+enters `q_eng` (the engineering gain that drives the economics) and the sized
+LCOE, which is where the plant pays for the plug. The anchor holds within the
+documented 2x band.
+
+### D-T is unchanged; advanced fuels are now fairly evaluated
+
+D-T stays a hot-central tandem (the Hammir central cell genuinely runs about
+125 keV), so its driven result is preserved: sized `T_i` about 23.3 keV, `q_sci`
+about 8.3, `tau_E` about 18.7 s, all unchanged within tolerance. The sized LCOE
+moves from about 369 to about 396 $/MWh (+7.3 percent) only because the 30 MW plug
+power is now charged explicitly (it was omitted before).
+
+The advanced fuels get a fair evaluation: a cool central cell (low bremsstrahlung)
+plugged by a hot plug, paying the plug power. The finding is recorded honestly in
+the cross-fuel observation below. The headline is that decoupling REMOVES the
+spurious hot-central radiation penalty (D-He3 net power and `q_eng` improve
+sharply with a cool central cell) but does NOT by itself make the advanced fuels
+economic at the modelled fields: they remain net-negative even cool. The
+advanced-fuel difficulty is now a genuine reactivity-and-radiation result, not an
+artifact of forcing one hot electron temperature on a fuel that does not want it.
+
+### Cross-fuel observation with a cool central cell (the real finding)
+
+Run at a high-field machine (`a = 0.5` m, `B = 6` T, `beta_max = 0.9`, `f_beta =
+0.85`, hot plug `T_e_plug = 125` keV, `L = 200` m diagnostics row) so the
+advanced fuels are not artificially density-starved; the central-cell `T_e` is the
+only variable. Every value reproduces from the committed model API
+(`net_electric_at_L`).
+
+| Fuel | central T_e [keV] | T_i [keV] | q_sci | q_eng | p_net [MW] | net-positive? |
+|------|-------------------|-----------|-------|-------|------------|---------------|
+| D-He3 | 125 (hot) | 24.2 | 0.097 | 0.377 | -977 | no |
+| D-He3 | 30 (cool) | 100.0 | 1.658 | 0.931 | -291 | no (near break-even) |
+| D-D | 125 (hot) | 27.2 | 0.223 | 0.421 | -1549 | no |
+| D-D | 30 (cool) | 100.0 | 0.568 | 0.551 | -3674 | no |
+| p-B11 | 300 (hot) | 300.0 | 0.106 | 0.371 | -633 | no |
+| p-B11 | 60 (cool) | 300.0 | 0.178 | 0.405 | -1281 | no |
+
+Per-fuel finding:
+
+- **D-He3** is the clear beneficiary of decoupling: cooling the central cell from
+  125 to 30 keV (hot plug retained) raises `q_sci` from 0.10 to 1.66 and `q_eng`
+  from 0.38 to 0.93 (from deeply net-negative toward break-even), and the GSS
+  optimum moves UP to `T_i` about 100 keV where D-He3 reactivity is strong and the
+  cool electrons no longer radiate it away. D-He3 is now FAIRLY evaluable and is
+  close to break-even, but still net-negative (`q_eng` < 1) at these fields. This
+  is the honest result: a cool-central hot-plug D-He3 tandem is far better than the
+  hot-central case but not yet economic in the 0D model.
+- **D-D** improves in `q_sci` with a cool central cell (0.22 to 0.57) but its
+  total p_net falls because the optimizer drives `T_i` to 100 keV where the much
+  higher fusion power demands a far larger (still sub-unity-efficiency) auxiliary
+  drive; D-D stays net-negative. Honest low-reactivity result.
+- **p-B11** stays at its bracket top `T_i` about 300 keV regardless; cooling the
+  central cell improves `q_sci` modestly (0.11 to 0.18) but p-B11 remains deeply
+  net-negative. The aneutronic fuel is genuinely hard in the 0D model at these
+  fields; decoupling does not change that conclusion.
+
+The real finding, stated plainly: the plug/central decoupling makes the
+advanced fuels fairly evaluable by removing the hot-central radiation penalty, and
+D-He3 in particular goes from deeply net-negative to near break-even with a cool
+central cell, but none of D-D, D-He3, or p-B11 is net-positive in the model at the
+modelled fields. Only D-T is economic. This is reported as found, not engineered
+to a target.
+
 ## Stability and validity diagnostics (Task 3)
 
 Two diagnostics are reported on `MirrorPlasmaState`. Both are INFORMATIONAL: they
@@ -670,7 +825,15 @@ minimum-warm-fraction bound is the documented contingency.
 - **Fowler, T. K. and Logan, B. G. (1977)**, "The tandem mirror reactor,"
   Comments Plasma Phys. Control. Fusion 2, 167. Classical tandem-mirror concept:
   the central-cell ions are confined by the electrostatic potential drop to the
-  end plugs, set by the plug-to-central density ratio.
+  end plugs, set by the plug-to-central density ratio. The plug and central cell
+  are distinct plasmas (the plug supplies the potential; the central cell does the
+  fusion), which is the basis for decoupling the plug electron temperature from
+  the central-cell electron temperature.
+- **Baldwin, D. E. and Logan, B. G. (1979)**, "Improved tandem mirror fusion
+  reactor," Phys. Rev. Lett. 43, 1318. Thermal-barrier tandem: a potential barrier
+  deliberately decouples the plug hot-electron population from the central-cell
+  electrons so the plug can run hotter (ECH-heated) than the central cell, which is
+  exactly the hot-plug / cool-central separation modelled here.
 - **Santarius, J. F. and Callen, J. D. (1983)**, "Fusion-alpha confinement in a
   tandem-mirror central cell," Phys. Fluids 26, 1037. Bounce-averaged
   Fokker-Planck treatment of fusion-alpha loss-cone confinement: about 50 percent

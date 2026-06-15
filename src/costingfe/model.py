@@ -569,6 +569,8 @@ class CostModel:
             plug_density_ratio=params["plug_density_ratio"],
             collisionality_min=params["collisionality_min"],
             f_alpha_heat=params["f_alpha_heat"],
+            T_e_plug=_to_num(params["T_e_plug"]),
+            p_plug=params["p_plug"],
             enforce_plasma_limits=params["enforce_plasma_limits"],
         )
 

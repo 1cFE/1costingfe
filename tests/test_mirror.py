@@ -71,6 +71,17 @@ _COLLISIONALITY_MIN = 0.1
 # 1983). Matches the YAML default. Task 2c.
 _F_ALPHA_HEAT = 0.80
 
+# Plug hot-electron temperature [keV] (Fowler-Logan potential; Hammir anchor).
+# Decoupled from the central-cell T_e: the plug builds the confining potential
+# e*phi = T_e_plug * ln(n_p/n_c) with hot electrons while the central cell sets
+# radiation at its own (coolable) T_e. Matches the YAML default. Task 2e.
+_TE_PLUG = 125.0
+
+# Plug sustainment power [MW] charged into the mirror recirculating budget (the
+# ECH/NBI holding the hot-electron plug, calibrated to Hammir's about 30 MW).
+# Matches the YAML default. Task 2e.
+_P_PLUG = 30.0
+
 
 def _forward(fuel=Fuel.DT, dhe3_dd_frac_pin=None, **kw):
     """Convenience wrapper for mirror_0d_forward at reference geometry."""
@@ -89,6 +100,7 @@ def _forward(fuel=Fuel.DT, dhe3_dd_frac_pin=None, **kw):
         vacuum_t=args.pop("vacuum_t", 0.10),
         plug_density_ratio=args.pop("plug_density_ratio", _PLUG_DENSITY_RATIO),
         collisionality_min=args.pop("collisionality_min", _COLLISIONALITY_MIN),
+        T_e_plug=args.pop("T_e_plug", _TE_PLUG),
         **args,
     )
 
@@ -264,6 +276,7 @@ class TestForward:
                 vacuum_t=0.10,
                 plug_density_ratio=_PLUG_DENSITY_RATIO,
                 collisionality_min=_COLLISIONALITY_MIN,
+                T_e_plug=_TE_PLUG,
                 **_FRACS,
                 **_MIX,
                 **extra,
@@ -399,6 +412,8 @@ def _inverse(
         plug_density_ratio=kw.pop("plug_density_ratio", _PLUG_DENSITY_RATIO),
         collisionality_min=kw.pop("collisionality_min", _COLLISIONALITY_MIN),
         f_alpha_heat=kw.pop("f_alpha_heat", _F_ALPHA_HEAT),
+        T_e_plug=kw.pop("T_e_plug", _TE_PLUG),
+        p_plug=kw.pop("p_plug", _P_PLUG),
         enforce_plasma_limits=enforce_plasma_limits,
         dhe3_dd_frac=0.131,
         dhe3_dd_frac_pin=dhe3_dd_frac_pin,
@@ -469,6 +484,8 @@ class TestInverse:
             plug_density_ratio=_PLUG_DENSITY_RATIO,
             collisionality_min=_COLLISIONALITY_MIN,
             f_alpha_heat=_F_ALPHA_HEAT,
+            T_e_plug=_TE_PLUG,
+            p_plug=_P_PLUG,
             dhe3_dd_frac=0.131,
             dhe3_dd_frac_pin=None,
             vacuum_t=0.10,
@@ -851,6 +868,8 @@ def _sz_params(
         plug_density_ratio=_PLUG_DENSITY_RATIO,
         collisionality_min=_COLLISIONALITY_MIN,
         f_alpha_heat=_F_ALPHA_HEAT,
+        T_e_plug=_TE_PLUG,
+        p_plug=_P_PLUG,
         dd_f_T=0.969,
         dd_f_He3=0.689,
         dhe3_dd_frac=0.131,
@@ -1005,6 +1024,8 @@ class TestMirrorSizing:
             plug_density_ratio=_PLUG_DENSITY_RATIO,
             collisionality_min=_COLLISIONALITY_MIN,
             f_alpha_heat=_F_ALPHA_HEAT,
+            T_e_plug=_TE_PLUG,
+            p_plug=_P_PLUG,
             dd_f_T=0.969,
             dd_f_He3=0.689,
             dhe3_dd_frac=0.131,
@@ -1210,6 +1231,8 @@ _SIZING_PARAMS = dict(
     plug_density_ratio=_PLUG_DENSITY_RATIO,
     collisionality_min=_COLLISIONALITY_MIN,
     f_alpha_heat=_F_ALPHA_HEAT,
+    T_e_plug=_TE_PLUG,
+    p_plug=_P_PLUG,
     dd_f_T=0.969,
     dd_f_He3=0.689,
     dhe3_dd_frac=0.131,
@@ -1278,6 +1301,7 @@ def _size(params, fuel=Fuel.DT):
         vacuum_t=params["vacuum_t"],
         plug_density_ratio=params["plug_density_ratio"],
         collisionality_min=params["collisionality_min"],
+        T_e_plug=params["T_e_plug"],
         f_rad_fus=params.get("f_rad_fus"),
     )
     return L, pn, ps
@@ -1308,10 +1332,14 @@ class TestWallConstraint:
         # re-pinned for the driven hot-electron regime: the Fowler-Logan plug
         # e*phi = T_e*ln(n_p/n_c) with T_e=125 raises pressure, so at fixed beta
         # the density is lower and a longer chamber is needed to meet the target.
-        # L = 69.230740222 m here (was 4.536524895 m under the ratio-to-T_i plug).
+        # re-pinned 2026-06-15: explicit plug power (P_plug = 30 MW charged into
+        # recirculating, Task 2e) raises the recirculating cost, so more fusion
+        # power and a longer chamber are needed: L = 77.842279425 m here
+        # (was 69.230740222 m before the plug power was charged explicitly). See
+        # docs/account_justification/mirror_confinement_regimes.md.
         params = dict(_SIZING_PARAMS, q_wall_max=50.0)
         L, _, _ = _size(params)
-        assert L == pytest.approx(69.230740222, rel=1e-4)
+        assert L == pytest.approx(77.842279425, rel=1e-4)
 
     def test_infeasible_under_cap_raises_naming_cap(self):
         with pytest.raises(SizingInfeasible, match=r"q_wall_max"):
@@ -1400,6 +1428,8 @@ _PB11_SIZING_PARAMS = dict(
     plug_density_ratio=_PLUG_DENSITY_RATIO,
     collisionality_min=_COLLISIONALITY_MIN,
     f_alpha_heat=_F_ALPHA_HEAT,
+    T_e_plug=_TE_PLUG,
+    p_plug=_P_PLUG,
     dd_f_T=0.969,
     dd_f_He3=0.689,
     dhe3_dd_frac=0.131,
@@ -1489,6 +1519,7 @@ class TestSurfaceConstraint:
             R_w=0.4,
             plug_density_ratio=_PLUG_DENSITY_RATIO,
             collisionality_min=_COLLISIONALITY_MIN,
+            T_e_plug=_TE_PLUG,
             f_rad_fus=None,  # DT: full radiation model
         )
         n_surf_20 = _density_from_surface_cap(
@@ -1675,8 +1706,12 @@ class TestAlphaHeating:
     def test_aux_heating_uses_alpha_fraction(self):
         # mirror_aux_heating subtracts f_alpha_heat * p_alpha, NOT the full
         # p_alpha, so a sub-unity f_alpha_heat raises the required auxiliary
-        # power. Closed-form check at a fixed forward state.
-        ps = _forward(T_i=30.0)
+        # power. Closed-form check at a fixed forward state. Use a shallow plug
+        # (T_e_plug=20) so the point is genuinely driven (aux above the floor),
+        # which is required for the f_alpha_heat < 1 vs = 1 comparison to bite;
+        # at the hot default plug (T_e_plug=125) confinement is deep and aux
+        # floors at both fractions (plug decoupled from central cell, Task 2e).
+        ps = _forward(T_i=30.0, T_e_plug=20.0)
         f_alpha = 0.80
         p_aux = float(mirror_aux_heating(ps, p_aux_floor=2.0, f_alpha_heat=f_alpha))
         expected = max(
@@ -1795,6 +1830,8 @@ class TestTandemConfinement:
             plug_density_ratio=_PLUG_DENSITY_RATIO,
             collisionality_min=_COLLISIONALITY_MIN,
             f_alpha_heat=_F_ALPHA_HEAT,
+            T_e_plug=_TE_PLUG,
+            p_plug=_P_PLUG,
             enforce_plasma_limits=False,
             dhe3_dd_frac=0.131,
             dhe3_dd_frac_pin=None,
@@ -1869,6 +1906,133 @@ class TestTandemConfinement:
         assert jitted == pytest.approx(eager, rel=1e-4)
         # Hammir anchor: at T_e = 125 keV, e*phi = 125 * ln(1.818) = 74.7 keV.
         assert eager == pytest.approx(125.0 * math.log(_PLUG_DENSITY_RATIO), rel=1e-4)
+        g = float(jax.grad(f)(125.0))
+        assert jnp.isfinite(g)
+        assert g == pytest.approx(math.log(_PLUG_DENSITY_RATIO), rel=1e-4)
+
+
+class TestPlugDecoupling:
+    """Decouple the hot-electron plug from the coolable central cell (Task 2e).
+
+    Real advanced-fuel tandems run a HOT-ELECTRON plug (set by plug ECH,
+    independent of the central fuel) that builds the Fowler-Logan confining
+    potential e*phi = T_e_plug * ln(n_p/n_c), DISTINCT from a central cell that
+    keeps its electrons cool to limit bremsstrahlung. A single electron
+    temperature cannot serve both (hot plug vs cool aneutronic central cell), so
+    the plug temperature T_e_plug is separated from the central-cell T_e. The
+    plug's sustainment power P_plug (ECH/NBI, calibrated to Hammir's about 30 MW)
+    is charged into the mirror recirculating power. See
+    docs/account_justification/mirror_confinement_regimes.md.
+    """
+
+    def test_plug_potential_uses_plug_temperature(self):
+        # e*phi = T_e_plug * ln(n_p/n_c) is set by the PLUG temperature, NOT the
+        # central-cell T_e. The forward's phi must track T_e_plug and ignore the
+        # central T_e: hold T_e_plug fixed and vary central T_e -> phi unchanged;
+        # vary T_e_plug -> phi scales with it.
+        ps_a = _forward(T_i=20.0, T_e=20.0, T_e_plug=125.0)
+        ps_b = _forward(T_i=20.0, T_e=60.0, T_e_plug=125.0)
+        # Central T_e changed 20 -> 60 keV but the plug potential is unchanged.
+        assert float(ps_a.phi) == pytest.approx(float(ps_b.phi), rel=1e-5)
+        assert float(ps_a.phi) == pytest.approx(
+            125.0 * math.log(_PLUG_DENSITY_RATIO), rel=1e-4
+        )
+        # Changing the PLUG temperature DOES move phi (it is the plug knob).
+        ps_c = _forward(T_i=20.0, T_e=20.0, T_e_plug=60.0)
+        assert float(ps_c.phi) == pytest.approx(
+            60.0 * math.log(_PLUG_DENSITY_RATIO), rel=1e-4
+        )
+        assert float(ps_c.phi) < float(ps_a.phi)
+
+    def test_cool_central_helps_advanced_fuel(self):
+        # At a FIXED hot plug, lowering the central-cell T_e sharply cuts
+        # bremsstrahlung, so a cool-central advanced-fuel run has far higher net
+        # electric than the hot-central case. Evaluate D-He3 net power as an
+        # OUTPUT at a fixed chamber length (net_electric_at_L runs the sizing-mode
+        # operating point, GSS over T_i with the energy-balance closure), holding
+        # the plug hot (T_e_plug = 125) and varying only the central-cell T_e.
+        # Hot central radiates heavily (net deeply negative); cool central
+        # radiates far less and p_net rises sharply -- the fair-evaluation
+        # regression the decoupling enables.
+        base = dict(
+            _SIZING_PARAMS,
+            a=0.5,
+            B_min=6.0,
+            q_wall_max=50.0,
+            q_surface_max=50.0,
+            beta_max=0.9,
+            T_e_plug=125.0,  # hot plug, fixed across both runs
+            f_rad_fus=None,
+            n_mod=1,
+        )
+        p_hot = dict(base, T_e=125.0)  # hot central cell: heavy bremsstrahlung
+        p_cool = dict(base, T_e=30.0)  # cool central cell: plug stays hot
+        L = 60.0
+        pn_hot = net_electric_at_L(L, p_hot, Fuel.DHE3)
+        pn_cool = net_electric_at_L(L, p_cool, Fuel.DHE3)
+        # Cooling the central cell raises net electric by a large margin (brem
+        # drops) at the same machine and the same hot plug.
+        assert pn_cool > pn_hot, (
+            f"cool central p_net={pn_cool:.1f} not above hot "
+            f"central p_net={pn_hot:.1f}; decoupling did not help D-He3"
+        )
+        # The improvement is sizeable, not marginal.
+        assert pn_cool - pn_hot > 50.0
+
+    def test_plug_power_in_recirculating(self):
+        # P_plug appears in the recirculating power: charging a larger plug power
+        # raises recirculating and lowers q_eng (the competing penalty that keeps
+        # the optimizer honest). Audit two inverse runs differing only in p_plug.
+        _ps0, pt0 = _inverse(fuel=Fuel.DT, p_plug=0.0)
+        _ps1, pt1 = _inverse(fuel=Fuel.DT, p_plug=60.0)
+        # More plug power -> lower engineering gain (more recirculating load).
+        assert float(pt1.q_eng) < float(pt0.q_eng), (
+            f"q_eng did not fall with plug power: "
+            f"p_plug=0 -> {float(pt0.q_eng):.3f}, "
+            f"p_plug=60 -> {float(pt1.q_eng):.3f}"
+        )
+        # The recirculating term carries the extra plug power: p_coils enters the
+        # recirculating sum at unit cost, so q_eng's recirculating denominator
+        # rises by the 60 MW difference.
+        p_net0 = float(pt0.p_net)
+        p_net1 = float(pt1.p_net)
+        assert p_net1 < p_net0
+
+    def test_dt_unchanged_within_tolerance(self):
+        # D-T (hot central cell, Hammir-consistent) still drives at about 23 keV
+        # and about 369 LCOE, now with the plug power charged EXPLICITLY. The
+        # explicit 30 MW plug power adds a modest recirculating cost on top of the
+        # already-driven point, so LCOE may shift slightly; re-pinned here with a
+        # 10 percent tolerance to absorb the explicit-plug-power increment while
+        # confirming the driven D-T regime is preserved.
+        m = CostModel(ConfinementConcept.MIRROR, Fuel.DT)
+        r = m.forward(
+            net_electric_mw=400.0,
+            availability=0.87,
+            lifetime_yr=40.0,
+            size_from_power=True,
+            f_beta=0.85,
+        )
+        T_i = float(r.plasma_state.T_i)
+        assert 18.0 <= T_i <= 28.0, f"D-T T_i={T_i:.1f} keV outside the driven band"
+        lcoe = float(r.costs.lcoe)
+        # Within 10 percent of the 369 $/MWh driven D-T result (now with explicit
+        # plug power). A larger shift would mean the plug-power charge broke the
+        # D-T regime, not a tolerable re-pin.
+        assert 330.0 <= lcoe <= 410.0, f"D-T LCOE={lcoe:.1f} outside tolerance of 369"
+
+    @pytest.mark.parametrize("fuel", [Fuel.DT, Fuel.DD, Fuel.DHE3, Fuel.PB11])
+    def test_plug_decoupling_jit_and_grad(self, fuel):
+        # jit == eager and finite grad of the forward phi w.r.t. T_e_plug across
+        # fuels (the plug potential is the decoupled knob).
+        def f(T_e_plug):
+            ps = _forward(fuel=fuel, T_i=40.0, T_e=40.0, T_e_plug=T_e_plug)
+            return ps.phi
+
+        eager = float(f(125.0))
+        jitted = float(jax.jit(f)(125.0))
+        assert jnp.isfinite(jitted)
+        assert jitted == pytest.approx(eager, rel=1e-4)
         g = float(jax.grad(f)(125.0))
         assert jnp.isfinite(g)
         assert g == pytest.approx(math.log(_PLUG_DENSITY_RATIO), rel=1e-4)

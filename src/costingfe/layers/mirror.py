@@ -157,33 +157,43 @@ def compute_ambipolar_potential(T_e, A):
     return T_e * jnp.log(jnp.sqrt(A * _M_P_OVER_M_E / (2.0 * jnp.pi)))
 
 
-def compute_plug_potential(T_e, plug_density_ratio):
+def compute_plug_potential(T_e_plug, plug_density_ratio):
     """Tandem plug confining potential e*phi [keV] (central-cell confinement).
 
     In a tandem mirror the central-cell ions are confined by the electrostatic
     potential drop to the end plugs (Fowler & Logan 1977; Frank et al. 2024,
-    arXiv:2411.06644 eq. 18), set by the plug-to-central density ratio:
+    arXiv:2411.06644 eq. 18), set by the plug HOT-ELECTRON temperature and the
+    plug-to-central density ratio:
 
-        e*phi = T_e * ln(n_p / n_c).
+        e*phi = T_e_plug * ln(n_p / n_c).
+
+    The potential is built by the HOT-ELECTRON PLUG, not the central cell. Real
+    advanced-fuel tandems run a separate hot-electron plug (ECH-heated, possibly a
+    different ion species) DISTINCT from a coolable central cell: the plug holds
+    the confining potential while the central cell runs the working fuel and keeps
+    its electrons cool to limit bremsstrahlung. This function therefore takes the
+    PLUG electron temperature T_e_plug (hot, set by plug ECH independent of the
+    central fuel), NOT the central-cell electron temperature. The central-cell T_e
+    sets central-cell radiation only; it does not enter the plug potential.
 
     This is the REAL Fowler-Logan form: e*phi is set by the FIXED plug hardware
     (the end-plug coils and plug heating the cost model commits to), not by the
     central-cell ion temperature. It is therefore independent of T_i, so during a
-    T_i scan at fixed central-cell electron temperature T_e the ratio e*phi / T_i
-    = T_e * ln(n_p/n_c) / T_i FALLS as T_i rises and the Pastukhov enhancement
-    exp(e*phi/T_i) weakens at high T_i: heating the central cell costs confinement
-    rather than buying it for free. This is what stops the free ride to ignition
-    and settles the optimum at a cooler, genuinely DRIVEN operating point.
+    T_i scan at fixed plug electron temperature T_e_plug the ratio e*phi / T_i
+    = T_e_plug * ln(n_p/n_c) / T_i FALLS as T_i rises and the Pastukhov
+    enhancement exp(e*phi/T_i) weakens at high T_i: heating the central cell costs
+    confinement rather than buying it for free. This is what stops the free ride
+    to ignition and settles the optimum at a cooler, genuinely DRIVEN point.
 
-    Calibrated to the Realta Hammir Q > 5 design point: at T_e = 125 keV and
+    Calibrated to the Realta Hammir Q > 5 design point: at T_e_plug = 125 keV and
     n_p/n_c = 1.818 (= 1/0.55, the published n_c/n_p = 0.55), e*phi = 125 *
     ln(1.818) = 74.7 keV, reproducing the published central-cell tau_c ~ 5 s and
     Q ~ 5.2.
 
-    T_e in [keV], plug_density_ratio = n_p/n_c dimensionless (> 1). Pure JAX,
+    T_e_plug in [keV], plug_density_ratio = n_p/n_c dimensionless (> 1). Pure JAX,
     differentiable. See docs/account_justification/mirror_confinement_regimes.md.
     """
-    return T_e * jnp.log(plug_density_ratio)
+    return T_e_plug * jnp.log(plug_density_ratio)
 
 
 def compute_tau_classical(tau_ii, R_m):
@@ -364,6 +374,7 @@ def mirror_0d_forward(
     vacuum_t: float,
     plug_density_ratio: float,
     collisionality_min: float,
+    T_e_plug: float,
     f_rad_fus: float | None = None,
 ):
     """Forward 0D mirror model: machine params -> MirrorPlasmaState.
@@ -381,6 +392,10 @@ def mirror_0d_forward(
     vacuum_t: plasma-to-first-wall vacuum gap [m]; first-wall area is
     2 pi (a + vacuum_t) L (matches the geometry layer's firstwall_area).
     f_rad_fus: when set, p_rad = f_rad_fus * p_fus (advanced fuel proxy).
+    T_e_plug: HOT plug-electron temperature [keV] that sets the Fowler-Logan
+    confining potential e*phi = T_e_plug*ln(n_p/n_c). Decoupled from the
+    central-cell T_e (which sets central-cell bremsstrahlung and is coolable for
+    advanced fuels), per the hot-electron-plug / cool-central-cell tandem split.
     Returns MirrorPlasmaState.
     """
     # 1. Geometry
@@ -451,13 +466,17 @@ def mirror_0d_forward(
     # 7. Tandem plug confining potential (BOUNDED, FIXED by the plug hardware).
     # The cost model commits to a tandem (n_plug_coils = 4, Hammir class), so the
     # central-cell ions are confined by the end-plug electrostatic potential
-    # e*phi = T_e*ln(n_p/n_c) (Fowler & Logan 1977; Frank et al. 2024 eq. 18),
-    # set by the FIXED plug-to-central density ratio. Because e*phi does not scale
-    # with T_i, the Pastukhov enhancement exp(e*phi/T_i) WEAKENS as T_i rises (at
-    # fixed T_e): heating the central cell costs confinement rather than buying it,
-    # so the optimum settles at a cooler driven point instead of igniting. The
-    # unbounded simple-mirror Boltzmann value is kept only as a diagnostic.
-    phi = compute_plug_potential(T_e, plug_density_ratio)
+    # e*phi = T_e_plug*ln(n_p/n_c) (Fowler & Logan 1977; Frank et al. 2024 eq. 18),
+    # set by the FIXED plug-to-central density ratio and the HOT-ELECTRON PLUG
+    # temperature T_e_plug. The plug is decoupled from the central cell: T_e_plug
+    # is hot (ECH-heated) to build the potential, while the central-cell T_e (used
+    # for radiation, beta, and W_th below) is coolable so advanced fuels limit
+    # bremsstrahlung. Because e*phi does not scale with T_i, the Pastukhov
+    # enhancement exp(e*phi/T_i) WEAKENS as T_i rises (at fixed T_e_plug): heating
+    # the central cell costs confinement rather than buying it, so the optimum
+    # settles at a cooler driven point instead of igniting. The unbounded
+    # simple-mirror Boltzmann value is kept only as a diagnostic.
+    phi = compute_plug_potential(T_e_plug, plug_density_ratio)
 
     # 8. Confinement time chain
     # tau_classical is diagnostic only; confinement chain uses Pastukhov + gas-dynamic.
@@ -675,6 +694,15 @@ def mirror_0d_inverse(
     # default; comes from YAML. Sets the pastukhov_valid diagnostic flag (1.0 when
     # collisionality >= this floor, 0.0 when deeply collisionless). Informational.
     collisionality_min: float,
+    # Required: HOT plug-electron temperature [keV]. No default; comes from YAML.
+    # Sets the Fowler-Logan confining potential e*phi = T_e_plug*ln(n_p/n_c),
+    # decoupled from the central-cell T_e (which sets bremsstrahlung). Calibrated
+    # to the Hammir hot-electron plug (about 125 keV).
+    T_e_plug: float,
+    # Required: plug sustainment power [MW]. No default; comes from YAML. The
+    # ECH/NBI power holding the hot-electron plug, charged into the mirror
+    # recirculating power (calibrated to Hammir's about 30 MW plug drive).
+    p_plug: float,
     # Behavior flag: False is the escape hatch for exploration runs.
     enforce_plasma_limits: bool = True,
 ):
@@ -689,6 +717,19 @@ def mirror_0d_inverse(
     6. Return (MirrorPlasmaState, PowerTable).
     """
     p_net_per_mod = p_net_target / n_mod
+
+    # Plug sustainment power into the mirror recirculating budget. The ECH/NBI
+    # holding the hot-electron plug is a recirculating load distinct from the
+    # central-cell heating: it does NOT heat the central cell (so it must not enter
+    # the plasma energy balance via p_input), it is the power cost of the plug
+    # that builds the confining potential. It is charged as an additive
+    # recirculating term on the mirror side by folding it into the p_coils bucket
+    # passed to the shared balance (the established mirror-side hook; the shared
+    # function's recirculating sum is p_coils + ... + p_input_eff/eta_pin, so this
+    # adds P_plug at unit recirculating cost without touching tokamak behavior).
+    # Calibrated to Hammir's about 30 MW plug drive. See
+    # docs/account_justification/mirror_confinement_regimes.md.
+    p_coils_eff = p_coils + p_plug
 
     # Step 1: Geometry (fixed inputs; L,a,B_min are not solved here).
     V_plasma = jnp.pi * a**2 * L
@@ -714,7 +755,7 @@ def mirror_0d_inverse(
         eta_de=eta_de,
         f_sub=f_sub,
         f_dec=f_dec,
-        p_coils=p_coils,
+        p_coils=p_coils_eff,
         p_cool=p_cool,
         p_pump=p_pump,
         p_trit=p_trit,
@@ -786,6 +827,7 @@ def mirror_0d_inverse(
         vacuum_t=vacuum_t,
         plug_density_ratio=plug_density_ratio,
         collisionality_min=collisionality_min,
+        T_e_plug=T_e_plug,
         f_rad_fus=f_rad_fus,
     )
 
@@ -848,7 +890,7 @@ def mirror_0d_inverse(
         eta_de=eta_de,
         f_sub=f_sub,
         f_dec=f_dec,
-        p_coils=p_coils,
+        p_coils=p_coils_eff,
         p_cool=p_cool,
         p_pump=p_pump,
         p_trit=p_trit,
@@ -1061,6 +1103,7 @@ def _density_from_surface_cap(
             vacuum_t=vacuum_t,
             plug_density_ratio=forward_kwargs["plug_density_ratio"],
             collisionality_min=forward_kwargs["collisionality_min"],
+            T_e_plug=forward_kwargs["T_e_plug"],
             f_rad_fus=forward_kwargs.get("f_rad_fus"),
         )
         return float(ps_probe.q_surface)
@@ -1154,6 +1197,7 @@ def _net_at_L_T(L, T_i, params, fuel, *, _surf_cap_cache=None, return_full=False
         R_w=params.get("R_w", 0.4),
         plug_density_ratio=params["plug_density_ratio"],
         collisionality_min=params["collisionality_min"],
+        T_e_plug=params["T_e_plug"],
         f_rad_fus=params.get("f_rad_fus"),
     )
     # Use the cross-L cache when available (T_i is the key; n_surf_20 is L-independent).
@@ -1211,6 +1255,7 @@ def _net_at_L_T(L, T_i, params, fuel, *, _surf_cap_cache=None, return_full=False
         vacuum_t=params["vacuum_t"],
         plug_density_ratio=params["plug_density_ratio"],
         collisionality_min=params["collisionality_min"],
+        T_e_plug=params["T_e_plug"],
         f_rad_fus=params.get("f_rad_fus"),
     )
 
@@ -1282,7 +1327,12 @@ def _net_at_L_T(L, T_i, params, fuel, *, _surf_cap_cache=None, return_full=False
         eta_de=params["eta_de"],
         f_sub=params["f_sub"],
         f_dec=f_dec_eff,
-        p_coils=params["p_coils"],
+        # Plug sustainment power into the recirculating budget (mirror-side hook;
+        # the ECH/NBI holding the hot-electron plug, calibrated to Hammir's about
+        # 30 MW). It is a recirculating load, NOT central-cell heating, so it is
+        # added to the p_coils bucket rather than p_input. See
+        # docs/account_justification/mirror_confinement_regimes.md.
+        p_coils=params["p_coils"] + params["p_plug"],
         p_cool=params["p_cool"],
         p_pump=params["p_pump"],
         p_trit=params["p_trit"],
@@ -1470,6 +1520,7 @@ def mirror_size_from_power(params, fuel):
                 R_w=params.get("R_w", 0.4),
                 plug_density_ratio=params["plug_density_ratio"],
                 collisionality_min=params["collisionality_min"],
+                T_e_plug=params["T_e_plug"],
                 f_rad_fus=params.get("f_rad_fus"),
             )
             n_surf_hi_20 = _density_from_surface_cap(

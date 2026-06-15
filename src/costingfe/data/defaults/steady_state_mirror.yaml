@@ -22,6 +22,24 @@ p_trit: 10.0  # Tritium processing power [MW]
 p_house: 4.0  # Housekeeping power [MW]
 p_cryo: 1.0  # Cryogenic power [MW]
 p_aux_floor: 2.0  # MW; control/startup floor on auxiliary sustainment power
+# Plug sustainment power [MW]. The ECH/NBI power holding the hot-electron tandem
+# plug that builds the Fowler-Logan confining potential. In a real advanced-fuel
+# tandem the plug is a SEPARATE sub-system from the central cell: it sustains the
+# hot-electron population (T_e_plug below) and the plugging species, at a power
+# cost that is charged into the mirror recirculating power. This is modelled as a
+# FIXED per-machine plug power calibrated to the Realta Hammir design point, which
+# holds its hot-electron plug with about 30 MW of plug NBI/ECH (Frank et al. 2024
+# arXiv:2411.06644 sec. 3.5; the published Q = P_fus/P_NBI = 5.2 counts this
+# 30 MW). A fixed-per-plug model (rather than scaling with n_p or central power)
+# is the defensible 0D choice: the 0D model does not solve the plug density or
+# trapping self-consistently, and the published anchor is a single design-point
+# plug power, so the plug is costed as fixed hardware-plus-drive (matching the
+# fixed n_plug_coils = 4 the CAS22 coil account already commits to). It is the
+# competing penalty that keeps the optimizer honest (a hotter/deeper plug costs
+# more). Charged on the mirror side via the p_coils recirculating bucket; the
+# shared tokamak power balance is unchanged. See
+# docs/account_justification/mirror_confinement_regimes.md.
+p_plug: 30.0  # MW; hot-electron plug sustainment power (Hammir plug NBI/ECH anchor)
 
 # Alpha loss-cone heating fraction [-]. Fraction of the fusion-alpha (charged
 # particle) power that deposits as central-cell self-heating before scattering
@@ -130,17 +148,31 @@ f_beta_max: 1.0         # Upper bound for the LCOE-optimizer f_beta search
 
 # Plasma parameters for radiation calculation
 n_e: 5.0e19  # Electron density [m^-3]
-# Central-cell electron temperature [keV]. A TANDEM mirror plug confines the
-# central-cell ions through the Fowler-Logan potential e*phi = T_e*ln(n_p/n_c)
-# (see plug_density_ratio above), which is set by the ELECTRON temperature, so a
-# tandem must run HOT electrons (typically ECH-heated in the plug) for the plug to
-# confine at all. The Realta Hammir Q>5 design point (Frank et al. 2024
-# arXiv:2411.06644 sec. 3.5) runs T_e = 125 keV (>> T_i = 45 keV) for exactly this
-# reason. At a cold T_e (e.g. 20 keV) e*phi = 12 keV is far too shallow to plug a
-# 20-80 keV central cell and the machine is infeasible at any T_i; the hot-electron
-# value is what makes the tandem a working, genuinely DRIVEN device. Anchored to
-# Hammir. See docs/account_justification/mirror_confinement_regimes.md.
-T_e: 125.0  # Electron temperature [keV] (tandem hot-electron plug, Hammir anchor)
+# Central-cell electron temperature [keV]. DECOUPLED from the plug: this is the
+# CENTRAL-CELL electron temperature that sets central-cell bremsstrahlung /
+# radiation (compute_p_rad, beta, stored energy), NOT the plug potential. The
+# confining potential is built by the separate HOT-ELECTRON plug at T_e_plug
+# (below); see plug_density_ratio above. Real advanced-fuel tandems run a hot
+# plug DISTINCT from a coolable central cell, so the central cell can keep its
+# electrons cool to limit bremsstrahlung while the plug stays hot. For the D-T
+# REFERENCE machine the central cell genuinely runs hot: the Realta Hammir Q>5
+# design point (Frank et al. 2024 arXiv:2411.06644 sec. 3.5) has a central cell at
+# T_e = 125 keV (>> T_i = 45 keV), so the default stays 125 for D-T. Advanced-fuel
+# configs/examples OVERRIDE this cool (e.g. 20-40 keV) to control bremsstrahlung
+# while keeping T_e_plug hot. See
+# docs/account_justification/mirror_confinement_regimes.md.
+T_e: 125.0  # Central-cell electron temperature [keV] (radiation; Hammir D-T reference)
+# Plug hot-electron temperature [keV]. Sets the Fowler-Logan confining potential
+# e*phi = T_e_plug * ln(n_p/n_c) (see plug_density_ratio). The plug confines
+# through the ELECTRON temperature, so a tandem must run HOT plug electrons
+# (ECH-heated) for the plug to confine at all; this is set by the plug ECH
+# INDEPENDENT of the central-cell fuel, which is exactly what lets an advanced
+# fuel keep its central cell cool (low T_e) while the plug stays hot. At a cold
+# plug (e.g. 20 keV) e*phi = 12 keV is far too shallow to plug a 20-80 keV central
+# cell. The Realta Hammir Q>5 design point runs its plug hot-electron population at
+# T_e = 125 keV (Frank et al. 2024 sec. 3.5); default 125 keV, anchored to Hammir.
+# See docs/account_justification/mirror_confinement_regimes.md.
+T_e_plug: 125.0  # Plug hot-electron temperature [keV] (Fowler-Logan potential; Hammir anchor)
 Z_eff: 1.2  # Effective charge
 plasma_volume: 200.0  # Plasma volume [m^3]
 radiation_peaking_factor: 1.0  # Uniform profile, no emission-measure correction
