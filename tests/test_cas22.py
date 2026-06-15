@@ -284,6 +284,54 @@ def _make_cas22_with_family(
     )
 
 
+def _make_electrostatic_cas22(concept):
+    """CAS22 for an electrostatic / cusp device: copper coils, no breeding
+    blanket, charged-particle exhaust to the direct converter (no W divertor)."""
+    return cas22_reactor_plant_equipment(
+        CC,
+        p_net=0.005,
+        p_th=0.012,
+        p_et=0.0065,
+        p_fus=0.011,
+        p_cryo=0.0,
+        n_mod=1,
+        fuel=Fuel.PB11,
+        noak=True,
+        blanket_vol=0.0,
+        shield_vol=0.01,
+        structure_vol=0.05,
+        vessel_vol=0.02,
+        family=ConfinementFamily.STEADY_STATE,
+        concept=concept,
+        b_center=2.0,
+        r_bore=0.3,
+        R0=0.0,
+        r_coil=0.0,
+        coil_material=CoilMaterial.COPPER,
+        blanket_form=BlanketForm.NONE,
+        p_nbi=0.0,
+        p_icrf=0.0,
+        p_ecrh=0.0,
+        p_lhcd=0.0,
+        p_driver=0.0,
+        f_dec=0.90,
+        p_dee=0.0,
+        burn_fraction=0.05,
+        vac_op_pressure_pa=1.0,
+        manufactured_target=False,
+        n_coils=0,
+    )
+
+
+def test_cas220108_electrostatic_concepts_have_no_divertor():
+    """Electrostatic confinement (orbitron, polywell) exhausts charged particles
+    to the direct converter; there is no W-monoblock divertor cassette, so
+    C220108 must be zero (as for the closed-field-line dipole)."""
+    for concept in (ConfinementConcept.ORBITRON, ConfinementConcept.POLYWELL):
+        result = _make_electrostatic_cas22(concept)
+        assert result["C220108"] == 0.0, f"{concept.value} has a phantom divertor"
+
+
 def test_cas220108_mfe_uses_divertor():
     """MFE should use divertor_base for CAS220108."""
     result = _make_cas22_with_family(ConfinementFamily.STEADY_STATE)

@@ -92,6 +92,18 @@ _COIL_DEFAULTS = {
 _MU0 = 4 * math.pi * 1e-7  # Vacuum permeability (T·m/A)
 _RHO_CU = 8960.0  # Copper density (kg/m³), for resistive-coil mass build-up
 
+# Concepts that exhaust charged particles without a W-monoblock divertor
+# cassette (C220108): the closed-field-line dipole loses through its top/bottom
+# loss cone, and electrostatic confinement (orbitron, polywell) directs charged
+# particles to the direct converter. None of these manufactures a divertor.
+_NO_DIVERTOR_CONCEPTS = frozenset(
+    {
+        ConfinementConcept.DIPOLE,
+        ConfinementConcept.ORBITRON,
+        ConfinementConcept.POLYWELL,
+    }
+)
+
 
 def _compute_geometry_factor(
     concept: ConfinementConcept,
@@ -522,10 +534,11 @@ def cas22_reactor_plant_equipment(
     # See docs/account_justification/CAS22_plant_systems.md
     # -----------------------------------------------------------------------
     if family == ConfinementFamily.STEADY_STATE:
-        if concept == ConfinementConcept.DIPOLE:
-            # Closed-field-line dipole: particles exhaust through the loss cone
-            # at the top/bottom openings of the chamber, so there is no W
-            # monoblock divertor cassette to manufacture (Simpson 2026 §2.2.6).
+        if concept in _NO_DIVERTOR_CONCEPTS:
+            # Closed-field-line dipole exhausts through the loss cone; electrostatic
+            # concepts (orbitron, polywell) direct charged particles to the direct
+            # converter. Neither manufactures a W-monoblock divertor cassette
+            # (Simpson 2026 §2.2.6).
             c220108 = 0.0
         else:
             c220108 = cc.divertor_base * (p_th / 1000.0) ** 0.5
