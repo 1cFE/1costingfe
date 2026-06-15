@@ -20,6 +20,49 @@
 **Depends on:** 2026-06-12-mirror-wall-loading-and-radial-build.md (Implemented,
 on the held `feat/mirror-wall-fluence` branch), 2026-06-11-mirror-0d-sizing-design.md.
 
+## Revision 2026-06-14 (tandem reframe, user-approved)
+
+During implementation (after Tasks 1 and 2 landed) verification found the
+corrected model spuriously ignites: with the gas-dynamic/Pastukhov bridge in
+place, the deeply collisionless D-T point (collisionality about 3e-5, 3.5
+decades below the 1/R_m Pastukhov validity boundary) gives tau_E about 1350 ms
+versus about 98 ms from the WHAM scaling, too long by 15-24x. Density is pinned
+by the neutron-wall cap so P_fus is flat across 15-55 keV, the net-electric
+objective is flat, and the energy-balance closure has no thermal lever; the
+optimizer still parks at about 60 keV.
+
+Root cause and decision: the cost model ALREADY commits to a TANDEM mirror. The
+CAS22 coil account costs `n_plug_coils = 4` high-field end-plug HTS coils (2 per
+end, Hammir class) at the throat field plus the long central solenoid string.
+The parent spec's "simple axisymmetric mirror, no tandem plugs" physics scope is
+therefore inconsistent with the hardware being costed, and Realta Hammir (the
+reference machine) is a tandem. The electrostatic-plugging structure in
+`compute_tau_pastukhov` (the `exp(e*phi/T_i)` enhancement) is the correct tandem
+mechanism; the defect is that the confining potential is uncalibrated and
+unbounded (the simple Boltzmann ambipolar value `phi = T_e*ln(sqrt(m_i/2 pi
+m_e))` grows with T_e without limit), so confinement is over-credited and the
+plasma ignites. Real tandems are plug-limited at Q about 1 to a few at roughly
+10-30 keV.
+
+Approved direction: model a tandem at costing fidelity. Keep Task 1's
+collisionality bridge (a tandem central cell runs collisionless and correctly
+sits on the plugged branch; gas-dynamic still governs collisional GDT-class
+machines). Keep Task 2's energy-balance closure (P_aux = losses - alpha is
+correct for any mirror). REPLACE the unbounded Boltzmann confining potential
+with a tandem plug-limited confining potential, calibrated to a published tandem
+design point (Realta Hammir Q>5 at the 50 m central cell) plus tandem-mirror
+literature (MFTF-B, TMX-U, Fowler and Ryutov), so the operating point lands
+where real tandems are, the spurious ignition disappears, and the energy-balance
+closure regains its thermal lever. This supersedes the earlier "degrade tau
+toward the WHAM simple-mirror anchor" idea (which would have credited
+simple-mirror confinement to hardware we cost as a tandem) and the "port the
+WHAM/Endrizzi simple-mirror scaling" idea (same incoherence). The sections below
+are updated to this tandem framing; Part 1's "Pastukhov branch" now means the
+calibrated tandem plug-limited confinement, and the WHAM simple-cell anchor
+remains valid only for a single end-plug cell, not the central-cell confinement.
+The buggy `f_dec_eff` fallback from Task 2 is expected to be removable once the
+plasma is no longer ignited (the clean p_transport identity returns).
+
 ## Motivation
 
 The mirror length-sizing and LCOE-optimize path drives D-T to about 60 keV
@@ -171,12 +214,21 @@ knobs. This decision is explicitly deferred to an observation step in the plan.
 
 ## Validation
 
-1. **Mirror anchors re-pass.** GDT and WHAM confinement within the documented
-   2x of `mirror_confinement.md`, on the new regime bridge.
+1. **Mirror anchors re-pass.** GDT (gas-dynamic, collisional branch) and WHAM
+   (single end-plug cell) confinement within the documented 2x of
+   `mirror_confinement.md`, on the new regime bridge.
+1b. **Tandem anchor (new, load-bearing).** The calibrated tandem plug-limited
+   central-cell confinement reproduces the Realta Hammir Q>5 design point (50 m
+   central cell, published fields/density/temperature) within a documented
+   tolerance (start 2x). This is the anchor that pins the plug-confinement
+   calibration; it is the tandem analog of the WHAM/GDT anchors. Sourced in
+   `mirror_confinement_regimes.md` from primary tandem-mirror literature (Realta
+   announcements/Forest et al.; MFTF-B, TMX-U, Fowler and Ryutov).
 2. **Energy-balance sanity.** At the corrected D-T sizing optimum: tau_E is
    physical (P_end is well below P_fus), the steady-state balance closes
-   (P_aux equals losses minus alpha by construction), and Q_eng and the
-   recirculating fraction are realistic.
+   (P_aux equals losses minus alpha by construction), the plasma is NOT
+   spuriously ignited (Q is tandem-realistic, about 1 to a few), and Q_eng and
+   the recirculating fraction are realistic.
 3. **Realistic operating temperature.** The D-T sizing/optimize optimum lands
    in a realistic band (pin a sanity range, for example 8 to 25 keV, not a
    point), no longer near 60 keV. Sensible optima for the other fuels.
