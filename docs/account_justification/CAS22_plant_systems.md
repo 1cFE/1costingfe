@@ -61,6 +61,12 @@ The 0.5 exponent reflects that divertor heat load scales sub-linearly
 with total thermal power (divertor area scales with machine size, heat
 flux concentration is a design parameter).
 
+Concepts that exhaust charged particles without a W-monoblock divertor
+cassette carry C220108 = 0: the closed-field-line dipole (loss-cone
+exhaust at the top/bottom openings) and the electrostatic concepts
+(orbitron, polywell), which direct charged particles to the direct
+energy converter.
+
 **IFE/MIF:**
 
     C220108 = cap_fixed + cap_per_hz × f_rep + cap_per_gwfus × (P_fus / 1000)

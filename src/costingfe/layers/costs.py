@@ -69,7 +69,7 @@ def cas10_preconstruction(cc, p_net, n_mod, fuel, noak):
     return subtotal + contingency
 
 
-def cas21_buildings(cc, p_et, p_the, p_th, p_fus, n_mod, fuel, noak):
+def cas21_buildings(cc, p_et, p_the, p_th, p_fus, n_mod, fuel, noak, coil_material):
     """CAS21: Buildings. Returns M$.
 
     Each building is priced per fuel type with its own scaling basis.
@@ -116,6 +116,11 @@ def cas21_buildings(cc, p_et, p_the, p_th, p_fus, n_mod, fuel, noak):
 
     total = 0.0
     for _name, entry in cc.building_costs.items():
+        # The cryogenics building is the magnet cryoplant (fuel-independent flat
+        # cost). Only superconducting-magnet concepts need it; normal-conducting
+        # (copper) and magnet-free concepts carry no cryoplant.
+        if _name == "cryogenics" and not coil_material.is_superconducting:
+            continue
         scales = entry.get("scales", "fixed")
         base_cost = entry.get(fuel_key, entry.get("all", 0.0))
         ratio = scale_map.get(scales, 1.0)

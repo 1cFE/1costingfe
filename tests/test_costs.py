@@ -24,7 +24,7 @@ from costingfe.layers.economics import (
     levelized_replacement_cost,
 )
 from costingfe.model import CostModel
-from costingfe.types import ConfinementConcept, Fuel, LaserDriverType
+from costingfe.types import CoilMaterial, ConfinementConcept, Fuel, LaserDriverType
 
 CC = load_costing_constants()
 
@@ -134,6 +134,7 @@ def test_cas21_scales_with_power():
     """Building costs should increase with larger plant."""
     cost_low = cas21_buildings(
         CC,
+        coil_material=CoilMaterial.REBCO_HTS,
         p_et=500.0,
         p_the=500.0,
         p_th=1250.0,
@@ -144,6 +145,7 @@ def test_cas21_scales_with_power():
     )
     cost_high = cas21_buildings(
         CC,
+        coil_material=CoilMaterial.REBCO_HTS,
         p_et=1000.0,
         p_the=1000.0,
         p_th=2500.0,
@@ -159,6 +161,7 @@ def test_cas21_fuel_differentiation():
     """pB11 buildings should cost less than DT (no hot cell, industrial grade)."""
     cost_dt = cas21_buildings(
         CC,
+        coil_material=CoilMaterial.REBCO_HTS,
         p_et=1150.0,
         p_the=1150.0,
         p_th=2500.0,
@@ -169,6 +172,7 @@ def test_cas21_fuel_differentiation():
     )
     cost_pb = cas21_buildings(
         CC,
+        coil_material=CoilMaterial.REBCO_HTS,
         p_et=1150.0,
         p_the=1150.0,
         p_th=2500.0,
@@ -182,6 +186,25 @@ def test_cas21_fuel_differentiation():
     assert cost_pb / cost_dt < 0.65
 
 
+def test_cas21_cryogenics_gated_on_superconducting_magnets():
+    """The cryogenics building is the magnet cryoplant: present for
+    superconducting-magnet concepts, absent for normal-conducting (copper)."""
+    kw = dict(
+        p_et=1000.0,
+        p_the=1000.0,
+        p_th=2500.0,
+        p_fus=2300.0,
+        n_mod=1,
+        fuel=Fuel.DT,
+        noak=True,
+    )
+    sc = cas21_buildings(CC, **kw, coil_material=CoilMaterial.REBCO_HTS)
+    cu = cas21_buildings(CC, **kw, coil_material=CoilMaterial.COPPER)
+    cryo = CC.building_costs["cryogenics"]["all"] * (1 + CC.contingency_rate(True))
+    assert cu < sc
+    assert sc - cu == pytest.approx(cryo)
+
+
 def test_cas21_admin_building_scales_sqrt_of_power():
     """The administration building is staff-driven; staff (and thus the
     building) scales as P^0.5, matching the staffing accounts (CAS40/CAS70),
@@ -191,6 +214,7 @@ def test_cas21_admin_building_scales_sqrt_of_power():
     )
     ref = cas21_buildings(
         cc,
+        coil_material=CoilMaterial.REBCO_HTS,
         p_et=1150.0,
         p_the=0.0,
         p_th=0.0,
@@ -201,6 +225,7 @@ def test_cas21_admin_building_scales_sqrt_of_power():
     )
     quad = cas21_buildings(
         cc,
+        coil_material=CoilMaterial.REBCO_HTS,
         p_et=4600.0,
         p_the=0.0,
         p_th=0.0,
@@ -218,6 +243,7 @@ def test_cas21_n_mod_feeds_total_power():
     with n_mod copies must equal feeding the plant-total power once."""
     per_module = cas21_buildings(
         CC,
+        coil_material=CoilMaterial.REBCO_HTS,
         p_et=50.0,
         p_the=50.0,
         p_th=125.0,
@@ -228,6 +254,7 @@ def test_cas21_n_mod_feeds_total_power():
     )
     total = cas21_buildings(
         CC,
+        coil_material=CoilMaterial.REBCO_HTS,
         p_et=1000.0,
         p_the=1000.0,
         p_th=2500.0,
@@ -249,6 +276,7 @@ def test_cas21_ventilation_driven_by_fusion_power():
     def vent(p_et, p_fus):
         full = cas21_buildings(
             CC,
+            coil_material=CoilMaterial.REBCO_HTS,
             p_et=p_et,
             p_the=0.0,
             p_th=0.0,
@@ -259,6 +287,7 @@ def test_cas21_ventilation_driven_by_fusion_power():
         )
         rest = cas21_buildings(
             cc_no_vent,
+            coil_material=CoilMaterial.REBCO_HTS,
             p_et=p_et,
             p_the=0.0,
             p_th=0.0,

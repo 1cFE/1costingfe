@@ -1099,10 +1099,25 @@ class CostModel:
         if "CAS10" in co:
             overridden.append("CAS10")
 
+        # coil_material drives the cryogenics building (magnet cryoplant) in
+        # CAS21 and the coil cost in CAS22. Every confinement-magnet concept
+        # declares it in YAML; COPPER is an inert sentinel for magnet-free
+        # concepts, whose _COIL_DEFAULTS is None so the material is never read
+        # for coil cost (and, being normal-conducting, carries no cryoplant).
+        coil_material = CoilMaterial(params.get("coil_material", "copper"))
+
         c21 = co.get(
             "CAS21",
             cas21_buildings(
-                cc, pt.p_et, pt.p_the, pt.p_th, pt.p_fus, n_mod, self.fuel, noak
+                cc,
+                pt.p_et,
+                pt.p_the,
+                pt.p_th,
+                pt.p_fus,
+                n_mod,
+                self.fuel,
+                noak,
+                coil_material,
             ),
         )
         if "CAS21" in co:
@@ -1122,10 +1137,6 @@ class CostModel:
         # b_center = field at the center of the loop (axis), NOT peak-on-conductor.
         r_bore = params.get("r_bore", 0.0)
         b_center = params.get("b_center", 0.0)
-        # Every confinement-magnet concept declares coil_material in its YAML.
-        # COPPER is an inert sentinel for magnet-free concepts, whose
-        # _COIL_DEFAULTS is None so the material is never read for cost.
-        coil_material = CoilMaterial(params.get("coil_material", "copper"))
         n_coils = params.get("n_coils", None)
         blanket_form = BlanketForm(params["blanket_form"])
         blanket_fill = BlanketFill(params["blanket_fill"])

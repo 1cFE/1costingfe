@@ -208,7 +208,7 @@ These are the same cost for all fuels — they house equipment that doesn't depe
 | Heat exchanger | \$17M | P\_th (thermal power) | Industrial building for coolant loops. Shrinks with DEC. |
 | Power supply | \$17M | P\_et (gross electric) | Magnet power supplies, capacitor banks, DEC power conditioning. |
 | Onsite AC power | \$12M | P\_et (gross electric) | Switchgear, diesel generators. |
-| Cryogenics | \$14M | Magnet stored energy | LHe/LN2 plant for SC magnets. |
+| Cryogenics | \$14M | Magnet type | LHe/LN2 plant for SC magnets. Gated on `coil_material.is_superconducting`: zero for normal-conducting (copper) concepts (orbitron, polywell, copper-magnet FRCs) and magnet-free concepts (IFE/MIF), which carry no cryoplant. Cryogenic fuel/target handling, where present, is costed in its own account, not here. |
 | Service water | \$9M | P\_th (thermal rejection) | Water treatment, circ water. |
 | Assembly hall | \$21M | Component size (~fixed) | High-bay steel, reactor module pre-assembly. |
 

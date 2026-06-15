@@ -52,10 +52,12 @@ _BASE = dict(
         # thin Li2O blanket (C220101 ~$360M) was previously costed at ~$0.6M of
         # fill; it is now ~$235M, consistent with the blanket structure.
         (C.DIPOLE, Fuel.DHE3, 276.24),
-        # POLYWELL re-benchmarked after C220108 divertor zeroing for
-        # electrostatic concepts: charged particles exhaust to the direct
-        # converter, so there is no W-monoblock divertor cassette. -7.5%.
-        (C.POLYWELL, Fuel.PB11, 49.08),
+        # POLYWELL re-benchmarked after two right-sizings for this electrostatic,
+        # copper-magnet concept: (1) C220108 divertor zeroed (charged particles
+        # exhaust to the direct converter, no W-monoblock cassette), then (2) the
+        # CAS21 cryogenics building zeroed (normal-conducting magnets need no
+        # cryoplant). Cumulative -9.6% from the original 53.08.
+        (C.POLYWELL, Fuel.PB11, 47.96),
     ],
 )
 def test_benchmark_lcoe_preserved(concept, fuel, expected):
