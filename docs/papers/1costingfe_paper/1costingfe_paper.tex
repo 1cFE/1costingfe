@@ -3593,6 +3593,23 @@ fuel-specific temperature search intervals; sized D-${}^3$He machines
 are larger than D-T at equal net power, and p-B11 does not reach
 positive net power within the search radius and fails as infeasible.
 
+\subsection{Literature Anchors}
+\label{sec:tokamak-anchors}
+
+The tokamak closed energy balance is the template the mirror sustainment
+model of \cref{sec:mirror-balance} copies, so the reference is itself
+pinned to published design points, parallel to the mirror GDT/WHAM anchors
+of \cref{sec:mirror-anchors}. Run at each machine's published
+volume-averaged density and temperature with the published auxiliary power,
+the unchanged forward model reproduces the published fusion gain $Q$ within
+a factor 1.09 for ITER \citep{shimada2007} and 0.83 for ARC
+\citep{sorbom2015arc}, both inside the 2x gate, and within a factor of
+about three for SPARC \citep{creely2020}, the larger gap reflecting SPARC's
+strongly peaked profiles against the flat-profile 0D idealization. As with
+the mirror anchors, the 2x band exists for the flat-versus-peaked profile
+gap rather than a calibration freedom; no tokamak physics or cost
+coefficient is adjusted to the anchors.
+
 %% ============================================================
 
 \section{0D Mirror Model}
@@ -3638,21 +3655,41 @@ where $T_{i,20} = T_i$~[keV] and $n_{i,20} = n_i / 10^{20}$~m$^{-3}$.
 This convention keeps all intermediates near unity, avoiding float32
 overflow in the XLA compiler.
 
-\subsection{Ambipolar Potential}
+\subsection{Confining Potential: Tandem Plug}
 \label{sec:mirror-phi}
 
-Radial quasineutrality in an open-ended mirror establishes an ambipolar
-electrostatic potential at the loss cone.  For a single-species
-Maxwellian plasma the Boltzmann relation gives:
+The reactor-relevant mirror is a tandem: the central cell that does the
+fusion is confined by an electrostatic potential drop to high-field end
+plugs, not by the simple-mirror electron-loss potential. Following
+\citet{fowler1977} the central-cell ion confining potential is set by the
+plug-to-central density ratio $n_p/n_c$:
+%
+\begin{equation}
+\label{eq:phi-plug}
+e\phi = T_{e,\text{plug}}\,\ln\!\left(\frac{n_p}{n_c}\right),
+\end{equation}
+%
+where $T_{e,\text{plug}}$ is the plug hot-electron temperature. The plug is
+a separate cell whose hot-electron population, sustained by plug ECH, holds
+the confining potential, so $T_{e,\text{plug}}$ is decoupled from the
+central-cell electron temperature \citep{baldwin1979}: a thermal barrier
+lets the plug run hot (default $T_{e,\text{plug}} = 125$~keV, anchored to
+the high-field tandem design point of \citet{frank2024}) while the central
+cell sets its own $T_e$ for radiation, beta, and stored energy. Because
+$n_p/n_c$ is an order-unity-to-few ratio, $e\phi$ is bounded, and at the
+anchor ($n_c/n_p = 0.55$, $T_{e,\text{plug}} = 125$~keV) it evaluates to
+$e\phi = 74.7$~keV, matching the published tandem central-cell value.
+
+The simple-mirror Boltzmann ambipolar potential
 %
 \begin{equation}
 \label{eq:phi-ambipolar}
-e\phi = T_e \ln\!\sqrt{\frac{A\,m_p}{2\pi\,m_e}}
+e\phi_{\text{amb}} = T_e \ln\!\sqrt{\frac{A\,m_p}{2\pi\,m_e}}
 \end{equation}
 %
-where $m_p$ and $m_e$ are the proton and electron masses. For deuterium
-($A = 2$) this evaluates to $e\phi \approx 3.2\,T_e$, and for
-hydrogen to $\approx 3.0\,T_e$.
+(about $3.2\,T_e$ for deuterium) is retained as a diagnostic for the
+simple-mirror limit; the tandem confining potential of
+\cref{eq:phi-plug} is the one entering the confinement chain.
 
 \subsection{Confinement Time Channels}
 \label{sec:mirror-tau}
@@ -3721,16 +3758,43 @@ Classical diffusion across field lines contributes a radial channel:
 %
 where $\rho_i$ is the ion gyroradius at the midplane field $B_{\min}$.
 
-\subsubsection{Combined Confinement}
+\subsubsection{Combined Axial Confinement: Collisionality Bridge}
 
-The axial channels add in parallel:
+The Pastukhov and gas-dynamic channels apply in physically distinct
+collisionality regimes and must be joined by a bridge that selects the
+governing limit. \citet{rognlien1980} establish that the Pastukhov
+loss-cone formula holds in the collisionless limit, while the collisional
+gas-dynamic outflow governs once the ion mean free path, reduced by the
+mirror ratio, falls to the order of the device length; the regime boundary
+is therefore at collisionality
 %
 \begin{equation}
-\label{eq:tau-axial}
-\frac{1}{\tau_{\text{axial}}} = \frac{1}{\tau_{\text{Pas}}} + \frac{1}{\tau_{\text{GD}}}
+\label{eq:collisionality}
+\xi \equiv \frac{L}{v_{ti}\,\tau_{ii}} \sim \frac{1}{R_m},
 \end{equation}
 %
-and the total particle confinement combines axial and radial:
+with $\xi \gg 1/R_m$ collisional and $\xi \ll 1/R_m$ collisionless. The
+gas-dynamic loss rate physically exists only when the loss cone is kept
+full by collisions, so it is gated by a smooth logistic in $\log_{10}\xi$
+centered on the boundary and combined via the loss-rate sum:
+%
+\begin{align}
+\label{eq:regime-gate}
+g(\xi) &= \sigma\!\left(\frac{\log_{10}\xi - \log_{10}(1/R_m)}{w}\right), \\
+\label{eq:tau-axial}
+\frac{1}{\tau_{\text{axial}}} &= \frac{1}{\tau_{\text{Pas}}}
+  + g(\xi)\,\frac{1}{\tau_{\text{GD}}},
+\end{align}
+%
+where $\sigma$ is the logistic function and $w = 0.13$ decades is a
+constructed smoothing width (\citeauthor{rognlien1980} establish the
+transition is smooth but publish no closed-form width). As $g \to 1$ in
+the collisional regime the gas-dynamic time dominates and
+$\tau_{\text{axial}} \to \tau_{\text{GD}}$; as $g \to 0$ in the
+collisionless regime the gas-dynamic rate is suppressed below the Pastukhov
+rate and $\tau_{\text{axial}} \to \tau_{\text{Pas}}$. The logistic argument
+is clamped to $[-30,30]$ before exponentiation to keep the reverse-mode
+gradient finite. The total particle confinement combines axial and radial:
 %
 \begin{equation}
 \label{eq:tau-p-mirror}
@@ -3750,6 +3814,58 @@ stored thermal energy to total loss energy per particle:
 \tau_E = \tau_p \cdot \frac{\tfrac{3}{2}(T_i + T_e)}
                             {2\,e\phi + T_i + T_e}
 \end{equation}
+
+\subsection{Alpha Loss-Cone Heating}
+\label{sec:mirror-alpha}
+
+A mirror does not confine its fusion alphas the way a closed device does:
+a fraction of the 3.5~MeV alphas is born in or scatters into the
+velocity-space loss cone and streams out the ends before depositing its
+energy. \citet{santarius1983} give a bounce-averaged Fokker-Planck result
+that roughly half the alphas are lost by count but under a quarter by
+energy, so $f_{\alpha,\text{heat}} \approx 0.75$--$0.85$ of the
+charged-particle power deposits in the central cell (model default
+$f_{\alpha,\text{heat}} = 0.80$). The model credits only
+$f_{\alpha,\text{heat}}\,P_\alpha$ as self-heating and routes the
+remaining $(1 - f_{\alpha,\text{heat}})\,P_\alpha$ to the axial end-loss
+channel as directed loss-cone exhaust, where it is recovered by the
+end-plug direct converter alongside the thermal end loss; the alpha energy
+is conserved, not discarded.
+
+\subsection{Energy-Balance Closure and Plug Power}
+\label{sec:mirror-balance}
+
+In sizing mode the auxiliary sustainment power is charged from the closed
+steady-state energy balance rather than asserted. The confinement-derived
+sustainment is
+%
+\begin{equation}
+\label{eq:mirror-aux}
+P_{\text{aux}} = \max\!\left(P_{\text{aux}}^{\text{floor}},\;
+  P_{\text{end}} + P_{\text{radial}} + P_{\text{rad}}
+  - f_{\alpha,\text{heat}}\,P_\alpha\right),
+\end{equation}
+%
+which is fed as the heating input to the shared MFE power balance of
+\cref{sec:inverse-balance}; the transport channel then conserves the
+undeposited alpha power, $p_{\text{transport}} = P_{\text{end}} +
+P_{\text{radial}} + (1 - f_{\alpha,\text{heat}})\,P_\alpha$, so the
+fusion-to-injected gain $Q_{\text{sci}} = P_{\text{fus}}/P_{\text{aux}}$
+and the engineering gain follow self-consistently from the confinement.
+The hot-electron plug is sustained at a real power cost: a plug power
+$P_{\text{plug}}$ (default 30~MW, anchored to the high-field tandem design
+point of \citet{frank2024}) is charged into the recirculating budget,
+since the plug ECH heats the plug electrons rather than the central cell.
+This plug power is the competing penalty that keeps the optimizer honest:
+deep plug confinement is not free.
+
+Because the Fowler-Logan potential of \cref{eq:phi-plug} is fixed by the
+plug rather than scaling with $T_i$, the ratio $e\phi/T_i$ falls as the
+central cell is heated, so the Pastukhov enhancement weakens with $T_i$:
+heating the central cell costs confinement. The length-sizing and
+LCOE-optimize search therefore settles the D-T central cell at a cool,
+genuinely driven operating point ($T_i \approx 23$~keV) with auxiliary
+sustainment well above the control floor, rather than running to ignition.
 
 \subsection{Plasma Beta and Operating Limits}
 \label{sec:mirror-beta}
@@ -3888,7 +4004,37 @@ $n_{20}\,\tau_p = 250\,E_{b,100}^{3/2}\,\log_{10} R_m$~ms for a
 at the same midplane thermal point ($T_i = 10$~keV, $T_e = 1$~keV)
 gives 88~ms; the ratio 1.53 reflects the expected gap between a single
 thermal Maxwellian and the Fokker-Planck fast-ion calculation underlying
-the published scaling.  Within the 2x gate.
+the published scaling.  Within the 2x gate. The collisionality bridge of
+\cref{eq:tau-axial} places GDT on the gas-dynamic branch (collisional,
+$\xi$ above $1/R_m$) and WHAM on the Pastukhov branch (collisionless, $\xi$
+more than three decades below $1/R_m$), each within one percent of the
+governing kernel.
+
+\paragraph{Hammir (tandem anchor.)}
+The high-field axisymmetric tandem design point of \citet{frank2024} has a
+50~m central cell, $n_c/n_p = 0.55$, $T_i = 45$~keV,
+$T_{e,\text{plug}} = 125$~keV, $P_{\text{fus}} = 157$~MW, and 30~MW of
+plug NBI/ECH, giving a published gain $Q = P_{\text{fus}}/P_{\text{NBI}}
+\approx 5.2$. At this central cell the tandem confining potential of
+\cref{eq:phi-plug} gives $e\phi = 74.7$~keV, the central cell is not
+ignited, and the model gain lands within the 2x band; charging
+$P_{\text{plug}} = 30$~MW makes the engineering-gain accounting match the
+published $Q$, which counts the same plug power.
+
+\subsection{Headline Operating Point}
+\label{sec:mirror-headline}
+
+Sized to a 400~MWe net target at the default high-field tandem
+($f_\beta = 0.85$), the D-T mirror is a driven tandem at $T_i = 23$~keV
+with $Q_{\text{sci}} = 8.3$, energy confinement $\tau_E = 19$~s, auxiliary
+sustainment near 245~MW, engineering gain $Q_{\text{eng}} = 1.68$, and
+LCOE about 396~\$/MWh; the operating point is beta-bound. D-T is therefore
+net-positive but marginal, paying the full recirculating cost of its
+hot-electron plug. The advanced fuels (D-D, D-${}^3$He, p-${}^{11}$B) are
+each genuinely driven but net-negative at the modelled fields: the
+hot-electron plug needed to confine the central cell radiates against
+their lower or harder reactivity, so none reaches $Q_{\text{eng}} > 1$
+even with a cool central cell. Only D-T is economic in the 0D model.
 
 \subsection{Assumptions and Limitations}
 \label{sec:mirror-limits}
@@ -3901,16 +4047,19 @@ design philosophy:
   Real mirror devices (GDT, WHAM) are beam-driven; the model is
   appropriate for a steady-state reactor operating point where the
   alpha population thermalizes quickly compared to $\tau_p$.
-\item $T_e$ is a fixed input; there is no self-consistent electron
-  power balance.
+\item The central-cell $T_e$ and the plug $T_{e,\text{plug}}$ are inputs;
+  there is no self-consistent electron power balance within the plug.
 \item $f_{\text{dec}}$ is an engineering input, not derived from
   $f_{\text{axial}}$ of the plasma state. The diagnostic field
   \texttt{f\_axial\_derived} is available for post-processing.
-\item The ambipolar potential uses the simple Boltzmann relation for
-  a single ion species; multispecies effects and warm-electron corrections
-  are not modeled.
+\item The plug is modeled as a confining potential plus a fixed
+  sustainment power, not a self-consistent second fusion plasma; the
+  plug density ratio and plug power are inputs anchored to a single
+  published design point.
 \item MHD stability is enforced only via the $\beta \le \beta_{\max}$
-  gate; drift-resonance and mirror-mode instabilities are not modeled.
+  gate. A collisionality-validity flag and a DCLC loss-cone proxy are
+  reported as informational diagnostics, but drift-resonance and
+  mirror-mode instabilities do not restrict the operating point.
 \item Geometry is a straight cylinder; end-cell and expander regions
   are not modeled.
 \end{itemize}
