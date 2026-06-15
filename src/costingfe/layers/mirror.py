@@ -157,24 +157,33 @@ def compute_ambipolar_potential(T_e, A):
     return T_e * jnp.log(jnp.sqrt(A * _M_P_OVER_M_E / (2.0 * jnp.pi)))
 
 
-def compute_plug_potential(T_i, plug_phi_over_T_i):
+def compute_plug_potential(T_e, plug_density_ratio):
     """Tandem plug confining potential e*phi [keV] (central-cell confinement).
 
     In a tandem mirror the central-cell ions are confined by the electrostatic
-    potential drop to the end plugs, e*phi = T_e * ln(n_p / n_c) (Fowler & Logan
-    1977; Frank et al. 2024, arXiv:2411.06644 eq. 3.4), set by the plug-to-
-    central density ratio and therefore BOUNDED, unlike the simple-mirror
-    Boltzmann value. The model parameterises this as a fixed ratio of the ion
-    temperature, e*phi = plug_phi_over_T_i * T_i, calibrated to the Realta Hammir
-    Q > 5 design point (nc/np = 0.55, Ti = 45 keV, Te = 125 keV -> e*phi/Ti =
-    1.66; the YAML default). Capping e*phi/T_i at this calibrated ratio bounds the
-    exp(e*phi/T_i) Pastukhov enhancement so the central cell reproduces the
-    published tau_c ~ 5 s and Q ~ 5.2 instead of spuriously igniting.
+    potential drop to the end plugs (Fowler & Logan 1977; Frank et al. 2024,
+    arXiv:2411.06644 eq. 18), set by the plug-to-central density ratio:
 
-    T_i in [keV], plug_phi_over_T_i dimensionless. Pure JAX, differentiable.
-    See docs/account_justification/mirror_confinement_regimes.md.
+        e*phi = T_e * ln(n_p / n_c).
+
+    This is the REAL Fowler-Logan form: e*phi is set by the FIXED plug hardware
+    (the end-plug coils and plug heating the cost model commits to), not by the
+    central-cell ion temperature. It is therefore independent of T_i, so during a
+    T_i scan at fixed central-cell electron temperature T_e the ratio e*phi / T_i
+    = T_e * ln(n_p/n_c) / T_i FALLS as T_i rises and the Pastukhov enhancement
+    exp(e*phi/T_i) weakens at high T_i: heating the central cell costs confinement
+    rather than buying it for free. This is what stops the free ride to ignition
+    and settles the optimum at a cooler, genuinely DRIVEN operating point.
+
+    Calibrated to the Realta Hammir Q > 5 design point: at T_e = 125 keV and
+    n_p/n_c = 1.818 (= 1/0.55, the published n_c/n_p = 0.55), e*phi = 125 *
+    ln(1.818) = 74.7 keV, reproducing the published central-cell tau_c ~ 5 s and
+    Q ~ 5.2.
+
+    T_e in [keV], plug_density_ratio = n_p/n_c dimensionless (> 1). Pure JAX,
+    differentiable. See docs/account_justification/mirror_confinement_regimes.md.
     """
-    return plug_phi_over_T_i * T_i
+    return T_e * jnp.log(plug_density_ratio)
 
 
 def compute_tau_classical(tau_ii, R_m):
@@ -293,26 +302,36 @@ def compute_dclc_parameter(a, T_i, A, B_min):
     return a / rho_i
 
 
-def mirror_aux_heating(state, p_aux_floor):
+def mirror_aux_heating(state, p_aux_floor, f_alpha_heat):
     """Auxiliary heating power [MW] required to sustain a mirror operating point.
 
     Mirror analog of the tokamak's aux_heating_from_confinement. The steady-state
-    plasma energy balance is P_alpha + P_aux = P_end + P_radial + P_rad, so the
-    auxiliary power that closes the balance is
+    plasma energy balance credits only the fraction of the fusion-alpha power that
+    deposits before scattering into the loss cone, f_alpha_heat * P_alpha, so
 
-        P_aux = max(P_aux_floor, P_end + P_radial + P_rad - P_alpha)
+        P_alpha_heat + P_aux = P_end + P_radial + P_rad,
+        P_alpha_heat = f_alpha_heat * P_alpha,
+        P_aux = max(P_aux_floor, P_end + P_radial + P_rad - f_alpha_heat * P_alpha)
 
     where P_end, P_radial, P_rad, P_alpha are the corrected forward powers on the
     MirrorPlasmaState and P_aux_floor is a small control/startup floor so an
-    ignited point still pays some control power. Feeding this P_aux as p_input to
-    mfe_forward_power_balance makes its p_transport = p_ash + P_aux - p_rad
-    collapse to P_end + P_radial (the real transport loss, since p_ash ~ p_alpha),
-    so the existing recirculating (P_aux/eta_pin) and DEC (f_dec*eta_de*
-    p_transport) terms net correctly. Pure JAX, differentiable.
+    ignited point still pays some control power. f_alpha_heat (about 0.80,
+    Santarius & Callen 1983) is the alpha loss-cone heating fraction: a mirror
+    loses about 50 percent of fusion alphas by count but under 25 percent by
+    energy out the loss cone, so about 75-85 percent of the alpha power deposits.
+
+    Feeding this P_aux as p_input to mfe_forward_power_balance makes its
+    p_transport = p_ash + P_aux - p_rad collapse to
+    P_end + P_radial + (1 - f_alpha_heat) * P_alpha (the real transport loss plus
+    the directed loss-cone alpha exhaust, since p_ash ~ p_alpha), so the lost
+    alpha fraction is conserved in the axial end-loss / DEC channel and the
+    existing recirculating (P_aux/eta_pin) and DEC (f_dec*eta_de*p_transport)
+    terms net correctly. Pure JAX, differentiable. See
+    docs/account_justification/mirror_confinement_regimes.md.
     """
     return jnp.maximum(
         p_aux_floor,
-        state.p_end + state.p_radial + state.p_rad - state.p_alpha,
+        state.p_end + state.p_radial + state.p_rad - f_alpha_heat * state.p_alpha,
     )
 
 
@@ -343,7 +362,7 @@ def mirror_0d_forward(
     dhe3_fuel_ratio: float,
     pb11_fuel_ratio: float,
     vacuum_t: float,
-    plug_phi_over_T_i: float,
+    plug_density_ratio: float,
     collisionality_min: float,
     f_rad_fus: float | None = None,
 ):
@@ -429,15 +448,16 @@ def mirror_0d_forward(
     n_i = n_i_frac * n_e
     tau_ii = compute_tau_ii(n_i, T_i, M_ion)
 
-    # 7. Tandem plug confining potential (BOUNDED). The cost model commits to a
-    # tandem (n_plug_coils = 4, Hammir class), so the central-cell ions are
-    # confined by the end-plug electrostatic potential e*phi = T_e*ln(n_p/n_c)
-    # (Fowler & Logan 1977; Frank et al. 2024 eq. 3.4), parameterised as a
-    # calibrated ratio of T_i (plug_phi_over_T_i). This bounds the
-    # exp(e*phi/T_i) Pastukhov enhancement so the central cell reproduces the
-    # Hammir Q>5 design point instead of spuriously igniting. The unbounded
-    # simple-mirror Boltzmann value is kept only as a diagnostic.
-    phi = compute_plug_potential(T_i, plug_phi_over_T_i)
+    # 7. Tandem plug confining potential (BOUNDED, FIXED by the plug hardware).
+    # The cost model commits to a tandem (n_plug_coils = 4, Hammir class), so the
+    # central-cell ions are confined by the end-plug electrostatic potential
+    # e*phi = T_e*ln(n_p/n_c) (Fowler & Logan 1977; Frank et al. 2024 eq. 18),
+    # set by the FIXED plug-to-central density ratio. Because e*phi does not scale
+    # with T_i, the Pastukhov enhancement exp(e*phi/T_i) WEAKENS as T_i rises (at
+    # fixed T_e): heating the central cell costs confinement rather than buying it,
+    # so the optimum settles at a cooler driven point instead of igniting. The
+    # unbounded simple-mirror Boltzmann value is kept only as a diagnostic.
+    phi = compute_plug_potential(T_e, plug_density_ratio)
 
     # 8. Confinement time chain
     # tau_classical is diagnostic only; confinement chain uses Pastukhov + gas-dynamic.
@@ -641,10 +661,16 @@ def mirror_0d_inverse(
     # No default; comes from YAML. Used only for the audit-mode
     # sustainment-consistency diagnostic (the inverse keeps the stated p_input).
     p_aux_floor: float,
-    # Required: tandem plug confining-potential ratio e*phi/T_i [-]. No default;
-    # comes from YAML. Sets the bounded central-cell confining potential
-    # (compute_plug_potential), calibrated to the Hammir Q>5 design point.
-    plug_phi_over_T_i: float,
+    # Required: alpha loss-cone heating fraction [-]. No default; comes from YAML.
+    # Fraction of fusion-alpha power that deposits as self-heating before
+    # scattering into the loss cone (Santarius & Callen 1983, about 0.80). Used in
+    # the audit-mode sustainment-consistency diagnostic (mirror_aux_heating).
+    f_alpha_heat: float,
+    # Required: tandem plug-to-central density ratio n_p/n_c [-]. No default;
+    # comes from YAML. Sets the bounded, T_i-independent central-cell confining
+    # potential e*phi = T_e*ln(n_p/n_c) (compute_plug_potential), calibrated to
+    # the Hammir Q>5 design point.
+    plug_density_ratio: float,
     # Required: Pastukhov-Maxwellian validity floor on collisionality [-]. No
     # default; comes from YAML. Sets the pastukhov_valid diagnostic flag (1.0 when
     # collisionality >= this floor, 0.0 when deeply collisionless). Informational.
@@ -758,7 +784,7 @@ def mirror_0d_inverse(
         dhe3_fuel_ratio=dhe3_fuel_ratio,
         pb11_fuel_ratio=pb11_fuel_ratio,
         vacuum_t=vacuum_t,
-        plug_phi_over_T_i=plug_phi_over_T_i,
+        plug_density_ratio=plug_density_ratio,
         collisionality_min=collisionality_min,
         f_rad_fus=f_rad_fus,
     )
@@ -767,7 +793,9 @@ def mirror_0d_inverse(
     # the stated p_input (auditing a given machine, NOT closing the balance like
     # sizing mode); report the ratio of stated p_input to the confinement-
     # required auxiliary power (mirror analog of the tokamak's implied H_factor).
-    sustainment_ratio = p_input / mirror_aux_heating(plasma_state, p_aux_floor)
+    sustainment_ratio = p_input / mirror_aux_heating(
+        plasma_state, p_aux_floor, f_alpha_heat
+    )
     plasma_state = dataclasses.replace(
         plasma_state, sustainment_ratio=sustainment_ratio
     )
@@ -1031,7 +1059,7 @@ def _density_from_surface_cap(
             dhe3_fuel_ratio=params_mix["dhe3_fuel_ratio"],
             pb11_fuel_ratio=params_mix["pb11_fuel_ratio"],
             vacuum_t=vacuum_t,
-            plug_phi_over_T_i=forward_kwargs["plug_phi_over_T_i"],
+            plug_density_ratio=forward_kwargs["plug_density_ratio"],
             collisionality_min=forward_kwargs["collisionality_min"],
             f_rad_fus=forward_kwargs.get("f_rad_fus"),
         )
@@ -1124,7 +1152,7 @@ def _net_at_L_T(L, T_i, params, fuel, *, _surf_cap_cache=None, return_full=False
         M_ion=params.get("M_ion", 2.5),
         Z_eff=params.get("Z_eff", 1.2),
         R_w=params.get("R_w", 0.4),
-        plug_phi_over_T_i=params["plug_phi_over_T_i"],
+        plug_density_ratio=params["plug_density_ratio"],
         collisionality_min=params["collisionality_min"],
         f_rad_fus=params.get("f_rad_fus"),
     )
@@ -1181,7 +1209,7 @@ def _net_at_L_T(L, T_i, params, fuel, *, _surf_cap_cache=None, return_full=False
         dhe3_fuel_ratio=params["dhe3_fuel_ratio"],
         pb11_fuel_ratio=params["pb11_fuel_ratio"],
         vacuum_t=params["vacuum_t"],
-        plug_phi_over_T_i=params["plug_phi_over_T_i"],
+        plug_density_ratio=params["plug_density_ratio"],
         collisionality_min=params["collisionality_min"],
         f_rad_fus=params.get("f_rad_fus"),
     )
@@ -1203,33 +1231,44 @@ def _net_at_L_T(L, T_i, params, fuel, *, _surf_cap_cache=None, return_full=False
     # Sizing-mode energy-balance closure: charge the confinement-derived
     # auxiliary power as p_input (the tokamak pattern), not the fixed YAML
     # p_input. This makes the GSS objective (net electric) reflect the true
-    # recirculating cost of sustainment.
-    p_aux = float(mirror_aux_heating(ps, params["p_aux_floor"]))
+    # recirculating cost of sustainment. Only f_alpha_heat * p_alpha deposits as
+    # self-heating (alpha loss-cone reduction, Santarius & Callen 1983); the lost
+    # fraction (1 - f_alpha_heat) * p_alpha is routed to the transport/DEC channel
+    # below.
+    f_alpha_heat = params["f_alpha_heat"]
+    p_aux = float(mirror_aux_heating(ps, params["p_aux_floor"], f_alpha_heat))
 
-    # DEC routing (Step 2b.4, corrected end-loss-only fallback). The mirror's
-    # direct converter sits at the end-plug expanders and recovers only the
-    # AXIAL end-loss channel P_end; P_radial and P_rad strike the lateral first
-    # wall and go to the thermal cycle. The shared balance instead routes DEC off
-    # its own p_transport = p_ash + p_input_eff - p_rad, which (a) collapses to
-    # P_end + P_radial only while sub-ignited and inflates toward p_ash once the
-    # central cell ignites, and (b) would otherwise use a different p_rad than
-    # the mirror forward. Both are handled: p_rad_override below pins the shared
-    # p_rad to the mirror's own ps.p_rad, so p_transport_shared here is exactly
-    # the value the shared function computes internally; and an effective f_dec
-    # makes the shared term recover exactly f_dec * eta_de * P_end:
-    #     f_dec_eff * p_transport = f_dec * P_end  ->  f_dec_eff = f_dec * P_end
-    #                                                              / p_transport.
+    # DEC routing (corrected end-loss-only path, extended for the loss-cone alpha
+    # exhaust). The mirror's direct converter sits at the end-plug expanders and
+    # recovers the AXIAL channel that exits through the throats: the end-loss
+    # P_end plus the directed loss-cone alpha exhaust (1 - f_alpha_heat) * P_alpha
+    # (the alphas that scatter out the loss cone before thermalising are charged
+    # particles that stream to the expander/DEC plates, not radiation or radial
+    # transport). P_radial and P_rad strike the lateral first wall and go to the
+    # thermal cycle. The shared balance instead routes DEC off its own
+    # p_transport = p_ash + p_input_eff - p_rad. p_rad_override below pins the
+    # shared p_rad to the mirror's own ps.p_rad, so p_transport_shared here is
+    # exactly the value the shared function computes internally; with the alpha
+    # loss-cone reduction it equals P_end + P_radial + (1 - f_alpha_heat)*P_alpha.
+    # An effective f_dec then makes the shared term recover exactly
+    # f_dec * eta_de * (P_end + (1 - f_alpha_heat)*P_alpha):
+    #     f_dec_eff * p_transport = f_dec * P_axial_recoverable
+    #       ->  f_dec_eff = f_dec * P_axial_recoverable / p_transport.
     # This charges the physically-correct end-plug recovery in code that already
-    # exists (the shared function is not modified) and the credit tracks P_end,
-    # which falls as confinement improves with temperature. See
+    # exists (the shared function is not modified) and the credit tracks the
+    # axial loss, leaving P_radial to the wall. Energy is conserved: the lost
+    # alpha power appears in p_transport and is split DEC-recovered / wall exactly
+    # like the end loss. See
     # docs/account_justification/mirror_confinement_regimes.md.
     p_ash_mir = float(ps.p_alpha)
     p_rad_mir = float(ps.p_rad)
     p_input_eff_mir = max(p_aux, p_rad_mir - p_ash_mir)
     p_transport_shared = p_ash_mir + p_input_eff_mir - p_rad_mir
+    p_alpha_lost = (1.0 - f_alpha_heat) * float(ps.p_alpha)
+    p_axial_recoverable = float(ps.p_end) + p_alpha_lost
     f_dec_raw = params["f_dec"]
     if p_transport_shared > 0.0:
-        f_dec_eff = f_dec_raw * float(ps.p_end) / p_transport_shared
+        f_dec_eff = f_dec_raw * p_axial_recoverable / p_transport_shared
     else:
         f_dec_eff = f_dec_raw
     pt = mfe_forward_power_balance(
@@ -1429,7 +1468,7 @@ def mirror_size_from_power(params, fuel):
                 M_ion=params.get("M_ion", 2.5),
                 Z_eff=params.get("Z_eff", 1.2),
                 R_w=params.get("R_w", 0.4),
-                plug_phi_over_T_i=params["plug_phi_over_T_i"],
+                plug_density_ratio=params["plug_density_ratio"],
                 collisionality_min=params["collisionality_min"],
                 f_rad_fus=params.get("f_rad_fus"),
             )

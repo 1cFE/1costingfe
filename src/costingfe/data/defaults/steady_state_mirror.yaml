@@ -23,16 +23,33 @@ p_house: 4.0  # Housekeeping power [MW]
 p_cryo: 1.0  # Cryogenic power [MW]
 p_aux_floor: 2.0  # MW; control/startup floor on auxiliary sustainment power
 
-# Tandem plug confining-potential ratio e*phi/T_i [-]. The CAS22 coil account
-# costs a TANDEM (n_plug_coils=4, Hammir class), so the central-cell confinement
-# is set by the end-plug electrostatic potential, NOT the unbounded simple-mirror
-# Boltzmann value. The tandem confining potential is e*phi = T_e * ln(n_p/n_c)
-# (Fowler & Logan 1977; Frank et al. 2024 arXiv:2411.06644 eq. 3.4), bounded by
-# the plug/central-cell density ratio. Calibrated to the Realta Hammir Q>5 design
-# point (nc/np = 0.55, Ti = 45 keV, Te = 125 keV -> e*phi = 74.7 keV, e*phi/Ti =
-# 1.66), which reproduces the published central-cell tau_c ~ 5 s and Q ~ 5.2 (not
+# Alpha loss-cone heating fraction [-]. Fraction of the fusion-alpha (charged
+# particle) power that deposits as central-cell self-heating before scattering
+# into the loss cone. A magnetic mirror loses fusion alphas out the loss cone:
+# Santarius & Callen 1983 (Phys. Fluids 26, 1037), the canonical bounce-averaged
+# Fokker-Planck treatment for tandem central-cell alphas, find about 50 percent
+# lost by COUNT but under 25 percent by ENERGY (alphas slow down on electrons
+# before scattering into the loss cone), so about 75-85 percent of the alpha
+# power deposits. The lost fraction (1 - f_alpha_heat) exits the loss cone as
+# directed exhaust and is routed to the axial end-loss / DEC channel. Default
+# 0.80, mid of the 0.75-0.85 sourced band. See
+# docs/account_justification/mirror_confinement_regimes.md.
+f_alpha_heat: 0.80
+
+# Tandem plug-to-central density ratio n_p/n_c [-]. The CAS22 coil account costs
+# a TANDEM (n_plug_coils=4, Hammir class), so the central-cell confinement is set
+# by the end-plug electrostatic potential e*phi = T_e * ln(n_p/n_c) (Fowler &
+# Logan 1977; Frank et al. 2024 arXiv:2411.06644 eq. 18), NOT the unbounded
+# simple-mirror Boltzmann value. e*phi is fixed by the plug HARDWARE (the end-plug
+# coils and plug heating) and the central-cell electron temperature T_e, NOT by
+# the ion temperature, so during a T_i scan the ratio e*phi/T_i FALLS as T_i rises
+# and the Pastukhov enhancement weakens at high T_i: heating costs confinement, so
+# the optimum settles at a cooler, genuinely DRIVEN point instead of igniting.
+# Calibrated to the Realta Hammir Q>5 design point: published n_c/n_p = 0.55, so
+# n_p/n_c = 1/0.55 = 1.818; at T_e = 125 keV this gives e*phi = 125*ln(1.818) =
+# 74.7 keV, reproducing the published central-cell tau_c ~ 5 s and Q ~ 5.2 (not
 # ignition). See docs/account_justification/mirror_confinement_regimes.md.
-plug_phi_over_T_i: 1.66
+plug_density_ratio: 1.818
 
 # --- Stability / validity diagnostics (Task 3; informational, not constraints) ---
 # Pastukhov-Maxwellian validity threshold on collisionality (L/mfp). The Pastukhov
@@ -113,7 +130,17 @@ f_beta_max: 1.0         # Upper bound for the LCOE-optimizer f_beta search
 
 # Plasma parameters for radiation calculation
 n_e: 5.0e19  # Electron density [m^-3]
-T_e: 20.0  # Electron temperature [keV]
+# Central-cell electron temperature [keV]. A TANDEM mirror plug confines the
+# central-cell ions through the Fowler-Logan potential e*phi = T_e*ln(n_p/n_c)
+# (see plug_density_ratio above), which is set by the ELECTRON temperature, so a
+# tandem must run HOT electrons (typically ECH-heated in the plug) for the plug to
+# confine at all. The Realta Hammir Q>5 design point (Frank et al. 2024
+# arXiv:2411.06644 sec. 3.5) runs T_e = 125 keV (>> T_i = 45 keV) for exactly this
+# reason. At a cold T_e (e.g. 20 keV) e*phi = 12 keV is far too shallow to plug a
+# 20-80 keV central cell and the machine is infeasible at any T_i; the hot-electron
+# value is what makes the tandem a working, genuinely DRIVEN device. Anchored to
+# Hammir. See docs/account_justification/mirror_confinement_regimes.md.
+T_e: 125.0  # Electron temperature [keV] (tandem hot-electron plug, Hammir anchor)
 Z_eff: 1.2  # Effective charge
 plasma_volume: 200.0  # Plasma volume [m^3]
 radiation_peaking_factor: 1.0  # Uniform profile, no emission-measure correction

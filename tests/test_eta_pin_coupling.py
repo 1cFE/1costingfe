@@ -45,7 +45,13 @@ _BASE = dict(
         # wall_limits_and_fluence.md (TOKAMAK was 228.07, MIRROR 186.95,
         # STELLARATOR 343.34). Steady-state MFE core lifetime now tracks q_n.
         (C.TOKAMAK, Fuel.DT, 208.41),
-        (C.MIRROR, Fuel.DT, 182.71),
+        # re-pinned 2026-06-15: mirror central-cell T_e raised 20->125 keV (the
+        # tandem hot-electron plug required by the fixed Fowler-Logan potential
+        # e*phi = T_e*ln(n_p/n_c)); the non-0D default radiation term reads this
+        # T_e, so the MIRROR-DT benchmark LCOE moved 182.71 -> 210.42. Mirror-only;
+        # tokamak/stellarator/dipole/polywell pins unchanged. See
+        # docs/account_justification/mirror_confinement_regimes.md.
+        (C.MIRROR, Fuel.DT, 210.42),
         (C.STELLARATOR, Fuel.DT, 326.77),
         # DIPOLE re-benchmarked after the radial-build inversion + spherical
         # geometry dispatch + Li2O blanket fill + C220108 divertor zeroing +

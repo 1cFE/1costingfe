@@ -198,10 +198,16 @@ re-pin (Task 6) extend this table.
 
 | Concept | Fuel | Quantity | Old | New | Note |
 |---------|------|----------|-----|-----|------|
-| Mirror | D-T | sized p_input (eff) | 40.0 MW (fixed YAML) | 2.0 MW (aux floor) | energy-balance closed |
-| Mirror | D-T | sized T_i (keV) | 59.77 (ignited) | 29.86 | tandem plug confinement (Task 2b) |
-| Mirror | D-T | sized tau_E (s) | about 2.4 (over-credited) | 0.96 | bounded plug potential (Task 2b) |
-| Mirror | D-T | sized LCOE ($/MWh) | 109.70 | 100.53 | energy-balance + plug confinement |
+| Mirror | D-T | sized p_input (eff) | 40.0 MW (fixed YAML) | 228.5 MW (driven) | energy-balance closed; fixed Fowler-Logan plug (Task 2c) |
+| Mirror | D-T | sized T_i (keV) | 59.77 (ignited) | 23.31 | fixed Fowler-Logan plug, hot-electron T_e (Task 2c) |
+| Mirror | D-T | sized q_sci | about 516 (near-ignited) | 8.32 | tandem-realistic driven gain (Task 2c) |
+| Mirror | D-T | sized tau_E (s) | about 2.4 (over-credited) | 18.8 | hot-electron plug; deep plugging (Task 2c) |
+| Mirror | D-T | sized LCOE ($/MWh) | 109.70 | 368.90 | genuinely driven (large recirculating P_aux) |
+| Mirror | D-T | non-0D default LCOE pin | 98.686 | 100.107 | YAML T_e 20->125 keV moves the radiation term |
+
+Intermediate values from Task 2b (ratio-to-T_i plug, T_e=20 keV): sized T_i 29.86 keV,
+tau_E 0.96 s, LCOE 100.53, p_input 2.0 MW (floored). Those are superseded by the
+Task 2c fixed Fowler-Logan plug above; they are recorded only to show the trajectory.
 
 ## Energy-balance closure (Task 2)
 
@@ -234,7 +240,7 @@ central cell and the end plug is set by their density ratio:
 e*phi_c = T_e * ln(n_p / n_c)
 ```
 
-(Frank et al. 2024 eq. 3.4; Fowler and Logan 1977). Because `n_p / n_c` is an
+(Frank et al. 2024 eq. 18; Fowler and Logan 1977). Because `n_p / n_c` is an
 order-unity-to-few ratio, `e*phi_c` is BOUNDED, unlike the simple-mirror value.
 This is the right tandem mechanism; the model only needs the confining potential
 calibrated to a real tandem design point.
@@ -334,6 +340,148 @@ falls with temperature while the central cell ignites just above it. The earlier
 potential: confinement no longer runs away, so the optimizer settles in the
 tandem regime on its own without an explicit stability bound.
 
+## Alpha loss-cone heating fraction (Task 2c)
+
+A magnetic mirror does not confine its fusion alphas the way a closed tokamak
+does: a fraction of the 3.5 MeV alphas is born in or scatters into the velocity-
+space loss cone and streams out the ends before depositing its energy in the
+central cell. The model credits only the deposited fraction `f_alpha_heat` of the
+charged-particle power `P_alpha` as self-heating, and routes the lost fraction
+`(1 - f_alpha_heat) * P_alpha` to the axial end-loss / DEC channel as directed
+loss-cone exhaust.
+
+### Sourcing and the value
+
+The canonical treatment is Santarius and Callen 1983 (Phys. Fluids 26, 1037), a
+bounce-averaged Fokker-Planck calculation of fusion-alpha confinement in a tandem
+central cell. The result is that roughly 50 percent of the alphas are lost by
+COUNT but under 25 percent by ENERGY, because most alphas slow down on the
+electrons and deposit the bulk of their energy before pitch-angle scattering
+carries them into the loss cone. So about 75 to 85 percent of the alpha power
+deposits. The model uses `f_alpha_heat = 0.80` (YAML default, mid of the
+0.75-0.85 band).
+
+Cross-check: Frank et al. 2024 (arXiv:2411.06644), the Hammir reference, credits
+near-full alpha deposition and is driven primarily by END LOSSES (which the model
+already represents through `P_end`). The two pictures are consistent: Hammir's
+driven character is end-loss-dominated, not alpha-loss-dominated, so crediting
+near-full alpha deposition there is defensible. The generic model default of 0.80
+is the conservative Santarius-Callen value; at the Hammir anchor it lowers the
+computed gain from `Q` about 5.8 (full deposition) to about 4.7, BOTH within the
+2x anchor band of the published `Q` about 5.2 (the 0.80 value actually lands
+closer to the published number). The Hammir anchor therefore holds at the generic
+`f_alpha_heat = 0.80`; no separate near-full-deposition evaluation is needed.
+
+### Implementation and energy conservation
+
+In the sustainment balance `mirror_aux_heating` subtracts `f_alpha_heat * P_alpha`
+instead of the full `P_alpha`:
+
+```
+P_aux = max(P_aux_floor, P_end + P_radial + P_rad - f_alpha_heat * P_alpha).
+```
+
+Feeding this `P_aux` as `p_input` to the shared `mfe_forward_power_balance` (with
+`p_rad_override = ps.p_rad`) makes its transport channel
+
+```
+p_transport = p_ash + p_input_eff - p_rad
+            = P_alpha + P_aux - P_rad
+            = P_end + P_radial + (1 - f_alpha_heat) * P_alpha,
+```
+
+so the un-deposited alpha power appears in the transport channel and is conserved
+(no power vanishes). The mirror DEC routing recovers the full axial channel
+`P_end + (1 - f_alpha_heat) * P_alpha` at the end-plug expanders (both are
+charged-particle streams to the DEC plates) via the effective
+`f_dec_eff = f_dec * (P_end + (1 - f_alpha_heat) * P_alpha) / p_transport`,
+leaving `P_radial` to the wall. The shared function is NOT modified; the
+reduction and the routing are entirely mirror-side, through the `p_input` handoff
+and the existing `p_rad_override` / effective-`f_dec` hooks. `q_sci = P_fus /
+p_input_eff` and `q_eng` follow automatically from the larger `P_aux`.
+
+### Observed effect on the D-T optimum (and the plug-potential fix that follows)
+
+At a FIXED 30 keV the alpha loss-cone reduction raises the required auxiliary
+power from the 2 MW floor to about 43 MW (comparable to Hammir's 30 MW plug NBI),
+as the counterfactual predicted. By itself, however, the alpha fix did NOT make
+the sizing optimum driven: the optimizer re-climbed `T_i` to the self-heating knee
+where the auxiliary power returned to the floor and `q_sci` returned to its
+near-ignited value. The cause was the ratio-to-`T_i` plug shortcut of Task 2b. The
+old `compute_plug_potential` held `e*phi = 1.66 * T_i`, so `e*phi / T_i` was a
+CONSTANT and the Pastukhov enhancement `x exp(x)` did not change with temperature.
+With fusion (and alpha) power pinned flat by the binding neutron-wall cap, raising
+`T_i` then bought confinement (`tau ~ T_i^1.5`) at zero fusion-power cost until the
+central cell self-heated, so the economic optimum sat at the self-heating knee,
+still floored.
+
+### The plug-potential fix (fixed Fowler-Logan form)
+
+The shortcut is wrong physics. The plug is FIXED hardware (the four end-plug coils
+and the plug heating the cost model commits to) producing a confining potential
+set by that fixed plug, not one that deepens for free as `T_i` rises. The model
+now uses the REAL Fowler-Logan form directly:
+
+```
+e*phi = T_e * ln(n_p / n_c)
+```
+
+(`compute_plug_potential(T_e, plug_density_ratio)`; Frank et al. 2024
+arXiv:2411.06644 eq. 18; Fowler and Logan 1977). Here `T_e` is the fixed
+central-cell electron temperature and `n_p / n_c` (the YAML `plug_density_ratio`)
+is the fixed plug-to-central density ratio, a fixed plug property. Because `e*phi`
+no longer scales with `T_i`, the ratio
+
+```
+e*phi / T_i = T_e * ln(n_p/n_c) / T_i
+```
+
+FALLS as `T_i` rises (at fixed `T_e`), so the Pastukhov enhancement `x exp(x)`
+WEAKENS at high `T_i`: heating the central cell now COSTS confinement instead of
+buying it for free. The free ride to self-heating is removed and the optimum
+settles at a cooler, genuinely DRIVEN point.
+
+Calibration is unchanged at the Hammir anchor: `n_p/n_c = 1/0.55 = 1.818` (the
+published `n_c/n_p = 0.55`), so at `T_e = 125` keV `e*phi = 125 * ln(1.818) = 74.7`
+keV, identical to the Task 2b value, and the Hammir anchor holds.
+
+#### A tandem plug requires hot electrons (T_e re-pin)
+
+The Fowler-Logan plug confines through the ELECTRON temperature, so a tandem must
+run HOT electrons (typically ECH-heated in the plug) for the plug to confine at
+all. The Realta Hammir Q>5 design point runs `T_e = 125` keV (`>> T_i = 45` keV)
+for exactly this reason (Frank et al. 2024 sec. 3.5). At a cold `T_e` (the old YAML
+20 keV) `e*phi = 12` keV is far too shallow to plug a 20-80 keV central cell, and
+the D-T machine is infeasible at every `T_i` (net power deeply negative). The YAML
+central-cell `T_e` is therefore re-pinned to the Hammir hot-electron value
+125 keV. This is the parameter that makes the tandem a working, genuinely driven
+device under the correct plug physics. The non-0D default radiation path reads the
+same YAML `T_e`, so this re-pin also moves the mirror non-0D LCOE pin (recorded in
+the before/after table).
+
+### Settled D-T regime (Task 2c, driven)
+
+With the fixed Fowler-Logan plug and the hot-electron `T_e`, the sized D-T optimum
+(400 MWe, `f_beta = 0.85`, YAML defaults) is genuinely DRIVEN:
+
+- `T_i` about 23.3 keV (a cool tandem-realistic central cell, below the Hammir
+  45 keV because the optimizer now PAYS confinement to go hotter)
+- auxiliary sustainment `P_aux` about 228 MW, well off the 2 MW floor (comparable
+  in spirit to Hammir's 30 MW plug NBI scaled to the larger 400 MWe plant)
+- `q_sci = P_fus / P_aux` about 8.3 (tandem-realistic, was about 516 near-ignited)
+- `q_eng` about 1.76 (net-positive), LCOE about 369 $/MWh (higher than the
+  spurious 100 $/MWh of the near-ignited Task 2b point because the plant now pays
+  the real recirculating cost of a driven tandem)
+- the operating point is BETA-bound (`beta` at the `f_beta * beta_max = 0.425`
+  ceiling): the hot electrons raise the central-cell pressure, so the
+  beta-limited density falls below the neutron-wall-limited density and the
+  binding cap moves from the wall (Task 2b) to beta.
+
+The earlier "ignited-plateau" and "wall-cap self-heating knee" findings are both
+resolved by the fixed plug: confinement no longer improves for free with `T_i`, so
+the optimizer settles in the driven tandem regime on its own, with no explicit
+stability bound (Task 4 still not needed).
+
 ## Stability and validity diagnostics (Task 3)
 
 Two diagnostics are reported on `MirrorPlasmaState`. Both are INFORMATIONAL: they
@@ -399,109 +547,96 @@ and the per-fuel decision on whether the plasma settles in a sensible,
 validity-respecting, tandem-realistic regime (which decides whether the conditional
 explicit stability constraint of Task 4 is needed).
 
-All rows are sized from the net-electric power target with `f_beta = 0.85` and YAML
-defaults (`R_m = 10`, `T_e = 20` keV, `B = 3` T, `plasma_t = 1.5` m,
-`collisionality_min = 0.1`, `plug_phi_over_T_i = 1.66`, `q_wall_max = 5`,
-`q_surface_max = 1`, `beta_max = 0.5`), generated from the model API
-(`CostModel(MIRROR, fuel).forward(size_from_power=True, ...)`); every value
-reproduces from the committed code. The power target is per-fuel feasible (D-T at
-400 MWe; D-D and D-He3 at 200 MWe; p-B11 has no feasible target and the row is read
-at the GSS optimum at `L_max = 400` m, where `p_net < 0`).
+All rows use `f_beta = 0.85` and YAML defaults (`R_m = 10`, `T_e = 125` keV
+hot-electron tandem plug, `B = 3` T, `plasma_t = 1.5` m, `collisionality_min =
+0.1`, `plug_density_ratio = 1.818`, `q_wall_max = 5`, `q_surface_max = 1`,
+`beta_max = 0.5`), read at the GSS optimum at `L_max = 200` m (the diagnostics row;
+D-T also sizes to its 400 MWe target at L about 178 m with the same operating
+point). Every value reproduces from the committed code via the model API
+(`CostModel(MIRROR, fuel).forward(...)`). With the fixed Fowler-Logan plug only
+D-T is net-positive in the driven hot-electron regime; D-D, D-He3, and p-B11 are
+net-NEGATIVE at `L_max` (the honest result, reported, not forced feasible).
 
 The two gain columns are reported honestly: `q_sci = p_fus / p_input_eff` is the
-fusion-to-injected gain, but in SIZING mode the injected power is the
-confinement-derived sustainment, which at the D-T and D-He3 optima sits at the
-auxiliary control floor (the central cell is nearly self-sustained by alpha
-heating), so `q_sci` there is large and is NOT the tandem plug-NBI gain (that is
-the Hammir anchor's `Q` about 5.2 in the section above). `q_eng = P_et /
-recirculating` is the engineering gain that actually drives the economics; `q_eng >
-1` means net-positive, `q_eng < 1` means the plant cannot deliver the target.
+fusion-to-injected gain, where the injected power is now the confinement-derived
+sustainment of a genuinely DRIVEN tandem (NOT floored). `q_eng = P_et /
+recirculating` is the engineering gain that drives the economics; `q_eng > 1`
+means net-positive, `q_eng < 1` means the plant cannot deliver power.
 
-| Fuel | target [MWe] | T_i [keV] | collisionality | `pastukhov_valid` | `dclc_parameter` (a/rho_i) | beta | q_sci | q_eng | LCOE [$/MWh] | binding density cap |
-|------|--------------|-----------|----------------|-------------------|----------------------------|------|-------|-------|--------------|---------------------|
-| D-T   | 400 | 29.86 | 1.49e-4 | 0.0 (flagged) | 114.0 | 0.307 | 516.5 | 7.75 | 100.53 | neutron wall (q_wall_max) |
-| D-D   | 200 | 100.00 | 1.39e-4 | 0.0 (flagged) | 62.3 | 0.425 | 8.02 | 1.70 | 829.14 | beta (f_beta x beta_max) |
-| D-He3 | 200 | 69.41 | 1.11e-4 | 0.0 (flagged) | 74.8 | 0.425 | 273.1 | 5.67 | 326.73 | beta (f_beta x beta_max) |
-| p-B11 | none | 300.00 | 7.51e-6 | 0.0 (flagged) | 36.0 | 0.425 | 3.08 | 0.611 | n/a (p_net < 0) | beta (f_beta x beta_max) |
+| Fuel | T_i [keV] | P_aux [MW] (off floor?) | collisionality | `pastukhov_valid` | beta | q_sci | q_eng | LCOE [$/MWh] | binding density cap | driven? |
+|------|-----------|--------------------------|----------------|-------------------|------|-------|-------|--------------|---------------------|---------|
+| D-T   | 23.3 | 228-259 (yes) | 1.4e-3 | 0.0 (flagged) | 0.425 | 8.3 | 1.77 | 369 | beta (f_beta x beta_max) | DRIVEN, net-positive |
+| D-D   | 15.6 | 78 (yes) | 3.3e-3 | 0.0 (flagged) | 0.425 | 0.38 | 0.24 | n/a (p_net < 0) | beta | driven but uneconomic |
+| D-He3 | 20.0 | 83 (yes) | 1.4e-3 | 0.0 (flagged) | 0.425 | 0.15 | 0.21 | n/a (p_net < 0) | beta | driven but uneconomic |
+| p-B11 | 300.0 | 189 (yes) | 2.5e-6 | 0.0 (flagged) | 0.425 | 0.15 | 0.23 | n/a (p_net < 0) | beta | driven but uneconomic |
 
 Observations, per fuel:
 
-- **D-T** settles at an interior optimum `T_i` about 30 keV, a tandem-realistic
-  central-cell temperature (between the cool simple-mirror cells at about 10 keV and
-  the Hammir design point at 45 keV). Density is neutron-wall-cap bound, so beta
-  (0.31) sits below its 0.425 ceiling. The central cell is nearly self-heated at the
-  optimum (`q_eng` about 7.8; the auxiliary sustainment is at the control floor),
-  which is why `q_sci` is large; this is the alpha-heated near-ignition floor, NOT a
-  spurious confinement runaway (the bounded plug potential of Task 2b caps the
-  Pastukhov enhancement). `dclc_parameter` about 114 means a warm-plasma stream of
-  order `1/114` about 0.9 percent stabilises DCLC, well within the
-  GDT/WHAM-demonstrated warm fraction. The validity flag fires because the central
-  cell is collisionless, as expected for a plugged tandem; the plug calibration, not
-  the bare Pastukhov-Maxwellian formula, carries the confinement there. Settles
-  sensibly.
+- **D-T** settles at an interior optimum `T_i` about 23 keV (a cool tandem-realistic
+  central cell, below the Hammir 45 keV because the optimizer now PAYS confinement
+  to go hotter under the fixed plug). The point is genuinely DRIVEN: auxiliary
+  sustainment is about 228-259 MW, far off the 2 MW floor, with `q_sci` about 8.3
+  (tandem-realistic, was about 516 near-ignited under the ratio-to-`T_i` plug).
+  Density is beta-cap bound (the hot electrons raise the pressure), so beta sits AT
+  the 0.425 ceiling and the binding cap moved from the neutron wall (Task 2b) to
+  beta. `q_eng` about 1.77, net-positive, LCOE about 369 $/MWh. Settles sensibly and
+  is the headline driven result.
 
-- **D-D** parks at the top of its `[5, 100]` keV bracket (`T_i` about 100 keV),
-  beta-cap bound, with `q_eng` about 1.7 (net-positive but expensive, LCOE about
-  830). At fixed beta the D-D fusion power keeps rising with `T_i` across the whole
-  bracket (D-D reactivity is far lower than D-T and still climbing at 100 keV), so
-  the net-electric objective is monotone and the optimizer parks at the bracket
-  edge. The temperature is not absurd for D-D (which needs higher `T_i` than D-T),
-  the collisionality is consistent with a plugged tandem, and `dclc_parameter` about
-  62 is in the GDT/WHAM-stabilizable range. Settles sensibly (bracket-edge
-  economics, a fuel-reactivity outcome, not a stability pathology).
+- **D-D** finds its GSS optimum at the LOW end of its bracket (`T_i` about 16 keV),
+  the opposite of Task 2b where it parked at the 100 keV bracket TOP. This is the
+  fixed plug working: under the old constant `e*phi/T_i` shortcut, raising `T_i`
+  bought free confinement so D-D climbed; now `e*phi` is fixed by the plug, the
+  Pastukhov enhancement weakens with `T_i`, and confinement is best at lower `T_i`.
+  The plug is genuinely driven (`P_aux` about 78 MW), but D-D's low reactivity gives
+  `q_eng` about 0.24 (< 1): net-negative. Uneconomic, driven, no stability
+  pathology.
 
-- **D-He3** settles at an interior optimum `T_i` about 69 keV, beta-cap bound, with
-  `q_eng` about 5.7 (the best advanced-fuel engineering gain here; LCOE about 327).
-  The interior optimum (not the bracket edge) reflects D-He3's reactivity peaking
-  within its `[20, 100]` keV bracket. Collisionality and `dclc_parameter` about 75
-  are in tandem-realistic, DCLC-stabilizable ranges; the validity flag fires as
-  expected for a plugged collisionless central cell. Settles sensibly.
+- **D-He3** likewise sits near the bottom of its bracket (`T_i` about 20 keV),
+  driven (`P_aux` about 83 MW). The hot-electron radiation and the weak plug
+  relative to the high `T_i` D-He3 wants give `q_eng` about 0.21 (< 1): net-negative.
+  This is a regime change from Task 2b (where the constant-ratio plug gave a
+  spurious interior optimum with `q_eng` about 5.7); the fixed-plug result is the
+  honest one. Uneconomic, driven, no pathology.
 
-- **p-B11** has NO feasible power target: at the GSS optimum (`T_i` about 300 keV,
-  the bracket top) with the chamber at `L_max = 400` m the engineering gain is
-  `q_eng` about 0.61 (< 1), so net electric power is negative and
-  `mirror_size_from_power` raises `SizingInfeasible`. The 300 keV is the bracket top,
-  appropriate for the very high `T_i` p-B11 needs, beta is at its cap, and the
-  collisionality/DCLC numbers are physical (`dclc_parameter` about 36, the smallest
-  of the four, since the high `T_i` gives a large gyroradius). The plasma does NOT
-  walk into a spurious ignition or a non-physical regime; it is simply not economic
-  at the modelled fields and beta cap. Settles sensibly in the diagnostics sense
-  (validity-respecting, no spurious ignition); the negative net power is the honest
-  aneutronic-fuel result at these inputs, a reported outcome, not a model pathology.
+- **p-B11** parks at its `[50, 300]` keV bracket top (`T_i` about 300 keV, the very
+  high temperature p-B11 needs), driven (`P_aux` about 189 MW), with `q_eng` about
+  0.23 (< 1): net-negative. Same honest aneutronic result as Task 2b, now with the
+  correct driven plug. The collisionality (about 2.5e-6) and beta (at cap) are
+  physical; no spurious ignition. Uneconomic, driven, no pathology.
 
 ### Decision: is Task 4 (explicit stability constraint) needed?
 
 No fuel walks outside a trustworthy regime. For every fuel the settled optimum is
 validity-respecting (the fired Pastukhov-Maxwellian flag is the expected
-plugged-tandem signature, not an error: the bounded plug potential carries the
+plugged-tandem signature, not an error: the fixed Fowler-Logan plug carries the
 confinement, not the bare formula), the collisionality is consistent with a plugged
-tandem (`L/mfp` of order 1e-4 to 1e-5, deeply on the plugged branch), the
-`dclc_parameter` sits in the range warm-plasma stabilisation handles (the required
-warm fraction `1/dclc_parameter` is of order 1 percent or less, as demonstrated by
-GDT and WHAM), and no fuel is spuriously ignited (the bounded plug potential of
-Task 2b caps the Pastukhov enhancement). D-T and D-He3 settle at interior optima;
-D-D and p-B11 settle at their bracket edges, which is a fuel-reactivity/economics
-outcome (monotone objective at the beta cap), not a stability pathology. The bounded
-plug calibration (Task 2b) is the lever that prevents runaway, so economics alone
-settles each fuel in a sensible regime.
+tandem (`L/mfp` of order 1e-3 to 1e-6, deeply on the plugged branch), and no fuel
+is spuriously ignited. Every fuel is now genuinely DRIVEN (auxiliary sustainment
+far off the floor) because the fixed plug potential removes the free-confinement
+ride: heating the central cell costs confinement, so the optimizer no longer climbs
+to self-heating. D-D, D-He3, and p-B11 settle near the LOW end of their brackets
+(the fixed-plug signature, the reverse of the Task 2b ratio-shortcut behavior),
+which is a fuel-reactivity/economics outcome, not a stability pathology.
 
 Decision per fuel:
 
-- D-T: settles sensibly (interior tandem optimum, `T_i` about 30 keV, wall-cap
-  bound, net-positive).
-- D-D: settles sensibly (bracket-edge economics, `T_i` about 100 keV, beta-cap
-  bound, net-positive but expensive).
-- D-He3: settles sensibly (interior optimum, `T_i` about 69 keV, beta-cap bound,
-  net-positive).
-- p-B11: settles sensibly in the diagnostics sense (validity-respecting, no spurious
-  ignition); uneconomic (`q_eng < 1`, no feasible target), which is the honest
-  aneutronic-fuel result, not a pathology.
+- D-T: settles sensibly and is the headline result: interior driven optimum,
+  `T_i` about 23 keV, beta-cap bound, net-positive (`q_eng` about 1.77).
+- D-D: driven (`P_aux` about 78 MW) but uneconomic (`q_eng` about 0.24, net-
+  negative); honest low-reactivity result, no pathology.
+- D-He3: driven (`P_aux` about 83 MW) but uneconomic (`q_eng` about 0.21, net-
+  negative); honest result in the hot-electron radiation regime, no pathology.
+- p-B11: driven (`P_aux` about 189 MW) but uneconomic (`q_eng` about 0.23, net-
+  negative); honest aneutronic result, no pathology.
 
 Therefore the conditional explicit stability constraint (Task 4) is NOT needed for
-any fuel and is skipped. If a future change moves a fuel into a regime where
-`dclc_parameter` demands an implausible warm-plasma fraction or where the validity
-flag fires together with a spurious ignition, the Task 4 minimum-warm-fraction
-bound is the documented contingency.
+any fuel and is skipped: the fixed plug potential, not an explicit bound, is what
+settles each fuel in a sensible driven regime. The honest caveat is that only D-T
+is economic at the modelled fields and the hot-electron tandem plug; the advanced
+fuels are driven and physical but net-negative, a reported outcome of the correct
+plug physics, not a model defect. If a future change moves a fuel into a regime
+where the validity flag fires together with a spurious ignition, the Task 4
+minimum-warm-fraction bound is the documented contingency.
 
 ## Sources
 
@@ -529,13 +664,18 @@ bound is the documented contingency.
 - **Frank, S. J. et al. (2024)**, "Confinement performance predictions for a
   high field axisymmetric tandem mirror," arXiv:2411.06644 (under consideration,
   J. Plasma Phys.). Primary source for the Realta Hammir Q>5 tandem central-cell
-  design point (eq. 3.4 tandem confining potential `e*phi = T_e ln(n_p/n_c)`;
+  design point (eq. 18 tandem confining potential `e*phi = T_e ln(n_p/n_c)`;
   sec. 3.5 design point: `ell_c = 50` m, `n_c/n_p = 0.55`, `T_i = 45` keV,
   `T_e = 125` keV, `P_fus = 157.4` MW, `P_NBI = 30` MW, `tau_c` about 5 s).
 - **Fowler, T. K. and Logan, B. G. (1977)**, "The tandem mirror reactor,"
   Comments Plasma Phys. Control. Fusion 2, 167. Classical tandem-mirror concept:
   the central-cell ions are confined by the electrostatic potential drop to the
   end plugs, set by the plug-to-central density ratio.
+- **Santarius, J. F. and Callen, J. D. (1983)**, "Fusion-alpha confinement in a
+  tandem-mirror central cell," Phys. Fluids 26, 1037. Bounce-averaged
+  Fokker-Planck treatment of fusion-alpha loss-cone confinement: about 50 percent
+  of alphas lost by count but under 25 percent by energy, so about 75-85 percent
+  of the alpha power deposits. Primary source for the `f_alpha_heat` value.
 
 No number in this document is sourced from or calibrated against any
 cost-modeling tool; all come from the primary plasma-physics literature, except

@@ -566,8 +566,9 @@ class CostModel:
             q_wall_max=params["q_wall_max"],
             q_surface_max=params["q_surface_max"],
             p_aux_floor=params["p_aux_floor"],
-            plug_phi_over_T_i=params["plug_phi_over_T_i"],
+            plug_density_ratio=params["plug_density_ratio"],
             collisionality_min=params["collisionality_min"],
+            f_alpha_heat=params["f_alpha_heat"],
             enforce_plasma_limits=params["enforce_plasma_limits"],
         )
 

@@ -56,13 +56,20 @@ _FRACS = dict(
 )
 _MIX = dict(dhe3_fuel_ratio=1.0, pb11_fuel_ratio=0.15)
 
-# Calibrated tandem plug confining-potential ratio e*phi/T_i (Frank et al. 2024
-# eq. 3.4 at the Hammir nc/np = 0.55 design point). Matches the YAML default.
-_PLUG_PHI_OVER_T_I = 1.66
+# Calibrated tandem plug-to-central density ratio n_p/n_c = 1/0.55 (Frank et al.
+# 2024 eq. 18 at the Hammir n_c/n_p = 0.55 design point). Matches the YAML default.
+# e*phi = T_e * ln(n_p/n_c) is FIXED by the plug hardware and T_e, independent of
+# T_i, so the Pastukhov enhancement weakens as T_i rises (drives the optimum cool).
+_PLUG_DENSITY_RATIO = 1.818
 
 # Pastukhov-Maxwellian validity floor on collisionality (matches YAML default
 # collisionality_min = 1/R_m at R_m=10). Diagnostic-only threshold (Task 3).
 _COLLISIONALITY_MIN = 0.1
+
+# Alpha loss-cone heating fraction: fraction of fusion-alpha power that deposits
+# in the central cell before scattering into the loss cone (Santarius & Callen
+# 1983). Matches the YAML default. Task 2c.
+_F_ALPHA_HEAT = 0.80
 
 
 def _forward(fuel=Fuel.DT, dhe3_dd_frac_pin=None, **kw):
@@ -80,7 +87,7 @@ def _forward(fuel=Fuel.DT, dhe3_dd_frac_pin=None, **kw):
         fuel=fuel,
         dhe3_dd_frac_pin=dhe3_dd_frac_pin,
         vacuum_t=args.pop("vacuum_t", 0.10),
-        plug_phi_over_T_i=args.pop("plug_phi_over_T_i", _PLUG_PHI_OVER_T_I),
+        plug_density_ratio=args.pop("plug_density_ratio", _PLUG_DENSITY_RATIO),
         collisionality_min=args.pop("collisionality_min", _COLLISIONALITY_MIN),
         **args,
     )
@@ -255,7 +262,7 @@ class TestForward:
                 fuel=fuel,
                 dhe3_dd_frac_pin=None,
                 vacuum_t=0.10,
-                plug_phi_over_T_i=_PLUG_PHI_OVER_T_I,
+                plug_density_ratio=_PLUG_DENSITY_RATIO,
                 collisionality_min=_COLLISIONALITY_MIN,
                 **_FRACS,
                 **_MIX,
@@ -389,8 +396,9 @@ def _inverse(
         q_wall_max=kw.pop("q_wall_max", 50.0),
         q_surface_max=kw.pop("q_surface_max", 50.0),
         p_aux_floor=kw.pop("p_aux_floor", 2.0),
-        plug_phi_over_T_i=kw.pop("plug_phi_over_T_i", _PLUG_PHI_OVER_T_I),
+        plug_density_ratio=kw.pop("plug_density_ratio", _PLUG_DENSITY_RATIO),
         collisionality_min=kw.pop("collisionality_min", _COLLISIONALITY_MIN),
+        f_alpha_heat=kw.pop("f_alpha_heat", _F_ALPHA_HEAT),
         enforce_plasma_limits=enforce_plasma_limits,
         dhe3_dd_frac=0.131,
         dhe3_dd_frac_pin=dhe3_dd_frac_pin,
@@ -458,8 +466,9 @@ class TestInverse:
             q_wall_max=50.0,  # high cap; this test is not wall-bound
             q_surface_max=50.0,  # high cap; this test is not surface-bound
             p_aux_floor=2.0,
-            plug_phi_over_T_i=_PLUG_PHI_OVER_T_I,
+            plug_density_ratio=_PLUG_DENSITY_RATIO,
             collisionality_min=_COLLISIONALITY_MIN,
+            f_alpha_heat=_F_ALPHA_HEAT,
             dhe3_dd_frac=0.131,
             dhe3_dd_frac_pin=None,
             vacuum_t=0.10,
@@ -482,7 +491,12 @@ class TestInverse:
 # re-pinned 2026-06-13: fluence-based CAS72 basis change, see
 # wall_limits_and_fluence.md (was 93.643616).
 # $/MWh at 500 MW, avail=0.87, lifetime=40 yr
-_MIRROR_DT_PINNED_LCOE = 98.68644714355469
+# Re-pinned 2026-06-15: tandem hot-electron central cell (T_e = 125 keV, Hammir
+# anchor) for the Fowler-Logan plug potential. The non-0D default path reads the
+# YAML T_e for its radiation term, so raising T_e from 20 to 125 keV moved this
+# pin from 98.686 to 100.107. The coil calibration pin (513.375 M$) is unaffected
+# (T_e does not enter the coil account). See mirror_confinement_regimes.md.
+_MIRROR_DT_PINNED_LCOE = 100.10710144042969
 
 
 class TestModelIntegration:
@@ -779,10 +793,18 @@ class TestMirrorCoilLengthScaling:
 
 # Shared sizing params: WHAM/Realta-class mirror geometry inputs (fixed).
 # The sizing solve only finds L; a, B, R_m stay as-is.
-_SZ_A = 0.4  # plasma radius [m]
+# Plasma radius [m]. Raised from 0.4 to 1.5 with the fixed Fowler-Logan plug:
+# the tandem hot-electron central cell (T_e = 125 keV) holds density at the beta
+# cap, so a small-radius machine cannot reach the test power targets in the
+# genuinely DRIVEN regime; the 1.5 m radius (the YAML-defaults machine) keeps the
+# 200-600 MW sizing targets feasible with headroom.
+_SZ_A = 1.5  # plasma radius [m]
 _SZ_B = 3.0  # midplane field [T]
 _SZ_R_M = 10.0  # mirror ratio
-_SZ_T_E = 20.0  # electron temperature [keV] (held fixed; GSS scans T_i)
+# Tandem hot-electron central cell (Hammir anchor, matches YAML). The Fowler-
+# Logan plug e*phi = T_e*ln(n_p/n_c) needs hot electrons to confine; held fixed
+# while the GSS scans T_i so e*phi/T_i falls with T_i (drives the optimum cool).
+_SZ_T_E = 125.0  # electron temperature [keV] (held fixed; GSS scans T_i)
 _SZ_F_BETA = 0.85
 _SZ_BETA_MAX = 0.5
 _SZ_L_MIN = 1.0
@@ -826,8 +848,9 @@ def _sz_params(
         p_house=4.0,
         p_cryo=1.0,
         p_aux_floor=2.0,
-        plug_phi_over_T_i=_PLUG_PHI_OVER_T_I,
+        plug_density_ratio=_PLUG_DENSITY_RATIO,
         collisionality_min=_COLLISIONALITY_MIN,
+        f_alpha_heat=_F_ALPHA_HEAT,
         dd_f_T=0.969,
         dd_f_He3=0.689,
         dhe3_dd_frac=0.131,
@@ -895,11 +918,14 @@ class TestMirrorSizing:
             size_from_power=True,
         )
         r_hi = m_hi.forward(
-            net_electric_mw=600.0,
+            net_electric_mw=400.0,
             availability=0.87,
             lifetime_yr=40.0,
             size_from_power=True,
         )
+        # 400 MWe (not 600) is the high target: in the driven hot-electron
+        # regime the YAML-default a=1.5,B=3 machine tops out near 455 MWe at
+        # L_max, so 600 MWe is infeasible via the CostModel default path.
         # Larger machine -> longer chamber -> higher C220103
         assert float(r_hi.cas22_detail["C220103"]) > float(r_lo.cas22_detail["C220103"])
 
@@ -938,17 +964,19 @@ class TestMirrorSizing:
         f_beta_max = m._eng_defaults["f_beta_max"]
         assert f_beta_min <= best <= f_beta_max
 
-    def test_dhe3_sizes_longer_than_dt(self):
-        """D-He3 mirror requires a longer chamber than DT at equal net power.
+    def test_dhe3_is_infeasible_where_dt_sizes(self):
+        """D-He3 is infeasible in the tandem hot-electron plug regime.
 
-        D-He3 reactivity is lower than DT at any temperature, and dilution
-        reduces n_i/n_e, so at equal f_beta density the machine needs more
-        volume (larger L) to produce the same net electric power.
+        The Fowler-Logan plug e*phi = T_e*ln(n_p/n_c) requires hot electrons
+        (T_e raised to confine the plug). Hot electrons make D-He3
+        radiation/aux-dominated: at every probed geometry the net electric
+        power is large and negative (about -2900 MW at L_max here), so D-He3
+        sizing raises SizingInfeasible. This is the honest result of the
+        density-ratio plug change; D-He3 is not forced feasible.
 
-        Both fuels use the same geometry (B=5 T, a=0.6 m, R_m=20) to isolate
-        the fuel dependence. DHE3 uses f_rad_fus=0.24 proxy and an aneutronic
-        power balance (mn=1.02, f_dec=0.6, no tritium processing);
-        L_max is extended to 500 m to accommodate the longer DHE3 machine.
+        At the same geometry (B=5 T, a=0.6 m, R_m=20, T_e=50) D-T still sizes
+        to a finite, positive chamber length, so the failure is fuel-specific,
+        not a geometry artifact.
         """
         common = dict(
             B_min=5.0,
@@ -974,8 +1002,9 @@ class TestMirrorSizing:
             p_house=4.0,
             p_cryo=1.0,
             p_aux_floor=2.0,
-            plug_phi_over_T_i=_PLUG_PHI_OVER_T_I,
+            plug_density_ratio=_PLUG_DENSITY_RATIO,
             collisionality_min=_COLLISIONALITY_MIN,
+            f_alpha_heat=_F_ALPHA_HEAT,
             dd_f_T=0.969,
             dd_f_He3=0.689,
             dhe3_dd_frac=0.131,
@@ -1010,11 +1039,11 @@ class TestMirrorSizing:
             f_rad_fus=0.24,
         )
         L_dt = mirror_size_from_power(p_dt, Fuel.DT)
-        L_dhe3 = mirror_size_from_power(p_dhe3, Fuel.DHE3)
-        assert L_dhe3 > L_dt, (
-            f"D-He3 should need longer chamber than DT, "
-            f"got L_DT={L_dt:.1f} m, L_DHE3={L_dhe3:.1f} m"
+        assert isinstance(L_dt, float) and L_dt > 0.0, (
+            f"D-T should size to a finite positive L, got {L_dt}"
         )
+        with pytest.raises(SizingInfeasible):
+            mirror_size_from_power(p_dhe3, Fuel.DHE3)
 
     def test_net_electric_at_L_return_full_state(self):
         """return_full surfaces the GSS-optimum forward (state, table).
@@ -1037,13 +1066,15 @@ class TestMirrorSizing:
     def test_high_f_beta_sizes_feasibly(self):
         """Regression: f_beta=0.95 sizes (no OperatingPointInfeasible).
 
-        On the 400 MWe example machine the neutron wall cap (q_wall_max) binds
-        at f_beta=0.95, so the operating density is wall-capped and beta lands
-        just below 0.95 * beta_max but well under beta_max. The pre-fix path
-        re-solved T_i through the inverse at the fixed wall-capped n_e_star and
-        reported beta = 0.5315 > beta_max = 0.5, tripping
-        OperatingPointInfeasible. Building the state directly from the GSS
-        optimum keeps beta bounded by construction.
+        In the tandem hot-electron plug regime (T_e raised to confine the
+        Fowler-Logan plug) the 400 MWe example machine is beta-bound, not
+        wall-bound: hot electrons raise the pressure, so at fixed beta the
+        density is lower and the neutron wall load stays well under q_wall_max.
+        Beta therefore sits exactly at the f_beta ceiling (f_beta * beta_max)
+        and below beta_max. The regression this guards (a re-solve reporting
+        beta > beta_max and tripping OperatingPointInfeasible) is still
+        exercised: building the state directly from the GSS optimum keeps beta
+        bounded by construction.
         """
         m = CostModel(ConfinementConcept.MIRROR, Fuel.DT)
         r = m.forward(
@@ -1058,11 +1089,13 @@ class TestMirrorSizing:
         assert math.isfinite(r.costs.lcoe)
         ps = m._plasma_state
         beta_max = 0.5  # YAML default for the mirror machine
-        # Wall-bound here: beta is below the f_beta ceiling and below beta_max.
-        assert float(ps.beta) <= 0.95 * beta_max * (1 + 1e-6)
+        q_wall_max = 5.0  # YAML default neutron wall-load cap
+        # Beta-bound: beta sits at the f_beta ceiling and below beta_max.
+        assert float(ps.beta) == pytest.approx(0.95 * beta_max, rel=1e-4)
         assert float(ps.beta) < beta_max
-        # Confirm the wall cap is the binding constraint (q_wall at its ceiling).
-        assert float(ps.wall_loading) == pytest.approx(5.0, rel=1e-3)
+        # The wall cap is NOT binding here (wall_loading about 1.06, well
+        # below q_wall_max=5.0): the f_beta ceiling is what binds.
+        assert float(ps.wall_loading) < q_wall_max
 
     def test_sized_state_beta_within_f_beta_cap(self):
         """Invariant the bug violated: sized-state beta <= f_beta * beta_max.
@@ -1147,7 +1180,11 @@ _SIZING_PARAMS = dict(
     q_wall_max=50.0,  # high default; cap non-binding unless a test overrides it
     q_surface_max=50.0,  # high default; cap non-binding unless a test overrides it
     R_m=10.0,
-    T_e=20.0,
+    # Tandem hot-electron central cell (Hammir anchor). The Fowler-Logan plug
+    # potential e*phi = T_e*ln(n_p/n_c) requires hot electrons to confine the
+    # central cell; a cold T_e (20 keV) gives e*phi = 12 keV, too shallow to plug,
+    # and the machine is infeasible. Matches the YAML default T_e = 125 keV.
+    T_e=125.0,
     f_beta=0.85,
     beta_max=0.5,
     L_min=1.0,
@@ -1170,8 +1207,9 @@ _SIZING_PARAMS = dict(
     p_house=4.0,
     p_cryo=1.0,
     p_aux_floor=2.0,
-    plug_phi_over_T_i=_PLUG_PHI_OVER_T_I,
+    plug_density_ratio=_PLUG_DENSITY_RATIO,
     collisionality_min=_COLLISIONALITY_MIN,
+    f_alpha_heat=_F_ALPHA_HEAT,
     dd_f_T=0.969,
     dd_f_He3=0.689,
     dhe3_dd_frac=0.131,
@@ -1238,7 +1276,7 @@ def _size(params, fuel=Fuel.DT):
         dhe3_fuel_ratio=params["dhe3_fuel_ratio"],
         pb11_fuel_ratio=params["pb11_fuel_ratio"],
         vacuum_t=params["vacuum_t"],
-        plug_phi_over_T_i=params["plug_phi_over_T_i"],
+        plug_density_ratio=params["plug_density_ratio"],
         collisionality_min=params["collisionality_min"],
         f_rad_fus=params.get("f_rad_fus"),
     )
@@ -1248,30 +1286,32 @@ def _size(params, fuel=Fuel.DT):
 @pytest.mark.slow
 class TestWallConstraint:
     def test_sizing_respects_q_wall_max(self):
-        # Default machine (a=1.5, B=3.0) is wall-bound at q_wall_max=5.0:
-        # n_wall(T) < n_beta(T) across the GSS T_i bracket at these params.
-        params = dict(_SIZING_PARAMS, q_wall_max=5.0)
+        # In the tandem hot-electron plug regime (T_e=125), the YAML-default
+        # a=1.5,B=3 machine is BETA-bound even at q_wall_max=5.0: hot electrons
+        # raise pressure, so at fixed beta the density (and hence neutron wall
+        # load) is low and the f_beta cap binds first. To keep a genuine
+        # WALL-bound test, this case uses a higher-field, smaller-radius machine
+        # (a=0.5, B_min=6.0) with a tighter wall cap (q_wall_max=2.0), where
+        # n_wall(T) < n_beta(T) across the GSS T_i bracket.
+        params = dict(_SIZING_PARAMS, a=0.5, B_min=6.0, q_wall_max=2.0)
         L, pnet, state = _size(params)
-        assert float(state.wall_loading) <= 5.0 * 1.001
-        # wall cap (5.0) is the active constraint:
-        assert float(state.wall_loading) >= 4.5
-        # energy-balance closed: sustainment charged from confinement -> the GSS
-        # optimum shifts to the hot end of the ignited plateau (T_i ~ 60 keV),
-        # where the f_beta cap co-binds with the wall cap, so beta sits AT the
-        # f_beta * beta_max ceiling rather than below it. The wall cap remains
-        # binding (wall_loading = 5.0); both caps are active at this T.
-        assert float(state.beta) <= 0.85 * 0.5 * (1 + 1e-3)
+        # wall cap (2.0) is the active, binding constraint:
+        assert float(state.wall_loading) <= 2.0 * 1.001
+        assert float(state.wall_loading) >= 1.9
+        # beta sits BELOW the f_beta * beta_max ceiling: the wall cap, not the
+        # f_beta cap, is what binds here.
+        assert float(state.beta) < 0.85 * 0.5
 
     def test_loose_cap_recovers_beta_bound_solution(self):
         # q_wall_max=50 must reproduce the (beta-bound) solution at the closed
         # energy balance.
-        # re-pinned 2026-06-14: tandem plug confinement calibrated to Hammir Q>5,
-        # see mirror_confinement_regimes.md (the bounded plug potential changed
-        # tau_E, the confinement-derived sustainment, hence the L that meets the
-        # target; was L = 4.509277938 m under the unbounded Boltzmann potential).
+        # re-pinned for the driven hot-electron regime: the Fowler-Logan plug
+        # e*phi = T_e*ln(n_p/n_c) with T_e=125 raises pressure, so at fixed beta
+        # the density is lower and a longer chamber is needed to meet the target.
+        # L = 69.230740222 m here (was 4.536524895 m under the ratio-to-T_i plug).
         params = dict(_SIZING_PARAMS, q_wall_max=50.0)
         L, _, _ = _size(params)
-        assert L == pytest.approx(4.536524895, rel=1e-4)
+        assert L == pytest.approx(69.230740222, rel=1e-4)
 
     def test_infeasible_under_cap_raises_naming_cap(self):
         with pytest.raises(SizingInfeasible, match=r"q_wall_max"):
@@ -1357,8 +1397,9 @@ _PB11_SIZING_PARAMS = dict(
     p_house=4.0,
     p_cryo=1.0,
     p_aux_floor=2.0,
-    plug_phi_over_T_i=_PLUG_PHI_OVER_T_I,
+    plug_density_ratio=_PLUG_DENSITY_RATIO,
     collisionality_min=_COLLISIONALITY_MIN,
+    f_alpha_heat=_F_ALPHA_HEAT,
     dd_f_T=0.969,
     dd_f_He3=0.689,
     dhe3_dd_frac=0.131,
@@ -1381,20 +1422,22 @@ _PB11_SIZING_PARAMS = dict(
 
 @pytest.mark.slow
 class TestSurfaceConstraint:
-    def test_pb11_sizing_is_surface_bound(self):
-        """p-B11 sized with q_surface_max=1.0: surface cap must bind.
+    def test_pb11_sizing_is_infeasible_naming_q_surface_max(self):
+        """p-B11 is infeasible in the driven hot-electron plug regime.
 
-        p-B11 radiates 83% of fusion power; the surface cap binds before
-        both the beta boundary and the neutron cap (which barely applies
-        for an aneutronic fuel).
+        p-B11 radiates 83% of fusion power; with the tandem hot-electron plug
+        (T_e=150 to confine the Fowler-Logan plug e*phi = T_e*ln(n_p/n_c))
+        the machine is radiation/aux-dominated. Net electric power is negative
+        at every L and grows MORE negative with volume (probed about -577 MW at
+        L=10 m down to -11240 MW at L_max=200 m with loose caps), so there is
+        no feasible surface-bound target at this geometry. This is the honest
+        result of the density-ratio plug change; p-B11 is not forced feasible.
+
+        At q_surface_max=1.0 the surface cap is the lowest-density (binding) cap
+        at L_max, so sizing raises SizingInfeasible naming q_surface_max.
         """
-        L, pnet, state = _size(_PB11_SIZING_PARAMS, fuel=Fuel.PB11)
-        # Surface cap must be at or below the threshold (with 0.1% tolerance).
-        assert float(state.q_surface) <= 1.0 * 1.001
-        # Neutron cap must not be the binding constraint (p-B11 is aneutronic).
-        assert float(state.wall_loading) < 5.0  # neutron cap slack
-        # Beta cap must not be the binding constraint either.
-        assert float(state.beta) < 0.85 * 0.5  # below f_beta * beta_max
+        with pytest.raises(SizingInfeasible, match=r"q_surface_max"):
+            _size(_PB11_SIZING_PARAMS, fuel=Fuel.PB11)
 
     def test_dt_audit_mode_warns_above_q_surface_max(self):
         """Forcing a small q_surface_max triggers a UserWarning in audit mode.
@@ -1413,18 +1456,23 @@ class TestSurfaceConstraint:
         with pytest.raises(SizingInfeasible, match=r"q_surface_max"):
             _size(params, fuel=Fuel.PB11)
 
-    def test_loose_surface_cap_recovers_wall_bound_or_beta_bound(self):
-        """With q_surface_max=50, the p-B11 solution is NOT surface-bound.
+    def test_loose_surface_cap_still_infeasible_not_from_surface(self):
+        """Loosening the surface cap does NOT recover a p-B11 solution.
 
-        Raising the cap to 50 MW/m^2 allows the solver to run free; the
-        active constraint should be either the beta boundary or the neutron
-        wall cap, not the surface cap.
+        In the driven hot-electron plug regime p-B11 is radiation/aux-dominated:
+        net electric power is negative at every L even with loose caps
+        (q_surface_max=50, q_wall_max=50 -> about -11240 MW at L_max). So sizing
+        still raises SizingInfeasible. Crucially, with the caps loose the
+        message does NOT name q_surface_max (no density cap binds; the power
+        balance itself is negative). This proves the infeasibility is the
+        hot-electron regime, not the surface heat-flux cap -- the tight-cap
+        sibling test that names q_surface_max is therefore not trivially
+        passing.
         """
         params = dict(_PB11_SIZING_PARAMS, q_surface_max=50.0, q_wall_max=50.0)
-        L, pnet, state = _size(params, fuel=Fuel.PB11)
-        # With loose caps the surface heat flux is above 1 MW/m^2 (otherwise
-        # the tight-cap test would be trivially passing).
-        assert float(state.q_surface) > 1.0
+        with pytest.raises(SizingInfeasible) as exc:
+            _size(params, fuel=Fuel.PB11)
+        assert "q_surface_max" not in str(exc.value)
 
     def test_density_from_surface_cap_returns_finite(self):
         """_density_from_surface_cap returns a finite, positive n20 for each fuel.
@@ -1439,7 +1487,7 @@ class TestSurfaceConstraint:
             M_ion=2.5,
             Z_eff=1.2,
             R_w=0.4,
-            plug_phi_over_T_i=_PLUG_PHI_OVER_T_I,
+            plug_density_ratio=_PLUG_DENSITY_RATIO,
             collisionality_min=_COLLISIONALITY_MIN,
             f_rad_fus=None,  # DT: full radiation model
         )
@@ -1530,10 +1578,15 @@ class TestEnergyBalanceClosure:
     def test_mirror_aux_heating_closes_balance(self):
         # P_aux = max(floor, P_end + P_radial + P_rad - P_alpha) from the state.
         ps = _forward(T_i=15.0)
-        p_aux = float(mirror_aux_heating(ps, p_aux_floor=2.0))
+        p_aux = float(
+            mirror_aux_heating(ps, p_aux_floor=2.0, f_alpha_heat=_F_ALPHA_HEAT)
+        )
         expected = max(
             2.0,
-            float(ps.p_end) + float(ps.p_radial) + float(ps.p_rad) - float(ps.p_alpha),
+            float(ps.p_end)
+            + float(ps.p_radial)
+            + float(ps.p_rad)
+            - _F_ALPHA_HEAT * float(ps.p_alpha),
         )
         assert p_aux == pytest.approx(expected, rel=1e-6)
 
@@ -1553,22 +1606,28 @@ class TestEnergyBalanceClosure:
         ps = r.plasma_state
         pt = r.power_table
         p_transport = float(pt.p_ash) + float(pt.p_input) - float(pt.p_rad)
-        p_transport_expected = float(ps.p_end) + float(ps.p_radial)
+        # The shared transport channel carries the real axial/radial loss PLUS
+        # the loss-cone alpha exhaust (1 - f_alpha_heat) * p_alpha routed here as
+        # directed exhaust (alpha loss-cone heating, Task 2c).
+        lost_alpha = (1.0 - _F_ALPHA_HEAT) * float(ps.p_alpha)
+        p_transport_expected = float(ps.p_end) + float(ps.p_radial) + lost_alpha
         assert p_transport == pytest.approx(p_transport_expected, rel=0.05)
 
     def test_sized_dt_optimum_is_realistic_temperature(self):
-        # THE headline regression: with the tandem plug confinement calibrated to
-        # Hammir, the D-T sizing optimum lands in a realistic TANDEM band, not the
-        # spurious ~60 keV ignition the unbounded Boltzmann potential produced.
+        # THE headline regression: with the FIXED Fowler-Logan plug potential
+        # e*phi = T_e*ln(n_p/n_c) (independent of T_i, hot-electron tandem T_e =
+        # 125 keV), the D-T sizing optimum lands in a realistic TANDEM band, not the
+        # spurious ~60 keV ignition the unbounded Boltzmann potential produced nor
+        # the wall-cap-pinned near-ignited ~35 keV the ratio-to-T_i shortcut left.
         #
         # The band is tandem-appropriate, NOT the simple-mirror GDT/WHAM band
         # (those single-cell devices run cool, ~10 keV). A tandem CENTRAL CELL
         # runs hotter: the Realta Hammir Q>5 design point is T_i = 45 keV (Frank
-        # et al. 2024), and the central cell must be hot enough that alpha heating
-        # nearly sustains it against the plug-limited end loss. The model's
-        # optimum (~30 keV at the YAML T_e = 20 keV) sits between the simple-mirror
-        # 10 keV and the Hammir 45 keV, which is the physically expected tandem
-        # regime. See docs/account_justification/mirror_confinement_regimes.md.
+        # et al. 2024). With the fixed plug the optimum settles at about 23 keV: the
+        # Pastukhov enhancement exp(e*phi/T_i) WEAKENS as T_i rises (e*phi is fixed
+        # by the plug, not bought by heating), so the central cell no longer rides
+        # to ignition and the point is genuinely DRIVEN (P_aux ~ 230 MW, well off the
+        # floor). See docs/account_justification/mirror_confinement_regimes.md.
         m = CostModel(ConfinementConcept.MIRROR, Fuel.DT)
         r = m.forward(
             net_electric_mw=400.0,
@@ -1577,7 +1636,7 @@ class TestEnergyBalanceClosure:
             size_from_power=True,
             f_beta=0.85,
         )
-        assert 20.0 <= float(r.plasma_state.T_i) <= 50.0
+        assert 15.0 <= float(r.plasma_state.T_i) <= 35.0
 
     def test_tau_E_physical_p_end_below_p_fus(self):
         m = CostModel(ConfinementConcept.MIRROR, Fuel.DT)
@@ -1595,8 +1654,104 @@ class TestEnergyBalanceClosure:
         # reports the sustainment-consistency diagnostic: stated p_input divided
         # by the confinement-required auxiliary power.
         ps, _pt = _inverse(p_input=50.0)
-        aux = float(mirror_aux_heating(ps, p_aux_floor=2.0))
+        aux = float(mirror_aux_heating(ps, p_aux_floor=2.0, f_alpha_heat=_F_ALPHA_HEAT))
         assert float(ps.sustainment_ratio) == pytest.approx(50.0 / aux, rel=1e-4)
+
+
+class TestAlphaHeating:
+    """Alpha loss-cone heating fraction (Santarius & Callen 1983).
+
+    A magnetic mirror loses fusion alphas out the loss cone before they fully
+    thermalise: about 50 percent by count but under 25 percent by energy, so
+    about 75-85 percent of the alpha power deposits as central-cell self-heating.
+    The model credits f_alpha_heat * p_alpha (default 0.80) instead of the full
+    p_alpha, which un-floors the auxiliary drive and lands the D-T optimum at a
+    genuinely DRIVEN tandem operating point. The lost fraction
+    (1 - f_alpha_heat) * p_alpha exits the loss cone as directed exhaust and is
+    accounted in the axial end-loss / DEC channel (energy bookkeeping closes).
+    See docs/account_justification/mirror_confinement_regimes.md.
+    """
+
+    def test_aux_heating_uses_alpha_fraction(self):
+        # mirror_aux_heating subtracts f_alpha_heat * p_alpha, NOT the full
+        # p_alpha, so a sub-unity f_alpha_heat raises the required auxiliary
+        # power. Closed-form check at a fixed forward state.
+        ps = _forward(T_i=30.0)
+        f_alpha = 0.80
+        p_aux = float(mirror_aux_heating(ps, p_aux_floor=2.0, f_alpha_heat=f_alpha))
+        expected = max(
+            2.0,
+            float(ps.p_end)
+            + float(ps.p_radial)
+            + float(ps.p_rad)
+            - f_alpha * float(ps.p_alpha),
+        )
+        assert p_aux == pytest.approx(expected, rel=1e-6)
+        # Full-deposition (f_alpha_heat=1.0) requires strictly less aux power.
+        p_aux_full = float(mirror_aux_heating(ps, p_aux_floor=2.0, f_alpha_heat=1.0))
+        assert p_aux > p_aux_full
+
+    def test_dt_optimum_is_driven(self):
+        # THE headline regression: with the alpha loss-cone reduction the D-T
+        # sizing optimum is genuinely DRIVEN -- the auxiliary power is well above
+        # the 2 MW control floor and the scientific gain drops from the spurious
+        # near-ignited ~516 to a tandem-realistic value.
+        m = CostModel(ConfinementConcept.MIRROR, Fuel.DT)
+        r = m.forward(
+            net_electric_mw=400.0,
+            availability=0.87,
+            lifetime_yr=40.0,
+            size_from_power=True,
+            f_beta=0.85,
+        )
+        pt = r.power_table
+        assert float(pt.p_input) > 10.0, (
+            f"P_aux = {float(pt.p_input):.1f} MW still near the floor; "
+            "alpha loss-cone reduction did not un-floor the drive"
+        )
+        assert float(pt.q_sci) < 50.0, (
+            f"q_sci = {float(pt.q_sci):.1f} still near-ignited (was ~516)"
+        )
+
+    def test_alpha_loss_routed_to_end_channel(self):
+        # The lost alpha fraction (1 - f_alpha_heat) * p_alpha must appear in the
+        # shared balance's transport channel so no power vanishes. With the
+        # mirror feeding p_input = P_aux and p_rad_override = ps.p_rad, the shared
+        # p_transport = p_ash + p_input_eff - p_rad collapses to
+        # P_end + P_radial + (1 - f_alpha_heat) * p_alpha. Energy bookkeeping
+        # closes: the un-deposited alpha power is conserved as directed exhaust.
+        m = CostModel(ConfinementConcept.MIRROR, Fuel.DT)
+        r = m.forward(
+            net_electric_mw=400.0,
+            availability=0.87,
+            lifetime_yr=40.0,
+            size_from_power=True,
+            f_beta=0.85,
+        )
+        ps = r.plasma_state
+        pt = r.power_table
+        p_transport = float(pt.p_ash) + float(pt.p_input) - float(pt.p_rad)
+        lost_alpha = (1.0 - _F_ALPHA_HEAT) * float(ps.p_alpha)
+        p_transport_expected = float(ps.p_end) + float(ps.p_radial) + lost_alpha
+        assert p_transport == pytest.approx(p_transport_expected, rel=0.05)
+        # The lost alpha power is a material part of the channel, not noise.
+        assert lost_alpha > 1.0
+
+    @pytest.mark.parametrize("fuel", [Fuel.DT, Fuel.DD, Fuel.DHE3, Fuel.PB11])
+    def test_alpha_heating_jit_and_grad(self, fuel):
+        # jit == eager and finite grad through mirror_aux_heating across fuels.
+        from costingfe.layers.mirror import mirror_aux_heating as _aux
+
+        def g(f_alpha):
+            ps = _forward(fuel=fuel, T_i=40.0)
+            return _aux(ps, p_aux_floor=2.0, f_alpha_heat=f_alpha)
+
+        eager = float(g(0.80))
+        jitted = float(jax.jit(g)(0.80))
+        assert jnp.isfinite(jitted)
+        assert jitted == pytest.approx(eager, rel=1e-4)
+        grad = float(jax.grad(g)(0.80))
+        assert jnp.isfinite(grad)
 
 
 class TestTandemConfinement:
@@ -1637,8 +1792,9 @@ class TestTandemConfinement:
             q_wall_max=50.0,
             q_surface_max=50.0,
             p_aux_floor=2.0,
-            plug_phi_over_T_i=_PLUG_PHI_OVER_T_I,
+            plug_density_ratio=_PLUG_DENSITY_RATIO,
             collisionality_min=_COLLISIONALITY_MIN,
+            f_alpha_heat=_F_ALPHA_HEAT,
             enforce_plasma_limits=False,
             dhe3_dd_frac=0.131,
             dhe3_dd_frac_pin=None,
@@ -1658,7 +1814,9 @@ class TestTandemConfinement:
             T_e=125.0,
             n_e=0.825e20,
         )
-        p_aux = float(mirror_aux_heating(psf, p_aux_floor=2.0))
+        p_aux = float(
+            mirror_aux_heating(psf, p_aux_floor=2.0, f_alpha_heat=_F_ALPHA_HEAT)
+        )
         q_model = float(psf.p_fus) / p_aux
         assert 0.5 * 5.2 <= q_model <= 2.0 * 5.2, (
             f"Hammir anchor: model Q = {q_model:.2f} (P_fus={float(psf.p_fus):.1f} "
@@ -1687,7 +1845,9 @@ class TestTandemConfinement:
         psf = _forward(
             L=50.0, a=0.5, B_min=3.0, R_m=13.3, T_i=45.0, T_e=125.0, n_e=0.825e20
         )
-        p_aux = float(mirror_aux_heating(psf, p_aux_floor=2.0))
+        p_aux = float(
+            mirror_aux_heating(psf, p_aux_floor=2.0, f_alpha_heat=_F_ALPHA_HEAT)
+        )
         # Genuinely externally driven: aux is well above the 2 MW control floor.
         assert p_aux > 5.0, f"aux floored at {p_aux:.1f} MW -> spuriously ignited"
         q_model = float(psf.p_fus) / p_aux
@@ -1695,17 +1855,23 @@ class TestTandemConfinement:
 
     @pytest.mark.parametrize("fuel", [Fuel.DT, Fuel.DD, Fuel.DHE3, Fuel.PB11])
     def test_plug_potential_jit_and_grad(self, fuel):
+        # e*phi = T_e * ln(n_p/n_c): differentiate w.r.t. the central-cell electron
+        # temperature T_e (the plug potential is set by T_e and the fixed density
+        # ratio, NOT by T_i). grad should be ln(n_p/n_c), finite and constant.
         from costingfe.layers.mirror import compute_plug_potential
 
-        def f(T_i):
-            return compute_plug_potential(T_i, _PLUG_PHI_OVER_T_I)
+        def f(T_e):
+            return compute_plug_potential(T_e, _PLUG_DENSITY_RATIO)
 
-        eager = float(f(30.0))
-        jitted = float(jax.jit(f)(30.0))
+        eager = float(f(125.0))
+        jitted = float(jax.jit(f)(125.0))
         assert jnp.isfinite(jitted)
         assert jitted == pytest.approx(eager, rel=1e-4)
-        g = float(jax.grad(f)(30.0))
+        # Hammir anchor: at T_e = 125 keV, e*phi = 125 * ln(1.818) = 74.7 keV.
+        assert eager == pytest.approx(125.0 * math.log(_PLUG_DENSITY_RATIO), rel=1e-4)
+        g = float(jax.grad(f)(125.0))
         assert jnp.isfinite(g)
+        assert g == pytest.approx(math.log(_PLUG_DENSITY_RATIO), rel=1e-4)
 
 
 class TestStabilityDiagnostics:
