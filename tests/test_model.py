@@ -51,6 +51,27 @@ def test_forward_lcoe_range():
     assert 10 < result.costs.lcoe < 500, f"LCOE {result.costs.lcoe} $/MWh unexpected"
 
 
+def test_construction_time_comes_from_yaml():
+    """A concept's YAML construction_time_yr must be used, not silently
+    replaced by a generic signature default. Orbitron's YAML says 3.0."""
+    m = CostModel(concept=ConfinementConcept.ORBITRON, fuel=Fuel.PB11)
+    r = m.forward(net_electric_mw=0.005, availability=0.85, lifetime_yr=30, n_mod=1)
+    assert float(r.params["construction_time_yr"]) == 3.0
+
+
+def test_construction_time_explicit_override_wins():
+    """An explicit construction_time_yr from the caller overrides the YAML."""
+    m = CostModel(concept=ConfinementConcept.ORBITRON, fuel=Fuel.PB11)
+    r = m.forward(
+        net_electric_mw=0.005,
+        availability=0.85,
+        lifetime_yr=30,
+        n_mod=1,
+        construction_time_yr=5.0,
+    )
+    assert float(r.params["construction_time_yr"]) == 5.0
+
+
 def test_orbitron_runs_at_kwe_design_point():
     """ORBITRON defaults are kWe-class (Avalanche's 5 kWe Orbitron module).
 

@@ -427,7 +427,10 @@ class TestInverse:
 # Pinned LCOE for the mirror default path (use_0d_model=False).
 # Captured from branch tip aa7eef8 before any model.py changes; guards that
 # the 0D opt-in default does NOT alter the existing non-0D path.
-_MIRROR_DT_PINNED_LCOE = 93.643616  # $/MWh at 500 MW, avail=0.87, lifetime=40 yr
+# $/MWh at 500 MW, avail=0.87, lifetime=40 yr. Re-pinned after construction_time_yr
+# stopped being masked by a signature default: mirror now uses its YAML value
+# (5.0 yr, factory-simpler) instead of the generic 6.0, lowering IDC/indirect.
+_MIRROR_DT_PINNED_LCOE = 88.93191528320312
 
 
 class TestModelIntegration:

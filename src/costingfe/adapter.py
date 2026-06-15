@@ -30,7 +30,8 @@ class FusionTeaInput:
     availability: float
     lifetime_yr: float
     n_mod: int = 1
-    construction_time_yr: float = 6.0
+    # None = use the concept YAML's construction_time_yr (do not mask it).
+    construction_time_yr: float | None = None
     interest_rate: float = 0.07
     inflation_rate: float = 0.02
     noak: bool = True
@@ -114,18 +115,22 @@ def run_costing(inp: FusionTeaInput) -> FusionTeaOutput:
         pulsed_conversion=pulsed_conv,
         laser_driver_type=laser_drv,
     )
+    # construction_time_yr is concept config (concept YAML). Only forward a
+    # customer value when one was given; otherwise let the YAML supply it.
+    fwd_overrides = dict(inp.overrides)
+    if inp.construction_time_yr is not None:
+        fwd_overrides["construction_time_yr"] = inp.construction_time_yr
     result = model.forward(
         net_electric_mw=inp.net_electric_mw,
         availability=inp.availability,
         lifetime_yr=inp.lifetime_yr,
         n_mod=inp.n_mod,
-        construction_time_yr=inp.construction_time_yr,
         interest_rate=inp.interest_rate,
         inflation_rate=inp.inflation_rate,
         noak=inp.noak,
         cost_overrides=inp.cost_overrides or None,
         override_reference_mw=inp.override_reference_mw,
-        **inp.overrides,
+        **fwd_overrides,
     )
 
     c = result.costs

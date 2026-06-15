@@ -162,7 +162,7 @@ class TestTier1FieldConstraints:
         assert inp.availability == 0.85
         assert inp.lifetime_yr == 40.0
         assert inp.n_mod == 1
-        assert inp.construction_time_yr == 6.0
+        assert inp.construction_time_yr is None  # deferred to the concept YAML
         assert inp.interest_rate == 0.07
         assert inp.inflation_rate == 0.02
         assert inp.noak is True

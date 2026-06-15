@@ -90,7 +90,8 @@ class CostingInput(BaseModel):
     # FR-1 of costingfe-library-preconditions spec: non-integer n_mod is
     # required for the two-knob projection (n_mod = 1000 / P_native).
     n_mod: float = Field(default=1.0, gt=0)
-    construction_time_yr: float = Field(default=6.0, gt=0)
+    # None = unspecified at the customer level; the concept YAML supplies it.
+    construction_time_yr: float | None = Field(default=None, gt=0)
     interest_rate: float = Field(default=0.07, gt=0)
     inflation_rate: float = 0.02
     noak: bool = True

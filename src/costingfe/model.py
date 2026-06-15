@@ -745,7 +745,6 @@ class CostModel:
         availability: float,
         lifetime_yr: float,
         n_mod: int = 1,
-        construction_time_yr: float = 6.0,
         interest_rate: float = 0.07,
         inflation_rate: float = 0.02,
         noak: bool = True,
@@ -763,6 +762,13 @@ class CostModel:
         (which depend on different power quantities per account) while
         respecting the user's empirical data.
         """
+        # construction_time_yr is concept config: it lives in the concept YAML,
+        # not a signature default (which would silently mask the YAML value). A
+        # customer override arrives as a keyword and lands in **overrides; pull
+        # it out here, before the unknown-kwarg check and the merge below.
+        construction_time_yr = overrides.pop(
+            "construction_time_yr", self._eng_defaults["construction_time_yr"]
+        )
         if override_reference_mw is not None and cost_overrides:
             cost_overrides = self._scale_overrides(
                 cost_overrides,
