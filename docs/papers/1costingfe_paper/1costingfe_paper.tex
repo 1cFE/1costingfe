@@ -1637,6 +1637,9 @@ improvements, control room, and security are approximately fixed; BOP
 electrical buildings scale with gross electric $P_{\text{et}}$. The
 administration building tracks staff and so scales sub-linearly, as
 $P^{0.5}$, consistent with the staffing-based accounts (CAS40, CAS70).
+The cryogenics building is the magnet cryoplant: it is present only for
+superconducting-magnet concepts and is zero for normal-conducting
+(copper) and magnet-free concepts, which carry no cryoplant.
 
 All power-scaling buildings are driven by \emph{plant-total} power.
 When a plant is assembled from $n_{\text{mod}}$ replicated modules, the
@@ -1687,10 +1690,12 @@ re-derived here.
 The divertor sub-account (CAS22.01.08) keeps this inherited scaling for
 steady-state MFE concepts that exhaust onto a material target,
 $C_{220108} = c_{\text{div}}\,(P_{\text{th}}/1000)^{0.5}$ with
-$c_{\text{div}} = 60$~M\$, but its value is concept-dependent. A
-levitated dipole has a closed-field-line topology and exhausts through
-the loss cone at the chamber openings, so it carries no manufactured
-divertor cassette and $C_{220108} = 0$. For inertial and
+$c_{\text{div}} = 60$~M\$, but its value is concept-dependent. Concepts
+that exhaust charged particles without a material target carry no
+manufactured divertor cassette and $C_{220108} = 0$: the levitated
+dipole (closed-field-line topology, loss-cone exhaust at the chamber
+openings) and the electrostatic concepts (orbitron, polywell), which
+direct charged particles to the direct energy converter. For inertial and
 magneto-inertial concepts the same sub-account instead funds the
 on-site target factory, built up from its three independent cost drivers,
 \begin{equation}
