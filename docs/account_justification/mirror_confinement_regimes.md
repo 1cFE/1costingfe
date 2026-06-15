@@ -1,8 +1,10 @@
 # Mirror Confinement Regime Bridge: Collisional vs Collisionless
 
 **Date:** 2026-06-14
-**Status:** Implemented; bridge sourced to Rognlien and Cutler 1980, smoothing
-constructed and documented honestly.
+**Status:** Implemented. Collisionality bridge sourced to Rognlien and Cutler
+1980 (smoothing constructed, documented honestly); tandem plug-limited
+central-cell confinement calibrated to the Realta Hammir Q>5 design point (Frank
+et al. 2024).
 
 ## Purpose
 
@@ -196,12 +198,12 @@ re-pin (Task 6) extend this table.
 
 | Concept | Fuel | Quantity | Old | New | Note |
 |---------|------|----------|-----|-----|------|
-| (Task 1: forward/inverse/sizing tau-driven pins recorded as they shift below) |
-| Mirror | D-T | sized p_input (eff) | 40.0 MW (fixed YAML) | 2.0 MW (aux floor; ignited) | energy-balance closed |
-| Mirror | D-T | sized LCOE ($/MWh) | 109.70 | 100.99 | energy-balance closed |
-| Mirror | D-T | sized T_i (keV) | 59.77 | 59.77 | unchanged: see finding below |
+| Mirror | D-T | sized p_input (eff) | 40.0 MW (fixed YAML) | 2.0 MW (aux floor) | energy-balance closed |
+| Mirror | D-T | sized T_i (keV) | 59.77 (ignited) | 29.86 | tandem plug confinement (Task 2b) |
+| Mirror | D-T | sized tau_E (s) | about 2.4 (over-credited) | 0.96 | bounded plug potential (Task 2b) |
+| Mirror | D-T | sized LCOE ($/MWh) | 109.70 | 100.53 | energy-balance + plug confinement |
 
-## Energy-balance closure (Task 2) and the ignited-plateau finding
+## Energy-balance closure (Task 2)
 
 Task 2 adds `mirror_aux_heating` (the mirror analog of the tokamak's
 `aux_heating_from_confinement`): in sizing mode the auxiliary sustainment power
@@ -210,37 +212,127 @@ is `P_aux = max(P_aux_floor, P_end + P_radial + P_rad - P_alpha)` and that value
 The forward/inverse audit path keeps the stated `p_input` and reports
 `sustainment_ratio = p_input / P_aux` as a consistency diagnostic.
 
-**DEC path (explicit fallback, Step 2.4 taken).** The shared balance recovers
-DEC off `p_transport = p_ash + p_input_eff - p_rad`. With `p_input = P_aux`
-this collapses to the real transport loss `P_end + P_radial` only while the
-plasma is sub-ignited (aux above its floor). Once the corrected (Task 1)
-Pastukhov confinement makes the D-T mirror ignited, aux floors and `p_transport`
-inflates toward `p_ash`, so the shared DEC term would recover `f_dec*eta_de` of
-the whole charged-particle power instead of the axial end-loss that actually
-reaches the end-plug direct converter. The model therefore passes an effective
-`f_dec_eff = f_dec * P_end / p_transport_shared`, so the shared term recovers
-exactly `f_dec*eta_de*P_end` (the recoverable axial end-loss). The shared
-function is not modified. The `p_transport`-identity check
-(`p_transport == P_end + P_radial`) consequently does NOT hold at the sized
-optimum, because the optimum is ignited and aux is floored: the identity is a
-sub-ignition property and is xfailed in the test suite for that reason.
+## Tandem plug-limited central-cell confinement (Task 2b)
 
-**Finding: the closure does not pull the D-T optimum below 60 keV.** With Task 1
-the D-T mirror at the sizing operating point is ignited (`P_alpha` about 629 MW
-vs `P_end` about 198 MW at 20 keV), and the neutron wall-load cap (not beta) is
-binding, so the density is set by `q_wall_max` and fusion power is pinned by the
-wall load independent of temperature (`P_fus` about 3.14 GW at L = 50 m for every
-T from 20 to 60 keV). The energy-balance closure has no lever in this regime:
-aux floors at `P_aux_floor` across the whole hot band, so the GSS objective (net
-electric) is flat to within about 1% from 20 to 60 keV and tilts slightly upward
-with T through the (now correctly end-loss-based) DEC credit, which grows with
-`P_end`. The optimizer therefore still settles near 60 keV. This is the
-"corrected plasma does not settle into a sensible regime on its own" condition
-the spec anticipates: the lever that pulls D-T to a realistic 10 keV is a
-stability/validity bound (the conditional Task 4 DCLC/warm-plasma operating
-bound), not the energy balance. The pre-Task-1 picture (a 6 TW end loss that
-charging would have killed) no longer holds because Task 1 removed the spurious
-end loss entirely and left an ignited, wall-limited plasma.
+After Tasks 1 and 2 the D-T mirror spuriously IGNITES: the corrected collisional
+bridge correctly places the deeply collisionless central cell on the Pastukhov
+branch, but the confining potential fed to the Pastukhov enhancement was the
+unbounded simple-mirror Boltzmann ambipolar value
+`e*phi = T_e * ln(sqrt(m_i / (2 pi m_e)))` (about 3 to 9 `T_e`, growing without
+limit). At the operating point that over-credits `tau_E` by 15 to 24x and pins
+the D-T optimum at about 60 keV.
+
+The defect is a physics-scope mismatch. The CAS22 coil account already costs a
+TANDEM (`n_plug_coils = 4`, Hammir class: two high-field HTS end plugs per end
+plus the long central solenoid). The confinement therefore must be the tandem
+central-cell confinement, where the ions are held by the electrostatic potential
+drop to the end plugs, NOT the simple-mirror electron-loss potential. In a
+classical tandem (Fowler and Logan 1977) the ion confining potential between the
+central cell and the end plug is set by their density ratio:
+
+```
+e*phi_c = T_e * ln(n_p / n_c)
+```
+
+(Frank et al. 2024 eq. 3.4; Fowler and Logan 1977). Because `n_p / n_c` is an
+order-unity-to-few ratio, `e*phi_c` is BOUNDED, unlike the simple-mirror value.
+This is the right tandem mechanism; the model only needs the confining potential
+calibrated to a real tandem design point.
+
+### The Hammir anchor (load-bearing)
+
+The Realta Hammir Q>5 pre-conceptual design point (Frank et al. 2024,
+arXiv:2411.06644, sec. 3.5, the `am = 0.15` m POPCON case) is:
+
+- central cell length `ell_c = 50` m
+- mirror throat field `B_m = 25` T, central cell field `B0c` about 3 T,
+  central cell mirror ratio `R_mc = 13.3` (finite beta, `beta_c` about 0.6)
+- end-plug density `n_p = 1.5e20` m^-3, density ratio `n_c / n_p = 0.55`, so
+  `n_c = 0.825e20` m^-3
+- `T_i = 45` keV, `T_e = 125` keV
+- fusion power `P_fus = 157.4` MW, plug neutral-beam power `P_NBI = 30` MW, so
+  the system gain `Q = P_fus / P_NBI = 5.2` (the Q>5 headline; the Realta
+  announcement quotes `Q_sci` about 5.3)
+
+At this point the tandem confining potential is
+`e*phi_c = 125 * ln(1 / 0.55) = 74.7` keV, i.e. the ratio
+
+```
+e*phi_c / T_i = 74.7 / 45 = 1.66.
+```
+
+The model evaluated at the Hammir central cell with this calibrated ratio
+reproduces the design point: the Pastukhov axial confinement time is about 6.3 s
+(the paper quotes a tandem central-cell `tau_c` about 5 s, sec. 3.5; within the
+2x anchor band), the central cell is NOT ignited (the confinement-required
+auxiliary power is about 27 MW, matching the published 30 MW plug NBI), and the
+gain `Q = P_fus / P_aux` is about 5.8 (within 2x of the published 5.2). By
+contrast the unbounded Boltzmann potential at `T_e = 125` keV gives
+`e*phi = 412` keV (`e*phi/T_i = 9.2`), which floors the auxiliary power and
+produces the spurious ignition.
+
+### The calibrated plug-confinement form
+
+The model replaces the unbounded Boltzmann potential in the confinement chain
+with the bounded tandem value (`compute_plug_potential`):
+
+```
+e*phi = plug_phi_over_T_i * T_i,     plug_phi_over_T_i = 1.66 (YAML default),
+```
+
+calibrated to the Hammir `e*phi_c / T_i` ratio above. `compute_ambipolar_potential`
+(the simple-mirror Boltzmann value) is retained as a diagnostic only. The
+collisionality bridge of Task 1 is unchanged (the tandem central cell runs
+collisionless and correctly sits on the plugged branch).
+
+Capping the ratio rather than carrying `T_e * ln(n_p/n_c)` with a free density
+ratio is a deliberate costing-fidelity choice: the 0D model does not solve the
+end-plug density self-consistently, so the single calibrated ratio fixes the
+central-cell confinement to the published tandem operating point. The honest
+caveat is that this is one anchored operating point, not a swept `n_p/n_c`
+response; the ratio is pinned to Hammir and carries the same 2x validation band
+as the GDT and WHAM kernel anchors.
+
+### DEC path (corrected end-loss-only routing)
+
+The mirror direct converter sits at the end-plug expanders and recovers only the
+AXIAL end-loss channel `P_end`; `P_radial` and `P_rad` strike the lateral first
+wall and go to the thermal cycle. The shared balance instead routes DEC off its
+own `p_transport = p_ash + p_input_eff - p_rad`. Two corrections make the routing
+physical without modifying the shared function:
+
+1. `p_rad_override = ps.p_rad` pins the shared function's radiation to the
+   mirror forward's own `p_rad` (clamped to `p_alpha`, open-ended synchrotron
+   geometry, no impurity line radiation). Without this the shared function
+   recomputed a different, impurity-laden, unclamped `p_rad` (about 10x larger
+   at the sized point), which broke both the `p_transport` identity and the DEC
+   credit. This is the reviewer's dual-`p_rad` finding, now fixed.
+2. With the radiation consistent, an effective `f_dec_eff = f_dec * P_end /
+   p_transport_shared` makes the shared term recover exactly
+   `f_dec * eta_de * P_end`, the recoverable axial end-loss, so the DEC credit
+   tracks `P_end` (which falls as confinement improves with temperature).
+
+With the plasma now plug-limited rather than ignited, the clean identity
+`p_transport == P_end + P_radial` holds at the sized D-T optimum (the auxiliary
+power sits at the ignition-threshold floor where `P_end + P_radial + P_rad -
+P_alpha` equals the floor), so `test_p_transport_identity_in_sizing` passes and
+its earlier xfail is removed.
+
+### Settled D-T regime
+
+With the tandem calibration the sized D-T optimum lands at `T_i` about 29.9 keV
+(was about 60 keV ignited), `tau_E` about 0.96 s (physical; `P_end` well below
+`P_fus`), and the energy balance closes with auxiliary sustainment at the control
+floor at the optimum. The optimum is a tandem-realistic temperature: it sits
+between the cool simple-mirror GDT/WHAM cells (about 10 keV) and the Hammir
+central-cell design point (45 keV), as expected for a tandem central cell that
+must be hot enough for alpha heating to nearly sustain it against the plug-limited
+end loss. The neutron-wall cap is binding (density set by `q_wall_max`), and the
+net-electric objective peaks near 30 keV because the end-loss-based DEC credit
+falls with temperature while the central cell ignites just above it. The earlier
+"ignited-plateau" finding (D-T parked at 60 keV) is resolved by the bounded plug
+potential: confinement no longer runs away, so the optimizer settles in the
+tandem regime on its own without an explicit stability bound.
 
 ## Sources
 
@@ -265,6 +357,16 @@ end loss entirely and left an ignited, wall-limited plasma.
 - **Endrizzi, D. et al. (2023)**, "Physics basis for the Wisconsin HTS
   Axisymmetric Mirror (WHAM)," J. Plasma Phys. 89, 975890501. Collisionless
   loss-cone (Pastukhov) regime for a high-field compact axisymmetric mirror.
+- **Frank, S. J. et al. (2024)**, "Confinement performance predictions for a
+  high field axisymmetric tandem mirror," arXiv:2411.06644 (under consideration,
+  J. Plasma Phys.). Primary source for the Realta Hammir Q>5 tandem central-cell
+  design point (eq. 3.4 tandem confining potential `e*phi = T_e ln(n_p/n_c)`;
+  sec. 3.5 design point: `ell_c = 50` m, `n_c/n_p = 0.55`, `T_i = 45` keV,
+  `T_e = 125` keV, `P_fus = 157.4` MW, `P_NBI = 30` MW, `tau_c` about 5 s).
+- **Fowler, T. K. and Logan, B. G. (1977)**, "The tandem mirror reactor,"
+  Comments Plasma Phys. Control. Fusion 2, 167. Classical tandem-mirror concept:
+  the central-cell ions are confined by the electrostatic potential drop to the
+  end plugs, set by the plug-to-central density ratio.
 
 No number in this document is sourced from or calibrated against any
 cost-modeling tool; all come from the primary plasma-physics literature, except

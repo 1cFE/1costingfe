@@ -23,6 +23,17 @@ p_house: 4.0  # Housekeeping power [MW]
 p_cryo: 1.0  # Cryogenic power [MW]
 p_aux_floor: 2.0  # MW; control/startup floor on auxiliary sustainment power
 
+# Tandem plug confining-potential ratio e*phi/T_i [-]. The CAS22 coil account
+# costs a TANDEM (n_plug_coils=4, Hammir class), so the central-cell confinement
+# is set by the end-plug electrostatic potential, NOT the unbounded simple-mirror
+# Boltzmann value. The tandem confining potential is e*phi = T_e * ln(n_p/n_c)
+# (Fowler & Logan 1977; Frank et al. 2024 arXiv:2411.06644 eq. 3.4), bounded by
+# the plug/central-cell density ratio. Calibrated to the Realta Hammir Q>5 design
+# point (nc/np = 0.55, Ti = 45 keV, Te = 125 keV -> e*phi = 74.7 keV, e*phi/Ti =
+# 1.66), which reproduces the published central-cell tau_c ~ 5 s and Q ~ 5.2 (not
+# ignition). See docs/account_justification/mirror_confinement_regimes.md.
+plug_phi_over_T_i: 1.66
+
 # Coil parameters (see steady_state_tokamak.yaml for the b_center / r_bore
 # convention).
 b_center: 12.0  # Field at coil center [T]
