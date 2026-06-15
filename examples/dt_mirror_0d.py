@@ -102,6 +102,8 @@ ps = mirror_0d_forward(
     pb11_fuel_ratio=0.15,
     dhe3_dd_frac_pin=None,
     vacuum_t=MACHINE.get("vacuum_t", 0.10),
+    plug_phi_over_T_i=MACHINE.get("plug_phi_over_T_i", 1.66),
+    collisionality_min=MACHINE.get("collisionality_min", 0.1),
 )
 
 print("\nPlasma State")

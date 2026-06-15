@@ -60,6 +60,10 @@ _MIX = dict(dhe3_fuel_ratio=1.0, pb11_fuel_ratio=0.15)
 # eq. 3.4 at the Hammir nc/np = 0.55 design point). Matches the YAML default.
 _PLUG_PHI_OVER_T_I = 1.66
 
+# Pastukhov-Maxwellian validity floor on collisionality (matches YAML default
+# collisionality_min = 1/R_m at R_m=10). Diagnostic-only threshold (Task 3).
+_COLLISIONALITY_MIN = 0.1
+
 
 def _forward(fuel=Fuel.DT, dhe3_dd_frac_pin=None, **kw):
     """Convenience wrapper for mirror_0d_forward at reference geometry."""
@@ -77,6 +81,7 @@ def _forward(fuel=Fuel.DT, dhe3_dd_frac_pin=None, **kw):
         dhe3_dd_frac_pin=dhe3_dd_frac_pin,
         vacuum_t=args.pop("vacuum_t", 0.10),
         plug_phi_over_T_i=args.pop("plug_phi_over_T_i", _PLUG_PHI_OVER_T_I),
+        collisionality_min=args.pop("collisionality_min", _COLLISIONALITY_MIN),
         **args,
     )
 
@@ -251,6 +256,7 @@ class TestForward:
                 dhe3_dd_frac_pin=None,
                 vacuum_t=0.10,
                 plug_phi_over_T_i=_PLUG_PHI_OVER_T_I,
+                collisionality_min=_COLLISIONALITY_MIN,
                 **_FRACS,
                 **_MIX,
                 **extra,
@@ -384,6 +390,7 @@ def _inverse(
         q_surface_max=kw.pop("q_surface_max", 50.0),
         p_aux_floor=kw.pop("p_aux_floor", 2.0),
         plug_phi_over_T_i=kw.pop("plug_phi_over_T_i", _PLUG_PHI_OVER_T_I),
+        collisionality_min=kw.pop("collisionality_min", _COLLISIONALITY_MIN),
         enforce_plasma_limits=enforce_plasma_limits,
         dhe3_dd_frac=0.131,
         dhe3_dd_frac_pin=dhe3_dd_frac_pin,
@@ -452,6 +459,7 @@ class TestInverse:
             q_surface_max=50.0,  # high cap; this test is not surface-bound
             p_aux_floor=2.0,
             plug_phi_over_T_i=_PLUG_PHI_OVER_T_I,
+            collisionality_min=_COLLISIONALITY_MIN,
             dhe3_dd_frac=0.131,
             dhe3_dd_frac_pin=None,
             vacuum_t=0.10,
@@ -819,6 +827,7 @@ def _sz_params(
         p_cryo=1.0,
         p_aux_floor=2.0,
         plug_phi_over_T_i=_PLUG_PHI_OVER_T_I,
+        collisionality_min=_COLLISIONALITY_MIN,
         dd_f_T=0.969,
         dd_f_He3=0.689,
         dhe3_dd_frac=0.131,
@@ -966,6 +975,7 @@ class TestMirrorSizing:
             p_cryo=1.0,
             p_aux_floor=2.0,
             plug_phi_over_T_i=_PLUG_PHI_OVER_T_I,
+            collisionality_min=_COLLISIONALITY_MIN,
             dd_f_T=0.969,
             dd_f_He3=0.689,
             dhe3_dd_frac=0.131,
@@ -1161,6 +1171,7 @@ _SIZING_PARAMS = dict(
     p_cryo=1.0,
     p_aux_floor=2.0,
     plug_phi_over_T_i=_PLUG_PHI_OVER_T_I,
+    collisionality_min=_COLLISIONALITY_MIN,
     dd_f_T=0.969,
     dd_f_He3=0.689,
     dhe3_dd_frac=0.131,
@@ -1228,6 +1239,7 @@ def _size(params, fuel=Fuel.DT):
         pb11_fuel_ratio=params["pb11_fuel_ratio"],
         vacuum_t=params["vacuum_t"],
         plug_phi_over_T_i=params["plug_phi_over_T_i"],
+        collisionality_min=params["collisionality_min"],
         f_rad_fus=params.get("f_rad_fus"),
     )
     return L, pn, ps
@@ -1346,6 +1358,7 @@ _PB11_SIZING_PARAMS = dict(
     p_cryo=1.0,
     p_aux_floor=2.0,
     plug_phi_over_T_i=_PLUG_PHI_OVER_T_I,
+    collisionality_min=_COLLISIONALITY_MIN,
     dd_f_T=0.969,
     dd_f_He3=0.689,
     dhe3_dd_frac=0.131,
@@ -1427,6 +1440,7 @@ class TestSurfaceConstraint:
             Z_eff=1.2,
             R_w=0.4,
             plug_phi_over_T_i=_PLUG_PHI_OVER_T_I,
+            collisionality_min=_COLLISIONALITY_MIN,
             f_rad_fus=None,  # DT: full radiation model
         )
         n_surf_20 = _density_from_surface_cap(
@@ -1624,6 +1638,7 @@ class TestTandemConfinement:
             q_surface_max=50.0,
             p_aux_floor=2.0,
             plug_phi_over_T_i=_PLUG_PHI_OVER_T_I,
+            collisionality_min=_COLLISIONALITY_MIN,
             enforce_plasma_limits=False,
             dhe3_dd_frac=0.131,
             dhe3_dd_frac_pin=None,
@@ -1691,6 +1706,71 @@ class TestTandemConfinement:
         assert jitted == pytest.approx(eager, rel=1e-4)
         g = float(jax.grad(f)(30.0))
         assert jnp.isfinite(g)
+
+
+class TestStabilityDiagnostics:
+    """Collisionality-validity flag and DCLC microstability diagnostic.
+
+    Both are DIAGNOSTICS (Task 3), not constraints. The validity flag reports
+    where the bare Pastukhov-Maxwellian assumption is stretched (deeply
+    collisionless); a tandem legitimately runs there and plugged, so it is
+    informational. The DCLC parameter is the number of ion gyroradii across the
+    plasma (Post loss-cone microstability criterion). See
+    docs/account_justification/mirror_confinement_regimes.md.
+    """
+
+    def test_collisionality_validity_flag_fires_when_collisionless(self):
+        # collisionality = L/mfp; below the Pastukhov-Maxwellian validity
+        # threshold (collisionality_min) the diagnostic flags overestimated
+        # confinement. Hot + low density is collisionless; cold + high density
+        # is collisional.
+        ps_hot = _forward(T_i=60.0, T_e=60.0, n_e=1.0e20)  # collisionless
+        ps_cold = _forward(T_i=2.0, T_e=2.0, n_e=5.0e20)  # collisional
+        # The flag is a bool-as-float: 0.0 when collisionless (invalid), 1.0 when
+        # collisional enough for the Maxwellian Pastukhov assumption to hold.
+        assert float(ps_hot.pastukhov_valid) == 0.0
+        assert float(ps_cold.pastukhov_valid) == 1.0
+        assert float(ps_cold.collisionality) > float(ps_hot.collisionality)
+
+    def test_dclc_diagnostic_present_and_finite_all_fuels(self):
+        for fuel in (Fuel.DT, Fuel.DD, Fuel.DHE3, Fuel.PB11):
+            ps = _forward(fuel=fuel, T_i=40.0, T_e=40.0)
+            assert math.isfinite(float(ps.dclc_parameter))
+            # Number of ion gyroradii across the plasma is strictly positive.
+            assert float(ps.dclc_parameter) > 0.0
+
+    def test_dclc_parameter_equals_a_over_rho_i(self):
+        # dclc_parameter = a / rho_i, the number of ion gyroradii across the
+        # plasma radius (Post loss-cone microstability criterion). rho_i is the
+        # midplane gyroradius at B_min, identical to the radial-transport kernel.
+        a, B_min, T_i = _A, _B_MIN, 30.0
+        ps = _forward(a=a, B_min=B_min, T_i=T_i, T_e=T_i)
+        rho_i = _RHO_I_PREFACTOR * math.sqrt(2.5 * T_i) / B_min
+        assert float(ps.dclc_parameter) == pytest.approx(a / rho_i, rel=1e-4)
+
+    @pytest.mark.parametrize("fuel", [Fuel.DT, Fuel.DD, Fuel.DHE3, Fuel.PB11])
+    def test_dclc_kernel_jit_matches_eager_and_differentiable(self, fuel):
+        from costingfe.layers.mirror import compute_dclc_parameter
+
+        def f(T_i):
+            return compute_dclc_parameter(a=0.5, T_i=T_i, A=2.5, B_min=3.0)
+
+        eager = float(f(30.0))
+        jitted = float(jax.jit(f)(30.0))
+        assert jnp.isfinite(jitted)
+        assert jitted == pytest.approx(eager, rel=1e-4)
+        g = float(jax.grad(f)(30.0))
+        assert jnp.isfinite(g)
+
+    def test_state_field_count(self):
+        # Pin the MirrorPlasmaState field set so a stray add/remove is caught.
+        # Task 3 adds pastukhov_valid and dclc_parameter (26 fields total).
+        import dataclasses
+
+        names = {f.name for f in dataclasses.fields(MirrorPlasmaState)}
+        assert "pastukhov_valid" in names
+        assert "dclc_parameter" in names
+        assert len(names) == 26
 
 
 class TestAnchors:

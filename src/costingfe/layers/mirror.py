@@ -103,6 +103,19 @@ class MirrorPlasmaState:
     q_surface: float  # Surface heat-flux (photons + radial transport) on FW [MW/m^2]
     R_m: float  # Mirror ratio [-]
     collisionality: float  # L / ion mean free path diagnostic [-]
+    # Pastukhov-Maxwellian validity flag (bool-as-float, 1.0 valid / 0.0 invalid).
+    # 1.0 when collisionality >= collisionality_min (the bare Pastukhov-Maxwellian
+    # core assumption holds); 0.0 when deeply collisionless, where the formula
+    # over-credits confinement. Informational: a tandem legitimately runs
+    # collisionless and plugged, so this flags where the assumption is stretched,
+    # not a hard error. See docs/account_justification/mirror_confinement_regimes.md.
+    pastukhov_valid: float
+    # DCLC microstability diagnostic: number of ion gyroradii across the plasma
+    # radius, a / rho_i (Post 1987 loss-cone criterion). The drift-cyclotron-loss-
+    # cone mode grows more readily as this grows; a warm-plasma stream stabilises
+    # DCLC when its fraction exceeds about rho_i/a (~ 1/dclc_parameter). Diagnostic
+    # only in Task 3 (not a constraint). See mirror_confinement_regimes.md.
+    dclc_parameter: float
     dhe3_dd_frac_eff: float = 0.0  # Effective D-D side-channel fraction (D-He3 only)
     # Audit-mode sustainment-consistency diagnostic: stated p_input divided by
     # the confinement-required auxiliary power (mirror analog of the tokamak's
@@ -261,6 +274,25 @@ def compute_tau_radial(tau_ii, a, T_i, A, B_min):
     return (a / rho_i) ** 2 * tau_ii
 
 
+def compute_dclc_parameter(a, T_i, A, B_min):
+    """DCLC microstability diagnostic: ion gyroradii across the plasma [-].
+
+    Returns a / rho_i, the number of midplane ion gyroradii spanning the plasma
+    radius, where rho_i is the gyroradius at B = B_min (same kernel as
+    compute_tau_radial). The drift-cyclotron-loss-cone (DCLC) mode is loss-cone
+    driven and grows more readily as the plasma spans more gyroradii (Post 1987,
+    "The magnetic mirror approach to fusion"). A warm-plasma stream filling the
+    loss cone stabilises DCLC when its fraction exceeds about rho_i/a, i.e.
+    roughly 1/(a/rho_i); both GDT and WHAM rely on warm-plasma DCLC stabilisation.
+    Diagnostic only (Task 3), not a constraint.
+
+    a [m], T_i [keV], A ion mass number, B_min [T]. Pure JAX, differentiable.
+    See docs/account_justification/mirror_confinement_regimes.md.
+    """
+    rho_i = _RHO_I_PREFACTOR * jnp.sqrt(A * T_i) / B_min
+    return a / rho_i
+
+
 def mirror_aux_heating(state, p_aux_floor):
     """Auxiliary heating power [MW] required to sustain a mirror operating point.
 
@@ -312,6 +344,7 @@ def mirror_0d_forward(
     pb11_fuel_ratio: float,
     vacuum_t: float,
     plug_phi_over_T_i: float,
+    collisionality_min: float,
     f_rad_fus: float | None = None,
 ):
     """Forward 0D mirror model: machine params -> MirrorPlasmaState.
@@ -461,6 +494,16 @@ def mirror_0d_forward(
     v_thi = _V_THI_PREFACTOR * jnp.sqrt(T_i / M_ion)
     collisionality = L / (v_thi * tau_ii)
 
+    # 15b. Stability / validity diagnostics (Task 3; informational, not constraints).
+    # Pastukhov-Maxwellian validity flag: 1.0 when collisional enough for the bare
+    # Pastukhov-Maxwellian core assumption (collisionality >= collisionality_min),
+    # 0.0 when deeply collisionless (confinement over-credited). A tandem
+    # legitimately runs collisionless and plugged, so this flags where the bare
+    # assumption is stretched, not a hard error. Bool-as-float for JAX/state parity.
+    pastukhov_valid = jnp.where(collisionality >= collisionality_min, 1.0, 0.0)
+    # DCLC microstability proxy: ion gyroradii across the plasma, a / rho_i.
+    dclc_parameter = compute_dclc_parameter(a, T_i, M_ion, B_min)
+
     return MirrorPlasmaState(
         n_e=n_e,
         T_i=T_i,
@@ -484,6 +527,8 @@ def mirror_0d_forward(
         q_surface=q_surface,
         R_m=R_m,
         collisionality=collisionality,
+        pastukhov_valid=pastukhov_valid,
+        dclc_parameter=dclc_parameter,
         dhe3_dd_frac_eff=dhe3_dd_frac_eff,
     )
 
@@ -600,6 +645,10 @@ def mirror_0d_inverse(
     # comes from YAML. Sets the bounded central-cell confining potential
     # (compute_plug_potential), calibrated to the Hammir Q>5 design point.
     plug_phi_over_T_i: float,
+    # Required: Pastukhov-Maxwellian validity floor on collisionality [-]. No
+    # default; comes from YAML. Sets the pastukhov_valid diagnostic flag (1.0 when
+    # collisionality >= this floor, 0.0 when deeply collisionless). Informational.
+    collisionality_min: float,
     # Behavior flag: False is the escape hatch for exploration runs.
     enforce_plasma_limits: bool = True,
 ):
@@ -710,6 +759,7 @@ def mirror_0d_inverse(
         pb11_fuel_ratio=pb11_fuel_ratio,
         vacuum_t=vacuum_t,
         plug_phi_over_T_i=plug_phi_over_T_i,
+        collisionality_min=collisionality_min,
         f_rad_fus=f_rad_fus,
     )
 
@@ -982,6 +1032,7 @@ def _density_from_surface_cap(
             pb11_fuel_ratio=params_mix["pb11_fuel_ratio"],
             vacuum_t=vacuum_t,
             plug_phi_over_T_i=forward_kwargs["plug_phi_over_T_i"],
+            collisionality_min=forward_kwargs["collisionality_min"],
             f_rad_fus=forward_kwargs.get("f_rad_fus"),
         )
         return float(ps_probe.q_surface)
@@ -1074,6 +1125,7 @@ def _net_at_L_T(L, T_i, params, fuel, *, _surf_cap_cache=None, return_full=False
         Z_eff=params.get("Z_eff", 1.2),
         R_w=params.get("R_w", 0.4),
         plug_phi_over_T_i=params["plug_phi_over_T_i"],
+        collisionality_min=params["collisionality_min"],
         f_rad_fus=params.get("f_rad_fus"),
     )
     # Use the cross-L cache when available (T_i is the key; n_surf_20 is L-independent).
@@ -1130,6 +1182,7 @@ def _net_at_L_T(L, T_i, params, fuel, *, _surf_cap_cache=None, return_full=False
         pb11_fuel_ratio=params["pb11_fuel_ratio"],
         vacuum_t=params["vacuum_t"],
         plug_phi_over_T_i=params["plug_phi_over_T_i"],
+        collisionality_min=params["collisionality_min"],
         f_rad_fus=params.get("f_rad_fus"),
     )
 
@@ -1377,6 +1430,7 @@ def mirror_size_from_power(params, fuel):
                 Z_eff=params.get("Z_eff", 1.2),
                 R_w=params.get("R_w", 0.4),
                 plug_phi_over_T_i=params["plug_phi_over_T_i"],
+                collisionality_min=params["collisionality_min"],
                 f_rad_fus=params.get("f_rad_fus"),
             )
             n_surf_hi_20 = _density_from_surface_cap(

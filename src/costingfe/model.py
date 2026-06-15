@@ -567,6 +567,7 @@ class CostModel:
             q_surface_max=params["q_surface_max"],
             p_aux_floor=params["p_aux_floor"],
             plug_phi_over_T_i=params["plug_phi_over_T_i"],
+            collisionality_min=params["collisionality_min"],
             enforce_plasma_limits=params["enforce_plasma_limits"],
         )
 

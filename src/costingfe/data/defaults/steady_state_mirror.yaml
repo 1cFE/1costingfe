@@ -34,6 +34,26 @@ p_aux_floor: 2.0  # MW; control/startup floor on auxiliary sustainment power
 # ignition). See docs/account_justification/mirror_confinement_regimes.md.
 plug_phi_over_T_i: 1.66
 
+# --- Stability / validity diagnostics (Task 3; informational, not constraints) ---
+# Pastukhov-Maxwellian validity threshold on collisionality (L/mfp). The Pastukhov
+# loss-cone formula assumes a Maxwellian core; Rognlien & Cutler 1980 place the
+# Pastukhov-vs-collisional boundary at mfp reduced by the mirror ratio of order L,
+# i.e. collisionality ~ 1/R_m. Below the Maxwellian-validity floor the bare
+# Pastukhov-Maxwellian assumption is stretched and confinement is over-credited;
+# the diagnostic flags it. A TANDEM legitimately runs collisionless and plugged,
+# so this is informational, not a hard error. Set to 1/R_m at the YAML R_m=10
+# (collisionality_crit = 0.1); the bridge already centers the regime here. See
+# docs/account_justification/mirror_confinement_regimes.md.
+collisionality_min: 0.1  # L/mfp validity floor for the bare Pastukhov-Maxwellian core
+# DCLC reference: the drift-cyclotron-loss-cone mode is loss-cone driven and grows
+# more readily as the plasma spans more ion gyroradii. The Post criterion is that a
+# warm-plasma stream filling the loss cone stabilises DCLC when its fraction
+# exceeds about rho_i/a, i.e. roughly 1/dclc_parameter with dclc_parameter = a/rho_i
+# (Post 1987; both GDT and WHAM rely on warm-plasma DCLC stabilisation). This
+# reference value is the dclc_parameter above which a warm-plasma stream is
+# typically required for stability; it is a documented reference, not a constraint.
+dclc_a_over_rho_ref: 50.0  # a/rho_i above which warm-plasma DCLC stabilisation is typically needed
+
 # Coil parameters (see steady_state_tokamak.yaml for the b_center / r_bore
 # convention).
 b_center: 12.0  # Field at coil center [T]
