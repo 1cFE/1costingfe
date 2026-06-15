@@ -137,7 +137,7 @@ out = run_costing(inp)
 # out.lcoe, out.costs (CAS-keyed dict), out.power_table, out.sensitivity
 ```
 
-The adapter supports two additional override mechanisms for the fusion-tea pipeline:
+The adapter supports three additional override mechanisms for the fusion-tea pipeline:
 
 ```python
 inp = FusionTeaInput(
@@ -158,7 +158,23 @@ print(out.costs["C220103"])     # 300.0 (CAS22 sub-accounts included in costs di
 
 - `cost_overrides` -- replace computed CAS account values with known costs. Passed through to `CostModel.forward()`.
 - `costing_overrides` -- override fields on `CostingConstants` (unit costs, scaling coefficients). Applied via `cc.replace()` before model construction.
+- `override_reference_mw` -- when set, `cost_overrides` are treated as absolute M$ measured at this reference power and scaled to `net_electric_mw` using each account's internal power-scaling law. Leave as `None` (default) to apply `cost_overrides` directly at the target power.
 - `out.overridden` -- list of keys that were injected rather than computed.
+
+```python
+# cost_overrides measured on a 1200 MWe reference design, scaled to a 1000 MWe plant
+inp = FusionTeaInput(
+    concept="tokamak",
+    fuel="dt",
+    net_electric_mw=1000.0,
+    availability=0.85,
+    lifetime_yr=30,
+    cost_overrides={"CAS22": 900.0},
+    override_reference_mw=1200.0,
+)
+out = run_costing(inp)
+# out.costs["CAS22"] is the 900 M$ figure scaled from the 1200 MWe reference to 1000 MWe
+```
 
 ## Supported Concepts
 
