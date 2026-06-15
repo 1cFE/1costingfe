@@ -102,6 +102,48 @@ settled point should be driven and Hammir-consistent. A 0D costing model retains
 residual approximations by design; this is the last planned physics layer before
 declaring the model sound within its stated band.
 
+## Revision 3 2026-06-15 (decouple plug and central cell, user-approved)
+
+Implementing the real Fowler-Logan plug potential (Revision 2) forced hot
+electrons: e*phi = T_e*ln(n_p/n_c) needs a high T_e to plug the central cell, so
+the global mirror default was re-pinned to T_e = 125 keV (Hammir). That made D-T
+a genuinely driven tandem (T_i about 23 keV, P_aux about 230 MW, Q_eng about
+1.77, LCOE about 369), but hot electrons produce large bremsstrahlung, so D-D,
+D-He3, and p-B11 went net-negative and could no longer be sized. A single
+electron temperature cannot serve both the plug (wants hot) and aneutronic
+central-cell fusion (wants cool).
+
+Decision (user): real advanced-fuel tandems use different plasmas, often
+different ion species, in the plug versus the central cell. The plug builds the
+confining potential with hot electrons (and a hydrogenic plugging species); the
+central cell runs the working fuel and can keep its electrons cool to control
+bremsstrahlung. Decouple them at costing fidelity:
+
+- Add a separate PLUG electron temperature `T_e_plug` (hot, ECH-heated) that sets
+  the Fowler-Logan potential: e*phi = T_e_plug * ln(n_p/n_c). The central-cell
+  electron temperature (the existing `T_e`) keeps setting central-cell
+  bremsstrahlung and is coolable for advanced fuels.
+- Charge the plug's power: add a plug sustainment power `P_plug` to recirculating
+  power (the ECH/NBI holding the hot-electron plug), calibrated to Hammir's about
+  30 MW plug drive. This is also the competing penalty that keeps the optimizer
+  honest (a deeper/hotter plug costs more).
+- Model the plug as potential-plus-power (a separate cell whose role is the
+  confining potential and its power cost), NOT a full second fusion plasma. The
+  central cell does the fusion. "Different species" is captured by the plug being
+  this separate potential-and-power sub-system, independent of the central fuel.
+
+Consequences: D-T stays a hot-central tandem (Hammir's central cell genuinely
+runs about 125 keV), so its driven result (about 369) is unchanged, now with the
+plug power charged explicitly (reconcile the Hammir Q anchor, which already
+counts the 30 MW plug NBI). Advanced fuels get a fair evaluation: a cool central
+cell (low brem) plugged by a hot plug, paying the plug power. The outcome
+(viable or still hard) is a real finding either way. New YAML: `T_e_plug` (hot,
+default Hammir about 125 keV) and the plug-power calibration; the central `T_e`
+default stays Hammir-hot for the D-T reference machine and is overridden cool for
+advanced-fuel configs. This is the last planned physics layer; after it the model
+is declared sound for D-T within its band and the advanced-fuel result is
+reported as found.
+
 ## Motivation
 
 The mirror length-sizing and LCOE-optimize path drives D-T to about 60 keV

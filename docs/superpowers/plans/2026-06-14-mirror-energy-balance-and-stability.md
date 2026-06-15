@@ -310,3 +310,21 @@ Task 3's observation showed the D-T optimum (30 keV) is still near-ignited (Q_sc
 Re-run the observe step against the alpha-corrected model; update the doc's settled-regime table; re-decide whether Task 4 (explicit stability constraint) is needed. Surface to the user.
 
 ### Tasks 4-6: unchanged (4 still conditional; 5 tokamak cross-check; 6 re-pin/docs/paper/final review).
+
+---
+
+## Revision 3 2026-06-15: decouple plug and central cell (user-approved)
+
+The Fowler-Logan plug (Task 2c/2d) forced a global hot T_e=125 keV, which made D-T a driven tandem but killed advanced fuels via bremsstrahlung (single T_e can't serve hot-plug and cool-aneutronic). See the spec's "Revision 3". Real advanced-fuel tandems use a hot-electron plug (possibly a different species) distinct from a coolable central cell.
+
+### Task 2e (NEW): decouple plug electron temperature and charge plug power
+
+**Files:** Modify `src/costingfe/layers/mirror.py` (plug potential uses T_e_plug; plug power into recirculating), `src/costingfe/model.py` (plumb T_e_plug + plug power), `src/costingfe/data/defaults/steady_state_mirror.yaml` (T_e_plug, plug-power calibration), `docs/account_justification/mirror_confinement_regimes.md` (sourcing); Test: `tests/test_mirror.py`.
+
+- [ ] Step 2e.1: RESEARCH (extend the doc). Sourcing for: (a) the hot-electron plug temperature in a Fowler-Logan tandem and that it is set by plug ECH independent of the central-cell fuel (Frank et al. 2024 T_e about 125 keV; Fowler & Logan 1977; Baldwin & Logan thermal barrier); (b) the plug sustainment power calibrated to Hammir's about 30 MW plug NBI/ECH. Document. No pyFECONS.
+- [ ] Step 2e.2: Failing tests (`TestPlugDecoupling`): (a) `compute_plug_potential` now uses `T_e_plug` (not central T_e): e*phi = T_e_plug*ln(n_p/n_c); (b) at fixed T_e_plug, lowering the central T_e cuts bremsstrahlung so a cool-central D-He3 (or p-B11) run is net-positive or at least its p_net rises sharply vs the hot-central case (a fair-evaluation regression: advanced fuels are sizeable with a cool central cell + hot plug); (c) plug power P_plug appears in recirculating (q_eng reflects it); (d) D-T (hot central, Hammir-consistent) still drives at the same point within tolerance, now with plug power explicit; (e) jit==eager + finite grad.
+- [ ] Step 2e.3: Implement: add `T_e_plug` YAML (hot, default about 125 keV Hammir; no Python default in kernels) threaded through forward/inverse/sizing; `compute_plug_potential(T_e_plug, plug_density_ratio)`. Add a plug sustainment power `P_plug` (calibrated to Hammir about 30 MW; choose a defensible scaling, e.g. fixed per-plug or scaled with n_p/plug requirement, documented) added to the mirror recirculating power (mirror-side; do not change the shared tokamak balance). Keep the central `T_e` as the radiation/bremsstrahlung temperature. Central `T_e` YAML default stays Hammir-hot (about 125) for the D-T reference; advanced-fuel configs/examples override it cool.
+- [ ] Step 2e.4: Reconcile the Hammir anchor: it credits the 30 MW plug NBI in its Q>5, so with P_plug explicit the model's Q should match Hammir's published Q within 2x (verify; the anchor may improve). Re-run the cross-fuel observe with a cool central T_e for advanced fuels; record in the doc whether D-He3/p-B11 are now viable or still hard (a real finding either way).
+- [ ] Step 2e.5: Full gate `uv run pytest -q -n auto`; ruff. D-T result unchanged within tolerance (plug power now explicit); advanced-fuel results move (fair evaluation). Coil pin 513.375 + non-mirror pins hold. Extend before/after table. Commit: `Decouple plug electron temperature from central cell and charge plug power`
+
+### Task 3 (re-observe again), Tasks 4-6: as before, now over the decoupled model.
