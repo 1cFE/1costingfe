@@ -10,9 +10,18 @@ ceiling, the neutron wall-load cap (q_wall_max), and the surface heat-flux cap
 driven costs (central-cell solenoids, end-plug coils, blanket, vessel) then
 scale with the solved L.
 
+The D-T machine is a DRIVEN tandem mirror. The central cell runs collisionless
+and is held by a fixed Fowler-Logan plug potential e*phi = T_e_plug*ln(n_p/n_c)
+set by a hot-electron plug (T_e_plug = 125 keV), so heating the central cell
+costs confinement instead of buying it: the golden-section search settles the
+central cell near T_i = 23 keV rather than riding to ignition. The plant pays
+real auxiliary sustainment (a confinement-derived P_aux plus a charged 30 MW
+plug power), so the mirror LCOE reflects the recirculating cost of a driven
+tandem (about 433 $/MWh at 400 MWe with these defaults).
+
 Shown here:
   1. Size mode across power targets   - L(P), economies of scale
-  2. f_beta sensitivity at 400 MWe   - L / LCOE trade at fixed power
+  2. f_beta sensitivity at 400 MWe   - density-pressure trade vs. L and LCOE
   3. Optimize mode at 400 MWe        - LCOE-optimal f_beta via outer GSS
   4. Infeasibility is loud            - SizingInfeasible, not garbage
 
@@ -85,17 +94,13 @@ for p_net in (100.0, 200.0, 400.0, 600.0):
     print(row)
 
 # ── 2. f_beta sensitivity at 400 MWe ─────────────────────────────────
-# Higher f_beta raises the beta-pressure density ceiling, but the operating
-# density is min(n_beta, n_wall, n_surf). At D-T defaults the neutron wall
-# cap binds first, so above the f_beta where n_beta crosses n_wall the
-# density (and hence L and LCOE) stops moving: the 0.70 and 0.85 rows land
-# at the same L and LCOE because both are wall-capped. At low f_beta (0.50)
-# n_beta is the binding cap, giving a longer L and higher LCOE. At high
-# f_beta (0.95) the wall cap still binds: the operating density is wall-capped,
-# beta sits below beta_max, and the row sizes feasibly (the sized state is built
-# from the GSS optimum, so beta is bounded by construction). Above the wall-cap
-# crossover the LCOE is flat in f_beta (0.70, 0.85, 0.95 share the same L and
-# LCOE), so the optimizer in section 3 is indifferent across that plateau.
+# The hot-electron plug raises the central-cell pressure, so for the driven
+# D-T tandem the beta-pressure cap binds before the neutron wall cap: the
+# operating density is n_beta = f_beta * n(beta_max), and beta sits at the
+# f_beta * beta_max ceiling. Raising f_beta therefore raises the operating
+# density, shortens L, and lowers LCOE. At low f_beta the density is starved
+# enough that 400 MWe net cannot be reached within L_max, and the solver
+# raises SizingInfeasible rather than returning garbage.
 print()
 print("=" * 64)
 print("  f_beta SWEEP at 400 MWe: density-pressure trade vs. L and LCOE")
@@ -118,10 +123,11 @@ for fb in (0.5, 0.7, 0.85, 0.95):
             **BASE,
             **CUSTOMER,
         )
-    except OperatingPointInfeasible as exc:
-        # Retained for robustness: a geometry whose GSS optimum still violates
-        # beta_max would surface here. At the default machine every f_beta in
-        # this sweep sizes feasibly (beta is bounded by the GSS construction).
+    except (OperatingPointInfeasible, SizingInfeasible) as exc:
+        # A low f_beta starves the density so the driven tandem cannot reach
+        # 400 MWe within L_max (SizingInfeasible); a GSS optimum that still
+        # violated beta_max would surface as OperatingPointInfeasible. Either
+        # way the model is loud rather than returning a meaningless cost.
         print(f"  {fb:>7.2f}  infeasible: {exc}")
         continue
     ps = model._plasma_state
@@ -154,10 +160,10 @@ fb_opt = model._sizing_fbeta
 print("\n  Optimizer result:")
 print(f"  optimal f_beta:  {fb_opt:.3f}")
 show(model, r_opt)
-# The neutron wall cap holds q_wall at its 5.0 MW/m^2 ceiling, so once f_beta
-# is high enough for the wall cap to bind, raising it further leaves the
-# wall-capped density (and thus L and LCOE) unchanged. The LCOE is flat across
-# that plateau, so the reported optimal f_beta is anywhere on it.
+# The driven D-T tandem is beta-bound: beta sits at the f_beta * beta_max
+# ceiling, so raising f_beta raises the operating density, shortens L, and
+# lowers LCOE. The outer GSS therefore drives f_beta toward the top of its
+# range, where the shortest feasible L gives the lowest LCOE.
 
 # ── 4. Infeasibility demo: target beyond L_max reach ─────────────────
 # At L_max=5 m and a=1.5 m (the YAML default plasma radius) the wall-capped

@@ -194,33 +194,52 @@ published confinement times (see `mirror_confinement.md`).
 
 Correcting `tau_E` for collisionless points moves mirror forward/inverse/sizing
 values. The coil calibration pin (513.375 M$, capital) and all non-mirror
-(tokamak, stellarator, IFE/MIF) pins do NOT move. Mirror pins that shifted in
-Task 1 are recorded here; the energy-balance closure (Task 2) and the final
-re-pin (Task 6) extend this table.
+(tokamak, stellarator, IFE/MIF) pins do NOT move. This is the finalized re-pin:
+the columns below trace the sized D-T optimum (400 MWe, `f_beta = 0.85`, YAML
+defaults) from the original spuriously-ignited value to the settled driven
+tandem, with the intermediate stages shown so the trajectory is auditable. Each
+intermediate stage is labelled as history; only the final row is current
+behavior.
 
-| Concept | Fuel | Quantity | Old | New | Note |
-|---------|------|----------|-----|-----|------|
-| Mirror | D-T | sized p_input (eff) | 40.0 MW (fixed YAML) | 228.5 MW (driven) | energy-balance closed; fixed Fowler-Logan plug (Task 2c) |
-| Mirror | D-T | sized T_i (keV) | 59.77 (ignited) | 23.31 | fixed Fowler-Logan plug, hot-electron T_e (Task 2c) |
-| Mirror | D-T | sized q_sci | about 516 (near-ignited) | 8.32 | tandem-realistic driven gain (Task 2c) |
-| Mirror | D-T | sized tau_E (s) | about 2.4 (over-credited) | 18.8 | hot-electron plug; deep plugging (Task 2c) |
-| Mirror | D-T | sized LCOE ($/MWh) | 109.70 | 395.8 | genuinely driven; explicit P_plug charged (Task 2e) |
-| Mirror | D-T | non-0D default LCOE pin | 98.686 | 100.107 | YAML T_e 20->125 keV moves the radiation term |
-| Mirror | D-T | a=1.5/B=3 wall-loose sized L (m) | 69.230740 | 77.842279 | explicit P_plug = 30 MW recirculating (Task 2e) |
+| Stage | T_i [keV] | tau_E [s] | P_aux [MW] | Q_sci | Q_eng | LCOE [$/MWh] |
+|-------|-----------|-----------|------------|-------|-------|--------------|
+| Original (pre-fix, harmonic sum, unbounded plug) | 59.77 (ignited) | about 2.4 (over-credited) | floored (about 2) | about 516 | n/a (near-ignited) | 109.70 |
+| Task 1+2 (regime bridge + energy balance) | still about 60 (ignited) | about 2.4 | floored | about 516 | n/a | about 110 |
+| Task 2b (ratio-to-T_i plug, T_e=20 keV) | 29.86 | 0.96 | 2.0 (floored) | high (floored) | about 1 | 100.53 |
+| Task 2c (fixed Fowler-Logan plug, hot T_e=125 keV) | 23.31 | 18.7 | about 228 (driven) | 8.30 | 1.76 | 368.9 |
+| Task 2e (explicit 30 MW plug power charged) -- CURRENT | 23.34 | 18.7 | about 245 (driven) | 8.30 | 1.68 | 395.8 |
 
-Intermediate values from Task 2b (ratio-to-T_i plug, T_e=20 keV): sized T_i 29.86 keV,
-tau_E 0.96 s, LCOE 100.53, p_input 2.0 MW (floored). Those are superseded by the
-Task 2c fixed Fowler-Logan plug above; they are recorded only to show the trajectory.
+The final row reproduces from the committed code via
+`CostModel(MIRROR, DT).forward(net_electric_mw=400, availability=0.87,
+lifetime_yr=40, size_from_power=True, f_beta=0.85)` (T_i 23.34 keV, tau_E 18.7 s,
+P_aux = P_fus/Q_sci about 245 MW, Q_sci 8.30, Q_eng 1.68, LCOE 395.8 $/MWh, with
+beta at the 0.425 ceiling). P_aux is the confinement-derived sustainment band
+(228-259 MW across the trajectory's L); the larger 400 MWe plant sits near
+245 MW.
+
+The trajectory in one sentence: the original model spuriously IGNITED at about
+60 keV (Q_sci about 516, LCOE about 100) because a harmonic-sum confinement
+combination and an unbounded simple-mirror plug potential over-credited `tau_E`;
+the settled model is a genuinely DRIVEN tandem at 23 keV (Q_sci 8.3, Q_eng 1.68,
+LCOE 396) that pays the real recirculating cost of its hot-electron plug.
+
+### Supporting quantity-level pins
+
+| Quantity | Old | New | Reason |
+|----------|-----|-----|--------|
+| sized p_input (eff) / P_aux | 40.0 MW (fixed YAML) | about 245 MW (driven) | energy-balance closed; confinement-derived sustainment |
+| non-0D default LCOE pin | 98.686 | 100.107 | YAML central-cell T_e 20->125 keV moves the radiation term |
+| a=1.5/B=3 wall-loose sized L (m) | 69.230740 | 77.842279 | explicit P_plug = 30 MW recirculating (Task 2e) |
 
 The Task 2e plug/central decoupling does NOT move the D-T operating point (the
-D-T central cell genuinely runs hot, so its T_e and the plug T_e_plug are both
-125 keV and the plug potential e*phi = 74.7 keV is unchanged). It moves the D-T
-sized LCOE from 368.9 to 395.8 $/MWh (+7.3 percent) only because the 30 MW plug
-sustainment power is now charged EXPLICITLY into the recirculating budget, which
-the earlier value omitted. The sized T_i (23.34 keV), q_sci (8.30), and tau_E
-(18.7 s) are unchanged within tolerance. The Hammir Q>5 anchor reconciles: Hammir
-already counts the 30 MW plug NBI in its published Q = P_fus/P_NBI = 5.2, so
-charging P_plug here makes the model's accounting match Hammir's rather than
+D-T central cell genuinely runs hot, so its central-cell T_e and the plug
+T_e_plug are both 125 keV and the plug potential e*phi = 74.7 keV is the same
+under either). It moves the D-T sized LCOE from 368.9 to 395.8 $/MWh
+(+7.3 percent) only because the 30 MW plug sustainment power is now charged
+EXPLICITLY into the recirculating budget. The sized T_i (23.34 keV), Q_sci
+(8.30), and tau_E (18.7 s) are unchanged within tolerance. The Hammir Q>5 anchor
+reconciles: Hammir counts the 30 MW plug NBI in its published Q = P_fus/P_NBI =
+5.2, so charging P_plug makes the model's accounting match Hammir's rather than
 omitting the plug cost.
 
 ## Energy-balance closure (Task 2)

@@ -6,16 +6,25 @@ rather than asserting p_net and working backwards.
 
 Five sections:
   1. Forward mode: given geometry and T_i, what comes out?
-  2. Inverse mode: target 30 MWe net, find the required T_i.
+  2. Inverse mode: a 30 MWe ask at the reference machine.
   3. Gate refusal: a configuration hitting beta > beta_max.
   4. Sizing: solve chamber length from net power target.
   5. Fuel comparison: D-T vs D-He3 at the same power target.
 
-D-He3 is the physically interesting mirror fuel: the hot-ion regime that
-mirrors can sustain makes the D-He3 reactivity peak more accessible, and
-the entirely charged-particle primary products are ideal for end-loss
-direct energy conversion. The tradeoff is that D-He3 requires a larger
-machine at comparable net power.
+The D-T machine is a DRIVEN tandem: the central cell runs collisionless and
+is held by a fixed Fowler-Logan plug potential e*phi = T_e_plug*ln(n_p/n_c)
+from a hot-electron plug (T_e_plug = 125 keV), so the plant pays real
+auxiliary sustainment plus a charged 30 MW plug power. The sizing search
+settles the central cell near T_i = 23 keV (heating it costs confinement
+under the fixed plug, so the optimizer does not ride to ignition).
+
+D-He3 is the often-cited mirror fuel: the entirely charged-particle primary
+products are ideal for end-loss direct energy conversion. In this 0D model,
+however, a hot-electron plug is needed to confine the central cell, and the
+resulting radiation plus the modest D-He3 reactivity leave D-He3 net-negative
+even with a cool central cell and a large machine. The fuel comparison below
+reports that honestly: D-He3 sizes INFEASIBLE at the modelled fields. Only
+D-T is net-positive.
 
 Mirror confinement note: at mirror-relevant parameters the gas-dynamic
 and Pastukhov times are milliseconds to seconds (depending on regime).
@@ -117,10 +126,11 @@ print(f"  phi (e*phi):  {float(ps.phi):8.1f} keV")
 print("\nConfinement Times (plasma physics diagnostics)")
 print(f"  tau_Pastukhov:{float(ps.tau_Pastukhov):8.3f} s  (electrostatic plugging)")
 print(f"  tau_GD:       {float(ps.tau_GD) * 1e3:8.3f} ms (gas-dynamic)")
-# At this parameter set, collisionality << 1: collisionless regime.
-# tau_GD < tau_Pastukhov so gas-dynamic losses dominate.
-print(f"  tau_p:        {float(ps.tau_p) * 1e3:8.3f} ms (combined; tau_GD-dominated)")
-print(f"  tau_E:        {float(ps.tau_E) * 1e3:8.3f} ms (energy; < tau_p, ambipolar)")
+# At this parameter set collisionality << 1: collisionless regime. The
+# collisionality-gated bridge suppresses the gas-dynamic loss rate here, so
+# the combined time tracks the Pastukhov (plugged) branch, not tau_GD.
+print(f"  tau_p:        {float(ps.tau_p):8.3f} s  (combined; Pastukhov-tracking)")
+print(f"  tau_E:        {float(ps.tau_E):8.3f} s  (energy; < tau_p, ambipolar)")
 tau_cl = float(ps.tau_classical)
 print(f"  tau_classical:{tau_cl:8.3f} s  (classical mirror, diagnostic)")
 coll = float(ps.collisionality)
@@ -146,8 +156,13 @@ print(f"  f_axial_diag:  {f_ax:7.3f}   (axial end-loss share, diagnostic only)")
 # T_e is held fixed; only T_i is found by the solver.
 print()
 print("=" * 64)
-print("  INVERSE MODE: 30 MWe target -> find required T_i")
+print("  INVERSE MODE: 30 MWe ask at the reference machine")
 print("=" * 64)
+# Inverse mode bisects on T_i for the fusion power the energy balance needs.
+# At this small reference machine (a=0.4 m, L=50 m) the driven tandem cannot
+# net 30 MWe: the bisector lands at the top of its T_i window with P_net about
+# zero (LCOE undefined, reported as nan). This is the honest driven result for
+# an undersized machine; the sizing section below grows L until the ask is met.
 
 r_inv = model_dt.forward(
     net_electric_mw=30.0,
@@ -244,12 +259,14 @@ print(f"  LCOE:         {float(r_sz.costs.lcoe):8.1f} $/MWh")
 print(f"  Overnight:    {float(r_sz.costs.overnight_cost):8.0f} $/kW")
 
 # ── Fuel comparison: D-T vs D-He3 at 200 MWe ─────────────────────────
-# D-He3 is the flagship mirror fuel. All primary D-He3 fusion products are
-# charged (proton + He4), ideal for end-loss DEC. However, D-He3 requires
-# much higher temperatures (peak reactivity near 200 keV vs. 65 keV for D-T)
-# and a larger machine at equal net power. The fuel-appropriate build uses
-# a larger plasma radius and field, consistent with the D-He3 hot-ion regime.
-# At 200 MWe the YAML default L_max = 200 m is not sufficient; 500 m is used.
+# All primary D-He3 fusion products are charged (proton + He4), ideal for
+# end-loss DEC, and D-He3 needs much higher temperatures (peak reactivity
+# near 200 keV vs. 65 keV for D-T). The fuel-appropriate build uses a larger
+# plasma radius and field with heavy DEC recovery and no tritium processing.
+# Even so, the hot-electron plug needed to confine the central cell drives
+# enough radiation that, against D-He3's modest reactivity, the plant is
+# net-negative at the modelled fields: D-He3 sizes INFEASIBLE here while D-T
+# sizes feasibly. This is the honest 0D finding, not a tuned result.
 print()
 print("=" * 64)
 print("  FUEL COMPARISON: D-T vs D-He3 (200 MWe, sizing)")
@@ -310,7 +327,7 @@ print("  - No neutrons from D + He3 -> p + He4; very low activation")
 print("  - All primary products charged: ideal for end-loss DEC")
 print("  - D-D side reactions produce some neutrons")
 print("  - Higher T_i raises tau_ii and Pastukhov confinement time")
-print("  - Size ordering vs. D-T depends on the power-balance build: with")
-print("    heavy DEC recovery (f_dec=0.6, eta_de=0.85) and no blanket, the")
-print("    aneutronic plant sizes smaller here despite lower reactivity;")
-print("    at a matched thermal-cycle build D-He3 sizes longer than D-T")
+print("  - In this 0D model D-He3 is net-negative: the hot-electron plug")
+print("    radiation plus the modest reactivity leave p_net < 0 even with a")
+print("    larger machine and heavy DEC, so it sizes INFEASIBLE. Only D-T is")
+print("    net-positive at the modelled fields.")
