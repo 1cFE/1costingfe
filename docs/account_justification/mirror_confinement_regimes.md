@@ -197,6 +197,50 @@ re-pin (Task 6) extend this table.
 | Concept | Fuel | Quantity | Old | New | Note |
 |---------|------|----------|-----|-----|------|
 | (Task 1: forward/inverse/sizing tau-driven pins recorded as they shift below) |
+| Mirror | D-T | sized p_input (eff) | 40.0 MW (fixed YAML) | 2.0 MW (aux floor; ignited) | energy-balance closed |
+| Mirror | D-T | sized LCOE ($/MWh) | 109.70 | 100.99 | energy-balance closed |
+| Mirror | D-T | sized T_i (keV) | 59.77 | 59.77 | unchanged: see finding below |
+
+## Energy-balance closure (Task 2) and the ignited-plateau finding
+
+Task 2 adds `mirror_aux_heating` (the mirror analog of the tokamak's
+`aux_heating_from_confinement`): in sizing mode the auxiliary sustainment power
+is `P_aux = max(P_aux_floor, P_end + P_radial + P_rad - P_alpha)` and that value
+(not the fixed YAML `p_input`) is fed to the shared `mfe_forward_power_balance`.
+The forward/inverse audit path keeps the stated `p_input` and reports
+`sustainment_ratio = p_input / P_aux` as a consistency diagnostic.
+
+**DEC path (explicit fallback, Step 2.4 taken).** The shared balance recovers
+DEC off `p_transport = p_ash + p_input_eff - p_rad`. With `p_input = P_aux`
+this collapses to the real transport loss `P_end + P_radial` only while the
+plasma is sub-ignited (aux above its floor). Once the corrected (Task 1)
+Pastukhov confinement makes the D-T mirror ignited, aux floors and `p_transport`
+inflates toward `p_ash`, so the shared DEC term would recover `f_dec*eta_de` of
+the whole charged-particle power instead of the axial end-loss that actually
+reaches the end-plug direct converter. The model therefore passes an effective
+`f_dec_eff = f_dec * P_end / p_transport_shared`, so the shared term recovers
+exactly `f_dec*eta_de*P_end` (the recoverable axial end-loss). The shared
+function is not modified. The `p_transport`-identity check
+(`p_transport == P_end + P_radial`) consequently does NOT hold at the sized
+optimum, because the optimum is ignited and aux is floored: the identity is a
+sub-ignition property and is xfailed in the test suite for that reason.
+
+**Finding: the closure does not pull the D-T optimum below 60 keV.** With Task 1
+the D-T mirror at the sizing operating point is ignited (`P_alpha` about 629 MW
+vs `P_end` about 198 MW at 20 keV), and the neutron wall-load cap (not beta) is
+binding, so the density is set by `q_wall_max` and fusion power is pinned by the
+wall load independent of temperature (`P_fus` about 3.14 GW at L = 50 m for every
+T from 20 to 60 keV). The energy-balance closure has no lever in this regime:
+aux floors at `P_aux_floor` across the whole hot band, so the GSS objective (net
+electric) is flat to within about 1% from 20 to 60 keV and tilts slightly upward
+with T through the (now correctly end-loss-based) DEC credit, which grows with
+`P_end`. The optimizer therefore still settles near 60 keV. This is the
+"corrected plasma does not settle into a sensible regime on its own" condition
+the spec anticipates: the lever that pulls D-T to a realistic 10 keV is a
+stability/validity bound (the conditional Task 4 DCLC/warm-plasma operating
+bound), not the energy balance. The pre-Task-1 picture (a 6 TW end loss that
+charging would have killed) no longer holds because Task 1 removed the spurious
+end loss entirely and left an ignited, wall-limited plasma.
 
 ## Sources
 

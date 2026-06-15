@@ -26,6 +26,7 @@ from costingfe.layers.mirror import (
     compute_tau_radial,
     mirror_0d_forward,
     mirror_0d_inverse,
+    mirror_aux_heating,
     mirror_size_from_power,
     net_electric_at_L,
 )
@@ -375,6 +376,7 @@ def _inverse(
         # high defaults; inverse tests are not wall- or surface-capped
         q_wall_max=kw.pop("q_wall_max", 50.0),
         q_surface_max=kw.pop("q_surface_max", 50.0),
+        p_aux_floor=kw.pop("p_aux_floor", 2.0),
         enforce_plasma_limits=enforce_plasma_limits,
         dhe3_dd_frac=0.131,
         dhe3_dd_frac_pin=dhe3_dd_frac_pin,
@@ -382,8 +384,7 @@ def _inverse(
         f_rad_fus=f_rad_fus,
         **_FRACS,
         **_MIX,
-        **_PB_KWARGS,
-        **kw,
+        **{**_PB_KWARGS, **kw},
     )
 
 
@@ -442,6 +443,7 @@ class TestInverse:
             beta_max=0.5,
             q_wall_max=50.0,  # high cap; this test is not wall-bound
             q_surface_max=50.0,  # high cap; this test is not surface-bound
+            p_aux_floor=2.0,
             dhe3_dd_frac=0.131,
             dhe3_dd_frac_pin=None,
             vacuum_t=0.10,
@@ -807,6 +809,7 @@ def _sz_params(
         p_trit=10.0,
         p_house=4.0,
         p_cryo=1.0,
+        p_aux_floor=2.0,
         dd_f_T=0.969,
         dd_f_He3=0.689,
         dhe3_dd_frac=0.131,
@@ -952,6 +955,7 @@ class TestMirrorSizing:
             p_pump=1.5,
             p_house=4.0,
             p_cryo=1.0,
+            p_aux_floor=2.0,
             dd_f_T=0.969,
             dd_f_He3=0.689,
             dhe3_dd_frac=0.131,
@@ -1145,6 +1149,7 @@ _SIZING_PARAMS = dict(
     p_trit=10.0,
     p_house=4.0,
     p_cryo=1.0,
+    p_aux_floor=2.0,
     dd_f_T=0.969,
     dd_f_He3=0.689,
     dhe3_dd_frac=0.131,
@@ -1224,17 +1229,24 @@ class TestWallConstraint:
         params = dict(_SIZING_PARAMS, q_wall_max=5.0)
         L, pnet, state = _size(params)
         assert float(state.wall_loading) <= 5.0 * 1.001
-        # wall cap (5.0) is the active constraint, not beta:
+        # wall cap (5.0) is the active constraint:
         assert float(state.wall_loading) >= 4.5
-        assert float(state.beta) < 0.85 * 0.5  # below f_beta * beta_max
+        # energy-balance closed: sustainment charged from confinement -> the GSS
+        # optimum shifts to the hot end of the ignited plateau (T_i ~ 60 keV),
+        # where the f_beta cap co-binds with the wall cap, so beta sits AT the
+        # f_beta * beta_max ceiling rather than below it. The wall cap remains
+        # binding (wall_loading = 5.0); both caps are active at this T.
+        assert float(state.beta) <= 0.85 * 0.5 * (1 + 1e-3)
 
     def test_loose_cap_recovers_beta_bound_solution(self):
-        # q_wall_max=50 must reproduce the pre-cap (beta-bound) solution.
-        # Legacy beta-bound pin: L = 4.9773251338 m (captured at tip 5530ec8).
+        # q_wall_max=50 must reproduce the (beta-bound) solution at the closed
+        # energy balance.
+        # energy-balance closed: sustainment charged from confinement (was the
+        # legacy beta-bound L = 4.9773251338 m at tip 5530ec8; the closure
+        # changed the recirculating power, hence the L that meets the target).
         params = dict(_SIZING_PARAMS, q_wall_max=50.0)
         L, _, _ = _size(params)
-        # Legacy L pre-cap (beta-bound): 4.9773251338 m
-        assert L == pytest.approx(4.9773251338, rel=1e-4)
+        assert L == pytest.approx(4.509277938, rel=1e-4)
 
     def test_infeasible_under_cap_raises_naming_cap(self):
         with pytest.raises(SizingInfeasible, match=r"q_wall_max"):
@@ -1319,6 +1331,7 @@ _PB11_SIZING_PARAMS = dict(
     p_trit=0.0,  # no tritium processing for p-B11
     p_house=4.0,
     p_cryo=1.0,
+    p_aux_floor=2.0,
     dd_f_T=0.969,
     dd_f_He3=0.689,
     dhe3_dd_frac=0.131,
@@ -1479,6 +1492,93 @@ class TestRegimeBridge:
 
         g = float(jax.grad(f)(2000.0))
         assert jnp.isfinite(g)
+
+
+class TestEnergyBalanceClosure:
+    """Sizing-mode steady-state energy balance: sustainment is charged from the
+    confinement-derived auxiliary power, paralleling the tokamak closure."""
+
+    def test_mirror_aux_heating_closes_balance(self):
+        # P_aux = max(floor, P_end + P_radial + P_rad - P_alpha) from the state.
+        ps = _forward(T_i=15.0)
+        p_aux = float(mirror_aux_heating(ps, p_aux_floor=2.0))
+        expected = max(
+            2.0,
+            float(ps.p_end) + float(ps.p_radial) + float(ps.p_rad) - float(ps.p_alpha),
+        )
+        assert p_aux == pytest.approx(expected, rel=1e-6)
+
+    @pytest.mark.xfail(
+        strict=True,
+        reason=(
+            "Identity p_transport == P_end + P_radial is a sub-ignition property. "
+            "Post-Task-1 the D-T sizing optimum is ignited (aux floors), so "
+            "p_transport inflates toward p_ash and the identity does not hold. "
+            "See mirror_confinement_regimes.md (ignited-plateau finding). Flips "
+            "when a stability bound (Task 4) moves the optimum sub-ignition."
+        ),
+    )
+    def test_p_transport_identity_in_sizing(self):
+        # When sizing feeds p_input=P_aux, the shared balance's p_transport
+        # equals P_end + P_radial to a small tolerance. p_transport is not a
+        # PowerTable field; reconstruct it from its definition in
+        # mfe_forward_power_balance: p_transport = p_ash + p_input_eff - p_rad.
+        m = CostModel(ConfinementConcept.MIRROR, Fuel.DT)
+        r = m.forward(
+            net_electric_mw=400.0,
+            availability=0.87,
+            lifetime_yr=40.0,
+            size_from_power=True,
+            f_beta=0.85,
+        )
+        ps = r.plasma_state
+        pt = r.power_table
+        p_transport = float(pt.p_ash) + float(pt.p_input) - float(pt.p_rad)
+        p_transport_expected = float(ps.p_end) + float(ps.p_radial)
+        assert p_transport == pytest.approx(p_transport_expected, rel=0.05)
+
+    @pytest.mark.xfail(
+        strict=True,
+        reason=(
+            "Energy-balance closure alone does NOT pull the D-T optimum below "
+            "60 keV: post-Task-1 the mirror is ignited and the neutron wall-load "
+            "cap pins fusion power independent of T, so the net-electric "
+            "objective is flat across the hot band and aux floors throughout. "
+            "The lever to a realistic 10 keV is the conditional Task 4 stability "
+            "bound. See mirror_confinement_regimes.md (ignited-plateau finding)."
+        ),
+    )
+    def test_sized_dt_optimum_is_realistic_temperature(self):
+        # THE headline regression: with the balance closed and tau fixed, the
+        # D-T sizing optimum lands in a realistic band, not ~60 keV.
+        m = CostModel(ConfinementConcept.MIRROR, Fuel.DT)
+        r = m.forward(
+            net_electric_mw=400.0,
+            availability=0.87,
+            lifetime_yr=40.0,
+            size_from_power=True,
+            f_beta=0.85,
+        )
+        assert 8.0 <= float(r.plasma_state.T_i) <= 25.0
+
+    def test_tau_E_physical_p_end_below_p_fus(self):
+        m = CostModel(ConfinementConcept.MIRROR, Fuel.DT)
+        r = m.forward(
+            net_electric_mw=400.0,
+            availability=0.87,
+            lifetime_yr=40.0,
+            size_from_power=True,
+            f_beta=0.85,
+        )
+        assert float(r.plasma_state.p_end) < float(r.plasma_state.p_fus)
+
+    def test_audit_mode_reports_sustainment_ratio(self):
+        # Forward/audit mode (mirror_0d_inverse) keeps the stated p_input and
+        # reports the sustainment-consistency diagnostic: stated p_input divided
+        # by the confinement-required auxiliary power.
+        ps, _pt = _inverse(p_input=50.0)
+        aux = float(mirror_aux_heating(ps, p_aux_floor=2.0))
+        assert float(ps.sustainment_ratio) == pytest.approx(50.0 / aux, rel=1e-4)
 
 
 class TestAnchors:

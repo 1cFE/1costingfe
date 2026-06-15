@@ -8,6 +8,7 @@ classical (Bing & Roberts 1961), Pastukhov electrostatic plugging
 (Pastukhov 1974, Cohen et al. 1978), gas-dynamic (Mirnov & Ryutov 1979).
 """
 
+import dataclasses
 import math
 import warnings
 from dataclasses import dataclass
@@ -101,6 +102,12 @@ class MirrorPlasmaState:
     R_m: float  # Mirror ratio [-]
     collisionality: float  # L / ion mean free path diagnostic [-]
     dhe3_dd_frac_eff: float = 0.0  # Effective D-D side-channel fraction (D-He3 only)
+    # Audit-mode sustainment-consistency diagnostic: stated p_input divided by
+    # the confinement-required auxiliary power (mirror analog of the tokamak's
+    # implied H_factor). 1.0 means the stated heating exactly sustains the
+    # operating point; >1 over-drives it, <1 under-sustains. Populated only on
+    # the inverse/audit path (where a stated p_input exists); 0.0 otherwise.
+    sustainment_ratio: float = 0.0
 
 
 # ---------------------------------------------------------------------------
@@ -223,6 +230,29 @@ def compute_tau_radial(tau_ii, a, T_i, A, B_min):
     """
     rho_i = _RHO_I_PREFACTOR * jnp.sqrt(A * T_i) / B_min
     return (a / rho_i) ** 2 * tau_ii
+
+
+def mirror_aux_heating(state, p_aux_floor):
+    """Auxiliary heating power [MW] required to sustain a mirror operating point.
+
+    Mirror analog of the tokamak's aux_heating_from_confinement. The steady-state
+    plasma energy balance is P_alpha + P_aux = P_end + P_radial + P_rad, so the
+    auxiliary power that closes the balance is
+
+        P_aux = max(P_aux_floor, P_end + P_radial + P_rad - P_alpha)
+
+    where P_end, P_radial, P_rad, P_alpha are the corrected forward powers on the
+    MirrorPlasmaState and P_aux_floor is a small control/startup floor so an
+    ignited point still pays some control power. Feeding this P_aux as p_input to
+    mfe_forward_power_balance makes its p_transport = p_ash + P_aux - p_rad
+    collapse to P_end + P_radial (the real transport loss, since p_ash ~ p_alpha),
+    so the existing recirculating (P_aux/eta_pin) and DEC (f_dec*eta_de*
+    p_transport) terms net correctly. Pure JAX, differentiable.
+    """
+    return jnp.maximum(
+        p_aux_floor,
+        state.p_end + state.p_radial + state.p_rad - state.p_alpha,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -525,6 +555,10 @@ def mirror_0d_inverse(
     # In inverse (audit) mode the computed q_surface is compared against
     # this threshold and a warning is issued when it is exceeded.
     q_surface_max: float,
+    # Required: control/startup floor on auxiliary sustainment power [MW].
+    # No default; comes from YAML. Used only for the audit-mode
+    # sustainment-consistency diagnostic (the inverse keeps the stated p_input).
+    p_aux_floor: float,
     # Behavior flag: False is the escape hatch for exploration runs.
     enforce_plasma_limits: bool = True,
 ):
@@ -635,6 +669,15 @@ def mirror_0d_inverse(
         pb11_fuel_ratio=pb11_fuel_ratio,
         vacuum_t=vacuum_t,
         f_rad_fus=f_rad_fus,
+    )
+
+    # Step 4b: Audit-mode sustainment-consistency diagnostic. The inverse keeps
+    # the stated p_input (auditing a given machine, NOT closing the balance like
+    # sizing mode); report the ratio of stated p_input to the confinement-
+    # required auxiliary power (mirror analog of the tokamak's implied H_factor).
+    sustainment_ratio = p_input / mirror_aux_heating(plasma_state, p_aux_floor)
+    plasma_state = dataclasses.replace(
+        plasma_state, sustainment_ratio=sustainment_ratio
     )
 
     # Step 5: Feasibility gate — tracer-skip guard matches the tokamak pattern.
@@ -1059,17 +1102,48 @@ def _net_at_L_T(L, T_i, params, fuel, *, _surf_cap_cache=None, return_full=False
     frac_eff = (
         float(ps.dhe3_dd_frac_eff) if fuel == Fuel.DHE3 else params["dhe3_dd_frac"]
     )
+    # Sizing-mode energy-balance closure: charge the confinement-derived
+    # auxiliary power as p_input (the tokamak pattern), not the fixed YAML
+    # p_input. This makes the GSS objective (net electric) reflect the true
+    # recirculating cost of sustainment.
+    p_aux = float(mirror_aux_heating(ps, params["p_aux_floor"]))
+
+    # Explicit DEC fallback (Step 2.4). The shared balance routes DEC off its
+    # p_transport = p_ash + p_input_eff - p_rad. With p_input = p_aux that
+    # collapses to the real transport loss (p_end + p_radial) ONLY while the
+    # plasma is sub-ignited (aux above its floor). Once the corrected Pastukhov
+    # confinement makes the mirror ignited, aux floors and p_transport inflates
+    # to ~p_ash, so the shared DEC term would recover f_dec*eta_de of the WHOLE
+    # charged-particle power rather than of the axial end-loss that actually
+    # reaches the end-plug direct converter. The mirror DEC only sees the axial
+    # end-loss channel (p_end exits through the throats; p_radial and p_rad hit
+    # the lateral wall). We therefore pass an EFFECTIVE f_dec that makes the
+    # shared term recover exactly f_dec*eta_de*p_end:
+    #     f_dec_eff * p_transport = f_dec * p_end  ->  f_dec_eff = f_dec * p_end
+    #                                                              / p_transport
+    # This reuses the shared machinery unchanged (no edit to the shared
+    # function) while charging the physically-correct end-plug recovery. See
+    # docs/account_justification/mirror_confinement_regimes.md.
+    p_ash_mir = float(ps.p_alpha)
+    p_transport_shared = (
+        p_ash_mir + max(p_aux, float(ps.p_rad) - p_ash_mir) - float(ps.p_rad)
+    )
+    f_dec_raw = params["f_dec"]
+    if p_transport_shared > 0.0:
+        f_dec_eff = f_dec_raw * float(ps.p_end) / p_transport_shared
+    else:
+        f_dec_eff = f_dec_raw
     pt = mfe_forward_power_balance(
         p_fus=float(ps.p_fus),
         fuel=fuel,
-        p_input=params["p_input"],
+        p_input=p_aux,
         mn=params["mn"],
         eta_th=params["eta_th"],
         eta_p=params["eta_p"],
         eta_pin=params["eta_pin"],
         eta_de=params["eta_de"],
         f_sub=params["f_sub"],
-        f_dec=params["f_dec"],
+        f_dec=f_dec_eff,
         p_coils=params["p_coils"],
         p_cool=params["p_cool"],
         p_pump=params["p_pump"],

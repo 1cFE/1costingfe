@@ -21,6 +21,7 @@ p_pump: 1.5  # Pumping power [MW]
 p_trit: 10.0  # Tritium processing power [MW]
 p_house: 4.0  # Housekeeping power [MW]
 p_cryo: 1.0  # Cryogenic power [MW]
+p_aux_floor: 2.0  # MW; control/startup floor on auxiliary sustainment power
 
 # Coil parameters (see steady_state_tokamak.yaml for the b_center / r_bore
 # convention).

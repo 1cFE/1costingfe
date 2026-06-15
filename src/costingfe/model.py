@@ -565,6 +565,7 @@ class CostModel:
             beta_max=params["beta_max"],
             q_wall_max=params["q_wall_max"],
             q_surface_max=params["q_surface_max"],
+            p_aux_floor=params["p_aux_floor"],
             enforce_plasma_limits=params["enforce_plasma_limits"],
         )
 
