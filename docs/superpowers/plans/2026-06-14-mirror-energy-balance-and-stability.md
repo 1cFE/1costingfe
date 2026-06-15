@@ -265,3 +265,28 @@ class TestTokamakAnchors:
 - Pin discipline is explicit per task: coil 513.375 never moves; non-mirror never moves; mirror pins move across Tasks 1-2 and are finalized in Task 6 with the before/after table.
 - Task 1's bridge formula and Task 5's literature values are derived-at-implementation (research steps), pinned after derivation, following the fluence-task precedent rather than transcription.
 - compute_tau_axial / mirror_aux_heating / the new state fields are the cross-task type contracts; later tasks use exactly these names.
+
+---
+
+## Revision 2026-06-14: tandem reframe (user-approved)
+
+Verification after Tasks 1-2 found the corrected model spuriously ignites (tau_E ~15-24x too long at the collisionless operating point) so the D-T optimum stays ~60 keV. Root cause: the CAS22 coil account already costs a TANDEM (n_plug_coils=4, Hammir class), but the confinement uses an unbounded simple-mirror Boltzmann ambipolar potential. See the spec's "Revision 2026-06-14 (tandem reframe)". Tasks 1 and 2 STAND (the bridge is correct; the energy-balance closure is correct). The remaining tasks are revised:
+
+### Task 2b (NEW): Tandem plug-limited confinement calibrated to Hammir Q>5
+
+**Files:** Modify `src/costingfe/layers/mirror.py` (the confining potential / plug confinement), `src/costingfe/data/defaults/steady_state_mirror.yaml` (plug-confinement calibration knob), `docs/account_justification/mirror_confinement_regimes.md` (Hammir + tandem-lit sourcing); Test: `tests/test_mirror.py`.
+
+- [ ] Step 2b.1: RESEARCH (write to mirror_confinement_regimes.md first). Primary sources for tandem-mirror central-cell confinement: Realta Hammir Q>5 design point (50 m central cell; published fields, density, temperature, Q -- Forest et al. / Realta announcements), and the classic tandem-mirror literature (Fowler & Logan tandem concept; Baldwin & Logan thermal barrier; MFTF-B and TMX-U design/results; Fowler & Ryutov). Establish a tandem central-cell confining potential or n*tau that, at the Hammir reference, gives Q>5 (NOT ignition). No pyFECONS.
+- [ ] Step 2b.2: Failing tests (`TestTandemConfinement`): (a) Hammir anchor -- at the published Hammir machine the model's central-cell confinement reproduces the Q>5 design point within 2x; (b) the D-T sizing optimum now lands in the realistic band (this is the xfail'd `test_sized_dt_optimum_is_realistic_temperature` from Task 2 -- it should now PASS; remove the xfail); (c) the plasma is not spuriously ignited (Q tandem-realistic ~1-few at the optimum); (d) jit==eager + finite grad for the new confining-potential function across fuels.
+- [ ] Step 2b.3: Implement: replace the unbounded `compute_ambipolar_potential` use in the Pastukhov-branch confinement with a tandem plug-limited confining potential -- a bounded form (cap the effective e*phi/T_i ratio) or an explicit plug-confining-potential YAML parameter, calibrated so the Hammir anchor reproduces Q>5. Keep `compute_ambipolar_potential` available as the simple-mirror diagnostic. Keep Task 1's collisionality bridge (collisionless -> plugged branch). Document the calibration in the doc. YAML knob for the plug confinement.
+- [ ] Step 2b.4: Revisit the Task 2 `f_dec_eff` fallback: with the plasma no longer ignited, confirm the clean p_transport identity (p_transport ~ P_end + P_radial) now holds and REMOVE the f_dec_eff fallback if so (flip the xfail'd `test_p_transport_identity_in_sizing` to passing). If it still does not hold, keep the corrected fallback (compute against the shared function's actual internal p_rad, fixing the 32% error the reviewer found).
+- [ ] Step 2b.5: Full gate `uv run pytest -q -n auto`; ruff. Mirror values move again (realistic now). Coil pin 513.375 and non-mirror pins hold. Extend the before/after table. Commit: `Calibrate mirror plug confinement to Hammir Q>5 tandem design point`
+
+### Task 3 (revised): diagnostics + observe against the tandem model
+Unchanged in intent (collisionality validity flag + DCLC diagnostic), but the OBSERVE step now runs against the tandem-calibrated model. Expectation: D-T settles realistic; surface the per-fuel observation to the user. Decide if Task 4 is still needed.
+
+### Task 4 (likely SKIP): conditional stability constraint
+The tandem calibration (Task 2b) is now the lever, so an explicit DCLC feasibility bound is likely unnecessary. Skip unless Task 3's observation shows a fuel still walking outside the trustworthy regime.
+
+### Tasks 5-6: unchanged
+Tokamak literature cross-check (Task 5) and the sanctioned re-pin + docs + paper + final review (Task 6) proceed as written, now over the tandem-calibrated results.
