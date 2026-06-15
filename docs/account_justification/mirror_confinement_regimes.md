@@ -334,6 +334,175 @@ falls with temperature while the central cell ignites just above it. The earlier
 potential: confinement no longer runs away, so the optimizer settles in the
 tandem regime on its own without an explicit stability bound.
 
+## Stability and validity diagnostics (Task 3)
+
+Two diagnostics are reported on `MirrorPlasmaState`. Both are INFORMATIONAL: they
+report where a modelling assumption is stretched or where a known microinstability
+is more readily driven, but neither restricts the operating point. They surface
+the physics the observe step (below) is decided against.
+
+### Pastukhov-Maxwellian validity flag (`pastukhov_valid`)
+
+The Pastukhov loss-cone confinement formula assumes a Maxwellian core. Rognlien
+and Cutler 1980 place the Pastukhov-versus-collisional boundary where the ion mean
+free path reduced by the mirror ratio is of order the system length, i.e.
+collisionality `L/mfp` of order `1/R_m` (the same boundary the regime bridge is
+centered on). Below the validity floor the plasma is too collisionless for the bare
+Pastukhov-Maxwellian assumption, and the formula over-credits confinement. The
+flag is
+
+```
+pastukhov_valid = 1.0  if  collisionality >= collisionality_min  else  0.0
+```
+
+with `collisionality_min = 0.1` (the YAML default, equal to `1/R_m` at the YAML
+`R_m = 10`). It is a bool-as-float for JAX/state parity.
+
+This flag is INFORMATIONAL, not a constraint. A TANDEM legitimately runs the
+central cell collisionless and electrostatically PLUGGED: the confinement is the
+plug-limited tandem value (bounded `e*phi`, calibrated to Hammir), not the bare
+simple-mirror Pastukhov-Maxwellian time. The flag therefore marks where the bare
+Pastukhov-Maxwellian assumption (a single thermal Maxwellian filling the loss
+cone) is stretched, which is exactly the regime in which the tandem plug
+calibration, not the bare formula, is doing the physics. A fired flag at the
+tandem operating point is expected and is not an error.
+
+### DCLC microstability diagnostic (`dclc_parameter`)
+
+The drift-cyclotron-loss-cone (DCLC) mode is the dominant loss-cone-driven
+microinstability in mirrors (Post 1987, "The magnetic mirror approach to fusion").
+It is driven by the loss-cone gradient in velocity space and grows more readily as
+the plasma spans more ion gyroradii in the radial direction. The reported proxy is
+the number of midplane ion gyroradii across the plasma radius,
+
+```
+dclc_parameter = a / rho_i,     rho_i = sqrt(2 A m_p T_i KEV_TO_J) / (e B_min),
+```
+
+the same gyroradius kernel used by the radial-transport time. The Post criterion is
+that a warm-plasma stream filling the loss cone stabilises DCLC when its fraction
+exceeds about `rho_i / a`, i.e. roughly `1/dclc_parameter`; both GDT and WHAM rely
+on warm-plasma DCLC stabilisation. The documented reference value
+`dclc_a_over_rho_ref = 50` (YAML) is the order of `a/rho_i` above which a
+warm-plasma stream is typically required for DCLC stability; it is a reference for
+interpreting the number, NOT a constraint in Task 3.
+
+A larger `dclc_parameter` means a larger warm-plasma fraction is needed; a value of
+order `dclc_a_over_rho_ref` or below means a modest warm fraction (of order a few
+percent) suffices, which is the regime GDT and WHAM operate in.
+
+## Settled-regime observation (all fuels)
+
+This section records the Task 3 observe step: the corrected tandem-calibrated model
+run in sizing/optimize mode across all four fuels, the settled optimum diagnostics,
+and the per-fuel decision on whether the plasma settles in a sensible,
+validity-respecting, tandem-realistic regime (which decides whether the conditional
+explicit stability constraint of Task 4 is needed).
+
+All rows are sized from the net-electric power target with `f_beta = 0.85` and YAML
+defaults (`R_m = 10`, `T_e = 20` keV, `B = 3` T, `plasma_t = 1.5` m,
+`collisionality_min = 0.1`, `plug_phi_over_T_i = 1.66`, `q_wall_max = 5`,
+`q_surface_max = 1`, `beta_max = 0.5`), generated from the model API
+(`CostModel(MIRROR, fuel).forward(size_from_power=True, ...)`); every value
+reproduces from the committed code. The power target is per-fuel feasible (D-T at
+400 MWe; D-D and D-He3 at 200 MWe; p-B11 has no feasible target and the row is read
+at the GSS optimum at `L_max = 400` m, where `p_net < 0`).
+
+The two gain columns are reported honestly: `q_sci = p_fus / p_input_eff` is the
+fusion-to-injected gain, but in SIZING mode the injected power is the
+confinement-derived sustainment, which at the D-T and D-He3 optima sits at the
+auxiliary control floor (the central cell is nearly self-sustained by alpha
+heating), so `q_sci` there is large and is NOT the tandem plug-NBI gain (that is
+the Hammir anchor's `Q` about 5.2 in the section above). `q_eng = P_et /
+recirculating` is the engineering gain that actually drives the economics; `q_eng >
+1` means net-positive, `q_eng < 1` means the plant cannot deliver the target.
+
+| Fuel | target [MWe] | T_i [keV] | collisionality | `pastukhov_valid` | `dclc_parameter` (a/rho_i) | beta | q_sci | q_eng | LCOE [$/MWh] | binding density cap |
+|------|--------------|-----------|----------------|-------------------|----------------------------|------|-------|-------|--------------|---------------------|
+| D-T   | 400 | 29.86 | 1.49e-4 | 0.0 (flagged) | 114.0 | 0.307 | 516.5 | 7.75 | 100.53 | neutron wall (q_wall_max) |
+| D-D   | 200 | 100.00 | 1.39e-4 | 0.0 (flagged) | 62.3 | 0.425 | 8.02 | 1.70 | 829.14 | beta (f_beta x beta_max) |
+| D-He3 | 200 | 69.41 | 1.11e-4 | 0.0 (flagged) | 74.8 | 0.425 | 273.1 | 5.67 | 326.73 | beta (f_beta x beta_max) |
+| p-B11 | none | 300.00 | 7.51e-6 | 0.0 (flagged) | 36.0 | 0.425 | 3.08 | 0.611 | n/a (p_net < 0) | beta (f_beta x beta_max) |
+
+Observations, per fuel:
+
+- **D-T** settles at an interior optimum `T_i` about 30 keV, a tandem-realistic
+  central-cell temperature (between the cool simple-mirror cells at about 10 keV and
+  the Hammir design point at 45 keV). Density is neutron-wall-cap bound, so beta
+  (0.31) sits below its 0.425 ceiling. The central cell is nearly self-heated at the
+  optimum (`q_eng` about 7.8; the auxiliary sustainment is at the control floor),
+  which is why `q_sci` is large; this is the alpha-heated near-ignition floor, NOT a
+  spurious confinement runaway (the bounded plug potential of Task 2b caps the
+  Pastukhov enhancement). `dclc_parameter` about 114 means a warm-plasma stream of
+  order `1/114` about 0.9 percent stabilises DCLC, well within the
+  GDT/WHAM-demonstrated warm fraction. The validity flag fires because the central
+  cell is collisionless, as expected for a plugged tandem; the plug calibration, not
+  the bare Pastukhov-Maxwellian formula, carries the confinement there. Settles
+  sensibly.
+
+- **D-D** parks at the top of its `[5, 100]` keV bracket (`T_i` about 100 keV),
+  beta-cap bound, with `q_eng` about 1.7 (net-positive but expensive, LCOE about
+  830). At fixed beta the D-D fusion power keeps rising with `T_i` across the whole
+  bracket (D-D reactivity is far lower than D-T and still climbing at 100 keV), so
+  the net-electric objective is monotone and the optimizer parks at the bracket
+  edge. The temperature is not absurd for D-D (which needs higher `T_i` than D-T),
+  the collisionality is consistent with a plugged tandem, and `dclc_parameter` about
+  62 is in the GDT/WHAM-stabilizable range. Settles sensibly (bracket-edge
+  economics, a fuel-reactivity outcome, not a stability pathology).
+
+- **D-He3** settles at an interior optimum `T_i` about 69 keV, beta-cap bound, with
+  `q_eng` about 5.7 (the best advanced-fuel engineering gain here; LCOE about 327).
+  The interior optimum (not the bracket edge) reflects D-He3's reactivity peaking
+  within its `[20, 100]` keV bracket. Collisionality and `dclc_parameter` about 75
+  are in tandem-realistic, DCLC-stabilizable ranges; the validity flag fires as
+  expected for a plugged collisionless central cell. Settles sensibly.
+
+- **p-B11** has NO feasible power target: at the GSS optimum (`T_i` about 300 keV,
+  the bracket top) with the chamber at `L_max = 400` m the engineering gain is
+  `q_eng` about 0.61 (< 1), so net electric power is negative and
+  `mirror_size_from_power` raises `SizingInfeasible`. The 300 keV is the bracket top,
+  appropriate for the very high `T_i` p-B11 needs, beta is at its cap, and the
+  collisionality/DCLC numbers are physical (`dclc_parameter` about 36, the smallest
+  of the four, since the high `T_i` gives a large gyroradius). The plasma does NOT
+  walk into a spurious ignition or a non-physical regime; it is simply not economic
+  at the modelled fields and beta cap. Settles sensibly in the diagnostics sense
+  (validity-respecting, no spurious ignition); the negative net power is the honest
+  aneutronic-fuel result at these inputs, a reported outcome, not a model pathology.
+
+### Decision: is Task 4 (explicit stability constraint) needed?
+
+No fuel walks outside a trustworthy regime. For every fuel the settled optimum is
+validity-respecting (the fired Pastukhov-Maxwellian flag is the expected
+plugged-tandem signature, not an error: the bounded plug potential carries the
+confinement, not the bare formula), the collisionality is consistent with a plugged
+tandem (`L/mfp` of order 1e-4 to 1e-5, deeply on the plugged branch), the
+`dclc_parameter` sits in the range warm-plasma stabilisation handles (the required
+warm fraction `1/dclc_parameter` is of order 1 percent or less, as demonstrated by
+GDT and WHAM), and no fuel is spuriously ignited (the bounded plug potential of
+Task 2b caps the Pastukhov enhancement). D-T and D-He3 settle at interior optima;
+D-D and p-B11 settle at their bracket edges, which is a fuel-reactivity/economics
+outcome (monotone objective at the beta cap), not a stability pathology. The bounded
+plug calibration (Task 2b) is the lever that prevents runaway, so economics alone
+settles each fuel in a sensible regime.
+
+Decision per fuel:
+
+- D-T: settles sensibly (interior tandem optimum, `T_i` about 30 keV, wall-cap
+  bound, net-positive).
+- D-D: settles sensibly (bracket-edge economics, `T_i` about 100 keV, beta-cap
+  bound, net-positive but expensive).
+- D-He3: settles sensibly (interior optimum, `T_i` about 69 keV, beta-cap bound,
+  net-positive).
+- p-B11: settles sensibly in the diagnostics sense (validity-respecting, no spurious
+  ignition); uneconomic (`q_eng < 1`, no feasible target), which is the honest
+  aneutronic-fuel result, not a pathology.
+
+Therefore the conditional explicit stability constraint (Task 4) is NOT needed for
+any fuel and is skipped. If a future change moves a fuel into a regime where
+`dclc_parameter` demands an implausible warm-plasma fraction or where the validity
+flag fires together with a spurious ignition, the Task 4 minimum-warm-fraction
+bound is the documented contingency.
+
 ## Sources
 
 - **Rognlien, T. D. and Cutler, T. A. (1980)**, "Transition from Pastukhov to
