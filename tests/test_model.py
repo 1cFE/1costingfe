@@ -51,6 +51,23 @@ def test_forward_lcoe_range():
     assert 10 < result.costs.lcoe < 500, f"LCOE {result.costs.lcoe} $/MWh unexpected"
 
 
+def test_orbitron_runs_at_kwe_design_point():
+    """ORBITRON defaults are kWe-class (Avalanche's 5 kWe Orbitron module).
+
+    A single module at its 5 kWe design point must produce a valid forward()
+    result with no analyst overrides. This requires (a) kWe-class YAML defaults
+    and (b) the feasibility check evaluating the concept's actual low-radiation
+    plasma rather than representative dense-thermal values.
+    """
+    model = CostModel(concept=ConfinementConcept.ORBITRON, fuel=Fuel.PB11)
+    result = model.forward(
+        net_electric_mw=0.005, availability=0.85, lifetime_yr=30, n_mod=1
+    )
+    assert result.power_table.p_net > 0
+    assert float(result.power_table.rec_frac) < 0.95
+    assert result.costs.lcoe > 0
+
+
 def test_forward_pb11_cheaper_licensing():
     """pB11 plant should have lower licensing cost than DT."""
     model_dt = CostModel(concept=ConfinementConcept.TOKAMAK, fuel=Fuel.DT)

@@ -372,6 +372,18 @@ class CostingInput(BaseModel):
         if any(v is None for v in mfe_params):
             return
 
+        # Evaluate radiation against the concept's actual plasma when it is
+        # known. _VALIDATION_PHYSICS supplies representative-thermal values for
+        # the adapter-level check (where plasma params are not yet merged from
+        # the YAML); once forward() merges them they reach this validator, and a
+        # non-thermal / low-density concept (e.g. electrostatic orbitron) must
+        # be judged on its own bremsstrahlung, not a dense-thermal stand-in.
+        phys = dict(_VALIDATION_PHYSICS)
+        for key in ("n_e", "T_e", "Z_eff", "plasma_volume", "B"):
+            value = getattr(self, key)
+            if value is not None:
+                phys[key] = value
+
         p_net_per_mod = self.net_electric_mw / self.n_mod
         p_fus = mfe_inverse_power_balance(
             p_net_target=p_net_per_mod,
@@ -390,7 +402,7 @@ class CostingInput(BaseModel):
             p_trit=self.p_trit,
             p_house=self.p_house,
             p_cryo=self.p_cryo,
-            **_VALIDATION_PHYSICS,
+            **phys,
         )
         pt = mfe_forward_power_balance(
             p_fus=p_fus,
@@ -409,7 +421,7 @@ class CostingInput(BaseModel):
             p_trit=self.p_trit,
             p_house=self.p_house,
             p_cryo=self.p_cryo,
-            **_VALIDATION_PHYSICS,
+            **phys,
         )
         self._check_power_table(pt, p_fus)
 

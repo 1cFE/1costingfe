@@ -343,6 +343,47 @@ class TestTier3PhysicsChecks:
                 eta_pin=0.1,
             )
 
+    def test_mfe_physics_uses_instance_plasma_not_representative(self):
+        """The feasibility check must evaluate the concept's own plasma, not
+        hardcoded representative-thermal values. A low-density non-thermal
+        plasma that is genuinely feasible must not be rejected as if it were a
+        dense thermal plasma."""
+        common = dict(
+            concept=ConfinementConcept.ORBITRON,
+            fuel=Fuel.PB11,
+            net_electric_mw=0.005,
+            mn=1.0,
+            eta_th=0.4,
+            eta_p=0.5,
+            f_sub=0.03,
+            p_pump=0.00005,
+            p_trit=0.0,
+            p_house=0.0001,
+            p_cryo=0.0,
+            blanket_t=0.02,
+            ht_shield_t=0.02,
+            structure_t=0.10,
+            vessel_t=0.05,
+            plasma_t=0.3,
+            burn_fraction=0.05,
+            fuel_recovery=0.99,
+            p_input=0.0025,
+            eta_pin=0.80,
+            eta_de=0.70,
+            f_dec=0.90,
+            p_coils=0.0001,
+            p_cool=0.0002,
+            R0=0.0,
+            elon=1.0,
+        )
+        # Dense thermal plasma -> enormous bremsstrahlung -> infeasible.
+        with pytest.raises(ValidationError, match="p_net"):
+            CostingInput(
+                **common, n_e=1.0e20, T_e=15.0, Z_eff=1.5, plasma_volume=500.0, B=5.0
+            )
+        # The actual low-density non-thermal plasma -> feasible (no raise).
+        CostingInput(**common, n_e=1.0e18, T_e=5.0, Z_eff=1.5, plasma_volume=0.5, B=1.0)
+
     def test_q_sci_warning_when_low(self):
         """Q_sci < 2 means fusion power is low relative to injected heating."""
         with warnings.catch_warnings(record=True) as w:

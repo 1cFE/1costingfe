@@ -4,7 +4,13 @@
 # Compact device, modular, steady-state.
 # Primary fuel: p-B11 (aneutronic, all charged products).
 
-p_input: 10.0        # E-field + injection power [MW]
+# Per-module kWe-class design point. Avalanche's Orbitron is a 1-100 kWe
+# machine built as single cells of 5 kW to 100s of kW; defaults anchor on the
+# concrete 5 kWe module (their "power pack"), reached at grid scale via n_mod
+# (a 1 GWe plant is ~200,000 modules). Loads are order-of-magnitude estimates
+# for a 5 kWe module pending BOM-class calibration; override at the spec level
+# to model a larger single-cell variant.
+p_input: 0.0025      # 2.5 kW E-field power supply [MW]
 
 # Heating mix — no conventional heating systems.
 # p_input represents electrostatic power supply; map to NBI as proxy
@@ -20,11 +26,11 @@ eta_pin: 0.80        # E-field power supply wall-plug efficiency
 eta_de: 0.70         # Electrostatic DEC efficiency on escaping alphas
 f_sub: 0.03          # Subsystem power fraction
 f_dec: 0.90          # Most charged products escape radially to DEC
-p_coils: 1.0         # Simple magnet power [MW]
-p_cool: 2.0          # Cooling power [MW]
-p_pump: 0.5          # Pumping power [MW]
+p_coils: 0.0001      # 0.1 kW small permanent / normal-conducting magnets [MW]
+p_cool: 0.0002       # 0.2 kW thermal management [MW]
+p_pump: 0.00005      # 0.05 kW vacuum pumping [MW]
 p_trit: 0.0          # No tritium (p-B11)
-p_house: 2.0         # Housekeeping power [MW]
+p_house: 0.0001      # 0.1 kW housekeeping (controls, sensors) [MW]
 p_cryo: 0.0          # No cryogenics (permanent or normal-conducting magnets)
 
 # Coil parameters — simple magnets. b_center = field at the loop center
