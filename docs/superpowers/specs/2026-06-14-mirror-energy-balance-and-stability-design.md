@@ -62,6 +62,11 @@ calibrated tandem plug-limited confinement, and the WHAM simple-cell anchor
 remains valid only for a single end-plug cell, not the central-cell confinement.
 The buggy `f_dec_eff` fallback from Task 2 is expected to be removable once the
 plasma is no longer ignited (the clean p_transport identity returns).
+Present-state correction: in the settled code the `f_dec_eff` was NOT removed but
+REPLACED by the correct loss-cone-aware DEC rescale `f_dec_eff = f_dec * (P_end +
+(1 - f_alpha_heat) * P_alpha) / p_transport` (still active, about 0.297 at the
+sized D-T optimum), so DEC recovers exactly the axial end-loss plus loss-cone
+alpha stream. It is retained as the corrected routing, not removed.
 
 ## Revision 2 2026-06-15 (alpha loss-cone heating, user-approved)
 

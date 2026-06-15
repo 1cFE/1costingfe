@@ -291,13 +291,21 @@ contrast the unbounded Boltzmann potential at `T_e = 125` keV gives
 `e*phi = 412` keV (`e*phi/T_i = 9.2`), which floors the auxiliary power and
 produces the spurious ignition.
 
-### The calibrated plug-confinement form
+### The calibrated plug-confinement form (SUPERSEDED intermediate step)
 
-The model replaces the unbounded Boltzmann potential in the confinement chain
-with the bounded tandem value (`compute_plug_potential`):
+NOTE: this section records an intermediate step in the trajectory (Task 2b). It
+is SUPERSEDED by the fixed Fowler-Logan form below ("The plug-potential fix" and
+"Decoupling the hot plug from the central cell"), which the settled code
+implements. The settled `compute_plug_potential` uses
+`e*phi = T_e_plug * ln(plug_density_ratio)` (a decoupled hot-plug electron
+temperature), NOT the ratio-to-`T_i` capping described here. Read this only as
+history; do not treat the `plug_phi_over_T_i = 1.66` ratio model as current.
+
+The intermediate model replaced the unbounded Boltzmann potential in the
+confinement chain with a bounded tandem value (the Task 2b `compute_plug_potential`):
 
 ```
-e*phi = plug_phi_over_T_i * T_i,     plug_phi_over_T_i = 1.66 (YAML default),
+e*phi = plug_phi_over_T_i * T_i,     plug_phi_over_T_i = 1.66 (Task 2b default),
 ```
 
 calibrated to the Hammir `e*phi_c / T_i` ratio above. `compute_ambipolar_potential`
@@ -305,13 +313,13 @@ calibrated to the Hammir `e*phi_c / T_i` ratio above. `compute_ambipolar_potenti
 collisionality bridge of Task 1 is unchanged (the tandem central cell runs
 collisionless and correctly sits on the plugged branch).
 
-Capping the ratio rather than carrying `T_e * ln(n_p/n_c)` with a free density
-ratio is a deliberate costing-fidelity choice: the 0D model does not solve the
-end-plug density self-consistently, so the single calibrated ratio fixes the
-central-cell confinement to the published tandem operating point. The honest
-caveat is that this is one anchored operating point, not a swept `n_p/n_c`
-response; the ratio is pinned to Hammir and carries the same 2x validation band
-as the GDT and WHAM kernel anchors.
+The intermediate step capped the ratio rather than carrying `T_e * ln(n_p/n_c)`
+with a free density ratio, as a costing-fidelity shortcut. That shortcut was the
+source of the residual self-heating knee (see "Observed effect on the D-T optimum"
+below) and was replaced by the real Fowler-Logan form. The honest caveat that the
+calibration is one anchored Hammir operating point, carrying the same 2x
+validation band as the GDT and WHAM kernel anchors, still applies to the settled
+form.
 
 ### DEC path (corrected end-loss-only routing)
 
@@ -332,11 +340,13 @@ physical without modifying the shared function:
    `f_dec * eta_de * P_end`, the recoverable axial end-loss, so the DEC credit
    tracks `P_end` (which falls as confinement improves with temperature).
 
-With the plasma now plug-limited rather than ignited, the clean identity
-`p_transport == P_end + P_radial` holds at the sized D-T optimum (the auxiliary
-power sits at the ignition-threshold floor where `P_end + P_radial + P_rad -
-P_alpha` equals the floor), so `test_p_transport_identity_in_sizing` passes and
-its earlier xfail is removed.
+With the plasma now plug-limited rather than ignited, the transport-channel
+identity closes at the sized D-T optimum. With the later alpha loss-cone routing
+(Task 2c) the un-deposited alpha power is conserved into the transport channel, so
+the identity is `p_transport == P_end + P_radial + (1 - f_alpha_heat) * P_alpha`
+(the clean `p_transport == P_end + P_radial` held only before the loss-cone term
+was added). `test_p_transport_identity_in_sizing` passes and its earlier xfail is
+removed.
 
 ### Settled D-T regime
 
@@ -425,7 +435,7 @@ near-ignited value. The cause was the ratio-to-`T_i` plug shortcut of Task 2b. T
 old `compute_plug_potential` held `e*phi = 1.66 * T_i`, so `e*phi / T_i` was a
 CONSTANT and the Pastukhov enhancement `x exp(x)` did not change with temperature.
 With fusion (and alpha) power pinned flat by the binding neutron-wall cap, raising
-`T_i` then bought confinement (`tau ~ T_i^1.5`) at zero fusion-power cost until the
+`T_i` then bought confinement (tau scales as `T_i^1.5`) at zero fusion-power cost until the
 central cell self-heated, so the economic optimum sat at the self-heating knee,
 still floored.
 
@@ -599,8 +609,26 @@ artifact of forcing one hot electron temperature on a fuel that does not want it
 Run at a high-field machine (`a = 0.5` m, `B = 6` T, `beta_max = 0.9`, `f_beta =
 0.85`, hot plug `T_e_plug = 125` keV, `L = 200` m diagnostics row) so the
 advanced fuels are not artificially density-starved; the central-cell `T_e` is the
-only variable. Every value reproduces from the committed model API
-(`net_electric_at_L`).
+only variable.
+
+Radiation model used: this cross-fuel observation is run with the FULL radiation
+model (`f_rad_fus = None`), so the central-cell bremsstrahlung and synchrotron
+terms respond to the central `T_e`. That is the appropriate evaluation here:
+for the advanced fuels the binding loss is radiation, so the temperature-resolved
+brem/synchrotron model is the physics under test, not the fixed `f_rad_fus`
+proxy. The production DEFAULT path instead supplies a per-fuel proxy
+(`f_rad_fus_dhe3 = 0.24`, `f_rad_fus_pb11 = 0.83`) for which `p_rad =
+f_rad_fus * p_fus` is `T_e`-INDEPENDENT; under that default the central-`T_e`
+change does NOT act through bremsstrahlung but only through beta, density, and
+`tau_E`. The cross-fuel numbers below are therefore generated by calling
+`net_electric_at_L` with `f_rad_fus = None` in the params dict (and the non-DT
+`Z_eff` adjustment the model applies), so the stated brem mechanism is the one
+exercised. The numbers reproduce from that API call to within model-evolution
+drift since they were first recorded (the D-He3 cool row in particular has moved
+modestly with the later plug-decoupling commit; the SIGN and the ranking are
+unchanged). The net conclusion (no advanced fuel net-positive) is robust under
+BOTH radiation paths: every fuel/T_e combination is net-negative whether the run
+uses the full model or the fixed proxy.
 
 | Fuel | central T_e [keV] | T_i [keV] | q_sci | q_eng | p_net [MW] | net-positive? |
 |------|-------------------|-----------|-------|-------|------------|---------------|
@@ -617,7 +645,10 @@ Per-fuel finding:
   125 to 30 keV (hot plug retained) raises `q_sci` from 0.10 to 1.66 and `q_eng`
   from 0.38 to 0.93 (from deeply net-negative toward break-even), and the GSS
   optimum moves UP to `T_i` about 100 keV where D-He3 reactivity is strong and the
-  cool electrons no longer radiate it away. D-He3 is now FAIRLY evaluable and is
+  cool central-cell electrons no longer radiate it away (this brem mechanism is
+  the one active under the full `f_rad_fus = None` model used for this table; under
+  the fixed proxy the same cooling instead helps through beta and `tau_E`). D-He3
+  is now FAIRLY evaluable and is
   close to break-even, but still net-negative (`q_eng` < 1) at these fields. This
   is the honest result: a cool-central hot-plug D-He3 tandem is far better than the
   hot-central case but not yet economic in the 0D model.

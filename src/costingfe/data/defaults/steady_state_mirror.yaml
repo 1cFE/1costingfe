@@ -87,7 +87,9 @@ collisionality_min: 0.1  # L/mfp validity floor for the bare Pastukhov-Maxwellia
 # (Post 1987; both GDT and WHAM rely on warm-plasma DCLC stabilisation). This
 # reference value is the dclc_parameter above which a warm-plasma stream is
 # typically required for stability; it is a documented reference, not a constraint.
-dclc_a_over_rho_ref: 50.0  # a/rho_i above which warm-plasma DCLC stabilisation is typically needed
+dclc_a_over_rho_ref: 50.0  # a/rho_i above which warm-plasma DCLC stabilisation is typically needed.
+                           # Documentation/reference-only: NOT read by any code (not a live knob).
+                           # The live DCLC diagnostic computes the inline dclc_parameter = a/rho_i.
 
 # Coil parameters (see steady_state_tokamak.yaml for the b_center / r_bore
 # convention).
