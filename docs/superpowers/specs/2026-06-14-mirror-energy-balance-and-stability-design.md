@@ -63,6 +63,45 @@ remains valid only for a single end-plug cell, not the central-cell confinement.
 The buggy `f_dec_eff` fallback from Task 2 is expected to be removable once the
 plasma is no longer ignited (the clean p_transport identity returns).
 
+## Revision 2 2026-06-15 (alpha loss-cone heating, user-approved)
+
+After Task 2b the D-T optimum moved to 29.9 keV, but the cross-fuel observation
+(Task 3) showed it is still near-ignited: Q_sci about 516, with the required
+auxiliary power pinned at the 2 MW control floor, because alpha heating
+(206.8 MW) almost exactly cancels total losses (208.8 MW). The model credits
+100 percent of the charged fusion power (`p_alpha` from `ash_neutron_split`) as
+plasma self-heating, with NO loss-cone reduction. Real D-T mirrors lose fusion
+alphas out the loss cone before they thermalize, which is why they run driven
+(Q about 5, like Hammir) rather than ignited. The model being more ignited at
+30 keV than the real Hammir machine is at 45 keV is physically backwards, and
+the floored auxiliary power means the beam-drive lever is dead, so the optimum
+is set by the wall cap and DEC credit rather than confinement-vs-drive
+economics. The 30 keV optimum is therefore still partly an artifact.
+
+Physics and decision: mirrors lose roughly 50 percent of alphas by count but
+under 25 percent by energy (Santarius and Callen, Phys. Fluids 26, 1037, 1983,
+the canonical bounce-averaged Fokker-Planck treatment for tandem central-cell
+alphas), because most alphas slow down on the electrons before scattering into
+the loss cone. So about 75-85 percent of alpha power deposits. Introduce a
+sourced alpha-heating fraction `f_alpha_heat` (YAML, default about 0.80, range
+0.75-0.85, calibrated/sourced to Santarius and Callen; no Python default per the
+defaults-in-YAML rule). In the sustainment balance subtract
+`f_alpha_heat * p_alpha` instead of the full `p_alpha`, and route the lost
+fraction `(1 - f_alpha_heat) * p_alpha` to the axial end-loss / DEC channel (it
+exits the loss cone as directed exhaust). Propagate the reduced self-heating
+consistently into the q_sci / q_eng accounting and the P_aux handoff (sizing and
+inverse). Counterfactual check: a 20 percent loss raises the required beam power
+from 2 MW to about 43 MW (comparable to Hammir's 30 MW NBI), un-floors the lever,
+and should land the optimum at a genuinely driven point. Honest nuance: Hammir
+itself credits near-full alpha deposition and is driven primarily by end losses
+(which the model already represents via P_end); the fix matters here because full
+alpha heating happens to land within 1 percent of cancelling those end losses, so
+the missing alpha-energy loss is what tips the model from spurious near-ignition
+into the driven regime. After this fix, re-run the cross-fuel observation; the
+settled point should be driven and Hammir-consistent. A 0D costing model retains
+residual approximations by design; this is the last planned physics layer before
+declaring the model sound within its stated band.
+
 ## Motivation
 
 The mirror length-sizing and LCOE-optimize path drives D-T to about 60 keV

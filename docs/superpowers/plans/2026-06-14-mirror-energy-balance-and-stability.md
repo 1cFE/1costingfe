@@ -290,3 +290,23 @@ The tandem calibration (Task 2b) is now the lever, so an explicit DCLC feasibili
 
 ### Tasks 5-6: unchanged
 Tokamak literature cross-check (Task 5) and the sanctioned re-pin + docs + paper + final review (Task 6) proceed as written, now over the tandem-calibrated results.
+
+---
+
+## Revision 2 2026-06-15: alpha loss-cone heating (user-approved)
+
+Task 3's observation showed the D-T optimum (30 keV) is still near-ignited (Q_sci ~516, aux floored) because the model credits 100% of alpha power as heating with no loss-cone reduction. See the spec's "Revision 2 2026-06-15 (alpha loss-cone heating)". Task 3's diagnostics stand; its "all settle sensibly / Task 4 not needed" conclusion is SUPERSEDED pending Task 2c (re-observe after the fix). Task 4 remains conditional on the re-observation.
+
+### Task 2c (NEW): Alpha loss-cone heating fraction
+
+**Files:** Modify `src/costingfe/layers/mirror.py` (mirror_aux_heating + the q_sci/q_eng + P_aux handoff), `src/costingfe/data/defaults/steady_state_mirror.yaml` (`f_alpha_heat`), `docs/account_justification/mirror_confinement_regimes.md` (Santarius & Callen sourcing); Test: `tests/test_mirror.py`.
+
+- [ ] Step 2c.1: RESEARCH (extend the doc). Primary source Santarius & Callen 1983 (Phys. Fluids 26, 1037): tandem central-cell alpha confinement, ~50% lost by count but <25% by energy (>75-85% deposited). Cross-check Frank et al. 2024 (Hammir credits near-full deposition, driven by end losses). Establish the defensible `f_alpha_heat` (default ~0.80, range 0.75-0.85) and document, with the honest nuance that Hammir's driven character is end-loss-dominated. No pyFECONS.
+- [ ] Step 2c.2: Failing tests (`TestAlphaHeating`): (a) `mirror_aux_heating` subtracts `f_alpha_heat*p_alpha`, not full p_alpha; (b) at the D-T sizing optimum the plasma is now DRIVEN (P_aux well above the floor, Q_sci tandem-realistic ~10-30, not ~500); (c) the lost alpha fraction `(1-f_alpha_heat)*p_alpha` is accounted in the axial end-loss/DEC channel (energy bookkeeping closes); (d) jit==eager + finite grad. Pin the new driven D-T optimum T_i (record old 30 keV near-ignited -> new driven value) and assert it is in a defensible tandem band (re-pin the realistic-T test to the driven value if it shifts).
+- [ ] Step 2c.3: Implement: `f_alpha_heat` YAML knob (no Python default in kernels). In the sustainment balance subtract `f_alpha_heat*p_alpha`; route `(1-f_alpha_heat)*p_alpha` to the axial end-loss/DEC channel (it is directed loss-cone exhaust, DEC-recoverable). Propagate the reduced self-heating into q_sci/q_eng (physics.py uses p_ash for the plasma balance; the mirror must pass the reduced effective alpha heating consistently -- decide whether via the existing p_rad_override-style hook or a mirror-specific effective-ash, WITHOUT modifying the shared function's tokamak behavior; document the choice). Keep the GDT/WHAM/Hammir anchors valid.
+- [ ] Step 2c.4: Full gate `uv run pytest -q -n auto`; ruff. The D-T optimum moves to the driven point; re-pin mirror sizing values with `# alpha loss-cone heating: driven operating point` and extend the before/after table. Coil pin 513.375 + non-mirror pins hold. Re-validate the Hammir anchor (it credits near-full deposition; confirm f_alpha_heat~0.8 keeps it within 2x, or document that the Hammir anchor uses f_alpha_heat=1.0 if the paper does). Commit: `Reduce mirror alpha heating for loss-cone losses (Santarius-Callen)`
+
+### Task 3 (re-observe): after Task 2c, re-run the cross-fuel observation
+Re-run the observe step against the alpha-corrected model; update the doc's settled-regime table; re-decide whether Task 4 (explicit stability constraint) is needed. Surface to the user.
+
+### Tasks 4-6: unchanged (4 still conditional; 5 tokamak cross-check; 6 re-pin/docs/paper/final review).
