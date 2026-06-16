@@ -26,20 +26,20 @@ p_trit: 10.0        # Tritium processing power [MW]
 p_house: 4.0        # Housekeeping power [MW]
 p_cryo: 0.5         # Cryogenic power [MW]
 
-# Coil parameters. b_center / r_bore drive kA*m via Biot-Savart:
-#   kA*m = G * b_center * r_bore^2 / (mu_0 * 1000)
-# b_center is the field at the geometric center of the loop (axis), NOT the
-# peak field on the conductor (peak-on-conductor is ~2-4x higher for high-field
-# SC, but that ratio does not enter the ampere-meter quantity). r_bore is the
-# effective winding-bore radius (calibration parameter).
-b_center: 12.0       # Field at coil center [T]
-r_bore: 1.85         # Effective winding bore radius [m]
-coil_material: rebco_hts  # HTS REBCO superconductor (SPARC/ARC-class)
+# Coil. The toroidal coil-cost ampere-meters scale bilinearly as
+# G * b_center * R0 * r_coil, where r_coil is the vessel outer radius from the
+# radial build. The on-axis center field b_center is the same physical quantity
+# as the plasma field B for a tokamak, so the model derives b_center from B; it
+# is not stored here (avoids a second field value that could drift from B).
+coil_material: rebco_hts  # HTS REBCO superconductor (ARC-class, B_max 23 T)
 
-# Radial build geometry [m] — CATF spherical tokamak reference
-R0: 3.0          # Major radius R0
-plasma_t: 1.1        # Minor radius a
-elon: 3.0            # Elongation kappa
+# Radial build geometry [m] — conventional aspect-ratio tokamak.
+# R0, plasma_t (a) and B are the self-consistent operating point solved by
+# size_from_power at 1000 MWe net (REBCO, D-T, H=1.0); see
+# examples/tokamak_1gwe_default.py.
+R0: 6.041        # Major radius R0
+plasma_t: 2.014      # Minor radius a (aspect ratio A = R0/a = 3.0)
+elon: 1.85           # Elongation kappa (conventional tokamak)
 blanket_t: 0.80      # Blanket thickness
 ht_shield_t: 0.20    # High-temperature shield
 structure_t: 0.20    # Primary structure
@@ -51,12 +51,12 @@ vac_op_pressure_pa: 3.0  # Divertor plenum pressure [Pa]; high-recycling region
 construction_time_yr: 6.0  # Years
 
 # Plasma parameters for radiation calculation
-n_e: 1.0e+20        # Electron density [m^-3]
-T_e: 15.0           # Electron temperature [keV]
+n_e: 1.1841e+20     # Electron density [m^-3]
+T_e: 16.49          # Electron temperature [keV]
 Z_eff: 1.5          # Effective charge
-plasma_volume: 500.0 # Plasma volume [m^3]
+plasma_volume: 894.4 # Plasma volume [m^3]
 radiation_peaking_factor: 1.0   # Uniform profile, no emission-measure correction
-B: 5.0              # Magnetic field [T]
+B: 10.0             # On-axis toroidal field [T] (b_center derived from this)
 
 # Impurity model
 wall_material: W       # Wall material: W, C, Be, Mo, SiC, Li

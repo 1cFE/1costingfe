@@ -602,9 +602,9 @@ class CostModel:
         params["R0"] = result.R0
         params["plasma_t"] = result.a
         params["B"] = result.B0
-        params["b_center"] = result.B0
         params["T_e"] = result.T_e
         self._last_R0 = result.R0  # exposed for inspection and integration tests
+        self._last_B0 = result.B0  # solved on-axis field, exposed for inspection
 
         # Keep the final power balance consistent with the sizing solve: add the
         # resistive-coil recirculation term (zero for superconductors) to p_coils
@@ -1004,26 +1004,33 @@ class CostModel:
                         "solved. Remove them or set size_from_power=False."
                     )
                 if params.get("optimize_lcoe", False):
-                    # Re-run the full sizing+cost pipeline per trial f_GW
+                    # Re-run the full sizing+cost pipeline per trial f_GW. A
+                    # low-density (low f_GW) trial may not reach the power target
+                    # within R0_max; treat that as a worst-case point (+inf) so
+                    # the golden-section search steers toward the feasible,
+                    # higher-density region instead of crashing on it.
                     def _lcoe_at(fgw):
-                        return self.forward(
-                            net_electric_mw=net_electric_mw,
-                            availability=availability,
-                            lifetime_yr=lifetime_yr,
-                            n_mod=n_mod,
-                            construction_time_yr=construction_time_yr,
-                            interest_rate=interest_rate,
-                            inflation_rate=inflation_rate,
-                            noak=noak,
-                            cost_overrides=cost_overrides,
-                            override_reference_mw=override_reference_mw,
-                            **{
-                                **overrides,
-                                "size_from_power": True,
-                                "optimize_lcoe": False,
-                                "f_GW": fgw,
-                            },
-                        ).costs.lcoe
+                        try:
+                            return self.forward(
+                                net_electric_mw=net_electric_mw,
+                                availability=availability,
+                                lifetime_yr=lifetime_yr,
+                                n_mod=n_mod,
+                                construction_time_yr=construction_time_yr,
+                                interest_rate=interest_rate,
+                                inflation_rate=inflation_rate,
+                                noak=noak,
+                                cost_overrides=cost_overrides,
+                                override_reference_mw=override_reference_mw,
+                                **{
+                                    **overrides,
+                                    "size_from_power": True,
+                                    "optimize_lcoe": False,
+                                    "f_GW": fgw,
+                                },
+                            ).costs.lcoe
+                        except SizingInfeasible:
+                            return float("inf")
 
                     best_fgw = self._optimize_gss(
                         _lcoe_at, params["f_GW_min"], params["f_GW_max"]
@@ -1214,7 +1221,16 @@ class CostModel:
         # (= geo.vessel_or, passed below), and r_bore is unused there.
         # b_center = field at the center of the loop (axis), NOT peak-on-conductor.
         r_bore = params.get("r_bore", 0.0)
-        b_center = params.get("b_center", 0.0)
+        # A tokamak's coil-cost center field IS the plasma field B (same physical
+        # on-axis toroidal field). Derive it here, at the point of consumption,
+        # rather than storing a second b_center: that keeps it from drifting from
+        # B and from becoming a spurious free parameter in sensitivity. Mirrors
+        # and other loop devices keep an explicit b_center (central vs plug field
+        # genuinely differ).
+        if self.concept == ConfinementConcept.TOKAMAK:
+            b_center = params["B"]
+        else:
+            b_center = params.get("b_center", 0.0)
         n_coils = params.get("n_coils", None)
         blanket_form = BlanketForm(params["blanket_form"])
         blanket_fill = BlanketFill(params["blanket_fill"])

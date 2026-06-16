@@ -30,9 +30,10 @@ def run(output_dir: Path) -> dict:
         "R0": 3.3,
         "elon": 1.84,
         # On-axis field from the same source as the geometry (NOT the YAML
-        # default): the bilinear coil model is linear in b_center, so the field
-        # and the radial build must come from the same design point.
-        "b_center": 9.2,  # B0 on-axis [T]; Sorbom et al. 2015, Table 1
+        # default). For a tokamak the coil-cost center field is derived from B,
+        # so setting B here drives both the physics and the bilinear coil cost
+        # from one self-consistent design point.
+        "B": 9.2,  # B0 on-axis [T]; Sorbom et al. 2015, Table 1
         "p_input": 25.0,  # default: ICRF auxiliary heating
         "eta_th": 0.40,
         # Framework requirements not directly published for ARC

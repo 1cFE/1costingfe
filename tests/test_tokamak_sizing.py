@@ -322,7 +322,10 @@ def test_backward_compat_sizing_off_unchanged():
     # REF below with that exact value, so this test guards against drift.
     # re-pinned 2026-06-13: fluence-based CAS72 basis change, see
     # wall_limits_and_fluence.md (was 124.343605).
-    REF = 119.37332153320312
+    # re-pinned after the default tokamak geometry was re-baselined to the
+    # size_from_power 1000 MWe operating point (R0 6.04 m, B 10 T, kappa 1.85,
+    # was R0 3.0 / B 5 / kappa 3.0).
+    REF = 155.05081176757812
     if REF is not None:
         assert r.costs.lcoe == pytest.approx(REF, rel=1e-9)
 

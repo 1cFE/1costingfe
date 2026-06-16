@@ -28,8 +28,7 @@ def test_forward_accepts_known_kwargs():
         net_electric_mw=1000.0,
         availability=0.85,
         lifetime_yr=30,
-        r_bore=2.5,
-        b_center=11.0,
+        B=11.0,
         eta_th=0.45,
     )
     assert result.costs.lcoe > 0

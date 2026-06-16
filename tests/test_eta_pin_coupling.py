@@ -44,7 +44,10 @@ _BASE = dict(
         # re-pinned 2026-06-13: fluence-based CAS72 basis change, see
         # wall_limits_and_fluence.md (TOKAMAK was 228.07, MIRROR 186.95,
         # STELLARATOR 343.34). Steady-state MFE core lifetime now tracks q_n.
-        (C.TOKAMAK, Fuel.DT, 208.41),
+        # re-pinned after the tokamak default geometry was re-baselined to the
+        # size_from_power 1000 MWe operating point (R0 6.04 m, B 10 T); costing
+        # that machine at this 200 MWe point raises LCOE (was 208.41 at R0 3.0).
+        (C.TOKAMAK, Fuel.DT, 290.88),
         # re-pinned 2026-06-15: mirror central-cell T_e raised 20->125 keV (the
         # tandem hot-electron plug required by the fixed Fowler-Logan potential
         # e*phi = T_e*ln(n_p/n_c)); the non-0D default radiation term reads this

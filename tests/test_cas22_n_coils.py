@@ -64,8 +64,14 @@ def test_n_coils_override_zero_no_op_in_two_class_mirror():
 def test_n_coils_ignored_for_tokamak():
     """Non-MIRROR concepts use a different G factor; n_coils kwarg is a no-op."""
     model = CostModel(concept=ConfinementConcept.TOKAMAK, fuel=Fuel.DT)
-    r_default = model.forward(**_base_kwargs())
-    r_with = model.forward(n_coils=3, **_base_kwargs())
+    # b_center / r_bore are mirror/loop coil inputs; a tokamak derives its coil
+    # center field from B, so drop them here and set B instead.
+    kwargs = {
+        k: v for k, v in _base_kwargs().items() if k not in ("b_center", "r_bore")
+    }
+    kwargs["B"] = 8.0
+    r_default = model.forward(**kwargs)
+    r_with = model.forward(n_coils=3, **kwargs)
     assert float(r_default.cas22_detail["C220103"]) == float(
         r_with.cas22_detail["C220103"]
     )
