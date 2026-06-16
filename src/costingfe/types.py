@@ -69,6 +69,20 @@ CONCEPT_TO_FAMILY = {
     ConfinementConcept.POLYWELL: ConfinementFamily.STEADY_STATE,
 }
 
+# Concepts whose plant power scales by REPLICATING a fixed module (n_mod), not by
+# growing a single device (volume, like tokamak/mirror) or by rep-rate/yield.
+# These support size_from_power via integer module-count solve (model._size_modular).
+# Membership is published-developer-grounded; see docs/account_justification/
+# concept_power_scaling.md. STAGED_ZPINCH is Zap's sheared-flow pinch (see its YAML).
+N_MOD_SIZED_CONCEPTS = frozenset(
+    {
+        ConfinementConcept.ORBITRON,
+        ConfinementConcept.DENSE_PLASMA_FOCUS,
+        ConfinementConcept.STAGED_ZPINCH,
+        ConfinementConcept.STEADY_FRC,
+    }
+)
+
 CONCEPT_DEFAULT_CONVERSION = {
     ConfinementConcept.LASER_IFE: PulsedConversion.THERMAL,
     ConfinementConcept.ZPINCH: PulsedConversion.THERMAL,
@@ -315,3 +329,4 @@ class ForwardResult:
     overridden: list[str] = field(default_factory=list)  # Keys that were overridden
     cas22_detail: dict[str, float] = field(default_factory=dict)  # CAS22 sub-accounts
     plasma_state: object = None  # PlasmaState when 0D model is active
+    solved_n_mod: int | None = None  # module count solved by n_mod size_from_power

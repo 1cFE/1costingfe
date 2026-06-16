@@ -12,6 +12,7 @@ from pydantic import BaseModel, Field, model_validator
 
 from costingfe.types import (
     CONCEPT_TO_FAMILY,
+    N_MOD_SIZED_CONCEPTS,
     BlanketFill,
     BlanketForm,
     ConfinementConcept,
@@ -90,6 +91,10 @@ class CostingInput(BaseModel):
     # FR-1 of costingfe-library-preconditions spec: non-integer n_mod is
     # required for the two-knob projection (n_mod = 1000 / P_native).
     n_mod: float = Field(default=1.0, gt=0)
+    # Module-replication sizing: per-module design net power (YAML); size_from_power
+    # for an N_MOD_SIZED concept solves the integer module count from it.
+    module_net_mwe: float | None = Field(default=None, gt=0)
+    size_from_power: bool = False
     # None = unspecified at the customer level; the concept YAML supplies it.
     construction_time_yr: float | None = Field(default=None, gt=0)
     interest_rate: float = Field(default=0.07, gt=0)
@@ -356,6 +361,19 @@ class CostingInput(BaseModel):
 
         return self
 
+    def _feasibility_net_per_module(self):
+        """Per-module net power for the feasibility check. For module-replication
+        concepts in size_from_power mode the physically meaningful unit is one
+        module at its design power (module_net_mwe), not the whole plant target
+        divided by the caller's n_mod (which is the pre-solve default)."""
+        if (
+            self.size_from_power
+            and self.module_net_mwe is not None
+            and self.concept in N_MOD_SIZED_CONCEPTS
+        ):
+            return self.module_net_mwe
+        return self.net_electric_mw / self.n_mod
+
     def _check_mfe_physics(self):
         from costingfe.layers.physics import (
             mfe_forward_power_balance,
@@ -385,7 +403,7 @@ class CostingInput(BaseModel):
             if value is not None:
                 phys[key] = value
 
-        p_net_per_mod = self.net_electric_mw / self.n_mod
+        p_net_per_mod = self._feasibility_net_per_module()
         p_fus = mfe_inverse_power_balance(
             p_net_target=p_net_per_mod,
             fuel=self.fuel,
@@ -445,7 +463,7 @@ class CostingInput(BaseModel):
         if self.eta_th is not None and self.eta_th == 0.0:
             return
 
-        p_net_per_mod = self.net_electric_mw / self.n_mod
+        p_net_per_mod = self._feasibility_net_per_module()
         common_kw = dict(
             fuel=self.fuel,
             f_rep=self.f_rep,

@@ -25,6 +25,14 @@ Deferred (framework generalizes, not built here): stellarator (R0/a, plus 3D
 coil markup), mirror (fixed radius, length sets power), laser and heavy-ion ICF
 (rep rate then yield-per-shot), pulsed-power and module-replication concepts.
 
+Update: mirror length sizing is now implemented (2026-06-11). Module-replication
+sizing is now implemented (2026-06-16) for Orbitron, dense plasma focus, staged
+z-pinch (Zap sheared-flow), and steady FRC: size_from_power solves an integer
+n_mod = ceil(target / module_net_mwe) from a per-module design power, the simple
+analog of the geometry solve. See docs/account_justification/concept_power_scaling.md.
+Still deferred: stellarator/dipole/polywell volume sizing; pulsed/IFE rep-rate
+and yield-per-shot sizing.
+
 ## Modes: one solve, four uses
 
 1. **Pin.** Existing behavior. Cost exactly the stated machine. Sizing off.

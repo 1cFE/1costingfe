@@ -4,6 +4,12 @@ q_eng: 3.0               # Engineering gain target (P_et / P_recirc)
 # No manufactured targets — plasma forms from gas injection.
 # Compact linear geometry.
 
+# Module-replication sizing: per-module design net electric power. Zap Energy's
+# DOE-approved design is a 50 MWe module ("future power plants will have multiple
+# modules"); size_from_power solves n_mod = ceil(target / module_net_mwe). See
+# docs/account_justification/concept_power_scaling.md.
+module_net_mwe: 50.0     # 50 MWe per module (Zap Energy, ~10 Hz)
+
 # Pulsed parameters
 f_rep: 1.0               # Repetition rate [Hz]
 pulsed_conversion: thermal

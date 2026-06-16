@@ -10,6 +10,11 @@
 # (a 1 GWe plant is ~200,000 modules). Loads are order-of-magnitude estimates
 # for a 5 kWe module pending BOM-class calibration; override at the spec level
 # to model a larger single-cell variant.
+
+# Module-replication sizing: per-module design net electric power. size_from_power
+# solves n_mod = ceil(target / module_net_mwe). See
+# docs/account_justification/concept_power_scaling.md.
+module_net_mwe: 0.005    # 5 kWe per cell (Avalanche Energy)
 p_input: 0.0025      # 2.5 kW E-field power supply [MW]
 
 # Heating mix — no conventional heating systems.

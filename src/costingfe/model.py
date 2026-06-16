@@ -69,6 +69,7 @@ from costingfe.layers.tokamak import (
 from costingfe.types import (
     CONCEPT_DEFAULT_CONVERSION,
     CONCEPT_TO_FAMILY,
+    N_MOD_SIZED_CONCEPTS,
     BlanketFill,
     BlanketForm,
     CoilMaterial,
@@ -732,6 +733,33 @@ class CostModel:
 
         return pt
 
+    def _size_modular(self, params, n_mod):
+        """Solve the integer module count for a module-replication concept and
+        return the per-module power table.
+
+        Unlike the tokamak/mirror geometry solves, this is a division: a plant
+        target is met by replicating a fixed module of design net power
+        `module_net_mwe`. n_mod = ceil(target / module_net_mwe), each module runs
+        at its design power, and the realized plant net (n_mod * module_net_mwe)
+        overshoots the target by less than one module (a fractional module cannot
+        be built). The solved count is exposed via self._last_n_mod and threads
+        into the cost aggregation as the effective n_mod. n_mod is a physical
+        integer; pinning it (caller n_mod != 1) is rejected.
+        """
+        if n_mod != 1:
+            raise ValueError(
+                "n_mod cannot be pinned in size_from_power mode for "
+                "module-replication concepts; it is solved from module_net_mwe. "
+                "Remove n_mod or set size_from_power=False."
+            )
+        module_net_mwe = params["module_net_mwe"]
+        target = params["net_electric_mw"]
+        n_solved = max(1, math.ceil(target / module_net_mwe))
+        # Each module at its design power; the plant overshoots target by < 1 module.
+        params["net_electric_mw"] = n_solved * module_net_mwe
+        self._last_n_mod = n_solved
+        return self._power_balance(params, n_solved)
+
     def _optimize_gss(self, lcoe_of_param, param_lo, param_hi):
         """Golden-section minimize LCOE over a scalar parameter in [param_lo, param_hi].
 
@@ -964,6 +992,7 @@ class CostModel:
                 params["f_rad_fus"] = self.cc.f_rad_fus(self.fuel)
 
         # Layer 2: Power balance (dispatched by family), or sizing solve.
+        solved_n_mod = None
         if params.get("size_from_power", False):
             if self.concept == ConfinementConcept.TOKAMAK:
                 pinned = [
@@ -1090,9 +1119,26 @@ class CostModel:
                     )
                 self._sizing_fbeta = params["f_beta"]
                 pt = self._size_mirror(params, n_mod)
+            elif self.concept in N_MOD_SIZED_CONCEPTS:
+                if params.get("optimize_lcoe", False):
+                    raise ValueError(
+                        "optimize_lcoe is not applicable to module-replication "
+                        "concepts; there is no continuous design variable to "
+                        "optimize (n_mod is a discrete count)."
+                    )
+                pt = self._size_modular(params, n_mod)
+                # The solved module count becomes the effective n_mod for all
+                # downstream cost aggregation.
+                n_mod = self._last_n_mod
+                solved_n_mod = n_mod
             else:
+                supported = (
+                    "TOKAMAK, MIRROR (geometry); "
+                    + ", ".join(sorted(c.value for c in N_MOD_SIZED_CONCEPTS))
+                    + " (module count)"
+                )
                 raise ValueError(
-                    f"size_from_power is implemented for TOKAMAK and MIRROR only; "
+                    f"size_from_power is implemented for {supported}; "
                     f"got concept={self.concept.value}"
                 )
         else:
@@ -1526,6 +1572,7 @@ class CostModel:
             overridden=overridden,
             cas22_detail=c22_detail,
             plasma_state=self._plasma_state,
+            solved_n_mod=solved_n_mod,
         )
 
     # Map from cost_overrides keys to CostResult attribute names, used by
