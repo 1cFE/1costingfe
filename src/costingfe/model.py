@@ -793,7 +793,7 @@ class CostModel:
         net_electric_mw: float,
         availability: float,
         lifetime_yr: float,
-        n_mod: int = 1,
+        n_mod: float = 1.0,
         interest_rate: float = 0.07,
         inflation_rate: float = 0.02,
         noak: bool = True,

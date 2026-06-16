@@ -80,7 +80,7 @@ def compute_lcoe(
     cas70: float,
     cas80: float,
     p_net: float,
-    n_mod: int,
+    n_mod: float,
     availability: float,
 ) -> float:
     """LCOE in $/MWh. CAS values in M$, p_net in MW.

@@ -147,7 +147,7 @@ def cas22_reactor_plant_equipment(
     p_et: float,
     p_fus: float,
     p_cryo: float,
-    n_mod: int,
+    n_mod: float,
     fuel: Fuel,
     noak: bool,
     blanket_vol: float,

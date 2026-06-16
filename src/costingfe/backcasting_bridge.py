@@ -47,7 +47,7 @@ def generate_subsystems(
     net_electric_mw: float = 1000.0,
     availability: float = 0.85,
     lifetime_yr: float = 30,
-    n_mod: int = 1,
+    n_mod: float = 1.0,
     construction_time_yr: float = 6.0,
     interest_rate: float = 0.07,
     **overrides,

@@ -29,7 +29,7 @@ class FusionTeaInput:
     net_electric_mw: float
     availability: float
     lifetime_yr: float
-    n_mod: int = 1
+    n_mod: float = 1.0
     # None = use the concept YAML's construction_time_yr (do not mask it).
     construction_time_yr: float | None = None
     interest_rate: float = 0.07
