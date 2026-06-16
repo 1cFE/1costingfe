@@ -144,33 +144,64 @@ where:
 
 #### Mirror two-class coil model
 
-The mirror coil system is split into two physically distinct populations:
+The mirror coil system is split into two physically distinct populations with
+distinct bore derivations:
 
-**Class 1 — central-cell solenoids:**
+**Class 1: central-cell solenoids (large-bore, low-field):**
+
+    r_bore_central = vessel_or + coil_standoff
+
+The central solenoids sit outside the full radial build; their bore is the vessel
+outer radius plus an assembly gap. At YAML defaults the radial build stacks to:
+
+    plasma_t + vacuum_t + firstwall_t + blanket_t + reflector_t
+        + ht_shield_t + structure_t + gap1_t + vessel_t
+    = 1.5 + 0.10 + 0.05 + 0.80 + 0.20 + 0.20 + 0.15 + 0.10 + 0.10 = 3.20 m
+    r_bore_central = 3.20 + 0.10 (coil_standoff) = 3.30 m
+
+This is the physically correct coil radius for a tandem-mirror central cell:
+WITAMIR-I central-cell solenoids are about 4 m radius for a comparable build.
 
     n_central = chamber_length / coil_spacing   (continuous; no rounding)
     G_central = n_central × 4π
-    kAm_central = G_central × b_center × r_bore² / (μ₀ × 1000)
+    kAm_central = G_central × b_center × r_bore_central² / (μ₀ × 1000)
 
 `n_central` is a continuous costing aggregate (not a physical integer count); the
 solenoid ensemble is treated as a distributed winding whose total conductor scales
-linearly with machine length. Field basis: `b_center` (central-cell on-axis field,
-same as the existing loop model).  YAML default: `coil_spacing: 5.0` m (Realta-class
-solenoid pitch for a tandem-mirror central cell).
+linearly with machine length. YAML default: `coil_spacing: 5.0` m (Realta-class
+solenoid pitch for a tandem-mirror central cell). Because `r_bore_central` is
+derived from the radial build, coil cost now responds to `blanket_t` and other
+build thicknesses.
 
-**Class 2 — end-plug HTS coils:**
+**Class 2: end-plug HTS coils (small-bore, high-field):**
+
+The plug coils sit at the throat where the machine necks down; flux conservation
+gives the throat plasma radius:
+
+    a_throat = plasma_t / sqrt(R_m)   (flux conservation)
+    r_bore_plug = a_throat + plug_standoff
+
+The plug bore is smaller than the central bore because the blanket does not extend
+to the throat. At YAML defaults (plasma_t=1.5, R_m=10, plug_standoff=0.30):
+
+    a_throat = 1.5 / sqrt(10) = 0.4743 m
+    r_bore_plug = 0.4743 + 0.30 = 0.7743 m
+
+`plug_standoff` covers the vacuum gap, throat structure, and cryostat at the mirror
+throat. WHAM-class HTS plug coils have winding-pack bores well under 1 m at 17 T,
+consistent with this value.
 
     b_plug = R_m × B          (throat field)
     G_plug = n_plug_coils × 4π
-    kAm_plug = G_plug × b_plug × r_bore² / (μ₀ × 1000)
+    kAm_plug = G_plug × b_plug × r_bore_plug² / (μ₀ × 1000)
 
 `n_plug_coils` is the count of discrete end-plug coils (default 4: 2 per end,
-HAMMIR Hammer-evolution coils). Field at the plug throat: `b_plug = R_m × B`
-where `R_m` is the mirror ratio and `B` is the central-cell field. Bore radius:
-the same `r_bore` as the central coils is used as a simplification; a full
-model would size the plug bore from the plug plasma radius, which is smaller.
-This simplification tends to overestimate plug conductor, but plug coils are
-a minor fraction of total at the default configuration.
+HAMMIR Hammer-evolution class). Field at the plug throat: `b_plug = R_m × B`
+where `R_m` is the mirror ratio and `B` is the central-cell field.
+
+The bore ratio (0.77/3.30 about 0.23) means plug kAm is about 5% of central kAm
+per coil at equal field; the high plug field (30 T vs 12 T central) partly offsets
+this, giving a plug conductor fraction of about 12% of the total.
 
 **Total:**
 
@@ -226,7 +257,7 @@ are actively working to reduce.
 |---------|-------:|-----------|
 | Tokamak | 3.09× | TF + CS + PF coil systems. Complex D-shaped winding, insulation, quench protection, structural casing, cryostat integration. Calibrated so the SPARC-class reference (B=12T, R0=3.0m, r_coil=2.95m) coil system = $516M under the bilinear model, matching the prior r_bore² calibration at its reference point. |
 | Stellarator | 5.87× | Non-planar 3D coil geometry. = 1.9× the tokamak markup, the NCSX modular-coil production cost overrun (90%; Neilson et al. 2010, PPPL-4455), the documented penalty for non-planar 3D coil fabrication (winding onto machined 3D forms, ±1.5mm tolerances, metrology). The longer 3D winding path is handled separately by the 2× path factor in G, so this 1.9× is fabrication complexity only. |
-| Mirror | 25/14 ≈ 1.786× | Two-class model (central solenoids + end-plug HTS). Recalibrated so that at YAML defaults (L=20 m, coil_spacing=5 m → n_central=4, n_plug=4, R_m=10, B=3 T → b_plug=30 T) the total reproduces the doc-validated 513.375 M$. Simple solenoid geometry; lower markup than tokamak reflects more straightforward winding and structural design. |
+| Mirror | 1.7266× | Two-class bore-resolved model (central solenoids + end-plug HTS). Recalibrated so that at YAML defaults (L=20 m, coil_spacing=5 m, r_bore_central=3.30 m, r_bore_plug=0.774 m, n_plug=4, b_plug=30 T) the total reproduces the doc-validated 513.375 M$. Simple solenoid geometry; lower markup than tokamak reflects more straightforward winding and structural design. |
 | Pulsed FRC | 1.5× | Theta-pinch formation coils. Simple, repetitive geometry. |
 | Theta pinch | 1.5× | Compression coils. Simple solenoid geometry. |
 | Orbitron | 1.5× | Electrostatic confinement coils. |
@@ -246,34 +277,42 @@ tokamak power-plant coil set is ~5–10× larger. Because the model is now linea
 in R0, a larger tokamak (e.g. ARC, R0=3.3m) scales its coil cost up
 proportionally rather than as R0².
 
-**Mirror two-class validation (YAML default machine, L=20 m):**
+**Mirror two-class bore-resolved validation (YAML default machine, L=20 m):**
 
-The previous coil model used a fixed `n_coils=10` with no length provenance. The
-10 came from an undocumented split of a 50 m machine, meaning the default 20 m
-machine was implicitly sized for a different geometry.
+Bores derived from the radial build and flux conservation, then the markup solved
+from the calibration constraint `total_conductor × markup = 513.375 M$`.
 
-The two-class model is calibrated once at the YAML default (L=20 m) so the
-validated baseline cost is preserved by construction.  The markup is solved
-from the constraint `total_conductor × markup = 513.375 M$`:
+Central-cell bore:
+
+    radial build: 1.5 + 0.10 + 0.05 + 0.80 + 0.20 + 0.20 + 0.15 + 0.10 + 0.10 = 3.20 m
+    r_bore_central = 3.20 + 0.10 (coil_standoff) = 3.30 m
 
     n_central = 20 / 5 = 4
     G_central = 4 × 4π = 50.265
-    kAm_central = 50.265 × 12 × 1.85² / (4π×10⁻⁷ × 1000) = 1,642,800 kAm
-    cost_central_conductor = 1,642,800 × 50 / 1e6 = 82.14 M$
+    kAm_central = 50.265 × 12 × 3.30² / (4π×10⁻⁷ × 1000) = 5,227,200 kAm
+    conductor_central = 5,227,200 × 50 / 1e6 = 261.360 M$
+
+Plug bore (flux conservation):
+
+    a_throat = 1.5 / sqrt(10) = 0.47434 m
+    r_bore_plug = 0.47434 + 0.30 (plug_standoff) = 0.77434 m
 
     b_plug = 10 × 3 = 30 T
     G_plug = 4 × 4π = 50.265
-    kAm_plug = 50.265 × 30 × 1.85² / (4π×10⁻⁷ × 1000) = 4,107,000 kAm
-    cost_plug_conductor = 4,107,000 × 50 / 1e6 = 205.35 M$
+    kAm_plug = 50.265 × 30 × 0.77434² / (4π×10⁻⁷ × 1000) = 719,526 kAm
+    conductor_plug = 719,526 × 50 / 1e6 = 35.976 M$
 
-    total_conductor = 82.14 + 205.35 = 287.49 M$
-    markup = 513.375 / 287.49 = 25/14 ≈ 1.7857
+Markup:
 
-This is algebraically exact (both 513.375 M$ and 287.49 M$ are rational in the
-REBCO $50/kAm, mu0 = 4π×10⁻⁷ basis), so the calibration holds to floating-point
-machine precision.  The validated baseline cost of 513.375 M$ is preserved
-exactly by construction; coil cost now scales with machine length, which the
-previous fixed-n_coils model could not do.
+    total_conductor = 261.360 + 35.976 = 297.336 M$
+    markup = 513.375 / 297.336 = 1.7266...
+
+The markup (1.7265803102296458 at float64 precision, stored in costing_constants.yaml)
+is the calibration constant such that the YAML default machine exactly reproduces
+the doc-validated 513.375 M$. The sensitivity structure has changed: central
+conductor is 88% of the total (up from 29% with the old r_bore=1.85 m for both
+classes), and coil cost now responds to blanket_t and all other radial-build
+thicknesses that set vessel_or.
 
 ### Resistive (copper) coil mass build-up
 

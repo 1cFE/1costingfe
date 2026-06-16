@@ -101,6 +101,7 @@ class TestInverseBrackets:
 class TestMultiFuelModel:
     _KW = dict(availability=0.85, lifetime_yr=30.0)
 
+    @pytest.mark.slow
     def test_dhe3_sizes_larger_machine_than_dt_at_equal_power(self):
         m_dt = CostModel(ConfinementConcept.TOKAMAK, Fuel.DT)
         m_dt.forward(net_electric_mw=200.0, size_from_power=True, **self._KW)

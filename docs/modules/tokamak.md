@@ -212,7 +212,12 @@ Override via `CostModel.forward(**overrides)`. To disable while keeping the 0D m
 In `model.py forward()`, applied between capital cost computation and CAS70/LCOE when `_plasma_state is not None`:
 
 ```python
-core_lt = cc.core_lifetime(self.fuel)
+# Steady-state MFE (tokamak, stellarator, mirror, steady FRC) derives the
+# core lifetime from the neutron wall loading: core_lt =
+# clamp(fluence_limit(fuel) / q_n, 0.5 FPY, plant life). IFE/MIF keep the
+# fixed cc.core_lifetime(self.fuel) constant.
+q_n = pt.p_neutron / max(geo.firstwall_area, 1e-6)
+core_lt = _core_lifetime_fpy(cc, self.fuel, q_n, lifetime_yr, availability)
 avail_eff = availability
 if self._plasma_state is not None:
     dm = DisruptionModel(

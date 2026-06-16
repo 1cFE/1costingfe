@@ -42,6 +42,8 @@ from costingfe.layers.mirror import (
     net_electric_at_L,
 )
 from costingfe.layers.physics import (
+    OperatingPointInfeasible,
+    SizingInfeasible,
     mfe_forward_power_balance,
     mfe_inverse_power_balance,
     pulsed_dec_forward,
@@ -81,6 +83,18 @@ from costingfe.types import (
     WallMaterial,
 )
 from costingfe.validation import CostingInput
+
+
+def _core_lifetime_fpy(cc, fuel, q_n, lifetime_yr, availability):
+    """Fluence-based core lifetime [FPY]: Phi_max / q_n, clamped to [0.5,
+    lifetime_yr * availability]. Floor of 0.5 FPY keeps the 1/q_n gradient
+    finite at extreme wall loadings; cap at lifetime_yr * availability because
+    nothing is replaced beyond plant life."""
+    return jnp.clip(
+        cc.fluence_limit(fuel) / jnp.maximum(q_n, 1e-6),
+        0.5,
+        lifetime_yr * availability,
+    )
 
 
 class CostModel:
@@ -543,11 +557,20 @@ class CostModel:
             dhe3_fuel_ratio=params["dhe3_fuel_ratio"],
             pb11_fuel_ratio=params["pb11_fuel_ratio"],
             dhe3_dd_frac_pin=params["dhe3_dd_frac_pin"],
+            vacuum_t=params["vacuum_t"],
             wall_material=wall_mat,
             T_edge=params["T_edge"],
             tau_ratio=params["tau_ratio"],
             f_rad_fus=params.get("f_rad_fus"),
             beta_max=params["beta_max"],
+            q_wall_max=params["q_wall_max"],
+            q_surface_max=params["q_surface_max"],
+            p_aux_floor=params["p_aux_floor"],
+            plug_density_ratio=params["plug_density_ratio"],
+            collisionality_min=params["collisionality_min"],
+            f_alpha_heat=params["f_alpha_heat"],
+            T_e_plug=_to_num(params["T_e_plug"]),
+            p_plug=params["p_plug"],
             enforce_plasma_limits=params["enforce_plasma_limits"],
         )
 
@@ -666,17 +689,19 @@ class CostModel:
 
     def _size_mirror(self, params, n_mod):
         """Solve chamber_length from the power target, inject it into params, and
-        return the power table via the mirror 0D inverse path.
+        return the power table built DIRECTLY from the GSS-optimum operating point.
 
         The sizing solve uses mirror_size_from_power (bisection over L at the
-        f_beta boundary operating point with GSS over T_i). After the solve,
-        chamber_length and the f_beta-derived n_e are written back into params so
-        that the geometry layer and the CAS22 coil account see the solved values.
-        The mirror 0D inverse path is then re-run at the solved L so the
-        MirrorPlasmaState and PowerTable are consistent.
+        constraint-boundary operating point with GSS over T_i). The final plasma
+        state and power table are taken from the same GSS forward path that the
+        bisection optimizes (net_electric_at_L with return_full=True), so the
+        reported operating point is exactly (T_star, n_e_star). This keeps beta
+        bounded by the f_beta / wall / surface construction (beta <= beta_max by
+        construction). The earlier approach re-solved T_i through the inverse at
+        fixed n_e_star, which discarded T_star and let beta drift above beta_max.
         """
         # Derive eta_pin (heating wall-plug efficiency) exactly as _power_balance
-        # does, so the sizing solve and the final inverse balance use the same value.
+        # does, so the sizing solve and the final forward state use the same value.
         params["eta_pin"] = self._effective_eta_pin(params)
 
         # Build the solve_params dict that mirror_size_from_power expects.
@@ -691,25 +716,21 @@ class CostModel:
 
         L_solved = mirror_size_from_power(solve_params, self.fuel)
 
-        # Recover the operating density at the solved L (f_beta boundary).
-        # Re-solve at L_solved because the bisection discards the inner GSS state.
-        _pn, _T_star, n_e_star = net_electric_at_L(
-            L_solved, solve_params, self.fuel, return_state=True
+        # Build the full forward state and power table at the GSS optimum. This
+        # surfaces the (MirrorPlasmaState, PowerTable) already computed inside the
+        # bisection's net_electric_at_L, so the operating point is consistent by
+        # construction and beta is bounded by the f_beta / wall / surface caps.
+        _pn, ps, pt = net_electric_at_L(
+            L_solved, solve_params, self.fuel, return_full=True
         )
 
         # Write solved geometry and density back so all downstream layers see them.
-        # n_e_star is the f_beta-derived density at the GSS T_i; it is used as the
-        # YAML-level n_e input for the final inverse call, which then solves T_i
-        # self-consistently from the power target at that density.
         params["chamber_length"] = L_solved
-        params["n_e"] = n_e_star
+        params["n_e"] = float(ps.n_e)
         self._last_L = L_solved  # exposed for inspection
+        self._plasma_state = ps
 
-        # Re-run the full 0D inverse at the solved L so the plasma state and
-        # power table are self-consistent. use_0d_model=True routes
-        # _power_balance to _power_balance_mirror_0d.
-        params["use_0d_model"] = True
-        return self._power_balance_mirror_0d(params, n_mod)
+        return pt
 
     def _optimize_gss(self, lcoe_of_param, param_lo, param_hi):
         """Golden-section minimize LCOE over a scalar parameter in [param_lo, param_hi].
@@ -1015,24 +1036,35 @@ class CostModel:
                     # and the sizing knobs in mirror.py to trade off precision
                     # against wall-clock time.
                     def _lcoe_at_fb(fb):
-                        return self.forward(
-                            net_electric_mw=net_electric_mw,
-                            availability=availability,
-                            lifetime_yr=lifetime_yr,
-                            n_mod=n_mod,
-                            construction_time_yr=construction_time_yr,
-                            interest_rate=interest_rate,
-                            inflation_rate=inflation_rate,
-                            noak=noak,
-                            cost_overrides=cost_overrides,
-                            override_reference_mw=override_reference_mw,
-                            **{
-                                **overrides,
-                                "size_from_power": True,
-                                "optimize_lcoe": False,
-                                "f_beta": fb,
-                            },
-                        ).costs.lcoe
+                        # Two exception types signal an infeasible f_beta:
+                        #   OperatingPointInfeasible — raised by mirror_0d_inverse
+                        #     when the wall-cap density violates beta_max.
+                        #   SizingInfeasible — raised by mirror_size_from_power
+                        #     (via _size_mirror) when the wall cap prevents the
+                        #     machine from reaching the power target at any L.
+                        # Return a large sentinel LCOE so GSS steers away.
+                        try:
+                            return self.forward(
+                                net_electric_mw=net_electric_mw,
+                                availability=availability,
+                                lifetime_yr=lifetime_yr,
+                                n_mod=n_mod,
+                                construction_time_yr=construction_time_yr,
+                                interest_rate=interest_rate,
+                                inflation_rate=inflation_rate,
+                                noak=noak,
+                                cost_overrides=cost_overrides,
+                                override_reference_mw=override_reference_mw,
+                                **{
+                                    **overrides,
+                                    "size_from_power": True,
+                                    "optimize_lcoe": False,
+                                    "f_beta": fb,
+                                },
+                            ).costs.lcoe
+                        except (OperatingPointInfeasible, SizingInfeasible):
+                            # infeasible f_beta (beta gate or sizing cap)
+                            return 1e8  # steer GSS away
 
                     best_fb = self._optimize_gss(
                         _lcoe_at_fb, params["f_beta_min"], params["f_beta_max"]
@@ -1238,6 +1270,16 @@ class CostModel:
             n_plug_coils=int(params.get("n_plug_coils", 0)),
             R_m=params.get("R_m", 1.0),
             B=params.get("B", 0.0),
+            r_bore_central=(
+                geo.vessel_or + params["coil_standoff"]
+                if self.concept == ConfinementConcept.MIRROR
+                else 0.0
+            ),
+            r_bore_plug=(
+                params["plasma_t"] / math.sqrt(params["R_m"]) + params["plug_standoff"]
+                if self.concept == ConfinementConcept.MIRROR
+                else 0.0
+            ),
             p_nbi=p_nbi,
             p_ecrh=p_ecrh,
             p_icrf=p_icrf,
@@ -1257,6 +1299,9 @@ class CostModel:
             f_ch=getattr(pt, "f_ch", 0.0),
             eta_dec=params.get("eta_dec", 0.0),
         )
+        # Informational sub-lines in cas22_detail (C220103_central/_plug,
+        # C220106_vessel/_pump, r_bore_*) are deliberately absent from these
+        # key sets; the parent account carries the aggregated total.
         _PER_MODULE_KEYS = {
             "C220101",
             "C220102",
@@ -1348,7 +1393,22 @@ class CostModel:
         # Apply disruption penalty for tokamak 0D/sizing runs only.
         # MirrorPlasmaState has no disruption_rate field; guard by concept so
         # a mirror 0D run never reaches the tokamak-specific penalty path.
-        core_lt = cc.core_lifetime(self.fuel)
+        # Steady-state MFE families derive core lifetime from the neutron wall
+        # loading (fluence basis); IFE/MIF keep the fixed per-fuel constant.
+        # pt.p_neutron and geo.firstwall_area are both per-module, so q_n needs
+        # no n_mod scaling.
+        if self.family == ConfinementFamily.STEADY_STATE:
+            # jnp.maximum on the area is a defensive guard against any concept
+            # reporting firstwall_area=0 (none currently do; all steady-state
+            # concepts get a strictly positive area in geometry.py). Note that
+            # a near-zero area would drive q_n up, shortening lifetime -- the
+            # opposite of clamping. Aneutronic steady-state fuels (p-B11,
+            # D-He3) clamp to plant life via vanishing p_neutron (q_n -> 0),
+            # not via the area.
+            q_n = pt.p_neutron / jnp.maximum(geo.firstwall_area, 1e-6)
+            core_lt = _core_lifetime_fpy(cc, self.fuel, q_n, lifetime_yr, availability)
+        else:
+            core_lt = cc.core_lifetime(self.fuel)
         avail_eff = availability
         if (
             self._plasma_state is not None

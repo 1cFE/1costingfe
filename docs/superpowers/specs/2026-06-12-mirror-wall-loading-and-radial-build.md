@@ -1,7 +1,7 @@
 # Mirror Wall-Loading Constraint and Radial-Build Consistency
 
 **Date:** 2026-06-12
-**Status:** Approved design, pending implementation
+**Status:** Implemented
 **Settled decisions (user, 2026-06-12):** (a) throat-derived plug bore;
 (b) SizingInfeasible when the wall cap defeats the target; (c) surface
 heat flux is a full constraint with a sourced q_surface_max; (d1)
@@ -50,14 +50,16 @@ with `coil_standoff` a new YAML key (assembly gap between vessel outer
 surface and winding pack; default 0.10 m, matching the gap2_t convention).
 At YAML defaults: r_bore_central = 3.20 + 0.10 = 3.30 m.
 
-The mirror coil markup is recalibrated ONCE so C220103 at the YAML
-default machine still equals 513.375 M$ (calibration-neutrality
-construction, same procedure as the two-class introduction; the markup
-absorbs the bore change by design). Existing pins (LCOE 93.643616,
-C220103 513.375) must hold bit-identically. What changes is the
-sensitivity structure: coil cost now responds to blanket_t and the rest
-of the radial build, which is physically correct (thicker blanket means
-larger, costlier magnets).
+The mirror coil markup is recalibrated ONCE (`coil_markup.mirror =
+1.7265803102296458` in costing_constants.yaml) so C220103 at the YAML
+default machine equals 513.375 M$ with the new bores (calibration-
+neutrality construction, same procedure as the two-class introduction;
+the markup absorbs the bore change by design). C220103 holds at 513.375.
+The coil-only LCOE step is calibration-neutral; the mirror default LCOE
+pin moves to 98.686447 under the Part 3 fluence-based CAS72, not the coil
+change. What changes structurally: coil cost now responds to blanket_t
+and the rest of the radial build, which is physically correct (thicker
+blanket means larger, costlier magnets).
 
 ### Plug coils
 
@@ -167,14 +169,17 @@ neutrons), while the neutron cap barely binds; for DT it lands the same
 order as the neutron concern.
 
 Sizing-mode mechanism: a third branch of the density resolution,
-n_e(T) = min(n_beta, n_wall, n_surf). For advanced fuels n_surf(T) has
-the same closed form as n_wall (proxy radiation scales as P_fus, i.e.
-n^2). For DT/DD the full radiation model is not a pure power of n, so
-the n_surf branch is found by a short monotone bisection on n at fixed
-T (radiation is monotone increasing in density). Infeasibility under the
-cap raises SizingInfeasible naming q_surface_max, per decision (b).
-MirrorPlasmaState gains a `q_surface` field; forward/inverse audit modes
-warn at the same threshold.
+n_e(T) = min(n_beta, n_wall, n_surf). The n_surf branch is found by ONE
+uniform eager monotone bisection on n at fixed T for all fuels
+(`_density_from_surface_cap`); radiation plus radial transport is monotone
+increasing in density, so the bisection is well-posed across the whole
+fuel set. This replaces the originally-sketched closed-form-for-advanced-
+fuels / bisection-for-DT split: a single bisection path is simpler and
+covers every fuel without a special case. The bracket is clamped to
+[1e-3, n_beta] so the common non-binding case early-outs in one forward
+evaluation. Infeasibility under the cap raises SizingInfeasible naming
+q_surface_max, per decision (b). MirrorPlasmaState gains a `q_surface`
+field; forward/inverse audit modes warn at the same threshold.
 
 ## Part 3: Fluence-based core lifetime (CAS72)
 
@@ -187,8 +192,15 @@ pushback behind the optimizer's boundary-riding.
 Replace the per-fuel lifetime constants with per-fuel neutron fluence
 limits:
 
-    Phi_max[fuel]  [MW yr / m^2]      (YAML, sourced)
-    core_lifetime_FPY = Phi_max / q_n_wall
+    fluence_limit_<fuel>  [MW yr / m^2]   (YAML, sourced)
+    core_lifetime_FPY = fluence_limit / q_n, clamped to plant life
+
+The shipped limits (costing_constants.yaml, sourced in
+docs/account_justification/wall_limits_and_fluence.md): DT 18, DD 36,
+D-He3 108, p-B11 180 MW yr/m^2. DT is anchored to the ARIES FS 200 dpa
+RAFM-steel FW/blanket window; the others scale off DT by spectrum
+hardness (softer 2.45 MeV D-D, small D-He3 side-channel, aneutronic
+p-B11 governed by the surface cap).
 
 Consistency check on the existing constants: DT 5 FPY at a 3-4 MW/m^2
 class wall loading implies Phi_max of 15-20 MW yr/m^2, which is the
@@ -208,13 +220,14 @@ non-free. Guard rails: lifetime clamped to [a small floor, plant life]
 so the gradient stays finite at extreme q_n.
 
 **DECISION (d), settled 2026-06-12 (user): (d1)** — the fluence basis
-applies to ALL MFE concepts at once. Existing tokamak/stellarator CAS72
-results move wherever their q_n differs from the implied reference; the
-basis change is documented with citations in the account-justification
-writeup, and the result shifts are quantified in the implementation
-(before/after table for the reference concepts). IFE/MIF stay out of
-scope (their chamber-wall fluence story is per-shot and lives in the
-existing per-concept treatments).
+applies to ALL MFE concepts at once. Tokamak and stellarator CAS72 fell
+where their q_n sits below the implied reference (their LCOE pins moved
+down accordingly); the mirror default LCOE pin moved to 98.686447. The
+basis change is documented with citations in
+docs/account_justification/wall_limits_and_fluence.md, where the
+before/after CAS72 table for the reference concepts lives. IFE/MIF stay
+out of scope (their chamber-wall fluence story is per-shot and lives in
+the existing per-concept treatments).
 
 ## Out of scope
 
@@ -241,8 +254,8 @@ existing per-concept treatments).
 - Surface flux: p-B11 sizing is q_surface-bound (n_surf < n_beta and
   n_surf < n_wall at the solution) with q_surface at the cap; DT default
   machine reports q_surface on the state and warns above q_surface_max
-  in audit modes; jit==eager for the advanced-fuel closed form; the
-  DT/DD inner bisection converges (monotonicity test of p_rad in n).
+  in audit modes; the n_surf uniform bisection converges across all
+  fuels (monotonicity of p_rad + p_radial in n).
 - Fluence lifetime: DT at the implied reference wall loading reproduces
   5 FPY (continuity); CAS72 grows smoothly with f_beta in sizing mode
   (finite positive gradient of LCOE w.r.t. f_beta through the

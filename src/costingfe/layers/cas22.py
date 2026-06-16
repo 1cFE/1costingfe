@@ -194,6 +194,8 @@ def cas22_reactor_plant_equipment(
     n_plug_coils: int = 0,  # Number of end-plug coils
     R_m: float = 1.0,  # Mirror ratio B_throat / B_min (for b_plug)
     B: float = 0.0,  # Central magnetic field [T] (for b_plug = R_m * B)
+    r_bore_central: float = 0.0,  # Central-cell solenoid bore [m]
+    r_bore_plug: float = 0.0,  # End-plug coil bore [m] (a/sqrt(R_m) + plug_standoff)
     # Bottom-up target-factory capital (CAS22.01.08, IFE/MIF), M$, three terms:
     #   cap_fixed       -- building + tritium-confinement shell + base line (fixed)
     #   cap_per_hz       -- production lines, scale with target throughput (f_rep)
@@ -297,6 +299,12 @@ def cas22_reactor_plant_equipment(
     #     the right basis for low-field FRC/linear copper coils, where the
     #     $/kAm path collapses to a near-zero, unphysical number.
     # -----------------------------------------------------------------------
+    # Mirror two-class informational sub-lines (0.0 for all non-mirror branches;
+    # the two-class branch overwrites these with the per-class values).
+    _c220103_central = 0.0
+    _c220103_plug = 0.0
+    _r_bore_central_out = 0.0
+    _r_bore_plug_out = 0.0
     if concept == ConfinementConcept.DIPOLE:
         # ---------------------------------------------------------------
         # Levitated dipole — two distinct coil populations:
@@ -337,26 +345,31 @@ def cas22_reactor_plant_equipment(
             concept == ConfinementConcept.MIRROR
             and coil_spacing > 0
             and n_plug_coils > 0
+            and r_bore_central > 0
+            and r_bore_plug > 0
         ):
             # -----------------------------------------------------------
-            # Mirror two-class coil model (length-scaling).
+            # Mirror two-class coil model (length-scaling, bore-resolved).
             #
             # Class 1 — central-cell solenoids:
             #   n_central = chamber_length / coil_spacing  (continuous
             #   aggregate; no rounding — this is a costing quantity, not a
-            #   physical integer). Field basis: b_center (central-cell field),
-            #   same as the existing loop model. G = n_central * 4*pi.
+            #   physical integer). Field basis: b_center (central-cell field).
+            #   Bore: r_bore_central = vessel_or + coil_standoff (from the
+            #   radial build; large-bore/low-field). G = n_central * 4*pi.
             #
             # Class 2 — end-plug HTS coils:
-            #   n_plug_coils at throat field b_plug = R_m * B.  Same r_bore
-            #   as central coils (simplification documented in
-            #   docs/account_justification/CAS22_reactor_components.md).
-            #   G_plug = n_plug_coils * 4*pi.
+            #   n_plug_coils at throat field b_plug = R_m * B. Bore:
+            #   r_bore_plug = a/sqrt(R_m) + plug_standoff (flux-conservation
+            #   throat radius plus structure; small-bore/high-field, no blanket
+            #   at the throat). G_plug = n_plug_coils * 4*pi.
             #
-            # Markup recalibrated (costing_constants.yaml, mirror: 25/14) so
-            # that at YAML defaults (L=20, coil_spacing=5, n_plug=4, R_m=10,
-            # B=3 -> b_plug=30 T) the total reproduces 513.375 M$ exactly
-            # (calibration-neutrality invariant; see account justification doc).
+            # r_bore (cross-concept schema key) is NOT read by this branch.
+            # The two bores are passed explicitly from model.py. Markup
+            # recalibrated (costing_constants.yaml) so that at YAML defaults
+            # (L=20, coil_spacing=5, n_plug=4, R_m=10, B=3, r_bore_central=3.30,
+            # r_bore_plug=1.5/sqrt(10)+0.30) the total reproduces 513.375 M$
+            # exactly (calibration-neutrality invariant; see account doc).
             # -----------------------------------------------------------
             coil_markup = cc.coil_markup[concept.value]
             n_central = chamber_length / coil_spacing
@@ -365,11 +378,19 @@ def cas22_reactor_plant_equipment(
             b_plug = R_m * B
             G_central = n_central * 4 * math.pi
             G_plug = n_plug_coils * 4 * math.pi
-            kAm_central = G_central * b_center * r_bore**2 / (_MU0 * 1000)
-            kAm_plug = G_plug * b_plug * r_bore**2 / (_MU0 * 1000)
+            kAm_central = G_central * b_center * r_bore_central**2 / (_MU0 * 1000)
+            kAm_plug = G_plug * b_plug * r_bore_plug**2 / (_MU0 * 1000)
             cond_per_kAm = coil_material.default_cost_per_kAm
-            total_conductor = (kAm_central + kAm_plug) * cond_per_kAm / 1e6
+            conductor_central = kAm_central * cond_per_kAm / 1e6
+            conductor_plug = kAm_plug * cond_per_kAm / 1e6
+            total_conductor = conductor_central + conductor_plug
             c220103 = total_conductor * coil_markup
+            # Informational sub-lines for the mirror two-class branch (markup
+            # is shared, so each class's share = conductor_x * markup).
+            _c220103_central = conductor_central * coil_markup
+            _c220103_plug = conductor_plug * coil_markup
+            _r_bore_central_out = r_bore_central
+            _r_bore_plug_out = r_bore_plug
         else:
             # Mirror with coil_spacing <= 0 or n_plug_coils <= 0 falls back to
             # the legacy fixed-n_coils model; all other non-None concepts also
@@ -738,6 +759,12 @@ def cas22_reactor_plant_equipment(
         # are for visibility and sensitivity tracing only.
         "C220106_vessel": c220106_vessel,
         "C220106_pump": c220106_pump,
+        # Informational sub-lines for the mirror two-class coil branch.
+        # Zero for non-mirror concepts. Not aggregated; C220103 carries the total.
+        "C220103_central": _c220103_central,
+        "C220103_plug": _c220103_plug,
+        "r_bore_central": _r_bore_central_out,
+        "r_bore_plug": _r_bore_plug_out,
         "C220107": c220107,
         "C220108": c220108,
         "C220109": c220109,

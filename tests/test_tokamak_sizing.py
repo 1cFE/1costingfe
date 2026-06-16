@@ -10,6 +10,10 @@ from costingfe.layers.tokamak import (
 from costingfe.model import CostModel
 from costingfe.types import ConfinementConcept, Fuel
 
+# Every test here runs a full sizing solve (GSS x bisection); the dev loop
+# skips them via -m "not slow", the full suite runs them.
+pytestmark = pytest.mark.slow
+
 
 def test_magnet_table_has_expected_materials():
     for key in ("rebco_hts", "nb3sn", "nbti", "copper"):
@@ -316,7 +320,9 @@ def test_backward_compat_sizing_off_unchanged():
     assert r.costs.lcoe > 0.0
     # FREEZE the reference: run this once, read the printed LCOE, and replace
     # REF below with that exact value, so this test guards against drift.
-    REF = 124.343605
+    # re-pinned 2026-06-13: fluence-based CAS72 basis change, see
+    # wall_limits_and_fluence.md (was 124.343605).
+    REF = 119.37332153320312
     if REF is not None:
         assert r.costs.lcoe == pytest.approx(REF, rel=1e-9)
 

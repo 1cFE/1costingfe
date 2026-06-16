@@ -220,7 +220,8 @@ Categorized by CAS account. Every field is overridable.
 | `remote_handling_<fuel>_base` | Remote handling (M$ at 1 GWe). | dt 150 · dd 100 · dhe3 30 · pb11 20 |
 | `installation_frac` | C220111 labor as fraction of subtotal. | 0.14 |
 | `multi_unit_labor_factor` | Labor cost of module N beyond #1. | 0.92 |
-| `core_lifetime_<fuel>` | Core component life (FPY). | dt 5 · dd 10 · dhe3 30 · pb11 50 |
+| `core_lifetime_<fuel>` | Core component life (FPY); IFE/MIF only (steady-state MFE derives it from fluence below). | dt 5 · dd 10 · dhe3 30 · pb11 50 |
+| `fluence_limit_<fuel>` | First-wall/blanket neutron fluence limit (MW yr/m^2); steady-state MFE core life = limit / q_n, clamped. | dt 18 · dd 36 · dhe3 108 · pb11 180 |
 | `replaceable_accounts` | CAS22 sub-accounts that get replaced. | `("C220101", "C220108")` |
 | `f_rad_<fuel>` (pulsed) | Pulsed radiation fraction. | dt 0.10 · dd 0.08 · dhe3 0.05 · pb11 0.15 |
 | `f_rad_fus_pb11` · `f_rad_fus_dhe3` | Steady-state brem fraction of P_fus. | 0.83 · 0.24 |

@@ -156,14 +156,24 @@ def test_sensitivity_jax_grad_matches_finite_diff():
     # JAX grad
     sens = model.sensitivity(result.params)
 
-    # Manual finite-difference for eta_th
+    # Centered finite-difference for eta_th. The fluence-based CAS72 basis
+    # (re-pinned 2026-06-13, see wall_limits_and_fluence.md) makes core
+    # lifetime depend on eta_th through q_n, adding curvature near eta_th=0.4;
+    # a small centered step is required to match the analytic derivative.
     base_lcoe = float(result.costs.lcoe)
     eta_th = result.params["eta_th"]
-    delta = eta_th * 0.01
-    r2 = model.forward(
+    delta = eta_th * 1e-3
+    r_hi = model.forward(
         net_electric_mw=1000.0, availability=0.85, lifetime_yr=30, eta_th=eta_th + delta
     )
-    fd_elasticity = ((float(r2.costs.lcoe) - base_lcoe) / delta) * eta_th / base_lcoe
+    r_lo = model.forward(
+        net_electric_mw=1000.0, availability=0.85, lifetime_yr=30, eta_th=eta_th - delta
+    )
+    fd_elasticity = (
+        ((float(r_hi.costs.lcoe) - float(r_lo.costs.lcoe)) / (2 * delta))
+        * eta_th
+        / base_lcoe
+    )
 
     assert abs(sens["engineering"]["eta_th"] - fd_elasticity) < 0.01, (
         f"JAX grad {sens['engineering']['eta_th']:.4f} vs FD {fd_elasticity:.4f}"
@@ -629,4 +639,38 @@ def test_two_knob_plant_aggregate_scales_with_n_mod():
     assert 0.8 * n_mod_run < ratio < n_mod_run, (
         f"CAS22 plant-aggregate override expected to scale by roughly n_mod "
         f"({n_mod_run:.2f}) minus multi-unit labor savings; got ratio {ratio:.3f}"
+    )
+
+
+def test_n_mod_does_not_scale_per_module_core_lifetime():
+    """Per-module q_n and core lifetime must be invariant to n_mod.
+
+    The fluence-based core lifetime uses pt.p_neutron and geo.firstwall_area,
+    both of which are per-module quantities. If someone erroneously multiplied
+    q_n by n_mod, core lifetime would fall with n_mod, making CAS72 grow
+    super-linearly rather than linearly. This test locks that invariant.
+
+    Construction: run TOKAMAK DT at n_mod=1 / 500 MWe and again at n_mod=2 /
+    1000 MWe (identical per-module operating point). Because the replacement
+    cost per event is sum(cas22_detail[k]) * n_mod and core_lifetime is
+    per-module, CAS72 must scale exactly linearly with n_mod. A doubling of
+    n_mod at the same per-module power must therefore produce CAS72 = 2 *
+    CAS72_single within floating-point tolerance.
+    """
+    model = CostModel(concept=ConfinementConcept.TOKAMAK, fuel=Fuel.DT)
+    one = model.forward(
+        net_electric_mw=500.0, n_mod=1, availability=0.85, lifetime_yr=30
+    )
+    two = model.forward(
+        net_electric_mw=1000.0, n_mod=2, availability=0.85, lifetime_yr=30
+    )
+    cas72_one = float(one.costs.cas72)
+    cas72_two = float(two.costs.cas72)
+    assert cas72_one > 0, "CAS72 should be positive for a DT tokamak"
+    # Tolerance of 0.1% allows for rounding in intermediate float ops but
+    # would catch any n_mod multiplication of q_n (which would roughly halve
+    # core lifetime and roughly double CAS72 per module, yielding ~4x total).
+    assert abs(cas72_two - 2.0 * cas72_one) / cas72_one < 1e-3, (
+        f"CAS72 at n_mod=2 ({cas72_two:.4f}) expected to be 2x CAS72 at "
+        f"n_mod=1 ({cas72_one:.4f}); ratio = {cas72_two / cas72_one:.4f}"
     )
