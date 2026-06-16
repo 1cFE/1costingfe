@@ -62,8 +62,9 @@ class FusionTeaOutput:
     power_table: dict[str, float]  # Power flow values (e.g. "p_fus" -> 2300.0)
     sensitivity: dict[
         str, dict[str, float]
-    ]  # {"engineering": {...}, "financial": {...}}
+    ]  # {"engineering": {...}, "financial": {...}, "costing": {...}}
     overridden: list[str] = field(default_factory=list)  # Keys that were overridden
+    params: dict[str, float] = field(default_factory=dict)  # Merged forward params, baseline values for sensitivity
 
 
 def run_costing(inp: FusionTeaInput) -> FusionTeaOutput:
@@ -188,4 +189,5 @@ def run_costing(inp: FusionTeaInput) -> FusionTeaOutput:
         power_table=power_table,
         sensitivity=sens,
         overridden=result.overridden,
+        params=dict(result.params),
     )
