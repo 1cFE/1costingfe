@@ -746,6 +746,14 @@ percent) suffices, which is the regime GDT and WHAM operate in.
 
 ## Settled-regime observation (all fuels)
 
+Snapshot scope: this section records the Task 3 observe step taken BEFORE the plug
+sustainment power was charged explicitly (Task 2e). The per-fuel rankings,
+driven-vs-ignited verdicts, and the net-negative advanced-fuel finding below are
+current; the D-T gain and LCOE figures here (q_eng about 1.77, LCOE about 369) are
+the pre-plug-power values. The finalized post-Task-2e headline numbers (D-T
+q_eng about 1.68, LCOE about 396, with the 30 MW plug power charged) are in the
+"Sanctioned mirror re-pin" table above, which is the authoritative current result.
+
 This section records the Task 3 observe step: the corrected tandem-calibrated model
 run in sizing/optimize mode across all four fuels, the settled optimum diagnostics,
 and the per-fuel decision on whether the plasma settles in a sensible,
@@ -884,8 +892,8 @@ minimum-warm-fraction bound is the documented contingency.
   deliberately decouples the plug hot-electron population from the central-cell
   electrons so the plug can run hotter (ECH-heated) than the central cell, which is
   exactly the hot-plug / cool-central separation modelled here.
-- **Santarius, J. F. and Callen, J. D. (1983)**, "Fusion-alpha confinement in a
-  tandem-mirror central cell," Phys. Fluids 26, 1037. Bounce-averaged
+- **Santarius, J. F. and Callen, J. D. (1983)**, "Alpha particle loss and energy
+  deposition in tandem mirrors," Phys. Fluids 26, 1037. Bounce-averaged
   Fokker-Planck treatment of fusion-alpha loss-cone confinement: about 50 percent
   of alphas lost by count but under 25 percent by energy, so about 75-85 percent
   of the alpha power deposits. Primary source for the `f_alpha_heat` value.
