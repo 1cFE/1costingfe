@@ -148,6 +148,38 @@ def test_sensitivity_ife():
     assert "p_input" not in sens["engineering"]  # MFE-specific param
 
 
+def test_sensitivity_drops_broken_heating_mix_sliders():
+    """p_nbi/p_ecrh/p_icrf/p_lhcd are not valid sensitivity sliders: production
+    renormalizes the heating mix to p_input, but the JAX-traced sensitivity path
+    skips that renorm, so their reported elasticity does not match forward().
+    They must not appear in any sensitivity category."""
+    model = CostModel(concept=ConfinementConcept.TOKAMAK, fuel=Fuel.DT)
+    result = model.forward(net_electric_mw=1000.0, availability=0.85, lifetime_yr=30)
+    sens = model.sensitivity(result.params)
+    for category in sens.values():
+        for k in ("p_nbi", "p_ecrh", "p_icrf", "p_lhcd"):
+            assert k not in category, f"{k} should not be a sensitivity slider"
+
+
+def test_sensitivity_includes_lifetime_yr():
+    """Plant economic lifetime is an LCOE driver and must be a sensitivity slider."""
+    model = CostModel(concept=ConfinementConcept.TOKAMAK, fuel=Fuel.DT)
+    result = model.forward(net_electric_mw=1000.0, availability=0.85, lifetime_yr=30)
+    sens = model.sensitivity(result.params)
+    assert "lifetime_yr" in sens["engineering"]
+    assert sens["engineering"]["lifetime_yr"] != 0
+
+
+def test_sensitivity_ife_includes_target_unit_cost():
+    """Per-shot target cost (CAS80) is a dominant IFE/MIF LCOE driver and must be
+    a sensitivity slider for pulsed concepts that consume targets."""
+    model = CostModel(concept=ConfinementConcept.LASER_IFE, fuel=Fuel.DT)
+    result = model.forward(net_electric_mw=1000.0, availability=0.85, lifetime_yr=30)
+    sens = model.sensitivity(result.params)
+    assert "target_unit_cost" in sens["engineering"]
+    assert sens["engineering"]["target_unit_cost"] != 0
+
+
 def test_sensitivity_jax_grad_matches_finite_diff():
     """JAX grad elasticities should be close to finite-difference estimates."""
     model = CostModel(concept=ConfinementConcept.TOKAMAK, fuel=Fuel.DT)

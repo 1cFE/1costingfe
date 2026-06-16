@@ -1613,6 +1613,7 @@ class CostModel:
         common = [
             "availability",
             "construction_time_yr",
+            "lifetime_yr",
             "mn",
             "eta_th",
             "eta_p",
@@ -1662,11 +1663,11 @@ class CostModel:
                 # Magnet costing
                 "b_center",
                 "r_bore",
-                # Heating mix (CAS22 costing)
-                "p_nbi",
-                "p_ecrh",
-                "p_icrf",
-                "p_lhcd",
+                # NOTE: p_nbi/p_ecrh/p_icrf/p_lhcd are deliberately not sliders.
+                # forward() renormalizes the heating mix to p_input on concrete
+                # values, but the JAX-traced sensitivity path skips that branch,
+                # so their elasticity would not match production. The improvable
+                # hardware question is captured by eta_source_* (costing category).
                 # 0D model / disruption parameters
                 "M_ion",
                 "lambda_q",
@@ -1684,6 +1685,10 @@ class CostModel:
                 "p_coils",
                 "eta_dec",
                 "f_pdv",
+                # Per-shot consumed-target cost (CAS80): a dominant IFE/MIF LCOE
+                # driver at high rep-rate. Zero for in-situ-formation concepts,
+                # which the params[k] != 0 filter excludes automatically.
+                "target_unit_cost",
             ],
         }
         keys = common + family_specific.get(self.family, [])
@@ -1814,11 +1819,12 @@ class CostModel:
             inf = eng.pop("inflation_rate", params.get("inflation_rate", 0.02))
             av = eng.pop("availability", avail)
             ct_val = eng.pop("construction_time_yr", ct)
+            lf = eng.pop("lifetime_yr", life)
 
             result = self.forward(
                 net_electric_mw=net_mw,
                 availability=av,
-                lifetime_yr=life,
+                lifetime_yr=lf,
                 n_mod=n_mod,
                 construction_time_yr=ct_val,
                 interest_rate=ir,
