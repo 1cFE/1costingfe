@@ -1649,11 +1649,13 @@ class CostModel:
             if key.startswith("C22") and key in ref_result.cas22_detail:
                 ref_val = ref_result.cas22_detail[key]
                 tgt_val = target_result.cas22_detail[key]
+                is_cas22_subaccount = True
             # Top-level CAS accounts
             elif key in self._OVERRIDE_TO_ATTR:
                 attr = self._OVERRIDE_TO_ATTR[key]
                 ref_val = getattr(ref_result.costs, attr)
                 tgt_val = getattr(target_result.costs, attr)
+                is_cas22_subaccount = False
             else:
                 # Unknown key: pass through unscaled
                 scaled[key] = value
@@ -1661,10 +1663,20 @@ class CostModel:
 
             if ref_val > 0:
                 scaled[key] = value * (tgt_val / ref_val)
+            elif is_cas22_subaccount:
+                # The library has no value for this CAS22 sub-account in this
+                # config (e.g. a driver account that is $0 for this concept),
+                # so no per-account ratio is available. The override IS the
+                # cost basis, and reactor-island hardware grows with plant
+                # size, so scale it linearly with net power rather than
+                # freezing it at the reference-power dollars. A genuinely
+                # scale-invariant CAS22 line item should use an explicit
+                # fixed-scaling hint instead.
+                scaled[key] = value * (target_mw / reference_mw)
             else:
-                # Reference value is zero (e.g. CAS28 digital twin at both
-                # scales, or an account that doesn't exist for this config).
-                # Pass through unscaled.
+                # Top-level account that is zero at both scales (e.g. CAS28
+                # digital twin): treated as a fixed/absent cost, so pass
+                # through unscaled rather than inflating it with plant size.
                 scaled[key] = value
 
         return scaled

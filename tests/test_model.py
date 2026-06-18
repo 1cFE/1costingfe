@@ -785,6 +785,73 @@ def test_two_knob_plant_aggregate_scales_with_n_mod():
     )
 
 
+def test_scale_overrides_cas22_zero_account_scales_linearly():
+    """Issue #37: an absolute override on a CAS22 sub-account the library
+    computes as $0 for this config must scale linearly with plant power, not
+    freeze at the reference-power dollars.
+
+    PULSED_FRC has no per-MJ driver coefficient for C220104, so the library
+    value is $0 at every power; the analyst's override is the cost basis and,
+    being reactor-island hardware, should grow with the plant.
+    """
+    model = CostModel(concept=ConfinementConcept.PULSED_FRC, fuel=Fuel.DHE3)
+    scaled = model._scale_overrides(
+        {"C220104": 25.0},
+        reference_mw=50.0,
+        target_mw=1000.0,
+        availability=0.85,
+        lifetime_yr=30,
+    )
+    # 25 * (1000 / 50) = 500, not the frozen 25.
+    assert scaled["C220104"] == pytest.approx(500.0, rel=1e-6)
+
+
+def test_scale_overrides_cas22_nonzero_account_uses_library_ratio():
+    """A CAS22 sub-account the library DOES compute must keep scaling by the
+    library's own per-account ratio (tgt/ref), not the linear power ratio.
+
+    Guards against the #37 fix bleeding into the working path.
+    """
+    model = CostModel(concept=ConfinementConcept.PULSED_FRC, fuel=Fuel.DHE3)
+    ref = model.forward(
+        net_electric_mw=50.0, n_mod=1, availability=0.85, lifetime_yr=30
+    )
+    tgt = model.forward(net_electric_mw=1000.0, availability=0.85, lifetime_yr=30)
+    lib_ratio = float(tgt.cas22_detail["C220107"]) / float(ref.cas22_detail["C220107"])
+    scaled = model._scale_overrides(
+        {"C220107": 100.0},
+        reference_mw=50.0,
+        target_mw=1000.0,
+        availability=0.85,
+        lifetime_yr=30,
+    )
+    assert scaled["C220107"] == pytest.approx(100.0 * lib_ratio, rel=1e-6)
+    # The library ratio must differ from the naive linear ratio, proving the
+    # nonzero path still uses the per-account law (FRC C220107 ~22x vs 20x).
+    assert lib_ratio != pytest.approx(1000.0 / 50.0, rel=1e-3)
+
+
+def test_scale_overrides_toplevel_zero_account_stays_frozen():
+    """Scope boundary: top-level accounts the library computes as $0 are NOT
+    linearly scaled (only CAS22 sub-account hardware is). Overriding such a
+    top-level zero account passes through frozen, so genuinely fixed/absent
+    costs (e.g. CAS28 digital twin) are not silently inflated with plant size.
+    """
+    model = CostModel(concept=ConfinementConcept.PULSED_FRC, fuel=Fuel.DHE3)
+    ref = model.forward(
+        net_electric_mw=50.0, n_mod=1, availability=0.85, lifetime_yr=30
+    )
+    assert float(ref.costs.cas23) == 0.0  # precondition: library-zero top-level
+    scaled = model._scale_overrides(
+        {"CAS23": 10.0},
+        reference_mw=50.0,
+        target_mw=1000.0,
+        availability=0.85,
+        lifetime_yr=30,
+    )
+    assert scaled["CAS23"] == 10.0  # frozen, not scaled
+
+
 def test_n_mod_does_not_scale_per_module_core_lifetime():
     """Per-module q_n and core lifetime must be invariant to n_mod.
 
