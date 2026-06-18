@@ -1784,6 +1784,10 @@ class CostModel:
             "use_0d_model",
             "0d_mode",
             "fw_area",
+            # Per-concept D-He3 side-channel fraction the 0D path injects into
+            # params (None unless overridden); listed so a 0D forward's params
+            # round-trip back through forward() (e.g. sensitivity() replay).
+            "dhe3_dd_frac_pin",
             # Power-to-geometry sizing (TOKAMAK)
             "size_from_power",
             "optimize_lcoe",
@@ -1916,8 +1920,16 @@ class CostModel:
         cost-of-capital givens, and costing are CostingConstants calibration
         parameters (unit costs, fractions, base costs).
 
-        Uses jax.grad for exact autodiff gradients.
+        Uses jax.grad for exact autodiff gradients, EXCEPT on the 0D /
+        power-sizing paths, which solve the operating point with a bisection
+        (tokamak_0d_inverse / mirror_0d_inverse). jax.grad cannot see through
+        that root-find -- every parameter enters the loop through the
+        non-differentiable comparison -- so it disagrees with the concrete
+        forward(). Those paths fall back to finite differences on forward().
         """
+        if params.get("use_0d_model", False) or params.get("size_from_power", False):
+            return self._sensitivity_fd(params, cost_overrides)
+
         lcoe_fn, keys, base_vals = self._build_lcoe_fn(params, cost_overrides)
         base_lcoe = float(lcoe_fn(base_vals))
 
@@ -1930,6 +1942,70 @@ class CostModel:
         for i, key in enumerate(keys):
             p = float(base_vals[i])
             dLCOE_dp = float(grads[i])
+            elasticity = dLCOE_dp * p / base_lcoe
+            if key in self._FINANCIAL_KEYS:
+                financial[key] = elasticity
+            elif key in self._COSTING_KEYS:
+                costing[key] = elasticity
+            else:
+                engineering[key] = elasticity
+
+        return {
+            "engineering": engineering,
+            "financial": financial,
+            "costing": costing,
+        }
+
+    def _sensitivity_fd(
+        self,
+        params: dict,
+        cost_overrides: dict[str, float] | None = None,
+        h: float = 1e-3,
+    ) -> dict[str, dict[str, float]]:
+        """Finite-difference elasticities by re-running forward() concretely.
+
+        The fallback for the 0D / sizing paths (see sensitivity()): central
+        differences on forward() with plain Python floats reproduce the
+        concrete execution the slider runs, including the bisection solve and
+        the heating-mix renormalization that JAX tracing skips. Same key
+        selection and categorization as the jax.grad path.
+        """
+        keys = [k for k in self._continuous_keys() if k in params and params[k] != 0]
+
+        # Split params into forward()'s named args and its **overrides exactly
+        # as _build_lcoe_fn does, but holding Python floats so forward() takes
+        # its concrete path.
+        named = {
+            "net_electric_mw": float(params["net_electric_mw"]),
+            "availability": float(params["availability"]),
+            "lifetime_yr": float(params["lifetime_yr"]),
+            "n_mod": params.get("n_mod", 1.0),
+            "interest_rate": params.get("interest_rate", 0.07),
+            "inflation_rate": params.get("inflation_rate", 0.02),
+            "noak": params.get("noak", True),
+        }
+        skip = set(named) | {"fuel", "concept"}
+        eng = {k: v for k, v in params.items() if k not in skip}
+
+        def run(key, value):
+            n = dict(named)
+            e = dict(eng)
+            (n if key in n else e)[key] = value
+            return float(
+                self.forward(cost_overrides=cost_overrides, **n, **e).costs.lcoe
+            )
+
+        base_lcoe = float(
+            self.forward(cost_overrides=cost_overrides, **named, **eng).costs.lcoe
+        )
+
+        engineering: dict[str, float] = {}
+        financial: dict[str, float] = {}
+        costing: dict[str, float] = {}
+        for key in keys:
+            p = float(params[key])
+            dp = abs(p) * h
+            dLCOE_dp = (run(key, p + dp) - run(key, p - dp)) / (2 * dp)
             elasticity = dLCOE_dp * p / base_lcoe
             if key in self._FINANCIAL_KEYS:
                 financial[key] = elasticity

@@ -237,6 +237,92 @@ def test_sensitivity_jax_grad_matches_finite_diff():
     )
 
 
+def test_forward_accepts_dhe3_dd_frac_pin_override():
+    """forward() must accept dhe3_dd_frac_pin so a 0D forward's params round-trip.
+
+    Regression for the issue #36 crash: the 0D path injects dhe3_dd_frac_pin
+    into the returned params, but it was not an accepted override key, so
+    replaying those params through forward() (as sensitivity() does) raised
+    ValueError. params out of forward() must round-trip back into forward().
+    """
+    model = CostModel(concept=ConfinementConcept.TOKAMAK, fuel=Fuel.DT)
+    r = model.forward(
+        net_electric_mw=1000.0, availability=0.85, lifetime_yr=30, use_0d_model=True
+    )
+    assert "dhe3_dd_frac_pin" in r.params
+    # Replaying every returned param as an override must not raise.
+    named = {
+        "net_electric_mw",
+        "availability",
+        "lifetime_yr",
+        "n_mod",
+        "interest_rate",
+        "inflation_rate",
+        "noak",
+    }
+    eng = {k: v for k, v in r.params.items() if k not in named | {"fuel", "concept"}}
+    r2 = model.forward(net_electric_mw=1000.0, availability=0.85, lifetime_yr=30, **eng)
+    assert float(r2.costs.lcoe) > 0
+
+
+def test_sensitivity_0d_tokamak_does_not_crash():
+    """sensitivity() on a 0D tokamak must return categorized elasticities.
+
+    Regression for issue #36: this used to raise ValueError before reaching
+    any gradient computation (dhe3_dd_frac_pin not round-trippable).
+    """
+    model = CostModel(concept=ConfinementConcept.TOKAMAK, fuel=Fuel.DT)
+    r = model.forward(
+        net_electric_mw=1000.0, availability=0.85, lifetime_yr=30, use_0d_model=True
+    )
+    sens = model.sensitivity(r.params)
+    assert "engineering" in sens and "financial" in sens and "costing" in sens
+    assert "B" in sens["engineering"]
+
+
+def test_sensitivity_0d_matches_forward_finite_diff():
+    """0D sensitivity must reproduce forward() (the slider answer), not jax.grad.
+
+    Issue #36: jax.grad cannot see through the tokamak_0d_inverse bisection on
+    T_e -- every parameter enters via the non-differentiable comparison, so
+    autodiff returns gradients that disagree with, and even flip the sign of,
+    the concrete forward(). The 0D path must fall back to finite differences on
+    forward(). We verify the returned elasticities for physics levers match an
+    independent central-difference on forward() (which jax.grad would fail).
+    """
+    model = CostModel(concept=ConfinementConcept.TOKAMAK, fuel=Fuel.DT)
+    r = model.forward(
+        net_electric_mw=1000.0, availability=0.85, lifetime_yr=30, use_0d_model=True
+    )
+    sens = model.sensitivity(r.params)
+    base = float(r.costs.lcoe)
+
+    def fd(key, h=1e-3):
+        p0 = float(r.params[key])
+        hi = model.forward(
+            net_electric_mw=1000.0,
+            availability=0.85,
+            lifetime_yr=30,
+            use_0d_model=True,
+            **{key: p0 * (1 + h)},
+        )
+        lo = model.forward(
+            net_electric_mw=1000.0,
+            availability=0.85,
+            lifetime_yr=30,
+            use_0d_model=True,
+            **{key: p0 * (1 - h)},
+        )
+        return (float(hi.costs.lcoe) - float(lo.costs.lcoe)) / (2 * p0 * h) * p0 / base
+
+    for key in ("B", "elon", "R0", "f_GW"):
+        want = fd(key)
+        got = sens["engineering"][key]
+        assert abs(got - want) < max(0.02, 0.05 * abs(want)), (
+            f"{key}: sensitivity {got:.4f} vs forward-FD {want:.4f}"
+        )
+
+
 def test_batch_lcoe_vmap():
     """batch_lcoe should evaluate many parameter sets via vmap."""
     model = CostModel(concept=ConfinementConcept.TOKAMAK, fuel=Fuel.DT)
