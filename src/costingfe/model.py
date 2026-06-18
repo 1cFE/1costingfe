@@ -85,6 +85,12 @@ from costingfe.types import (
 )
 from costingfe.validation import CostingInput
 
+# Power-to-geometry sizing (size_from_power) and the outer LCOE optimization
+# (optimize_lcoe) are gated off for the released build. The solver modules
+# (layers/tokamak.py, layers/mirror.py, the model._size_* helpers) remain on
+# disk but are unreachable through forward(). Flip to True to re-enable.
+SIZING_FEATURES_ENABLED = False
+
 
 def _core_lifetime_fpy(cc, fuel, q_n, lifetime_yr, availability):
     """Fluence-based core lifetime [FPY]: Phi_max / q_n, clamped to [0.5,
@@ -937,6 +943,20 @@ class CostModel:
                         "cost_overrides",
                     }
                 },
+            )
+
+        # Power-to-geometry sizing and LCOE optimization are gated off for the
+        # released build (the solver code stays on disk but is unreachable here).
+        # Guarding on the effective param value catches every concept and every
+        # input route (YAML default or user override); the keys remain whitelisted
+        # so this clear message fires instead of an "unknown parameter" error.
+        if not SIZING_FEATURES_ENABLED and (
+            params.get("size_from_power", False)
+            or params.get("optimize_lcoe", False)
+        ):
+            raise NotImplementedError(
+                "Power-to-geometry sizing (size_from_power) and LCOE "
+                "optimization (optimize_lcoe) are not available in this release."
             )
 
         # optimize_lcoe implies size_from_power (you can only optimize the
