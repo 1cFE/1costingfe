@@ -6,7 +6,7 @@ This post hands you that codebase. [1costingFE](https://github.com/1cFE/1costing
 
 ## What it is
 
-1costingFE is a costing framework. In: a confinement concept, a fuel, and a design point, the geometry that drives the component costs and the net electric power that fills the LCOE denominator. Out: a levelized cost of electricity, an account-by-account cost breakdown, and the closed power balance behind them. It is calibrated and traceable through the [account justification documents](https://github.com/1cFE/1costingfe/tree/v0.1.0-alpha.1/docs/account_justification): one document per cost account, recording what the number is calibrated against and where the uncertainty lives.
+1costingFE is a costing framework. Its inputs are: a confinement concept, a fuel, and a design point, the geometry that drives the component costs and the net electric power that fills the LCOE denominator. It outputs: a levelized cost of electricity, an account-by-account cost breakdown, and the closed power balance behind them. It is calibrated and traceable through the [account justification documents](https://github.com/1cFE/1costingfe/tree/v0.1.0-alpha.1/docs/account_justification): one document per cost account, recording what the number is calibrated against and where the uncertainty lives.
 
 It is composed of three modules:
 
@@ -53,7 +53,7 @@ result = model.forward(
 )
 
 print(f"LCOE: ${float(result.costs.lcoe):.1f}/MWh")
-print(f"Total capital: ${float(result.costs.overnight_cost):,.0f}/kW")
+print(f"Total capital: ${float(result.costs.capital_per_kw):,.0f}/kW")
 subaccounts = {
     k: v for k, v in result.cas22_detail.items()
     if k != "C220000" and not k.startswith("C220106_")
@@ -65,16 +65,16 @@ for code, value in sorted(subaccounts.items(), key=lambda kv: -kv[1])[:5]:
 which prints, on a fresh install:
 
 ```
-LCOE: $85.3/MWh
-Total capital: $6,048/kW
-  C220103: $515M
-  C220101: $424M
-  C220111: $285M
-  C220102: $284M
+LCOE: $108.7/MWh
+Total capital: $8,262/kW
+  C220103: $1133M
+  C220101: $805M
+  C220102: $467M
+  C220111: $467M
   C220104: $279M
 ```
 
-That is a 1 GWe D-T tokamak at 85% availability over a 30-year life; the capital figure includes interest during construction and is quoted per kW of net capacity. The five largest reactor-plant items are the magnets (C220103), the blanket and first wall (C220101), installation labor (C220111), the shield (C220102), and heating and current drive (C220104). The returned object also carries the full power balance from fusion power to grid, every intermediate parameter by name, and the set of accounts your inputs overrode.
+That is a 1 GWe D-T tokamak at 85% availability over a 30-year life; the capital figure includes interest during construction and is quoted per kW of net capacity. The five largest reactor-plant items are the magnets (C220103), the blanket and first wall (C220101), the shield (C220102), installation labor (C220111), and heating and current drive (C220104). The returned object also carries the full power balance from fusion power to grid, every intermediate parameter by name, and the set of accounts your inputs overrode.
 
 Swap the two enums and the same call costs a pulsed FRC burning D-He3 or a laser IFE plant burning D-T. The `examples/` folder has 26 scripts, including the ones that reproduce the numbers in the cost-floor and DEC posts, and the per-account justification documents live in `docs/account_justification/`.
 
@@ -85,10 +85,10 @@ If you work on fusion, there is probably one piece of this plant you know better
 **You have a better design point.** Every concept's engineering parameters live in a YAML defaults file (`src/costingfe/data/defaults/steady_state_tokamak.yaml` and sixteen siblings), and any of them can be overridden per call:
 
 ```yaml
-b_center: 12.0       # Field at coil center [T]
-R0: 3.0              # Major radius R0
-plasma_t: 1.1        # Minor radius a
-elon: 3.0            # Elongation kappa
+B: 10.0              # On-axis toroidal field [T]
+R0: 6.041            # Major radius R0
+plasma_t: 2.014      # Minor radius a
+elon: 1.85           # Elongation kappa
 blanket_t: 0.80      # Blanket thickness
 f_GW: 0.85           # Greenwald density fraction
 ```
@@ -120,7 +120,7 @@ print(f"Overridden accounts: {result.overridden}")
 ```
 
 ```
-LCOE: $84.6/MWh
+LCOE: $97.5/MWh
 Overridden accounts: ['C220103']
 ```
 
@@ -141,14 +141,14 @@ for key, e in sorted(
 ```
 
 ```
-availability             -0.89
-interest_rate            +0.65
-R0                       +0.40
-construction_time_yr     +0.30
-elon                     +0.29
-eta_th                   -0.28
-blanket_t                +0.25
-plasma_t                 +0.20
+availability             -0.91
+interest_rate            +0.69
+R0                       +0.45
+eta_th                   -0.36
+construction_time_yr     +0.32
+lifetime_yr              -0.27
+blanket_t                +0.27
+elon                     +0.26
 ```
 
 These are elasticities: percent change in LCOE per percent change in the parameter.
