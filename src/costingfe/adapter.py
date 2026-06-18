@@ -7,6 +7,7 @@ Provides:
 """
 
 from dataclasses import dataclass, field
+from typing import Any
 
 from costingfe.defaults import load_costing_constants
 from costingfe.model import CostModel
@@ -62,8 +63,11 @@ class FusionTeaOutput:
     power_table: dict[str, float]  # Power flow values (e.g. "p_fus" -> 2300.0)
     sensitivity: dict[
         str, dict[str, float]
-    ]  # {"engineering": {...}, "financial": {...}}
+    ]  # {"engineering": {...}, "financial": {...}, "costing": {...}}
     overridden: list[str] = field(default_factory=list)  # Keys that were overridden
+    params: dict[str, Any] = field(
+        default_factory=dict
+    )  # Merged forward params (floats plus enums/strings/dicts); sensitivity baselines
 
 
 def run_costing(inp: FusionTeaInput) -> FusionTeaOutput:
@@ -188,4 +192,5 @@ def run_costing(inp: FusionTeaInput) -> FusionTeaOutput:
         power_table=power_table,
         sensitivity=sens,
         overridden=result.overridden,
+        params=dict(result.params),
     )
