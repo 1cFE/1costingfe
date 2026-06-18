@@ -39,7 +39,7 @@ cas80 = float(c.cas80) / energy_mwh * 1e6
 
 print("\npB11 Mirror — 1 GWe NOAK, 85% availability, 30-yr, 7% WACC")
 print(f"LCOE:       {lcoe:>6.1f} $/MWh  ({lcoe / 10:.2f} ¢/kWh)")
-print(f"Overnight:  {float(c.overnight_cost):>6.0f} $/kW")
+print(f"Overnight:  {float(c.capital_per_kw):>6.0f} $/kW")
 print(f"Total cap:  {float(c.total_capital):>6.0f} M$")
 print(f"Q_eng:      {float(pt.q_eng):>6.1f}")
 print(f"Recirc:     {float(pt.rec_frac) * 100:>5.1f}%")
@@ -214,7 +214,7 @@ for name, overrides in scenarios:
         cost_ovr = {"CAS21": float(r_temp.costs.cas21) / 2}
     r = model.forward(**kw, cost_overrides=cost_ovr)
     lcoe_v = float(r.costs.lcoe)
-    on = float(r.costs.overnight_cost)
+    on = float(r.costs.capital_per_kw)
     gap = lcoe_v - TARGET
     marker = " ***" if gap <= 0 else ""
     print(
@@ -294,7 +294,7 @@ if hits:
     print(f"  WACC: {kw['interest_rate']:.1%}")
     print(f"  Lifetime: {kw['lifetime_yr']} yr")
     print(f"  eta_th: {kw['eta_th']:.2f}")
-    print(f"  Overnight: {float(c.overnight_cost):.0f} $/kW")
+    print(f"  Overnight: {float(c.capital_per_kw):.0f} $/kW")
     print(f"  Total capital: {float(c.total_capital):.0f} M$")
 else:
     print("\nNo combinations in the grid reach $10/MWh.")
@@ -413,7 +413,7 @@ for frac in [1.0, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3]:
     ovr = {"CAS22": cas22_base * frac}
     r = model.forward(**learn_kwargs, cost_overrides=ovr)
     lcoe_v = float(r.costs.lcoe)
-    on = float(r.costs.overnight_cost)
+    on = float(r.costs.capital_per_kw)
     gap = lcoe_v - TARGET
     label = f"{(1 - frac) * 100:.0f}%"
     marker = " ***" if gap <= 0 else ""
@@ -711,7 +711,7 @@ for name, overrides in dd_scenarios:
     kw = {**dd_kwargs, **overrides}
     r = dd_model.forward(**kw)
     lcoe_v = float(r.costs.lcoe)
-    on = float(r.costs.overnight_cost)
+    on = float(r.costs.capital_per_kw)
     q_sci = float(r.power_table.q_sci)
     marker = " ***" if lcoe_v <= TARGET else ""
     print(
@@ -756,7 +756,7 @@ r_pb = CostModel(ConfinementConcept.MIRROR, Fuel.PB11).forward(
 marker = " ***" if float(r_pb.costs.lcoe) <= TARGET else ""
 print(
     f"  {'pB11 Mirror':<36} {float(r_pb.costs.lcoe):>6.1f} "
-    f"{float(r_pb.costs.overnight_cost):>7.0f} {float(r_pb.power_table.q_sci):>6.1f}"
+    f"{float(r_pb.costs.capital_per_kw):>7.0f} {float(r_pb.power_table.q_sci):>6.1f}"
     f"  {'No exotic isotopes':>24}{marker}"
 )
 
@@ -779,7 +779,7 @@ r_frc = m_cheaphe3.forward(
 marker = " ***" if float(r_frc.costs.lcoe) <= TARGET else ""
 print(
     f"  {'DHe3 FRC (He-3 @ $20k/kg)':<36} {float(r_frc.costs.lcoe):>6.1f} "
-    f"{float(r_frc.costs.overnight_cost):>7.0f} {float(r_frc.power_table.q_sci):>6.1f}"
+    f"{float(r_frc.costs.capital_per_kw):>7.0f} {float(r_frc.power_table.q_sci):>6.1f}"
     f"  {'He-3 supply problem':>24}{marker}"
 )
 
@@ -788,7 +788,7 @@ marker = " ***" if float(r_ref.costs.lcoe) <= TARGET else ""
 print(
     f"  {f'DD FRC (eta={eta_dd_with_steam:.0%}, +steam)':<36}"
     f" {float(r_ref.costs.lcoe):>6.1f} "
-    f"{float(r_ref.costs.overnight_cost):>7.0f} {float(r_ref.power_table.q_sci):>6.1f}"
+    f"{float(r_ref.costs.capital_per_kw):>7.0f} {float(r_ref.power_table.q_sci):>6.1f}"
     f"  {'Commodity fuel only':>24}{marker}"
 )
 
@@ -813,7 +813,7 @@ marker = " ***" if float(r_dd_ns.costs.lcoe) <= TARGET else ""
 print(
     f"  {f'DD FRC (eta={eta_dd_no_steam:.0%}, no steam)':<36}"
     f" {float(r_dd_ns.costs.lcoe):>6.1f} "
-    f"{float(r_dd_ns.costs.overnight_cost):>7.0f}"
+    f"{float(r_dd_ns.costs.capital_per_kw):>7.0f}"
     f" {float(r_dd_ns.power_table.q_sci):>6.1f}"
     f"  Simpler, higher Q needed{marker}"
 )
@@ -830,7 +830,7 @@ r_dt = CostModel(ConfinementConcept.MIRROR, Fuel.DT).forward(
 )
 print(
     f"  {'DT Mirror':<36} {float(r_dt.costs.lcoe):>6.1f} "
-    f"{float(r_dt.costs.overnight_cost):>7.0f} {float(r_dt.power_table.q_sci):>6.1f}"
+    f"{float(r_dt.costs.capital_per_kw):>7.0f} {float(r_dt.power_table.q_sci):>6.1f}"
     f"  {'Neutron penalty':>24}"
 )
 

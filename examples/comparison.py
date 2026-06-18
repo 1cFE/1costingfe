@@ -22,7 +22,7 @@ for fuel in Fuel:
     c = r.costs
     print(
         f"{fuel.value:<8} {c.lcoe:>8.1f} {c.total_capital:>10.0f} "
-        f"{c.cas22:>10.0f} {c.overnight_cost:>10.0f} {r.power_table.p_fus:>8.0f}"
+        f"{c.cas22:>10.0f} {c.capital_per_kw:>10.0f} {r.power_table.p_fus:>8.0f}"
     )
 
 # ── Concept Comparison (DT fuel) ───────────────────────────────────
@@ -46,7 +46,7 @@ for concept in ConfinementConcept:
     pt = r.power_table
     print(
         f"{concept.value:<16} {c.lcoe:>8.1f} {c.total_capital:>10.0f} "
-        f"{c.overnight_cost:>10.0f} {pt.q_eng:>8.1f} {pt.rec_frac * 100:>7.1f}%"
+        f"{c.capital_per_kw:>10.0f} {pt.q_eng:>8.1f} {pt.rec_frac * 100:>7.1f}%"
     )
 
 # ── Full Ranking (all combinations) ────────────────────────────────
@@ -68,7 +68,7 @@ for i, r in enumerate(results[:15]):
     c = r.result.costs
     print(
         f"{i + 1:>3} {r.concept.value:<16} {r.fuel.value:<6} "
-        f"{r.lcoe:>8.1f} {c.total_capital:>10.0f} {c.overnight_cost:>10.0f}"
+        f"{r.lcoe:>8.1f} {c.total_capital:>10.0f} {c.capital_per_kw:>10.0f}"
     )
 
 print(f"\n{len(results)} viable combinations total.")

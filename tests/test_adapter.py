@@ -12,8 +12,9 @@ def test_adapter_tokamak_dt():
     )
     out = run_costing(inp)
     assert out.lcoe > 0
-    assert out.overnight_cost > 0
-    assert out.total_capital > 0
+    assert out.overnight_cost > 0  # M$, CAS10-50
+    assert out.total_capital > out.overnight_cost  # adds IDC
+    assert out.capital_per_kw > 0  # $/kW
     assert "CAS22" in out.costs
     assert out.costs["CAS22"] > 0
     assert "p_fus" in out.power_table

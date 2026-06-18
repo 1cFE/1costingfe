@@ -26,5 +26,5 @@ for n in [1, 2, 4]:
 
     print(
         f"{n:>6} {per_mod_cas22:>12.0f} {total_cas22:>12.0f} "
-        f"{r.costs.overnight_cost:>12.0f} {r.costs.lcoe:>10.1f}"
+        f"{r.costs.capital_per_kw:>12.0f} {r.costs.lcoe:>10.1f}"
     )

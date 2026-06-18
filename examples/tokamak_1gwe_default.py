@@ -32,7 +32,7 @@ print(f"  plasma_vol   = {float(ps.V_plasma):.1f} m^3")
 print(f"  beta_N       = {float(ps.beta_N):.2f}  (cap 3.5)")
 print(f"  P_fus        = {float(ps.p_fus):.0f} MW")
 print(f"  LCOE         = {float(r.costs.lcoe):.1f} $/MWh")
-print(f"  Overnight    = {float(r.costs.overnight_cost):.0f} $/kW")
+print(f"  Overnight    = {float(r.costs.capital_per_kw):.0f} $/kW")
 
 print()
 print("  YAML-ready pinned operating point:")

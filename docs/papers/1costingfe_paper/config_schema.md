@@ -301,7 +301,7 @@ What `forward()` returns. Not configurable, listed for completeness.
 |---|---|---|
 | `ForwardResult` | `power_table` · `costs` · `params` · `overridden` · `cas22_detail` · `plasma_state` | Top-level container. |
 | `PowerTable` | `p_fus, p_ash, p_neutron, p_rad, p_wall, p_dee, p_dec_waste, p_th, p_the, p_et, p_loss, p_net, p_pump, p_sub, p_aux, p_input, p_coils, p_cool, p_cryo, p_target, q_sci, q_eng, rec_frac, e_driver_mj, e_stored_mj, f_rep, f_ch` | All power flows from Layer 2. |
-| `CostResult` | `cas10..cas90, cas20, cas71, cas72, total_capital, lcoe, overnight_cost` | Cost breakdown in M$ + $/MWh + $/kW. |
+| `CostResult` | `cas10..cas90, cas20, cas71, cas72, total_capital, lcoe, overnight_cost, capital_per_kw` | Cost breakdown in M$ + $/MWh + $/kW. `overnight_cost` is M$ (CAS10-50, excl IDC); `total_capital` is M$ (CAS10-60, incl IDC); `capital_per_kw` is $/kW. |
 
 ---
 

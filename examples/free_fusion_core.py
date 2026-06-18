@@ -52,7 +52,7 @@ for name, concept, fuel in CONCEPTS:
     bop = free.costs.cas23 + free.costs.cas24 + free.costs.cas25 + free.costs.cas26
     print(
         f"{name:<16} {base.costs.lcoe:>10.1f} {free.costs.lcoe:>10.1f}"
-        f" {free.costs.overnight_cost:>8.0f}"
+        f" {free.costs.capital_per_kw:>8.0f}"
         f" {base.costs.cas22:>8.0f} {bop:>8.0f}"
     )
 
@@ -102,14 +102,14 @@ for label, bv, fv in rows:
 
 print("-" * 56)
 print(
-    f"{'Overnight cost':<24} {bc.overnight_cost * NET_MW / 1000:>10.0f}"
-    f" {fc.overnight_cost * NET_MW / 1000:>10.0f}"
-    f" {(fc.overnight_cost - bc.overnight_cost) * NET_MW / 1000:>+10.0f}"
+    f"{'Overnight cost':<24} {bc.capital_per_kw * NET_MW / 1000:>10.0f}"
+    f" {fc.capital_per_kw * NET_MW / 1000:>10.0f}"
+    f" {(fc.capital_per_kw - bc.capital_per_kw) * NET_MW / 1000:>+10.0f}"
 )
 
 print(f"\n{'Metric':<24} {'Baseline':>10} {'Free Core':>10}")
 print("-" * 46)
-print(f"{'Overnight ($/kW)':<24} {bc.overnight_cost:>10.0f} {fc.overnight_cost:>10.0f}")
+print(f"{'Overnight ($/kW)':<24} {bc.capital_per_kw:>10.0f} {fc.capital_per_kw:>10.0f}")
 print(f"{'LCOE ($/MWh)':<24} {bc.lcoe:>10.1f} {fc.lcoe:>10.1f}")
 print(f"{'LCOE (¢/kWh)':<24} {bc.lcoe / 10:>10.2f} {fc.lcoe / 10:>10.2f}")
 
@@ -158,7 +158,7 @@ for p in [1000, 2000, 3000, 5000]:
     marker = " ***" if gap <= 0 else ""
     print(
         f"  {p:>7d} {r.costs.lcoe:>8.1f} {r.costs.lcoe / 10:>8.2f}"
-        f" {r.costs.overnight_cost:>10.0f} {gap:>+8.1f}{marker}"
+        f" {r.costs.capital_per_kw:>10.0f} {gap:>+8.1f}{marker}"
     )
 
 # ── Path B: Availability ──────────────────────────────────────────
@@ -176,7 +176,7 @@ for av in [0.85, 0.90, 0.95, 0.98]:
     marker = " ***" if gap <= 0 else ""
     print(
         f"  {av:>7.0%} {r.costs.lcoe:>8.1f} {r.costs.lcoe / 10:>8.2f}"
-        f" {r.costs.overnight_cost:>10.0f} {gap:>+8.1f}{marker}"
+        f" {r.costs.capital_per_kw:>10.0f} {gap:>+8.1f}{marker}"
     )
 
 # ── Path C: Cheaper financing ─────────────────────────────────────
@@ -195,7 +195,7 @@ for wacc in [0.07, 0.05, 0.04, 0.03, 0.02]:
     marker = " ***" if gap <= 0 else ""
     print(
         f"  {wacc:>7.1%} {r.costs.lcoe:>8.1f} {r.costs.lcoe / 10:>8.2f}"
-        f" {r.costs.overnight_cost:>10.0f} {gap:>+8.1f}{marker}"
+        f" {r.costs.capital_per_kw:>10.0f} {gap:>+8.1f}{marker}"
     )
 
 # ── Path D: Longer plant life ─────────────────────────────────────
@@ -213,7 +213,7 @@ for life in [30, 40, 50, 60]:
     marker = " ***" if gap <= 0 else ""
     print(
         f"  {life:>6d}yr {r.costs.lcoe:>8.1f} {r.costs.lcoe / 10:>8.2f}"
-        f" {r.costs.overnight_cost:>10.0f} {gap:>+8.1f}{marker}"
+        f" {r.costs.capital_per_kw:>10.0f} {gap:>+8.1f}{marker}"
     )
 
 # ── Path E: Faster construction ───────────────────────────────────
@@ -232,7 +232,7 @@ for ct in [6, 4, 3, 2]:
     marker = " ***" if gap <= 0 else ""
     print(
         f"  {ct:>6d}yr {r.costs.lcoe:>8.1f} {r.costs.lcoe / 10:>8.2f}"
-        f" {r.costs.overnight_cost:>10.0f} {gap:>+8.1f}{marker}"
+        f" {r.costs.capital_per_kw:>10.0f} {gap:>+8.1f}{marker}"
     )
 
 # ── Path F: Halve buildings ───────────────────────────────────────
@@ -253,7 +253,7 @@ for frac in [1.0, 0.75, 0.50, 0.25]:
     label = f"{frac:.0%} base"
     print(
         f"  {label:>8} {r.costs.lcoe:>8.1f} {r.costs.lcoe / 10:>8.2f}"
-        f" {r.costs.overnight_cost:>10.0f} {gap:>+8.1f}{marker}"
+        f" {r.costs.capital_per_kw:>10.0f} {gap:>+8.1f}{marker}"
     )
 
 
@@ -322,7 +322,7 @@ for f_dec, eta_de, notes in [
     print(
         f"  {f_dec:>8.0%} {eta_de:>8.0%}"
         f" {r_corr.costs.lcoe:>8.1f} {r_corr.costs.lcoe / 10:>8.2f}"
-        f" {r_corr.costs.overnight_cost:>10.0f}"
+        f" {r_corr.costs.capital_per_kw:>10.0f}"
         f" {gap:>+8.1f} {notes:>20}{marker}"
     )
 
@@ -522,7 +522,7 @@ for label, r in scenarios:
     marker = " ***" if gap <= 0 else ""
     print(
         f"  {label:<40} {r.costs.lcoe:>7.1f} {r.costs.lcoe / 10:>7.2f}"
-        f" {r.costs.overnight_cost:>9.0f} {gap:>+7.1f}{marker}"
+        f" {r.costs.capital_per_kw:>9.0f} {gap:>+7.1f}{marker}"
     )
 
 

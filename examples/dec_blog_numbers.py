@@ -81,7 +81,7 @@ for label, f_dec, eta_de, extra in configs_vb:
         kw2["cost_overrides"] = ovr
         r = m.forward(**kw2)
     c = r.costs
-    print(f"  {label:<45} {c.lcoe:>5.0f} {c.overnight_cost:>7.0f}")
+    print(f"  {label:<45} {c.lcoe:>5.0f} {c.capital_per_kw:>7.0f}")
 
 
 # TABLE 2 (pulsed p-B11 no-turbine) removed: wasting 87% brem heat
@@ -226,7 +226,7 @@ r_th_agg = m.forward(**AGG_KW, inflation_rate=INFLATION, cost_overrides=FREE_COR
 budget = TARGET - r_th_agg.costs.lcoe
 print(
     f"  {'Thermal only (sCO2 Brayton, 47%)':<45}"
-    f" {r_th_agg.costs.lcoe:>5.1f} {r_th_agg.costs.overnight_cost:>7.0f}"
+    f" {r_th_agg.costs.lcoe:>5.1f} {r_th_agg.costs.capital_per_kw:>7.0f}"
     f" {budget:>+7.1f}"
 )
 
@@ -235,7 +235,7 @@ r_vb_agg, dec_agg = free_core_with_dec(m, 0.9, 0.60, **AGG_KW)
 budget = TARGET - r_vb_agg.costs.lcoe
 print(
     f"  {'VB DEC 60% + thermal (hybrid)':<45}"
-    f" {r_vb_agg.costs.lcoe:>5.1f} {r_vb_agg.costs.overnight_cost:>7.0f}"
+    f" {r_vb_agg.costs.lcoe:>5.1f} {r_vb_agg.costs.capital_per_kw:>7.0f}"
     f" {budget:>+7.1f}"
 )
 
@@ -353,8 +353,8 @@ print("-" * 45)
 print(f"  {'LCOE ($/MWh)':<20} {r_th.costs.lcoe:>10.1f} {r_vb.costs.lcoe:>10.1f}")
 print(
     f"  {'Overnight ($/kW)':<20}"
-    f" {r_th.costs.overnight_cost:>10.0f}"
-    f" {r_vb.costs.overnight_cost:>10.0f}"
+    f" {r_th.costs.capital_per_kw:>10.0f}"
+    f" {r_vb.costs.capital_per_kw:>10.0f}"
 )
 
 

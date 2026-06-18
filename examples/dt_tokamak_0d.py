@@ -96,7 +96,7 @@ else:
 
 print("\nCost")
 print(f"  LCOE:         {float(r_inv.costs.lcoe):8.1f} $/MWh")
-print(f"  Overnight:    {float(r_inv.costs.overnight_cost):8.0f} $/kW")
+print(f"  Overnight:    {float(r_inv.costs.capital_per_kw):8.0f} $/kW")
 
 # ── 1 GWe: the implied operating point must be allowed ────────────────
 # Asking this machine for 1 GWe implies beta_N = 3.8, past the Troyon
@@ -133,7 +133,7 @@ print(f"  T_e:          {float(ps_1gw.T_e):8.1f} keV")
 print(f"  beta_N:       {float(ps_1gw.beta_N):8.2f} %*m*T/MA")
 print(f"  P_fus:        {float(ps_1gw.p_fus):8.0f} MW")
 print(f"  LCOE:         {float(r_1gw.costs.lcoe):8.1f} $/MWh")
-print(f"  Overnight:    {float(r_1gw.costs.overnight_cost):8.0f} $/kW")
+print(f"  Overnight:    {float(r_1gw.costs.capital_per_kw):8.0f} $/kW")
 
 # ── Forward mode: specify T_e, see what comes out ─────────────────────
 print()

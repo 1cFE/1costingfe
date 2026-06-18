@@ -50,6 +50,32 @@ def test_forward_lcoe_range():
     assert 10 < result.costs.lcoe < 500, f"LCOE {result.costs.lcoe} $/MWh unexpected"
 
 
+def test_capital_fields_have_correct_units():
+    """overnight_cost is M$ true overnight (CAS10-50, excl IDC); capital_per_kw is $/kW.
+
+    Regression for issue #34: overnight_cost used to hold the $/kW specific cost
+    (and silently included IDC). It must now be the M$ overnight sum, distinct
+    from total_capital (which adds CAS60 IDC), with the $/kW figure living in
+    capital_per_kw.
+    """
+    model = CostModel(concept=ConfinementConcept.TOKAMAK, fuel=Fuel.DT)
+    r = model.forward(net_electric_mw=1000.0, availability=0.85, lifetime_yr=30)
+    c = r.costs
+
+    expected_overnight = c.cas10 + c.cas20 + c.cas30 + c.cas40 + c.cas50
+    assert c.overnight_cost == pytest.approx(expected_overnight)
+    # Overnight excludes IDC, so it must be strictly below total_capital.
+    assert c.overnight_cost < c.total_capital
+    assert c.total_capital == pytest.approx(c.overnight_cost + c.cas60)
+
+    # capital_per_kw is the $/kW specific cost off total_capital and total net power.
+    n_mod = r.params["n_mod"]
+    expected_per_kw = c.total_capital * 1e6 / (r.power_table.p_net * n_mod * 1e3)
+    assert c.capital_per_kw == pytest.approx(expected_per_kw)
+    # The two are different magnitudes; the old field conflated them.
+    assert c.capital_per_kw != pytest.approx(c.overnight_cost)
+
+
 def test_construction_time_comes_from_yaml():
     """A concept's YAML construction_time_yr must be used, not silently
     replaced by a generic signature default. Orbitron's YAML says 3.0."""

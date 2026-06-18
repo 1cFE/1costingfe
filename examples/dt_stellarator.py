@@ -73,7 +73,7 @@ print("DT Modular HTS Stellarator — 1 GWe, 90% availability, 30 yr lifetime")
 lcoe_ckwh = float(c.lcoe) / 10
 print(
     f"LCOE: {c.lcoe:.1f} $/MWh ({lcoe_ckwh:.2f} c/kWh)"
-    f" | Overnight: {c.overnight_cost:.0f} $/kW"
+    f" | Overnight: {c.capital_per_kw:.0f} $/kW"
 )
 print(f"Fusion: {pt.p_fus:.0f} MW | Net: {pt.p_net:.0f} MW | Q_eng: {pt.q_eng:.1f}")
 print(f"Recirculating fraction: {pt.rec_frac:.1%}")
@@ -172,7 +172,7 @@ print("-" * 42)
 for a in avail_vals:
     r = model.forward(**{**base_kwargs, "availability": a})
     lc = float(r.costs.lcoe)
-    on = float(r.costs.overnight_cost)
+    on = float(r.costs.capital_per_kw)
     marker = " <-- base" if a == 0.90 else ""
     print(f"{a:>7.0%} {lc:>9.1f} {lc - base_lcoe:>+7.1f} {on:>11.0f}{marker}")
 

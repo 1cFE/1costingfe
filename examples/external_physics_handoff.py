@@ -116,7 +116,7 @@ def main() -> None:
     print(f"  Q_eng:   {pt.q_eng:.2f}")
     print(f"  Recirc:  {pt.rec_frac:.1%}")
     print()
-    print(f"Overnight specific cost: {costs.overnight_cost:.0f} $/kW")
+    print(f"Overnight specific cost: {costs.capital_per_kw:.0f} $/kW")
     print(f"LCOE: {costs.lcoe:.1f} $/MWh")
 
 

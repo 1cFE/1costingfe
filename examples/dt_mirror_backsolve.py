@@ -194,7 +194,7 @@ for name, (overrides, cost_ovr) in override_scenarios.items():
         f"  P_fus: {pt.p_fus:.0f} MW | P_net: {pt.p_net:.0f} MW | Q_eng: {pt.q_eng:.1f}"
     )
     print(
-        f"  Overnight: {c.overnight_cost:.0f} $/kW"
+        f"  Overnight: {c.capital_per_kw:.0f} $/kW"
         f" | Capital: {float(c.total_capital):.0f} M$"
     )
     print(f"  CAS21 (buildings): {float(c.cas21):.0f} M$")
@@ -214,7 +214,7 @@ for name, overrides in scenarios.items():
         f"  P_fus: {pt.p_fus:.0f} MW | P_net: {pt.p_net:.0f} MW | Q_eng: {pt.q_eng:.1f}"
     )
     print(
-        f"  Overnight: {c.overnight_cost:.0f} $/kW"
+        f"  Overnight: {c.capital_per_kw:.0f} $/kW"
         f" | Capital: {float(c.total_capital):.0f} M$"
     )
     print(f"  Overrides: {overrides}")

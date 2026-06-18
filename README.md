@@ -28,7 +28,8 @@ result = model.forward(
 )
 
 print(f"LCOE: {result.costs.lcoe:.1f} $/MWh")
-print(f"Overnight cost: {result.costs.overnight_cost:.0f} $/kW")
+print(f"Overnight capital: {result.costs.overnight_cost:.0f} M$")  # CAS10-50, excl IDC
+print(f"Specific capital: {result.costs.capital_per_kw:.0f} $/kW")
 print(f"Fusion power: {result.power_table.p_fus:.0f} MW")
 ```
 

@@ -55,8 +55,9 @@ class FusionTeaOutput:
     """Cost breakdown in CAS-code-keyed format for fusion-tea."""
 
     lcoe: float  # $/MWh
-    overnight_cost: float  # $/kW
-    total_capital: float  # M$
+    overnight_cost: float  # M$ (CAS10-50, excludes IDC)
+    total_capital: float  # M$ (CAS10-60, includes IDC)
+    capital_per_kw: float  # $/kW (total_capital per net electric kW)
     costs: dict[str, float]  # CAS code -> M$ (e.g. "CAS10" -> 16.0)
     power_table: dict[str, float]  # Power flow values (e.g. "p_fus" -> 2300.0)
     sensitivity: dict[
@@ -182,6 +183,7 @@ def run_costing(inp: FusionTeaInput) -> FusionTeaOutput:
         lcoe=float(c.lcoe),
         overnight_cost=float(c.overnight_cost),
         total_capital=float(c.total_capital),
+        capital_per_kw=float(c.capital_per_kw),
         costs=costs,
         power_table=power_table,
         sensitivity=sens,

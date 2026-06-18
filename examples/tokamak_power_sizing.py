@@ -34,7 +34,7 @@ def show(model, result):
     print(f"  beta_N:       {float(ps.beta_N):8.2f} %*m*T/MA (cap 3.5)")
     print(f"  P_fus:        {float(ps.p_fus):8.0f} MW")
     print(f"  LCOE:         {float(result.costs.lcoe):8.1f} $/MWh")
-    print(f"  Overnight:    {float(result.costs.overnight_cost):8.0f} $/kW")
+    print(f"  Overnight:    {float(result.costs.capital_per_kw):8.0f} $/kW")
 
 
 # ── 1. Size mode: the machine follows the power ask ───────────────────

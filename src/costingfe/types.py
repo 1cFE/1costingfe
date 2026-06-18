@@ -278,7 +278,8 @@ class CostResult:
     cas90: float = 0.0  # Annualized financial (capital)
     total_capital: float = 0.0  # CAS10-60 sum
     lcoe: float = 0.0  # $/MWh
-    overnight_cost: float = 0.0  # $/kW
+    overnight_cost: float = 0.0  # CAS10-50 sum (M$, excludes IDC)
+    capital_per_kw: float = 0.0  # $/kW (total_capital per net electric kW)
 
     _LABELS = {
         "cas10": ("CAS10", "Pre-construction"),
@@ -311,9 +312,12 @@ class CostResult:
             val = float(getattr(self, attr))
             lines.append(f"{code:<8} {label:<30} {val:>10.1f}")
         lines.append("-" * 50)
+        lines.append(
+            f"{'':8} {'Overnight (M$)':<30} {float(self.overnight_cost):>10.1f}"
+        )
         lines.append(f"{'':8} {'Total capital':<30} {float(self.total_capital):>10.1f}")
         lines.append(
-            f"{'':8} {'Overnight ($/kW)':<30} {float(self.overnight_cost):>10.0f}"
+            f"{'':8} {'Capital ($/kW)':<30} {float(self.capital_per_kw):>10.0f}"
         )
         lines.append(f"{'':8} {'LCOE ($/MWh)':<30} {float(self.lcoe):>10.1f}")
         return "\n".join(lines)

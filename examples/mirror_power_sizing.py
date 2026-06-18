@@ -56,7 +56,7 @@ def show(model, result):
     print(f"  P_fus:        {float(ps.p_fus):8.0f} MW")
     print(f"  C220103 coil: {float(c22['C220103']):8.1f} M$")
     print(f"  LCOE:         {float(result.costs.lcoe):8.1f} $/MWh")
-    print(f"  Overnight:    {float(result.costs.overnight_cost):8.0f} $/kW")
+    print(f"  Overnight:    {float(result.costs.capital_per_kw):8.0f} $/kW")
 
 
 # ── 1. Size mode: chamber length follows the power ask ────────────────
@@ -85,7 +85,7 @@ for p_net in (100.0, 200.0, 400.0, 600.0):
     ps = model._plasma_state
     c220103 = float(r.cas22_detail["C220103"])
     lcoe = float(r.costs.lcoe)
-    oc = float(r.costs.overnight_cost)
+    oc = float(r.costs.capital_per_kw)
     row = (
         f"  {p_net:>8.0f}  {model._last_L:>8.1f}  {float(ps.T_i):>10.1f}"
         f"  {float(ps.n_e):>12.2e}  {float(ps.beta):>6.3f}  {float(ps.p_fus):>11.0f}"

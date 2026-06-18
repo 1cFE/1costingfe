@@ -82,7 +82,7 @@ def run(output_dir: Path) -> dict:
         "concept": "TOKAMAK",
         "inputs": inputs,
         "predicted_overnight_musd": float(c.total_capital),
-        "predicted_overnight_per_kwe_usd": float(c.overnight_cost),
+        "predicted_overnight_per_kwe_usd": float(c.capital_per_kw),
         "predicted_lcoe_usd_per_mwh": float(c.lcoe),
         "fusion_power_mw": float(pt.p_fus),
         "net_electric_mw": float(pt.p_net),

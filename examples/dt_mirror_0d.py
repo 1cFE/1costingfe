@@ -189,7 +189,7 @@ print(f"  Q_eng:        {float(pt_inv.q_eng):8.1f}")
 
 print("\nCost")
 print(f"  LCOE:         {float(r_inv.costs.lcoe):8.1f} $/MWh")
-print(f"  Overnight:    {float(r_inv.costs.overnight_cost):8.0f} $/kW")
+print(f"  Overnight:    {float(r_inv.costs.capital_per_kw):8.0f} $/kW")
 
 # ── Gate refusal: beta > beta_max ─────────────────────────────────────
 # A very compact machine (plasma_t = 0.15 m, chamber_length = 5 m) at high
@@ -256,7 +256,7 @@ print(f"  n_e:          {float(ps_sz.n_e):8.2e} m^-3")
 print(f"  P_fus:        {float(ps_sz.p_fus):8.0f} MW")
 print(f"  P_net:        {float(pt_sz.p_net):8.0f} MW")
 print(f"  LCOE:         {float(r_sz.costs.lcoe):8.1f} $/MWh")
-print(f"  Overnight:    {float(r_sz.costs.overnight_cost):8.0f} $/kW")
+print(f"  Overnight:    {float(r_sz.costs.capital_per_kw):8.0f} $/kW")
 
 # ── Fuel comparison: D-T vs D-He3 at 200 MWe ─────────────────────────
 # All primary D-He3 fusion products are charged (proton + He4), ideal for

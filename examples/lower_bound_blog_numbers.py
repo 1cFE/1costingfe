@@ -86,7 +86,7 @@ dt_full = m_dt.forward(**BASELINE_KW)
 dt_free = m_dt.forward(**BASELINE_KW, cost_overrides=FREE_CORE)
 
 print(f"  DT free-core LCOE:      ${dt_free.costs.lcoe:.1f}/MWh")
-print(f"  DT free-core overnight: ${dt_free.costs.overnight_cost:,.0f}/kW")
+print(f"  DT free-core overnight: ${dt_free.costs.capital_per_kw:,.0f}/kW")
 print(f"  DT fully costed LCOE:   ${dt_full.costs.lcoe:.1f}/MWh")
 print(f"  DT buildings:           ${dt_full.costs.cas21:,.0f}M")
 print(f"  DT staffing (free):     ${dt_free.costs.cas71:.1f}M/yr")
@@ -149,7 +149,7 @@ for label, kw in scenarios:
     r = m_dt.forward(**kw, inflation_rate=INFLATION, cost_overrides=FREE_CORE)
     budget = TARGET - r.costs.lcoe
     print(
-        f"  {label:<42} {r.costs.lcoe:>5.1f} {r.costs.overnight_cost:>7.0f}"
+        f"  {label:<42} {r.costs.lcoe:>5.1f} {r.costs.capital_per_kw:>7.0f}"
         f" {budget:>+7.1f}"
     )
 
@@ -213,7 +213,7 @@ for label, kw in scenarios:
     )
     budget = TARGET - r.costs.lcoe
     print(
-        f"  {label:<42} {r.costs.lcoe:>5.1f} {r.costs.overnight_cost:>7.0f}"
+        f"  {label:<42} {r.costs.lcoe:>5.1f} {r.costs.capital_per_kw:>7.0f}"
         f" {budget:>+7.1f}"
     )
 
@@ -236,7 +236,7 @@ agg_kw = dict(
 )
 free_agg = m_pb11.forward(**agg_kw, cost_overrides=FREE_CORE, **ANEUTRONIC_KW)
 full_agg = m_pb11.forward(**agg_kw, **ANEUTRONIC_KW)
-core_budget_kw = full_agg.costs.overnight_cost - free_agg.costs.overnight_cost
+core_budget_kw = full_agg.costs.capital_per_kw - free_agg.costs.capital_per_kw
 
 print(f"  Free-core floor:        ${free_agg.costs.lcoe:.1f}/MWh")
 print(f"  Budget for core:        ${TARGET - free_agg.costs.lcoe:.1f}/MWh")
@@ -396,7 +396,7 @@ full_base = m_pb11.forward(
 )
 
 print(f"  Free-core LCOE floor:   ${free_base.costs.lcoe:.1f}/MWh")
-print(f"  Free-core overnight:    ${free_base.costs.overnight_cost:,.0f}/kW")
+print(f"  Free-core overnight:    ${free_base.costs.capital_per_kw:,.0f}/kW")
 print(f"  Fully costed LCOE:      ${full_base.costs.lcoe:.1f}/MWh")
 core_share = (full_base.costs.lcoe - free_base.costs.lcoe) / full_base.costs.lcoe
 print(f"  Core share of LCOE:     {core_share * 100:.0f}%")
@@ -429,5 +429,5 @@ for cycle in [PowerCycle.RANKINE, PowerCycle.BRAYTON_SCO2, PowerCycle.COMBINED]:
     )
     print(
         f"  {cycle.value:<15} {r.params['eta_th']:>6.2f}"
-        f" {r.costs.lcoe:>7.1f} {r.costs.overnight_cost:>8.0f}"
+        f" {r.costs.lcoe:>7.1f} {r.costs.capital_per_kw:>8.0f}"
     )

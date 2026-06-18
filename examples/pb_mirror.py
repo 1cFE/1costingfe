@@ -52,7 +52,7 @@ print("pB11 Mirror — 500 MWe, 85% availability, 30 yr lifetime")
 lcoe_ckwh = float(c.lcoe) / 10
 print(
     f"LCOE: {c.lcoe:.1f} $/MWh ({lcoe_ckwh:.2f} ¢/kWh)"
-    f" | Overnight: {c.overnight_cost:.0f} $/kW"
+    f" | Overnight: {c.capital_per_kw:.0f} $/kW"
 )
 print(f"Fusion: {pt.p_fus:.0f} MW | Net: {pt.p_net:.0f} MW | Q_eng: {pt.q_eng:.1f}")
 print(f"Recirculating fraction: {pt.rec_frac:.1%}")

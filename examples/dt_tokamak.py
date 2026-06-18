@@ -48,7 +48,7 @@ c = result.costs
 pt = result.power_table
 
 print("DT Tokamak (CATF ref) — 1 GWe, 85% availability, 30 yr lifetime")
-print(f"LCOE: {c.lcoe:.1f} $/MWh | Overnight: {c.overnight_cost:.0f} $/kW")
+print(f"LCOE: {c.lcoe:.1f} $/MWh | Overnight: {c.capital_per_kw:.0f} $/kW")
 print(f"Fusion: {pt.p_fus:.0f} MW | Net: {pt.p_net:.0f} MW | Q_eng: {pt.q_eng:.1f}")
 print()
 

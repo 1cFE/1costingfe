@@ -1554,7 +1554,7 @@ class CostModel:
             n_targets_per_year=n_targets_per_year,
         )
         lcoe = compute_lcoe(c90, c70, c80, pt.p_net, n_mod, avail_eff)
-        overnight = total_capital * 1e6 / (pt.p_net * n_mod * 1e3)  # $/kW
+        capital_per_kw = total_capital * 1e6 / (pt.p_net * n_mod * 1e3)  # $/kW
 
         costs = CostResult(
             cas10=c10,
@@ -1579,7 +1579,8 @@ class CostModel:
             cas90=c90,
             total_capital=total_capital,
             lcoe=lcoe,
-            overnight_cost=overnight,
+            overnight_cost=overnight_cost,
+            capital_per_kw=capital_per_kw,
         )
         return ForwardResult(
             power_table=pt,
