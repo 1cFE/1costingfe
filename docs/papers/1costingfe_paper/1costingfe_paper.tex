@@ -14,6 +14,7 @@
 \usepackage{microtype}
 \usepackage{cleveref}
 \usepackage{graphicx}
+\usepackage{float}
 \usepackage[numbers]{natbib}
 \usepackage{doi}
 \usepackage{tikz}
@@ -246,19 +247,14 @@ incentivizes designs with lower capital costs and faster construction,
 even at the expense of higher operating costs.
 
 The remainder of this paper is organized as follows.
-\Cref{sec:lcoe} presents the economics module,
+\Cref{sec:tour} walks through a representative example: a concept handed
+off from an external physics model into the costing pipeline, with a
+sensitivity tornado, run on a non-tokamak case (a D-${}^3$He mirror) to
+exercise concept-agnosticism.
+\Cref{sec:lcoe} then presents the economics module,
 \Cref{sec:physics-module} the physics module, and
 \Cref{sec:cas} the cost account structure, with detailed treatment of
 the accounts for which independent justification studies have been completed.
-\Cref{sec:tokamak-model} presents the 0D tokamak model.
-
-The walkthrough in \cref{sec:tour} presents a representative
-example: a single concept handed off from an external physics model
-into the costing pipeline, with a sensitivity tornado over the
-combined parameter set. Concept-agnosticism is exercised by running
-the walkthrough on a non-tokamak case (a D-${}^3$He mirror with
-venetian-blind direct energy conversion); the included 0D models in
-the appendix are convenience layers and are not required.
 
 
 %% ============================================================
@@ -281,11 +277,8 @@ and where applicable $\eta_{\text{de}}$, $f_{\text{dec}}$, and
 secondary burn fractions for catalyzed cycles); these feed the
 1costingfe physics module. Costing parameters (WACC, $T_c$, the
 FOAK/NOAK (First-/Nth-of-a-Kind) switch, conductor cost per kA-m,
-${}^3$He market price, etc.) enter at the engineering-sizing and
+${}^3$He market price, etc.) enter at the engineering and
 CAS-account stages.
-The included 0D models (\cref{sec:tokamak-model} for tokamaks) are
-convenience layers for users without an external physics model in
-hand and are not required.
 
 Throughout the paper, monospace identifiers in parentheses (e.g.,
 \texttt{burn\_fraction}) name the corresponding configuration
@@ -322,9 +315,8 @@ parameter exposed by the framework.
 \end{tikzpicture}
 \caption{Pipeline from external physics outputs to LCOE. Solid path:
 forward computation. Dashed path: known-cost overrides bypass the
-parametric estimate at any CAS account. The included 0D models
-(Appendix~A) substitute for the leftmost box when the user has no
-external physics in hand.}
+parametric estimate at any CAS account. The leftmost box is supplied by
+the user's physics model.}
 \label{fig:pipeline}
 \end{figure}
 
@@ -358,12 +350,12 @@ Blanket form  & None                & D-${}^3$He: no breeding blanket required \
 $M_n$         & 1.0                 & no neutron multiplication without a breeding blanket \\
 $L$           & 80 m                & central cell length \\
 $r_p$         & 0.4 m               & plasma radius at midplane \\
-$B_{\max}$    & 12 T                & peak field on conductor \\
+$b_{\text{center}}$ & 12 T          & field at coil center / on-axis (\texttt{b\_center}) \\
 $T_e$         & 70 keV              & per \cref{sec:dhe3-split} example \\
 $n_e$         & $3.3 \times 10^{19}$ m${}^{-3}$ & per \cref{sec:dhe3-split} example \\
-$\eta_{\text{de}}$ & 0.70           & venetian-blind direct conversion (single-pass; \texttt{eta\_de}) \\
-$f_{\text{dec}}$ & 0.90             & charged-particle collection fraction (\texttt{f\_dec}) \\
-$f_T^*$       & 0.5                 & secondary D-T burn (\texttt{dhe3\_f\_T}) \\
+$\eta_{\text{de}}$ & 0.70           & venetian-blind direct conversion efficiency (single-pass; \texttt{eta\_de}) \\
+$f_{\text{dec}}$ & 0.90             & charged-particle collection fraction into DEC system (\texttt{f\_dec}) \\
+$f_T^*$       & 0.5                 & secondary D-T burn fraction (\texttt{dhe3\_f\_T}) \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -415,21 +407,21 @@ CAS account & Description & M\$ \\
 \midrule
 CAS10        & Pre-construction (land, permits, licensing)  & 14.5 \\
 CAS21        & Buildings \& structures                      & 322.1 \\
-CAS22        & Reactor plant equipment                      & 1906.8 \\
+CAS22        & Reactor plant equipment                      & 1889.1 \\
 CAS23--29    & Other direct (BOP, special materials, contingency) & 235.9 \\
-CAS30        & Capitalized indirect services                & 492.9 \\
+CAS30        & Capitalized indirect services                & 489.4 \\
 CAS40        & Owner's costs                                & 23.0 \\
-CAS50        & Supplementary costs                          & 184.5 \\
-CAS60        & Interest during construction                 & 611.2 \\
+CAS50        & Supplementary costs                          & 183.8 \\
+CAS60        & Interest during construction                 & 607.0 \\
 \midrule
-\multicolumn{2}{l}{Total overnight}                          & 3790.9 \\
-\multicolumn{2}{l}{Overnight specific cost (\$/kW)}          & 3791 \\
+\multicolumn{2}{l}{Total overnight}                          & 3764.7 \\
+\multicolumn{2}{l}{Overnight specific cost (\$/kW)}          & 3765 \\
 \midrule
 CAS70 (M\$/yr) & O\&M and scheduled replacement             & 34.5 \\
-CAS80 (M\$/yr) & Fuel                                       & 256.4 \\
-CAS90 (M\$/yr) & Annualized financial (CRF $\times$ capital) & 305.5 \\
+CAS80 (M\$/yr) & Fuel (raw isotopes)                        & 256.4 \\
+CAS90 (M\$/yr) & Annualized financial (CRF, \cref{eq:crf})   & 303.4 \\
 \midrule
-\multicolumn{2}{l}{\textbf{LCOE (\$/MWh)}}                  & \textbf{78.2} \\
+\multicolumn{2}{l}{\textbf{LCOE (\$/MWh)}}                  & \textbf{78.0} \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -443,8 +435,9 @@ CAS90 (M\$/yr) & Annualized financial (CRF $\times$ capital) & 305.5 \\
 The forward pipeline of \cref{fig:pipeline} is differentiable end-to-end.
 Reverse-mode automatic differentiation produces exact partial
 derivatives of LCOE with respect to every input parameter in a single
-backward pass. \Cref{fig:tornado} shows the resulting tornado for the
-\cref{sec:tour} reference scenario, organized into three bands:
+backward pass. \Cref{fig:tornado} presents the LCOE sensitivity
+(elasticity) to the 12 most influential parameters, organized into three
+bands:
 physics outputs (the parameters supplied by the external physics
 model), cost unit prices (procurement-grounded \$/unit values that
 multiply physical quantities), and financial / methodology (cost-of-money,
@@ -463,28 +456,46 @@ moves LCOE by $+0.10\%$. Recorded by
 \label{fig:tornado}
 \end{figure}
 
-The tornado shows the sensitivity (LCOE elasticity) of each parameter.
 Parameters with the longest bars (highest elasticity) are the most
-influential in driving LCOE variations. For the reference scenario, the most consequential
-physics-output parameter is \texttt{availability} (elasticity $-0.54$),
-the most consequential cost unit price is \texttt{fuel\_recovery}
-($-7.19$), and the most consequential financial parameter is
-\texttt{interest\_rate} ($+0.38$). \texttt{fuel\_recovery} controls the fraction of unburnt fusion fuel
+influential in driving LCOE. For the reference scenario the dominant
+parameter is \texttt{fuel\_recovery} (elasticity $-7.33$), in the
+physics-outputs band; the most consequential cost unit price is
+\texttt{u\_he3}, the ${}^3$He purchase price ($+0.44$); and the most
+consequential financial parameter is \texttt{interest\_rate} ($+0.40$).
+\texttt{fuel\_recovery} controls the fraction of unburnt fusion fuel
 recirculated from the exhaust; its default value is 0.99. Operating
 near this limit means the residual loss fraction
 $(1 - \texttt{fuel\_recovery}) = 0.01$ is small, so a 1\% relative
 improvement in \texttt{fuel\_recovery} cuts fresh ${}^3$He purchases
-sharply. Combined with the high ${}^3$He price, this explains the
-unusually large elasticity. The financial bucket entries are modest for this
-reference scenario, reflecting the relatively low capital intensity of
-mirror designs: \texttt{interest\_rate} carries an elasticity of $+0.38$
-and \texttt{inflation\_rate} $+0.17$.
+sharply. Combined with the high ${}^3$He price (\texttt{u\_he3}), this
+explains the unusually large elasticity. The financial bucket entries
+are modest for this reference scenario, reflecting the relatively low
+capital intensity of mirror designs: \texttt{interest\_rate} carries an
+elasticity of $+0.40$ and \texttt{inflation\_rate} $+0.16$.
 
 \subsection{Other API Surfaces}
 \label{sec:tour-api}
 
 The forward call of \cref{sec:tour-forward} is the primary API entry
-point. Three additional API surfaces address common variants.
+point. Four additional API surfaces address common variants.
+
+\paragraph{Costing constants.} The calibration constants behind the
+parametric estimates (unit prices, fabrication markups, fractions) are
+exposed as \texttt{forward} keywords and can be overridden directly. For
+example, to test a more optimistic ${}^3$He price:
+
+\begin{minipage}{\linewidth}
+\begin{lstlisting}
+result = model.forward(
+    net_electric_mw=1000.0, availability=0.87, lifetime_yr=30,
+    u_he3=1_000_000.0,  # $/kg, optimistic He-3 price
+)
+\end{lstlisting}
+\end{minipage}
+
+This rescales every account that consumes the constant (here CAS80, the
+${}^3$He fuel cost), in contrast to a cost override, which replaces an
+account total outright.
 
 \paragraph{Cost overrides.} A vendor quote may replace a parametric
 estimate without re-running the physics:
@@ -538,14 +549,14 @@ single parameter hits a target LCOE, given everything else fixed.
 \begin{lstlisting}
 from costingfe.analysis.backcast import backcast_single
 eta_de_target = backcast_single(
-    model, target_lcoe=60.0, param_name="eta_de",
+    model, target_lcoe=78.0, param_name="eta_de",
     param_range=(0.50, 0.85), base_params=result.params,
 )
 \end{lstlisting}
 \end{minipage}
 
 This example determines the venetian-blind efficiency required to bring the
-mirror reference plant to a 60\,\$/MWh LCOE.
+mirror reference plant to a 78\,\$/MWh LCOE.
 
 The remainder of this paper is a detailed report of the calculation
 that is being executed by the code. \Cref{sec:lcoe} formalises how
@@ -753,9 +764,15 @@ when the growing annuity is neglected.
 \label{sec:physics-module}
 
 The denominator of the LCOE, \cref{eq:lcoe}, is the annual saleable
-electricity, which depends on the net electric power $P_{\text{net}}$ and plant availability.
-The purpose of the physics module is computing $P_{\text{net}}$ from
-device and plasma parameters, given a confinement concept and fuel cycle.
+electricity, which depends on the net electric power delivered to the grid
+$P_{\text{net}}$ (gross output minus in-plant recirculation; \cref{eq:p-net})
+and plant availability.
+The physics module is the plant power balance for a given fuel cycle: it
+relates the fusion power and the net electric power by tracking the energy
+flow from the plasma to the grid, net of recirculating power. The fusion
+power itself, set by device geometry and plasma parameters, comes from a
+concept-specific physics model external to \texttt{1costingfe} (the user's
+own, possibly proprietary, code).
 A computation of the plant availability would also fit in this, or an Engineering module,
 but requires a dedicated model incorporating the specifics of a design (e.g. maintainability, accessibility, component failure modes).
 
@@ -771,17 +788,14 @@ or a plasma with seeded impurities may alter the radiation losses or the plasma 
 \citep{frank2022}. These and other coefficients are therefore exposed as
 first-class parameters amenable to sensitivity analysis via automatic differentiation.
 
-The power balance is concept-agnostic given $P_{\text{fus}}$: it
-produces $P_{\text{net}}$ regardless of confinement scheme.
-Determining $P_{\text{fus}}$ from reactor geometry and plasma
-parameters requires a separate concept-specific physics model,
-typically supplied externally by the user.
-
-The fusion-power split (\cref{sec:fusion-power-split}) is upstream of
-both regimes. \Cref{sec:steady-balance} covers the steady-state
-balance used for tokamaks, stellarators, and mirrors;
-\cref{sec:pulsed-balance} covers the per-pulse balance used for laser
-IFE, Z-pinch, and pulsed inductive concepts.
+Given $P_{\text{fus}}$, the conversion to $P_{\text{net}}$ tracks the same
+energy channels for any confinement scheme; the only distinction is whether
+the power is delivered continuously or per shot. \Cref{sec:steady-balance}
+covers the steady-state balance, used for concepts such as tokamaks,
+stellarators, and mirrors, and \cref{sec:pulsed-balance} the per-pulse
+balance, used for concepts such as laser IFE, Z-pinch, and pulsed inductive
+machines. The fusion-power split (\cref{sec:fusion-power-split}) is upstream
+of both.
 
 \subsection{Fusion Power Split}
 \label{sec:fusion-power-split}
@@ -798,7 +812,7 @@ separately in \cref{sec:steady-balance}; and direct charged-particle
 transport to plasma-facing surfaces. Most of this energy is converted
 to electricity via a thermal cycle, though a fraction of the
 charged-particle transport loss may be recovered directly via direct
-energy conversion (DEC).
+energy conversion (DEC) systems.
 
 The purpose of this calculation is to determine the charged-particle
 and neutron power split.
@@ -837,14 +851,10 @@ Unburned fuel is exhausted, separated, and recycled with efficiency
 $f_r$ (\texttt{fuel\_recovery}); the resulting cumulative fusion
 probability of an injected atom is $f_b / [1 - f_r(1-f_b)]$,
 approaching 1 as $f_r \to 1$. Both $f_b$ and $f_r$ are used in CAS80
-(\cref{sec:cas80}). Values are declared per-concept in the engineering
-YAMLs rather than as global defaults. Steady-state MFE concepts share a
-regime default $f_b = 0.05$; inertial concepts use 0.25--0.30; the
-heterogeneous magneto-inertial bucket uses concept-specific values
-ranging from 0.01 (dense plasma focus) to 0.30 (heavy-ion fusion). The
-NOAK $f_r = 0.99$ value is uniform across concepts but declared
-per-concept by policy. Per-concept values and provenance are documented
-in \texttt{docs/account\_justification/burn\_fraction.md}.
+(\cref{sec:cas80}). Both are declared per-concept in the engineering
+YAMLs rather than as global defaults, with the NOAK $f_r = 0.99$ uniform
+across concepts. Per-concept values and provenance are given in
+\cref{app:burn-fraction}.
 
 \subsubsection{Deuterium-tritium (D-T)}
 The D-T reaction is the simplest case: each fusion event releases a
@@ -949,7 +959,7 @@ The bred-tritium burn fraction $f_T^*$ is a design choice: burn for
 energy or exhaust to reduce the neutron load. Mirror plants without
 active tritium discharge let bred T burn at
 $f_T^* \approx 0.5$ (single-pass thermal burn); pulsed FRC
-architectures designed for low neutron load exhaust (or hold for
+architectures designed for low neutron load may exhaust (or hold for
 decay) bred tritium, giving $f_T^* \approx 0$.
 
 The bred-${}^3$He utilization $f_{{}^3\text{He}}^*$ is not a free
@@ -1043,7 +1053,8 @@ purely aneutronic.
 
 The steady-state balance applies to confinement concepts with
 continuous heating power and continuous fusion output (tokamaks,
-stellarators, mirrors, levitated dipoles, polywells). It converts the fusion-power split of
+stellarators, mirrors, steady-state FRCs, levitated dipoles, polywells,
+and orbitrons). It converts the fusion-power split of
 \cref{sec:fusion-power-split} into net electric power via the thermal
 and electric conversion stack and the recirculating-power accounting.
 
@@ -1064,6 +1075,21 @@ P_{\text{brem}} = 5.35 \times 10^{-37}\; n_e^2 \, Z_{\text{eff}}
 \noindent where $n_e$ is the electron density in m$^{-3}$, $T_e$ the
 volume-averaged electron temperature in keV, $Z_{\text{eff}}$ the
 effective charge, and $V$ the plasma volume in m$^3$.
+Equation~\eqref{eq:p-brem} is the non-relativistic electron-ion form,
+accurate at the D-T and D-D operating temperatures
+($T_e \sim 10$--$30$~keV), and it is applied (summed with synchrotron and
+impurity-line radiation below) only for those two fuels. At the high
+temperatures of the aneutronic fuels (D-${}^3$He and p-${}^{11}$B,
+$T_e \gtrsim 100$~keV) relativistic and electron-electron bremsstrahlung
+corrections become significant and the thermal synchrotron estimate breaks
+down, so the framework does not apply these formulas to D-${}^3$He or
+p-${}^{11}$B. It instead pins the radiated fraction of fusion power through
+\texttt{f\_rad\_fus}, defaulting to $0.24$ for D-${}^3$He
+\citep{rider1997} and $0.83$ for p-${}^{11}$B \citep{ochs2022}
+(\texttt{f\_rad\_fus\_dhe3}, \texttt{f\_rad\_fus\_pb11});
+equivalently, a fixed total radiation power can be pinned with
+\texttt{p\_rad\_override}. Either replaces the computed
+bremsstrahlung-plus-synchrotron-plus-impurity sum.
 
 For synchrotron radiation, the optically thin (Larmor) formula
 grossly overestimates the net loss in MFE plasmas because most
@@ -1105,9 +1131,9 @@ high-energy electron tail, which is responsible for most of the
 emission at optically thin harmonics \citep{ochs2024}. This
 self-consistent kinetic effect can reduce the net synchrotron loss by
 up to an order of magnitude relative to the thermal prediction. For
-such regimes a radiation power override informed by kinetic
-Fokker--Planck modeling should be supplied in place of the
-Albajar formula.
+such regimes the Albajar formula is bypassed with a kinetic
+Fokker--Planck radiation estimate supplied through the
+\texttt{p\_rad\_override} parameter introduced above.
 
 \paragraph{Impurity Line Radiation.}
 In MFE plasmas, line radiation from partially ionized impurities is
@@ -1226,10 +1252,13 @@ P_{\text{in,eff}} = \max\!\bigl(P_{\text{in}},\;
 \noindent This ensures $P_{\text{transport}} \geq 0$ and correctly
 penalizes radiation-dominated regimes through increased recirculating
 power: the additional heating must be supplied at wall-plug efficiency
-$\eta_{\text{pin}}$, which raises $P_{\text{recirc}}$ and degrades the
-engineering~$Q$. For example, a p-${}^{11}$B mirror at
-$T_e = 150$~keV requires $P_{\text{in,eff}} \gg P_{\text{in}}$ due to
-synchrotron losses, driving the LCOE well above D-T levels.
+$\eta_{\text{pin}}$, which raises the recirculating power
+$P_{\text{recirc}}$ (\cref{eq:p-recirc}) and degrades the
+engineering~$Q$. For example, p-${}^{11}$B radiates a large fraction of its fusion power and
+so requires a large heating power; if that power is under-specified,
+\cref{eq:p-input-eff} scales the effective heating up to close the energy
+balance. That heating is recirculated at $\eta_{\text{pin}}$, raising
+$P_{\text{recirc}}$ and the LCOE accordingly.
 
 \paragraph{Thermal and Electric Conversion.}
 
@@ -1261,13 +1290,21 @@ P_{\text{et}} = \eta_{\text{th}} \, P_{\text{th}}
 \end{equation}
 
 \noindent For systems with direct energy conversion (DEC), a fraction
-$f_{\text{dec}}$ of the transport power bypasses the
-thermal cycle and is converted at efficiency $\eta_{\text{dec}}$, and
-the gross electric power becomes
-$P_{\text{et}} = \eta_{\text{th}} P_{\text{th}} +
- f_{\text{dec}} \, \eta_{\text{dec}} \, P_{\text{transport}}$.
-DEC is disabled by default ($f_{\text{dec}} = 0$) pending further
-technology maturation.
+$f_{\text{dec}}$ of the transport power bypasses the thermal cycle and is
+converted at efficiency $\eta_{\text{dec}}$. That fraction is removed from
+the thermal power of \cref{eq:p-thermal} (only the remaining
+$(1-f_{\text{dec}})\,P_{\text{transport}}$ is converted thermally), so the
+gross electric power becomes
+\begin{equation}
+\label{eq:p-gross-dec}
+P_{\text{et}} = \eta_{\text{th}}\,\bigl(P_{\text{th}}
+  - f_{\text{dec}}\,P_{\text{transport}}\bigr)
+  + f_{\text{dec}}\,\eta_{\text{dec}}\,P_{\text{transport}}.
+\end{equation}
+$f_{\text{dec}}$ is a per-concept default: zero for tokamaks, stellarators,
+dipoles, and steady-state FRCs, and nonzero where charged-particle exhaust
+is naturally collected (0.3 for mirrors, 0.5 for polywells, 0.9 for
+orbitrons).
 
 \subsubsection{Recirculating Power and Net Electric Output}
 
@@ -1333,48 +1370,54 @@ The inverse-balance solver used by the costing model is presented in
 Pulsed confinement concepts (laser IFE, Z-pinch, and inductive
 recovery schemes) differ from the steady-state balance above in two
 respects: (i)~energy is delivered in discrete pulses rather than as
-continuous heating, and (ii)~charged-particle energy may be recovered
-electromagnetically rather than thermally. \texttt{1costingfe}
+continuous heating, and (ii)~an inductive recovery option captures the
+per-pulse PdV work of the expanding plasmoid directly in the driver coils,
+returning part of the driver energy that a thermal cycle would charge
+entirely as recirculating loss. \texttt{1costingfe}
 provides two pulsed power balance variants, selected by the
 \texttt{PulsedConversion} parameter.
 
 \subsubsection{Per-Pulse Energy Framework}
-The user specifies three primary inputs: the target net electric power
-$P_{\text{net}}^*$, the engineering gain $Q_{\text{eng}} = P_{\text{et}}
-/ P_{\text{recirc}}$, and the repetition rate $f_{\text{rep}}$ (Hz).
-From these, the model derives the required driver energy per pulse
-$E_{\text{drv}}$ (MJ), the average driver power
-$P_{\text{drv}} = E_{\text{drv}} \, f_{\text{rep}}$, and the fusion
-power $P_{\text{fus}}$. The scientific gain
-$Q_{\text{sci}} = P_{\text{fus}} / P_{\text{drv}}$ falls out as a
-derived quantity. The driver wall-plug efficiency $\eta_{\text{pin}}$
-relates stored energy to delivered energy:
-$E_{\text{stored}} = E_{\text{drv}} / \eta_{\text{pin}}$.
-Here $\eta_{\text{pin}}$ characterizes pulsed-driver hardware (laser, ion
-beam, capacitor bank); the steady-state $\eta_{\text{pin}}$ in
-\cref{eq:p-recirc} refers instead to the auxiliary heating wall-plug
-efficiency, which may be decomposed into source and coupling factors.
-The charged-particle fraction $f_{\text{cp}}$ is derived from the fuel
-type and determines the ash--neutron split, while
-$f_{\text{rad}}$ is the fraction of ash power radiated during the burn,
-so $P_{\text{rad}} = f_{\text{rad}} \, P_{\text{cp}}$. This single
+As in the steady-state balance, we trace the per-pulse energy from the
+driver through to the grid. A driver delivers $E_{\text{drv}}$ (MJ) per pulse,
+drawn from stored energy $E_{\text{stored}} = E_{\text{drv}} /
+\eta_{\text{pin}}$, where $\eta_{\text{pin}}$ is the pulsed-driver wall-plug
+efficiency (laser, ion beam, capacitor bank; distinct from the
+auxiliary-heating $\eta_{\text{pin}}$ of \cref{eq:p-recirc}, which decomposes
+into source and coupling factors). Each pulse releases fusion energy at
+scientific gain $Q_{\text{sci}} = P_{\text{fus}} / P_{\text{drv}}$, so the
+fusion power is $P_{\text{fus}} = Q_{\text{sci}} \, P_{\text{drv}}$ with the
+average driver power $P_{\text{drv}} = E_{\text{drv}} \, f_{\text{rep}}$ at
+repetition rate $f_{\text{rep}}$ (Hz). The charged-particle fraction
+$f_{\text{cp}}$ is derived from the fuel type and sets the ash--neutron
+split, while $f_{\text{rad}}$ is the fraction of ash power radiated during
+the burn, so $P_{\text{rad}} = f_{\text{rad}} \, P_{\text{cp}}$. This single
 parameter replaces the mechanistic bremsstrahlung, synchrotron, and
 impurity-line radiation calculation used in the steady-state balance
-(\cref{sec:steady-balance}); pulsed plasmas have rapidly evolving
-density and temperature profiles that make the steady-state formulas
-inapplicable.
+(\cref{sec:steady-balance}); pulsed plasmas have rapidly evolving density
+and temperature profiles that make the steady-state formulas inapplicable.
+The conversion stack below then gives the gross electric power
+$P_{\text{et}}$, and after the recirculating driver and auxiliary loads the
+net power $P_{\text{net}} = P_{\text{et}} - P_{\text{recirc}}$ and the
+engineering gain $Q_{\text{eng}} = P_{\text{et}} / P_{\text{recirc}}$ follow.
 
-$Q_{\text{eng}}$ is preferred over $Q_{\text{sci}}$ as the primary input
-because it directly determines economic viability ($Q_{\text{eng}} \le 1$
-means no net power; $Q_{\text{eng}} \approx 2$ means 50\% recirculation),
-and it works uniformly across thermal and DEC conversion pathways without
-requiring concept-dependent parameterization.
+For costing the framework runs this balance inverse (as in the steady-state
+case): the user supplies the target net power $P_{\text{net}}^*$, the
+engineering gain $Q_{\text{eng}}$, and $f_{\text{rep}}$, and the model solves
+for $E_{\text{drv}}$ and $P_{\text{fus}}$. $Q_{\text{eng}}$ is taken as a
+primary input rather than derived because it directly determines economic
+viability ($Q_{\text{eng}} \le 1$ means no net power; $Q_{\text{eng}}
+\approx 2$ means 50\% recirculation) and works uniformly across thermal and
+DEC conversion pathways without requiring concept-dependent
+parameterization.
 
 \subsubsection{Pulsed Thermal Conversion}
-For laser IFE, Z-pinch, mag-target, and other pulsed concepts whose
-driver energy thermalises in the blanket, the model supports an
-optional partial direct charged-particle capture path that mirrors
-the steady-state hybrid balance of \cref{eq:p-thermal}. A fraction
+For laser IFE, Z-pinch, mag-target, and other pulsed concepts in which the
+energy leaving the plasma is absorbed as heat and converted through a
+thermal cycle (rather than recovered electromagnetically, as in the
+inductive case below), the model supports an optional partial direct
+charged-particle capture path that mirrors the steady-state hybrid balance
+of \cref{eq:p-thermal}. A fraction
 $f_{\text{dec}} \in [0, 1]$ of the non-radiated charged-particle
 power $P_{\text{ch,net}} = (1 - f_{\text{rad}})\,P_{\text{cp}}$ is
 collected at efficiency $\eta_{\text{de}}$; the remainder of the ash
@@ -1387,19 +1430,28 @@ P_{\text{dee}} &= f_{\text{dec}}\,\eta_{\text{de}}\,P_{\text{ch,net}}, \\
 P_{\text{et}} &= \eta_{\text{th}} P_{\text{th}} + P_{\text{dee}}.
 \end{align}
 Setting $f_{\text{dec}} = 0$ recovers the pure-thermal limit in which
-all ash thermalises; setting it close to unity (with a low neutron
-fraction, e.g.\ p-B11) approaches the aneutronic DEC limit.
+all ash thermalises; setting it near unity for a low-neutron fuel
+approaches the aneutronic direct-conversion limit. The default
+p-${}^{11}$B dense plasma focus uses $f_{\text{dec}} = 0.90$, modelling
+the LPP Fusion design that direct-converts the emitted ion beam in a
+decelerator \citep{lerner2023dpf}; the model captures this
+charged-particle recovery but not the separate photoelectric recovery of
+the X-ray power, which still thermalises.
 The full driver draw $P_{\text{drv}}/\eta_{\text{pin}}$ still enters
 the recirculating load --- unlike the inductive case below, the
 thermal-mode driver charge is not recovered.
 
 \subsubsection{Pulsed Inductive DEC Conversion}
-For inductive recovery concepts (e.g.\ pulsed FRCs with capacitor-bank-driven compression), the driver
-energy circulates in an electromagnetic loop: capacitor bank $\to$
-compression coils $\to$ plasma $\to$ coils $\to$ capacitor bank.
-Charged-particle energy does PdV work on the expanding plasmoid,
-which is recovered inductively. The fraction of net charged-particle
-power that couples as PdV work is
+For pulsed concepts in which the plasma's expansion energy is recovered
+electromagnetically rather than as heat (the pulsed FRC, e.g.\ Helion, and
+the theta pinch), the framework includes a dedicated inductive
+direct-energy-conversion model.
+The driver energy circulates in an electromagnetic loop (capacitor bank
+$\to$ compression coils $\to$ plasma $\to$ coils $\to$ capacitor bank). The
+compressed plasma fuses, and the charged-particle ash expands, doing PdV
+work on the magnetic field, which induces current back into the coils. The fraction of net charged-particle
+power that couples as PdV work, for plasma expanding adiabatically from
+$r_{\min}$ to $r_{\max}$, is
 \begin{equation}
 f_{\text{pdv}} = 1 - \left(\frac{r_{\min}}{r_{\max}}\right)^{\!2(\gamma-1)}
 \end{equation}
@@ -1424,14 +1476,8 @@ Neutrons, bremsstrahlung, and undirected charged particles still enter
 a thermal blanket. When $\eta_{\text{th}} > 0$ a conventional thermal
 cycle runs in parallel with the DEC, and the total gross electric is
 $P_{\text{et}} = P_{\text{dee}} + P_{\text{the}}$. When
-$\eta_{\text{th}} = 0$ the concept is purely inductive and all
-thermal loads (pumps, balance of plant (BOP)) are zeroed automatically.
-
-For inductive DEC, the capacitor bank is costed on a \$/J stored-energy
-basis (Account~22.01.07, \cref{sec:cas2207}): $C_{220107} = c_{\text{cap}}
-\times E_{\text{stored}}$, where $c_{\text{cap}}$ is the all-in installed
-cost per joule. The NOAK default and its justification are discussed in
-\cref{sec:cas2207}.
+$\eta_{\text{th}} = 0$ the concept is purely inductive, and that thermal
+power is dumped as waste heat rather than converted to electricity.
 
 For the DEC inverse, the model takes the scientific gain $Q_{\text{sci}}$
 as input and derives the required stored energy per pulse:
@@ -1459,15 +1505,17 @@ shows the full hierarchy.
 The \emph{Disposition} column flags whether the account uses prior
 conventions unchanged (\emph{Inherited}), keeps the prior backbone
 with additional sub-cases (\emph{Extended}), or has been re-derived
-from procurement and first principles (\emph{Replaced}). Subsections
-in this chapter present methodology only for accounts in the latter
-two categories.
+from procurement and first principles (\emph{Replaced}). Here the prior
+conventions are the cost calculations (the heritage scaling laws) of the
+pyFECONS implementation \citep{woodruff2026, woodruff2026b}. Subsections in this chapter present
+methodology only for accounts in the latter two categories.
 
 \begin{table}[htbp]
 \caption{Cost account structure overview. Accounts with dedicated
 methodology subsections are marked with~$\dagger$.}
 \label{tab:cas-overview}
 \centering
+\small
 \begin{tabular}{llcp{6.0cm}}
 \toprule
 CAS & Description & Disposition & Method \\
@@ -1527,7 +1575,7 @@ engineering studies, and pre-construction reports. It is typically less
 than 1\% of total capital; individual sub-accounts do not warrant
 detailed parametric modeling.
 
-\subsubsection{Land and Land Rights (C11)}
+\subsubsection{Land and Land Rights (CAS11)}
 Modern compact fusion plant designs require 20--200 acres, far less
 than the legacy 1{,}000-acre assumption in earlier ARIES studies.
 A representative compact pilot-plant filing \citep{cfs_arc} plans 100 acres for 400\,MWe,
@@ -1540,13 +1588,12 @@ industrial zoning\footnote{USDA NASS, \emph{Land Values 2024 Summary}, August 20
 investments.
 
 The compact siting is enabled by the absence of an exclusion zone:
-the NRC's 2023 decision to regulate D-T fusion under 10~CFR~Part~30
-(byproduct materials) rather than Part~50/52 (reactor licensing)
+the NRC's 2023 decision to regulate fusion energy systems under
+10~CFR~Part~30 (byproduct materials) rather than Part~50/52 (reactor licensing)
 eliminates the large-radius emergency planning zone required for
-fission plants \citep{nrc2023}. Aneutronic fuels such as p-${}^{11}$B
-likely fall outside NRC jurisdiction entirely.
+fission plants \citep{nrc2023}.
 
-\subsubsection{Plant Licensing (C13)}
+\subsubsection{Plant Licensing (CAS13)}
 Licensing timelines are fuel-dependent and affect first-of-a-kind
 (FOAK) builds by extending the total project time, which flows into
 the levelized annual cost calculation for CAS70 and CAS80.
@@ -1563,7 +1610,7 @@ Fuel & Licensing time (yr) & Rationale \\
 D-T   & 2.0 & Part~30 licensing, upper end of 1--2~yr range \\
 D-D   & 1.5 & Reduced tritium inventory \\
 D-${}^3$He & 0.75 & Minimal radioactivity \\
-p-${}^{11}$B & 0.0 & No NRC jurisdiction \\
+p-${}^{11}$B & 0.0 & No radioactivity \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -1581,72 +1628,78 @@ materials), not Part~50 (reactor license), which means no Seismic
 Category~I requirements, no NQA-1 program for most buildings, and
 no fission-style containment structure.
 
+\subsubsection{Fuel and Power Scaling}
+Each building is costed for what it physically is; the per-fuel totals
+(each a sum of the individually-costed buildings) are summarized in
+\cref{tab:cas21-fuel}.
+
 \begin{table}[htbp]
-\caption{CAS21 buildings cost by fuel cycle (1\,GWe reference).}
+\caption{CAS21 buildings cost by fuel cycle.}
 \label{tab:cas21-fuel}
 \centering
-\begin{tabular}{lrrl}
+\begin{tabular}{lrl}
 \toprule
-Fuel & \$/kW & M\$ at 1\,GWe & Construction grade \\
+Fuel & Value at 1\,GWe (M\$) & Construction grade \\
 \midrule
-D-T    & 629 & 629 & Enhanced industrial (tritium confinement, hot cell, rad-HVAC) \\
-D-D    & 576 & 576 & Enhanced industrial (reduced tritium/activation scope) \\
-D-${}^3$He & 452 & 452 & Light enhanced industrial \\
-p-${}^{11}$B & 385 & 385 & Industrial (no hot cell, no tritium, standard HVAC) \\
+D-T    & 629 & Enhanced industrial (tritium confinement, hot cell, rad-HVAC) \\
+D-D    & 576 & Enhanced industrial (reduced tritium/activation scope) \\
+D-${}^3$He & 452 & Light enhanced industrial \\
+p-${}^{11}$B & 385 & Industrial (no hot cell, no tritium, standard HVAC) \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\subsubsection{Fuel-Dependent Scoping}
-Each building is costed for what it physically is. Key
-differentiators by fuel:
+\Cref{tab:cas21-buildings} lists each building with its per-fuel cost at the
+1\,GWe reference and the power quantity it scales with.
 
-\begin{itemize}
-\item \textbf{Hot cell:} D-T \$104M (full remote handling, 3--4~ft
-  shielding, NQA-1 on tritium-wetted systems); D-D \$78M (3/4 scope,
-  NQA-1 overhead similar); D-${}^3$He \$23M (shielded inspection room
-  only); p-${}^{11}$B \textbf{\$0} (does not exist; nothing
-  activates). The hot cell is physically integrated within the
-  reactor building, following UK pilot-plant cost models, not a separate
-  structure.
+\begin{table}[htbp]
+\caption{CAS21 buildings by fuel cycle and scaling driver (M\$ at the
+1\,GWe net reference). Fuel-independent buildings span the fuel columns.}
+\label{tab:cas21-buildings}
+\centering
+\small
+\begin{tabular}{lrrrrl}
+\toprule
+Building & D-T & D-D & D-${}^3$He & p-${}^{11}$B & Scales with \\
+\midrule
+Reactor building & 138 & 127 & 98 & 81 & $P_{\text{fus}}$ \\
+Hot cell & 104 & 78 & 23 & 0 & $P_{\text{fus}}$ \\
+Reactor auxiliaries & 29 & 25 & 21 & 17 & $P_{\text{fus}}$ \\
+Ventilation/HVAC & 17 & 15 & 6 & 3.5 & $P_{\text{fus}}$ \\
+Site improvements & 85 & 81 & 75 & 69 & fixed \\
+Maintenance & 17 & 16 & 15 & 14 & fixed \\
+Control room & 14 & 13 & 12 & 12 & fixed \\
+Fuel storage & 9 & 7 & 3 & 1 & fixed \\
+Site services & 5 & 5 & 3.5 & 3.5 & fixed \\
+Security & 3.5 & 3.5 & 2.3 & 2.3 & fixed \\
+Administration & 9 & 8 & 6 & 5 & $P^{0.5}$ (staff) \\
+\midrule
+Turbine building & \multicolumn{4}{c}{58} & $P_{\text{the}}$ \\
+Heat exchanger & \multicolumn{4}{c}{17} & $P_{\text{th}}$ \\
+Service water & \multicolumn{4}{c}{9} & $P_{\text{th}}$ \\
+Power supply & \multicolumn{4}{c}{17} & $P_{\text{et}}$ \\
+On-site AC & \multicolumn{4}{c}{12} & $P_{\text{et}}$ \\
+Cryogenics & \multicolumn{4}{c}{14} & fixed (superconducting only) \\
+Assembly hall & \multicolumn{4}{c}{21} & fixed \\
+\bottomrule
+\end{tabular}
+\end{table}
 
-\item \textbf{Reactor building:} D-T \$138M (biological shielding
-  walls, tritium confinement barriers); p-${}^{11}$B \$81M (standard
-  heavy industrial crane hall, no shielding, personnel walk-in access).
+The fuel dependence is an activation and tritium-handling story: the
+buildings that shield neutrons or confine tritium (reactor building, hot
+cell, ventilation/HVAC) ease from D-T through D-${}^3$He as the neutron
+energy and tritium inventory fall, and the hot cell vanishes entirely for
+aneutronic p-${}^{11}$B (nothing activates). Ventilation scales with
+$P_{\text{fus}}$ because its dominant load is confinement rad-ventilation of
+the reactor building, not office comfort HVAC. The cryogenics building is
+the magnet cryoplant, present only for superconducting-magnet concepts and
+zero for normal-conducting (copper) and magnet-free designs.
 
-\item \textbf{Ventilation/HVAC:} D-T \$17M (rad-HVAC: HEPA, stack
-  monitoring, emergency isolation); D-D \$15M (full rad-HVAC for
-  tritium zones); p-${}^{11}$B \$3.5M (standard industrial HVAC).
-
-\item \textbf{Security:} Tritium is not listed in 10~CFR Part~37
-  Category~1/2 table, so no armed response requirements apply for any fusion
-  fuel. All fuels use standard industrial security (\$2--3.5M).
-
-\item \textbf{Site improvements:} D-T \$85M (larger footprint from
-  hot cell, tritium processing); p-${}^{11}$B \$69M (standard industrial site).
-\end{itemize}
-
-\subsubsection{Scaling Basis}
-Different buildings scale with different physical drivers. The
-turbine building scales with thermal electric power $P_{\text{the}}$
-(steam cycle only, not DEC); the reactor building, hot cell, reactor
-auxiliaries, and ventilation/HVAC scale with fusion power
-$P_{\text{fus}}$ (ventilation because its dominant load is confinement
-rad-ventilation of the reactor building, not office comfort HVAC); site
-improvements, control room, and security are approximately fixed; BOP
-electrical buildings scale with gross electric $P_{\text{et}}$. The
-administration building tracks staff and so scales sub-linearly, as
-$P^{0.5}$, consistent with the staffing-based accounts (CAS40, CAS70).
-The cryogenics building is the magnet cryoplant: it is present only for
-superconducting-magnet concepts and is zero for normal-conducting
-(copper) and magnet-free concepts, which carry no cryoplant.
-
-All power-scaling buildings are driven by \emph{plant-total} power.
-When a plant is assembled from $n_{\text{mod}}$ replicated modules, the
-power-scaling buildings are fed $n_{\text{mod}}$ times the per-module
-power, the same total the balance-of-plant accounts (CAS23--26) use, so
-the buildings/site reach plant scale rather than being pinned to a
-single module; fixed buildings are charged once per site.
+All power-scaling buildings are driven by \emph{plant-total} power: when a
+plant is assembled from $n_{\text{mod}}$ replicated modules, they are fed
+$n_{\text{mod}}$ times the per-module power (the same total the
+balance-of-plant accounts CAS23--26 use), reaching plant scale rather than
+being pinned to a single module; fixed buildings are charged once per site.
 
 \subsubsection{Comparison with Benchmarks}
 \Cref{tab:cas21-benchmarks} situates the fuel-dependent CAS21 figures
@@ -1671,71 +1724,34 @@ The fusion p-${}^{11}$B figure of 384~\$/kW sits at roughly
 1.7$\times$ CCGT, and the D-T figure of 626~\$/kW at roughly
 3.0$\times$ CCGT.
 The values are derived from-scratch using industrial construction
-benchmarks \citep{cushman_wakefield_2025, netl2022, nrel_atb2024},
-superseding ARIES/pyFECONS values.
+benchmarks \citep{cushman_wakefield_2025, netl2022, nrel_atb2024}.
 
 
 %% ------------------------------------------------------------
-\subsection{Inherited Sub-Accounts}
+\subsection{CAS22: Reactor Plant Equipment}
+\label{sec:cas22}
+
+CAS22 (reactor plant equipment) is the largest direct-capital account and
+the most concept- and fuel-sensitive. Following the dispositions of
+\cref{tab:cas-overview}, several sub-accounts inherit prior scaling
+unchanged, while the rest (coils, supplementary heating / driver, vacuum
+system, power supplies, direct energy converter, remote handling, and
+isotope separation) are re-derived from component physics and procurement.
+The inherited sub-accounts are summarized first, then each re-derived
+account in turn.
+
+\subsubsection{Inherited Sub-Accounts}
 \label{sec:cas22-inherited}
 
 Sub-accounts CAS22.01.02 (shield), 22.01.05 (primary structure),
-22.01.08 (divertor), and 22.01.11 (installation labor) inherit the
+and 22.01.11 (installation labor) inherit the
 methodology of the pyFECONS
 implementation \citep{woodruff2026} unchanged: hybrid volume +
 thermal-intensity scaling for component accounts and
 percentage-of-subtotal for installation labor. They are not
 re-derived here.
 
-The divertor sub-account (CAS22.01.08) keeps this inherited scaling for
-steady-state MFE concepts that exhaust onto a material target,
-$C_{220108} = c_{\text{div}}\,(P_{\text{th}}/1000)^{0.5}$ with
-$c_{\text{div}} = 60$~M\$, but its value is concept-dependent. Concepts
-that exhaust charged particles without a material target carry no
-manufactured divertor cassette and $C_{220108} = 0$: the levitated
-dipole (closed-field-line topology, loss-cone exhaust at the chamber
-openings) and the electrostatic concepts (orbitron, polywell), which
-direct charged particles to the direct energy converter. For inertial and
-magneto-inertial concepts the same sub-account instead funds the
-on-site target factory, built up from its three independent cost drivers,
-\begin{equation}
-\label{eq:target-factory}
-C_{220108} = c_{\text{fix}} + c_{\text{line}}\,f_{\text{rep}} + c_{\text{flow}}\,(P_{\text{fus}}/1000):
-\end{equation}
-a fixed building and tritium-confinement shell ($c_{\text{fix}}$);
-precision production lines that scale with target throughput, i.e. the
-repetition rate $f_{\text{rep}}$ ($c_{\text{line}}$); and material
-handling, cryogenics, and post-shot recovery that scale with mass-energy
-flow $P_{\text{fus}}$ ($c_{\text{flow}}$). These are the only two
-independent factory variables: fixing the plant electric power and rep
-rate fixes the fusion power and hence the yield per shot
-($P_{\text{fus}}/f_{\text{rep}}$ at fixed module count), so target size
-enters through $P_{\text{fus}}$ alone and needs no separate term. This
-replaces an earlier flat \$244~M scaling on electric power---a fair proxy
-for the handling term, but blind to the throughput (rep-rate) term that
-is the axis the original basis was criticized for missing.
-The coefficients are a \emph{per-concept} bottom-up build-up. A laser or
-heavy-ion capsule factory is a precision cleanroom whose tritium-handling
-back half (DT fill, ice-layering, contained assembly, injection) adds a
-dual-confinement premium and whose throughput is oversized by the inverse
-acceptance yield, totalling $\sim$725--780~M\$ at the design point and
-calibrated so its optimistic corner reproduces the
-LIFE~\cite{anklam2011life} target factory ($\sim$\$600~M, \$0.25/target).
-A MagLIF or Z-pinch load is instead a stamped-and-filled metal liner, a
-casting-shop process near $\sim$150~M\$---five times cheaper, and not the
-capsule cleanroom that the flat number phantom-applied to every concept.
-That flat figure, inherited from the Miles/LIFE factory total via
-pyFECONS~\cite{woodruff2026}, also double-counted the factory: the
-per-shot target cost (\cref{sec:cas80}) is sourced from fully-loaded
-studies that already amortize the plant, so the capital and per-shot
-accounts are disentangled here to count it once.
-Whether a concept carries a factory is gated on the per-shot target cost
-$c_{\text{target}}>0$ and sized by $c_{\text{fac}}$: concepts that form
-their plasma or liner in situ---plasma-jet MIF, the liquid-liner
-magnetized-target loop, pulsed FRC, theta pinch, dense plasma focus, and
-sheared-flow / staged Z-pinch---set both to zero and carry
-$C_{220108} = 0$, with no cost override required.
-
+\subsubsection{CAS22.01.01: First Wall and Blanket}
 Sub-account CAS22.01.01 (first wall + blanket) follows the pyFECONS
 volume $\times$ thermal-intensity $\times$ fuel-dependent unit-cost
 form, with the D-T reference unit cost anchored to a RAFM-steel blanket
@@ -1809,14 +1825,14 @@ given concept built worldwide, not on $n_{\rm mod}$, which represents
 units at a single site.
 
 %% ------------------------------------------------------------
-\subsection{CAS22.01.03: Coils (Superconducting and Resistive)}
+\subsubsection{CAS22.01.03: Coils (Superconducting and Resistive)}
 \label{sec:cas2203}
 
 CAS22.01.03 covers the magnet system: toroidal field (TF), central
 solenoid (CS), poloidal field (PF) coils, structural casing,
 insulation, quench protection, cryostat interfaces, and testing.
 
-\subsubsection{Conductor Scaling Law}
+\paragraph{Conductor Scaling Law}
 The conductor quantity in kA-m follows from the magnet topology. For a
 toroidal system the on-axis field fixes the total ampere-turns through
 Amp\`ere's law, $NI = 2\pi R_0 B / \mu_0$, while the conductor length per
@@ -1899,7 +1915,7 @@ MIF, IFE, Z-pinch & \multicolumn{3}{l}{\$0 (no plant-scale confinement magnets)}
 \end{tabular}
 \end{table}
 
-\subsubsection{Conductor Cost Assumptions}
+\paragraph{Conductor Cost Assumptions}
 The default conductor is REBCO high-temperature superconductor at
 \$50/kA-m, an aggressive NOAK target. Current market prices for
 REBCO tape are \$150--300/kA-m; the \$50/kA-m assumption reflects
@@ -1917,7 +1933,7 @@ industrial supply chain requiring \$10{,}000/kg falling to \$75/kg), the
 REBCO cost trajectory is a manufacturing learning curve for an
 existing product, making the aggressive target more defensible.
 
-\subsubsection{Resistive Copper Coils}
+\paragraph{Resistive Copper Coils}
 The \$/kA-m model is correct where an expensive superconductor dominates
 cost. For low-field resistive copper coils (an FRC at near-unity beta
 runs external fields of order $0.1$--$1$~T) the conductor is cheap per
@@ -1934,7 +1950,7 @@ $\rho_{\text{Cu}} = 8960$~kg/m$^3$, current density $J = 5$~A/mm$^2$,
 copper price $p_{\text{Cu}} = 11$~\$/kg, fabrication markup
 $k_{\text{Cu}} = 3.5$, steel support mass $m_{\text{st}} = 0.6\,m_{\text{Cu}}$,
 $p_{\text{st}} = 6$~\$/kg, and $k_{\text{st}} = 3.0$. The ampere-metres
-are the same $G\,B_{\max}R_{\text{coil}}^2/\mu_0$ quantity as the
+are the same $G\,B\,r_{\text{coil}}^2/\mu_0$ quantity as the
 superconducting path, so no new geometry assumption is introduced. The
 branch is selected by conductor material, so it applies to every copper
 concept (steady and pulsed FRC, theta pinch, polywell, orbitron) and
@@ -1943,7 +1959,7 @@ $B = 0.5$~T, $R = 1.85$~m, $n_{\text{coils}} = 4$ carries about 123~t of
 copper and 74~t of steel, giving $C_{220103} \approx \$6$M, versus about
 \$0.1M from the \$/kA-m path at the same field.
 
-\subsubsection{Levitated Dipole Floating Coil}
+\paragraph{Levitated Dipole Floating Coil}
 The levitated dipole replaces the external magnet set with a single
 superconducting floating coil immersed in the plasma, so its
 CAS22.01.03 follows a dedicated build-up rather than
@@ -1969,13 +1985,13 @@ reference OpenStar Reactor~A point uses $B_{\text{center}} = 6.26$~T
 and $R_{\text{coil}} = 5.3$~m.
 
 %% ------------------------------------------------------------
-\subsection{CAS22.01.04: Supplementary Heating / Primary Driver}
+\subsubsection{CAS22.01.04: Supplementary Heating / Primary Driver}
 \label{sec:cas2204}
 
 CAS22.01.04 covers different hardware depending on the confinement
 family.
 
-\subsubsection{Steady-State MFE}
+\paragraph{Steady-State MFE}
 For tokamaks, stellarators, and mirrors, the account covers
 vendor-purchased auxiliary heating systems. Cost scales linearly with
 installed power:
@@ -2003,7 +2019,7 @@ concepts such as the FRC, is a deliberate refinement not applied here;
 the driver's recirculating burden is already represented through
 $\eta_{\text{pin}}$.
 
-\subsubsection{Pulsed Concepts}
+\paragraph{Pulsed Concepts}
 For pulsed concepts, the account covers the primary driver capital, namely
 the hardware that compresses or ignites the target. This is the pulsed
 analog of the magnet system (CAS22.01.03): the mechanism that provides
@@ -2098,7 +2114,7 @@ whose confinement is provided by coils (pulsed FRC, theta pinch) have
 that hardware in CAS22.01.03.
 
 %% ------------------------------------------------------------
-\subsection{CAS22.01.06: Vacuum System}
+\subsubsection{CAS22.01.06: Vacuum System}
 \label{sec:cas2206}
 
 CAS22.01.06 is a sum of two parts with different cost drivers:
@@ -2151,14 +2167,14 @@ exist only for visibility and sensitivity tracing. CAS22.01.06 is
 currently the sole account that uses them.
 
 %% ------------------------------------------------------------
-\subsection{CAS22.01.07: Power Supplies}
+\subsubsection{CAS22.01.07: Power Supplies}
 \label{sec:cas2207}
 
 CAS22.01.07 covers the electrical power supply systems that drive the
 fusion core: magnet power supplies, pulsed power drivers, and associated
 switchgear. The account has two modes.
 
-\subsubsection{Steady-State MFE}
+\paragraph{Steady-State MFE}
 For tokamaks, stellarators, and mirrors, the cost scales with gross
 electric output:
 \begin{equation}
@@ -2174,7 +2190,7 @@ cheaper regime for power electronics. No direct vendor quote exists at
 fusion-relevant parameters (1--10~kV, 10--100~kA, 100+~MW).
 Uncertainty: $\pm$20\%.
 
-\subsubsection{Pulsed Concepts}
+\paragraph{Pulsed Concepts}
 For all pulsed concepts, the cost scales with stored energy per
 pulse on a \$/J basis:
 \begin{equation}
@@ -2195,7 +2211,7 @@ every 3.7~years. The annualized replacement cost is computed as a
 present-value sum of discrete replacements over the plant lifetime,
 discounted at the project interest rate.
 
-\subsubsection{Source Provenance}
+\paragraph{Source Provenance}
 The steady-state MFE figure draws partly on the ARIES-CS
 \citep{najmabadi2008stellarator} power-supply scope, which is a
 systems study rather than a procurement reference. The capacitor-bank
@@ -2207,7 +2223,58 @@ follow-on work; a vendor quote may be applied via
 substitution lands.
 
 %% ------------------------------------------------------------
-\subsection{CAS22.01.09: Direct Energy Converter (electrostatic)}
+\subsubsection{CAS22.01.08: Divertor and Target Factory}
+\label{sec:cas2208}
+The divertor sub-account (CAS22.01.08) keeps the inherited pyFECONS scaling
+for steady-state MFE concepts that exhaust onto a material target,
+$C_{220108} = c_{\text{div}}\,(P_{\text{th}}/1000)^{0.5}$ with
+$c_{\text{div}} = 60$~M\$. Concepts
+that exhaust charged particles without a material target carry no
+manufactured divertor cassette and $C_{220108} = 0$: the levitated
+dipole (closed-field-line topology, loss-cone exhaust at the chamber
+openings) and the electrostatic concepts (orbitron, polywell), which
+direct charged particles to the direct energy converter. For inertial and
+magneto-inertial concepts the same sub-account instead funds the
+on-site target factory, built up from its three independent cost drivers,
+\begin{equation}
+\label{eq:target-factory}
+C_{220108} = c_{\text{fix}} + c_{\text{line}}\,f_{\text{rep}} + c_{\text{flow}}\,(P_{\text{fus}}/1000):
+\end{equation}
+a fixed building and tritium-confinement shell ($c_{\text{fix}}$);
+precision production lines that scale with target throughput, i.e. the
+repetition rate $f_{\text{rep}}$ ($c_{\text{line}}$); and material
+handling, cryogenics, and post-shot recovery that scale with mass-energy
+flow $P_{\text{fus}}$ ($c_{\text{flow}}$). These are the only two
+independent factory variables: fixing the plant electric power and rep
+rate fixes the fusion power and hence the yield per shot
+($P_{\text{fus}}/f_{\text{rep}}$ at fixed module count), so target size
+enters through $P_{\text{fus}}$ alone and needs no separate term. This
+replaces an earlier flat \$244~M scaling on electric power---a fair proxy
+for the handling term, but blind to the throughput (rep-rate) term that
+is the axis the original basis was criticized for missing.
+The coefficients are a \emph{per-concept} bottom-up build-up. A laser or
+heavy-ion capsule factory is a precision cleanroom whose tritium-handling
+back half (DT fill, ice-layering, contained assembly, injection) adds a
+dual-confinement premium and whose throughput is oversized by the inverse
+acceptance yield, totalling $\sim$725--780~M\$ at the design point and
+calibrated so its optimistic corner reproduces the
+LIFE~\cite{anklam2011life} target factory ($\sim$\$600~M, \$0.25/target).
+A MagLIF or Z-pinch load is instead a stamped-and-filled metal liner, a
+casting-shop process near $\sim$150~M\$---five times cheaper, and not the
+capsule cleanroom that the flat number phantom-applied to every concept.
+That flat figure, inherited from the Miles/LIFE factory total via
+pyFECONS~\cite{woodruff2026}, also double-counted the factory: the
+per-shot target cost (\cref{sec:cas80}) is sourced from fully-loaded
+studies that already amortize the plant, so the capital and per-shot
+accounts are disentangled here to count it once.
+Whether a concept carries a factory is gated on the per-shot target cost
+$c_{\text{target}}>0$ and sized by $c_{\text{fac}}$: concepts that form
+their plasma or liner in situ---plasma-jet MIF, the liquid-liner
+magnetized-target loop, pulsed FRC, theta pinch, dense plasma focus, and
+sheared-flow / staged Z-pinch---set both to zero and carry
+$C_{220108} = 0$, with no cost override required.
+
+\subsubsection{CAS22.01.09: Direct Energy Converter (electrostatic)}
 \label{sec:cas2209}
 
 CAS22.01.09 covers add-on direct energy converters for linear devices
@@ -2290,7 +2357,7 @@ dominated by the HV power conditioning scale-up factor and the
 plant-scale tank fabrication unit cost.
 
 %% ------------------------------------------------------------
-\subsection{CAS22.01.10: Remote Handling \& Maintenance Equipment}
+\subsubsection{CAS22.01.10: Remote Handling \& Maintenance Equipment}
 \label{sec:cas2210}
 
 CAS22.01.10 covers the robotic and remotely-operated equipment required
@@ -2309,7 +2376,7 @@ C_{220110} = C_{\text{RH,base}}(f) \times S_{\text{concept}}
 (M\$ at 1\,GWe tokamak reference) and $S_{\text{concept}}$ is a
 geometry-dependent scaling factor.
 
-\subsubsection{Fuel Dependence}
+\paragraph{Fuel Dependence}
 Neutron activation determines whether remote handling is needed and how
 heavily equipment must be rad-hardened.
 \Cref{tab:rh-fuel} lists the base costs.
@@ -2330,7 +2397,7 @@ p-${}^{11}$B &  20 & Conventional maintenance equipment (no rad-hardening) \\
 \end{tabular}
 \end{table}
 
-\subsubsection{Concept Dependence}
+\paragraph{Concept Dependence}
 Toroidal vessels (tokamak, stellarator) require articulated multi-axis
 manipulators to reach components through narrow ports, while linear
 geometries (mirror, FRC) permit simpler end-access tooling.
@@ -2339,7 +2406,7 @@ use $S_{\text{concept}} = 0.55$.
 
 
 %% ------------------------------------------------------------
-\subsection{CAS22.01.12: Isotope Separation}
+\subsubsection{CAS22.01.12: Isotope Separation}
 \label{sec:cas2212}
 
 CAS22.01.12 is set to zero for all fuel cycles. All isotope procurement
@@ -2389,7 +2456,7 @@ B-11 (enriched) & 10{,}000 & FOAK estimate (B-10 tails) \\
 
 
 %% ------------------------------------------------------------
-\subsection{CAS22.02--.07: Plant-Wide Reactor Systems}
+\subsubsection{CAS22.02--.07: Plant-Wide Reactor Systems}
 \label{sec:cas2207-cluster}
 
 The plant-wide reactor systems CAS22.02 (main and secondary coolant),
@@ -2888,13 +2955,13 @@ CAS70 comprises two sub-accounts:
   with $\Phi_{\max}$ the fuel-dependent fluence limit (D-T 18, D-D 36,
   D-${}^3$He 108, p-${}^{11}$B 180~MW\,yr/m$^2$; D-T anchored to the
   ARIES~FS 200~dpa RAFM-steel window, the others scaled by spectrum
-  hardness) and $q_{\text{wall}}$ the neutron wall loading of
-  \cref{eq:q-wall}. A higher-$q_{\text{wall}}$ machine wears its core out
+  hardness) and $q_{\text{wall}}$ the neutron wall loading (neutron
+  power per unit first-wall area). A higher-$q_{\text{wall}}$ machine wears its core out
   sooner and carries a larger annualized replacement charge; the lifetime
   is clamped between a 0.5~FPY floor (keeping the $1/q_{\text{wall}}$
   gradient finite at extreme wall loading) and the plant full-power life
   (nothing is replaced beyond it). Limits and sources are documented in
-  \texttt{docs/account\_justification/wall\_limits\_and\_fluence.md}. For
+  \cref{app:wall-limits}. For
   pulsed
   inductive DEC concepts, CAS72 includes capacitor bank scheduled
   replacement, whose lifetime is derived from cycle count and
@@ -3043,7 +3110,7 @@ shot per module) and $f_{\text{rep}}$ is the repetition rate. The
 burn-fraction correction below does not apply to $A_{\text{target}}$:
 the target is consumed whole each shot regardless of fuel burnup.
 $c_{\text{target}}$ is a per-concept input, zero for magnetic concepts
-and for in-situ-formation pulsed concepts (\cref{sec:cas22-inherited}),
+and for in-situ-formation pulsed concepts (\cref{sec:cas2208}),
 and it carries only the \emph{non-capital} per-shot cost---materials,
 factory operating labour, and post-shot radiological handling, divided
 by the acceptance yield---because the factory capital is funded once, in
@@ -3328,10 +3395,11 @@ The differentiable backend exposes exact gradients
 and supports vectorised sensitivity sweeps, making LCOE-driven design
 exploration tractable.
 
-Several limitations remain. Only a single confinement-specific physics
-layer (the 0D tokamak model of \cref{sec:tokamak-model}) is implemented;
-analogous models for stellarators, mirrors, FRCs, and inertial systems
-are planned but not yet exercised. Calibration cross-checks
+Several limitations remain. The framework costs a physics operating point
+supplied by the user and does not bundle concept-specific 0D physics
+models in this release; coupling to external physics codes, or future
+bundled physics layers for tokamaks, stellarators, mirrors, FRCs, and
+inertial systems, is left to future work. Calibration cross-checks
 against the ARC and ARIES-AT reference designs are presented in
 \cref{sec:benchmark}; cross-validation against pyFECONS reference cases
 at the per-account level is left to future work.
@@ -3369,705 +3437,6 @@ and \texttt{docs/papers/1costingfe\_paper/scripts/make\_tornado.py}
 %% ============================================================
 
 \appendix
-
-\section{0D Tokamak Model}
-\label{sec:tokamak-model}
-
-The power balance of the physics module accepts fusion power
-$P_{\text{fus}}$ as an input. To derive $P_{\text{fus}}$ from machine
-geometry and plasma parameters for a tokamak, the framework implements a
-zero-dimensional (0D) equilibrium model that chains standard scaling
-laws. The model is fully differentiable, enabling gradient-based
-sensitivity analysis of LCOE with respect to machine-level design
-choices ($R$, $a$, $B$, $q_{95}$, etc.).
-
-\subsection{Fusion Reactivity}
-\label{sec:reactivity}
-
-The fusion reactivity $\langle\sigma v\rangle$ is evaluated per fuel
-with analytic parameterizations of the common form
-
-\begin{equation}
-\label{eq:sigma-v}
-\langle\sigma v\rangle = C_1\,\theta\,
-  \sqrt{\frac{\xi}{m_r c^2\,T^3}}\;\exp(-3\xi)
-  \quad [\text{m}^3/\text{s}]
-\end{equation}
-
-\noindent where $\theta = T / (1 - T(C_2 + T(C_4 + TC_6))/(1 + T(C_3 + T(C_5 + TC_7))))$,
-$\xi = (B_G^2 / 4\theta)^{1/3}$, $B_G$ is the Gamow constant of the
-reaction, and $C_1$--$C_7$ are tabulated fit coefficients. D-T
-($B_G = 34.38$~keV$^{1/2}$, valid $0.2 \leq T \leq 100$~keV, peak near
-$T \approx 65$~keV), both D-D branches, and D-${}^3$He (valid to
-190~keV) use the coefficients of \citet{boschhale1992}; p-B11 uses the
-high-temperature fit of \citet{nevinsswain2000} (valid
-$50 \leq T \leq 500$~keV) as tabulated by \citet{tentoribelloni2023},
-with the higher-reactivity revision of \citet{putvinski2019} available
-as the optimistic alternative.
-
-Reactant densities follow quasineutrality from the electron density and
-a fuel-mix ratio input ($n_{{}^3\text{He}}/n_\text{D}$ or
-$n_\text{B}/n_\text{p}$): the higher fuel-ion charges of the advanced
-fuels dilute the reactant densities, reduce the total ion pressure
-entering the stored energy and $\beta_N$, and raise $Z_{\text{eff}}$
-(and with it bremsstrahlung), with the configured $Z_{\text{eff}}$
-interpreted as the hydrogenic-plus-impurity baseline. For D-${}^3$He
-the D-D side-channel fraction is derived from the rate ratio at the
-operating point (an explicit input pins it); the ion temperature can
-exceed the electron temperature through a hot-ion ratio
-$T_i/T_e \geq 1$; and the operating-temperature search interval is
-fuel-specific, bounded by each fit's validity range. For D-${}^3$He and
-p-B11 the radiated power defaults to the same fixed-fraction-of-fusion
-proxy used by the energy-balance path, keeping the two paths consistent.
-
-\subsection{Plasma Equilibrium}
-
-Given major radius $R$, minor radius $a$, elongation $\kappa$,
-toroidal field $B$, and edge safety factor $q_{95}$, the plasma
-current follows from MHD force balance:
-
-\begin{equation}
-\label{eq:ip}
-I_p = \frac{2\pi\,a^2\,\kappa\,B}{\mu_0\,R\,q_{95}}
-  \quad [\text{A}]
-\end{equation}
-
-The electron density is set as a fraction $f_{\text{GW}}$ of the
-Greenwald density limit \citep{iterphysics1999}:
-
-\begin{equation}
-\label{eq:greenwald}
-n_{\text{GW}} = \frac{I_p\,[\text{MA}]}{\pi\,a^2}
-  \quad [10^{20}\;\text{m}^{-3}],
-\qquad
-n_e = f_{\text{GW}}\,n_{\text{GW}}
-\end{equation}
-
-The plasma volume and first-wall area of the elongated torus are
-$V = 2\pi^2 R\,a^2\,\kappa$ and $A_{\text{fw}} = 4\pi^2 R\,a\,\kappa$.
-
-\subsection{Fusion Power}
-
-For a 50/50 D-T plasma ($n_D = n_T = n_e/2$), the volumetric fusion
-power is:
-
-\begin{equation}
-\label{eq:pfus-tokamak}
-P_{\text{fus}} = \tfrac{1}{4}\,n_e^2\,
-  \langle\sigma v\rangle(T_e)\;E_{\text{fus}}\;V
-  \quad [\text{W}]
-\end{equation}
-
-\noindent where $E_{\text{fus}} = 17.6$~MeV per D-T reaction.
-This $P_{\text{fus}}$ feeds directly into the fuel-cycle-dependent
-power split (\cref{tab:fusion-reactions}) and the power balance
-of \cref{eq:p-thermal}--\cref{eq:p-net}.
-
-\subsection{Energy Confinement}
-
-The energy confinement time is evaluated against the IPB98(y,2)
-H-mode scaling \citep{iterphysics1999}:
-
-\begin{equation}
-\label{eq:ipb98y2}
-\tau_{E,98} = 0.0562\;
-  I_p^{0.93}\,B^{0.15}\,\bar{n}_{19}^{0.41}\,
-  P_{\text{heat}}^{-0.69}\,R^{1.97}\,\epsilon^{0.58}\,
-  \kappa^{0.78}\,M^{0.19}
-  \quad [\text{s}]
-\end{equation}
-
-\noindent where $\bar{n}_{19}$ is the line-averaged density in units of
-$10^{19}$~m$^{-3}$, $P_{\text{heat}} = P_\alpha + P_{\text{aux}}$ is
-the total heating power in MW, $\epsilon = a/R$ is the inverse aspect
-ratio, and $M$ is the effective ion mass in AMU. The ratio of the
-actual confinement time $\tau_E = W_{\text{th}} / P_{\text{heat}}$
-(where $W_{\text{th}} = 3\,n_e\,T_e\,V$ for electrons and ions at
-equal temperatures) to the scaling prediction gives the H-factor,
-$H = \tau_E / \tau_{E,98}$, which measures the quality of confinement
-relative to the empirical database.
-
-\subsection{Stability and Engineering Limits}
-
-The normalized beta,
-
-\begin{equation}
-\label{eq:beta-n}
-\beta_N = \frac{\beta_t\,a\,B}{I_p\,[\text{MA}]},
-\qquad
-\beta_t = \frac{2\mu_0\,n_e\,T_e}{B^2},
-\end{equation}
-
-\noindent must remain below the Troyon limit ($\beta_N \lesssim 3.5$)
-for ideal MHD stability. The safety factor $q_{95}$ must exceed
-2 to avoid kink instabilities.
-
-Two engineering constraints are evaluated: the neutron wall loading
-$q_{\text{wall}} = P_n / A_{\text{fw}}$, which drives structural
-damage and blanket lifetime; and the divertor heat flux, estimated
-from a simplified scrape-off-layer model with midplane power width
-$\lambda_q \approx 2$~mm and flux expansion factor $f_{\text{exp}}
-\approx 5$.
-
-\subsection{Disruption Model}
-
-Disruptions destroy confinement and can cause significant structural
-damage. The model estimates a disruption frequency from the proximity
-of the operating point to stability boundaries:
-
-\begin{equation}
-\label{eq:disruption-rate}
-\Gamma = \sum_{j} \Gamma_0\,\exp\!\left(-s\,m_j\right)
-\end{equation}
-
-\noindent where the sum runs over the Greenwald ($m = 1 - f_{\text{GW}}$),
-Troyon ($m = 1 - \beta_N/\beta_{N,\max}$), and kink
-($m = 1 - q_{95,\min}/q_{95}$) channels, $\Gamma_0 = 0.1$~FPY$^{-1}$
-is the baseline rate far from limits, and $s = 15$ sets the
-steepness. Each disruption damages a fraction of the first-wall
-component lifetime and incurs 72~hours of downtime, reducing
-effective plant availability.
-
-\subsection{Operating Modes}
-
-The model supports two operating modes. In \emph{forward mode}, the
-user specifies machine geometry, field, safety factor, Greenwald
-fraction, and temperature; the model returns the full plasma state
-including $P_{\text{fus}}$, $\beta_N$, $H$-factor, wall loading,
-and disruption rate. In \emph{inverse mode}, the user specifies a
-target $P_{\text{net}}$ and the model solves for the electron
-temperature $T_e$ that produces the required fusion power via
-bisection, returning both the plasma state and the complete power
-table. The inverse mode enables target-driven design: given a net
-power requirement, the framework determines the plasma conditions,
-checks them against stability and engineering limits, and computes
-the resulting LCOE in a single differentiable pass. The implied
-operating point must be admissible: a violation of an error-severity
-stability limit (Greenwald fraction, Troyon $\beta_N$, kink safety
-factor) raises an \texttt{OperatingPointInfeasible} error carrying the
-diagnosis, rather than costing a plasma that cannot exist; an explicit
-flag (\texttt{enforce\_plasma\_limits}) disables the check for
-exploratory runs. Far beyond the limits the disruption-rate model is
-numerically capped and the disruption-penalized availability floored at
-zero, so no operating point can produce non-finite cost components.
-
-\subsection{Power-to-Geometry Sizing}
-\label{sec:tokamak-sizing}
-
-For cost analyses that must scale with the power target, the framework
-provides a sizing solve that maps a target net electric power to tokamak
-geometry $(R_0, a, B_0)$, driving the geometry-dependent accounts
-(C220103 coils, blanket, vessel) from physics rather than from pinned
-inputs.
-
-The on-axis toroidal field is derived from the conductor's peak-field
-ceiling $B_{\max}$ and the inboard radial build:
-\begin{equation}
-\label{eq:b0-sizing}
-B_0 = B_{\max} \frac{R_{\text{coil,i}}}{R_0},
-\qquad
-R_{\text{coil,i}} = R_0 - a - d_{\text{in}},
-\end{equation}
-where $d_{\text{in}} = d_{\text{bk}} + d_{\text{sh}} + d_{\text{str}} +
-d_{\text{vv}}$ is the sum of the inboard blanket, shield, structure, and
-vessel thicknesses. Because these layers are fixed in metres, the ratio
-$B_0/B_{\max}$ falls as $R_0$ decreases, making high-field conductor
-more advantageous at small machine size.
-
-At each trial $R_0$ the operating point is determined at the constraint
-boundary: plasma current from \cref{eq:ip} with the $q_{95}$ floor,
-density from \cref{eq:greenwald} at the Greenwald fraction $f_{\text{GW}}$,
-and temperature from a bounded maximization of net power over a per-fuel
-interval $[T_{\min}, T_{\max}]$, subject to the Troyon limit
-$\beta_N \le \beta_{N,\max}$. Net power is then evaluated with the
-full power balance, including resistive recirculation for copper coils.
-Net power is monotonic increasing in $R_0$ at the boundary operating
-point, so $R_0$ is located by bisection; if the maximum search radius
-$R_{0,\max}$ cannot deliver the target, the solve raises a
-\texttt{SizingInfeasible} error.
-
-The solve supports four usage modes: \emph{pin} (existing behavior,
-sizing off), \emph{size} (solve $R_0$ from design knobs), \emph{scale}
-(anchor a reference machine's knobs, change the power target), and
-\emph{optimize} (minimize LCOE over $f_{\text{GW}}$ with $R_0$ slaved to
-the power target, using the disruption model of \cref{sec:tokamak-model}).
-Both sizing flags default to false, so existing configurations are
-unaffected. The solve is fuel-aware through the per-fuel reactivities,
-mix dilution, and radiation treatment of \cref{sec:reactivity}, with
-fuel-specific temperature search intervals; sized D-${}^3$He machines
-are larger than D-T at equal net power, and p-B11 does not reach
-positive net power within the search radius and fails as infeasible.
-
-\subsection{Literature Anchors}
-\label{sec:tokamak-anchors}
-
-The tokamak closed energy balance is the template the mirror sustainment
-model of \cref{sec:mirror-balance} copies, so the reference is itself
-pinned to published design points, parallel to the mirror GDT/WHAM anchors
-of \cref{sec:mirror-anchors}. Run at each machine's published
-volume-averaged density and temperature with the published auxiliary power,
-the unchanged forward model reproduces the published fusion gain $Q$ within
-a factor 1.09 for ITER \citep{shimada2007} and 0.83 for ARC
-\citep{sorbom2015arc}, both inside the 2x gate, and within a factor of
-about three for SPARC \citep{creely2020}, the larger gap reflecting SPARC's
-strongly peaked profiles against the flat-profile 0D idealization. As with
-the mirror anchors, the 2x band exists for the flat-versus-peaked profile
-gap rather than a calibration freedom; no tokamak physics or cost
-coefficient is adjusted to the anchors.
-
-%% ============================================================
-
-\section{0D Mirror Model}
-\label{sec:mirror-model}
-
-The framework includes a zero-dimensional (0D) plasma model for
-axisymmetric magnetic mirrors, structurally parallel to the tokamak
-model of \cref{sec:tokamak-model}. Given machine geometry (length $L$,
-plasma radius $a$, minimum on-axis field $B_{\min}$, mirror ratio
-$R_m$) and plasma conditions ($T_i$, $T_e$, $n_e$), the model computes
-confinement times, fusion power, plasma beta, and wall loading.  The
-model is fully JAX-differentiable and float32-safe for use in
-gradient-based analysis.
-
-\subsection{Ion-Ion Collision Time}
-\label{sec:mirror-tauii}
-
-The model uses the NRL ion-ion collision time \citep{huba2016} for a
-singly charged fuel ion of mass number $A$ and charge $Z = 1$:
-%
-\begin{equation}
-\label{eq:tau-ii}
-\tau_{ii} = \frac{2.09 \times 10^{13}\,A^{1/2}\,T_i[\text{eV}]^{3/2}}
-                  {n_i\,\ln\Lambda}
-  \quad [\text{s}]
-\end{equation}
-%
-where $T_i[\text{eV}]$ is the ion temperature in eV, $n_i$ is the ion
-density in m$^{-3}$, and $\ln\Lambda = 17$ is the Coulomb logarithm.
-The implementation accepts $T_i$ in keV and $n_i$ in units of
-$10^{20}$~m$^{-3}$, folding both conversions into a single prefactor:
-%
-\begin{equation}
-\label{eq:tau-ii-prefactor}
-\tau_{ii} = \frac{(2.09 \times 10^{13})\,(10^3)^{3/2}\,10^{-20}}
-                  {\ln\Lambda}
-            \cdot \frac{A^{1/2}\,T_{i,20}^{3/2}}{n_{i,20}}
-  = \frac{6.609 \times 10^{-3}\,A^{1/2}\,T_{i,20}^{3/2}}{n_{i,20}\,\ln\Lambda}
-  \quad [\text{s}]
-\end{equation}
-%
-where $T_{i,20} = T_i$~[keV] and $n_{i,20} = n_i / 10^{20}$~m$^{-3}$.
-This convention keeps all intermediates near unity, avoiding float32
-overflow in the XLA compiler.
-
-\subsection{Confining Potential: Tandem Plug}
-\label{sec:mirror-phi}
-
-The reactor-relevant mirror is a tandem: the central cell that does the
-fusion is confined by an electrostatic potential drop to high-field end
-plugs, not by the simple-mirror electron-loss potential. Following
-\citet{fowler1977} the central-cell ion confining potential is set by the
-plug-to-central density ratio $n_p/n_c$:
-%
-\begin{equation}
-\label{eq:phi-plug}
-e\phi = T_{e,\text{plug}}\,\ln\!\left(\frac{n_p}{n_c}\right),
-\end{equation}
-%
-where $T_{e,\text{plug}}$ is the plug hot-electron temperature. The plug is
-a separate cell whose hot-electron population, sustained by plug ECH, holds
-the confining potential, so $T_{e,\text{plug}}$ is decoupled from the
-central-cell electron temperature \citep{baldwin1979}: a thermal barrier
-lets the plug run hot (default $T_{e,\text{plug}} = 125$~keV, anchored to
-the high-field tandem design point of \citet{frank2024}) while the central
-cell sets its own $T_e$ for radiation, beta, and stored energy. Because
-$n_p/n_c$ is an order-unity-to-few ratio, $e\phi$ is bounded, and at the
-anchor ($n_c/n_p = 0.55$, $T_{e,\text{plug}} = 125$~keV) it evaluates to
-$e\phi = 74.7$~keV, matching the published tandem central-cell value.
-
-The simple-mirror Boltzmann ambipolar potential
-%
-\begin{equation}
-\label{eq:phi-ambipolar}
-e\phi_{\text{amb}} = T_e \ln\!\sqrt{\frac{A\,m_p}{2\pi\,m_e}}
-\end{equation}
-%
-(about $3.2\,T_e$ for deuterium) is retained as a diagnostic for the
-simple-mirror limit; the tandem confining potential of
-\cref{eq:phi-plug} is the one entering the confinement chain.
-
-\subsection{Confinement Time Channels}
-\label{sec:mirror-tau}
-
-The model implements three confinement channels, each physically
-distinct.
-
-\subsubsection{Classical Mirror Confinement (Bing--Roberts)}
-
-Ions trapped in a loss-cone distribution scatter into the loss cone on
-the collision time.  Following \citet{huba2016}:
-%
-\begin{equation}
-\label{eq:tau-classical}
-\tau_{\text{cl}} = 2.6\,\ln(R_m)\,\tau_{ii}
-\end{equation}
-%
-This channel is diagnostic only; it is not combined into $\tau_p$
-because the Pastukhov and gas-dynamic channels dominate in the
-parameter space of interest.
-
-\subsubsection{Pastukhov Electrostatic Plugging}
-
-The ambipolar potential $e\phi$ raises the effective loss-cone barrier.
-Ions must diffuse in energy past $e\phi + T_i$ to escape, giving an
-exponential suppression \citep{pastukhov1974,cohen1978}:
-%
-\begin{equation}
-\label{eq:tau-pastukhov}
-\tau_{\text{Pas}} = \frac{\sqrt{\pi}}{2}\,\frac{R_m + 1}{R_m}\,
-  \ln(2 R_m + 2)\,\frac{e\phi}{T_i}\,e^{e\phi/T_i}\,\tau_{ii}
-\end{equation}
-%
-The factor $\ln(2R_m+2)$ captures the logarithmic density-of-states
-weighting over the mirror throat, and $(R_m+1)/R_m$ is a
-geometric correction from the full Pastukhov 1974 derivation.
-
-\subsubsection{Gas-Dynamic Confinement}
-
-When the mean free path is shorter than the device length
-($\ell_{\text{mfp}} \lesssim L$), collisions establish a nearly
-Maxwellian distribution that leaks through the loss cone as a thermal
-gas.  The gas-dynamic confinement time \citep{mirnov1979} is:
-%
-\begin{equation}
-\label{eq:tau-gd}
-\tau_{\text{GD}} = \frac{R_m\,L}{v_{ti}},
-  \qquad v_{ti} = \sqrt{\frac{2\,T_i\,[\text{keV}]\,e_{\text{keV}}}{A\,m_p}}
-\end{equation}
-%
-where $e_{\text{keV}} = 1.602 \times 10^{-16}$~J/keV is the keV-to-J
-conversion.  In the implementation $v_{ti}$ is the ion thermal speed
-based on $T_i$; this is a factor of $\sqrt{2}$ larger than the sound
-speed $c_s = \sqrt{T_e/m_i}$ used in some formulations, an explicit
-convention documented in the validation anchors (\cref{sec:mirror-anchors}).
-
-\subsubsection{Radial Cross-Field Diffusion}
-
-Classical diffusion across field lines contributes a radial channel:
-%
-\begin{equation}
-\label{eq:tau-radial}
-\tau_{\text{rad}} = \left(\frac{a}{\rho_i}\right)^2 \tau_{ii},
-  \qquad \rho_i = \frac{\sqrt{2\,A\,m_p\,T_i\,[\text{keV}]\,e_{\text{keV}}}}{e\,B_{\min}}
-\end{equation}
-%
-where $\rho_i$ is the ion gyroradius at the midplane field $B_{\min}$.
-
-\subsubsection{Combined Axial Confinement: Collisionality Bridge}
-
-The Pastukhov and gas-dynamic channels apply in physically distinct
-collisionality regimes and must be joined by a bridge that selects the
-governing limit. \citet{rognlien1980} establish that the Pastukhov
-loss-cone formula holds in the collisionless limit, while the collisional
-gas-dynamic outflow governs once the ion mean free path, reduced by the
-mirror ratio, falls to the order of the device length; the regime boundary
-is therefore at collisionality
-%
-\begin{equation}
-\label{eq:collisionality}
-\xi \equiv \frac{L}{v_{ti}\,\tau_{ii}} \sim \frac{1}{R_m},
-\end{equation}
-%
-with $\xi \gg 1/R_m$ collisional and $\xi \ll 1/R_m$ collisionless. The
-gas-dynamic loss rate physically exists only when the loss cone is kept
-full by collisions, so it is gated by a smooth logistic in $\log_{10}\xi$
-centered on the boundary and combined via the loss-rate sum:
-%
-\begin{align}
-\label{eq:regime-gate}
-g(\xi) &= \sigma\!\left(\frac{\log_{10}\xi - \log_{10}(1/R_m)}{w}\right), \\
-\label{eq:tau-axial}
-\frac{1}{\tau_{\text{axial}}} &= \frac{1}{\tau_{\text{Pas}}}
-  + g(\xi)\,\frac{1}{\tau_{\text{GD}}},
-\end{align}
-%
-where $\sigma$ is the logistic function and $w = 0.13$ decades is a
-constructed smoothing width (\citeauthor{rognlien1980} establish the
-transition is smooth but publish no closed-form width). As $g \to 1$ in
-the collisional regime the gas-dynamic time dominates and
-$\tau_{\text{axial}} \to \tau_{\text{GD}}$; as $g \to 0$ in the
-collisionless regime the gas-dynamic rate is suppressed below the Pastukhov
-rate and $\tau_{\text{axial}} \to \tau_{\text{Pas}}$. The logistic argument
-is clamped to $[-30,30]$ before exponentiation to keep the reverse-mode
-gradient finite. The total particle confinement combines axial and radial:
-%
-\begin{equation}
-\label{eq:tau-p-mirror}
-\frac{1}{\tau_p} = \frac{1}{\tau_{\text{axial}}} + \frac{1}{\tau_{\text{rad}}}
-\end{equation}
-
-\subsection{Energy Confinement Time}
-\label{sec:mirror-taue}
-
-Particles lost axially carry the ambipolar potential energy $e\phi$ in
-addition to their thermal energy.  The energy confinement time is
-therefore shorter than the particle confinement time by the ratio of
-stored thermal energy to total loss energy per particle:
-%
-\begin{equation}
-\label{eq:tau-e-mirror}
-\tau_E = \tau_p \cdot \frac{\tfrac{3}{2}(T_i + T_e)}
-                            {2\,e\phi + T_i + T_e}
-\end{equation}
-
-\subsection{Alpha Loss-Cone Heating}
-\label{sec:mirror-alpha}
-
-A mirror does not confine its fusion alphas the way a closed device does:
-a fraction of the 3.5~MeV alphas is born in or scatters into the
-velocity-space loss cone and streams out the ends before depositing its
-energy. \citet{santarius1983} give a bounce-averaged Fokker-Planck result
-that roughly half the alphas are lost by count but under a quarter by
-energy, so $f_{\alpha,\text{heat}} \approx 0.75$--$0.85$ of the
-charged-particle power deposits in the central cell (model default
-$f_{\alpha,\text{heat}} = 0.80$). The model credits only
-$f_{\alpha,\text{heat}}\,P_\alpha$ as self-heating and routes the
-remaining $(1 - f_{\alpha,\text{heat}})\,P_\alpha$ to the axial end-loss
-channel as directed loss-cone exhaust, where it is recovered by the
-end-plug direct converter alongside the thermal end loss; the alpha energy
-is conserved, not discarded.
-
-\subsection{Energy-Balance Closure and Plug Power}
-\label{sec:mirror-balance}
-
-In sizing mode the auxiliary sustainment power is charged from the closed
-steady-state energy balance rather than asserted. The confinement-derived
-sustainment is
-%
-\begin{equation}
-\label{eq:mirror-aux}
-P_{\text{aux}} = \max\!\left(P_{\text{aux}}^{\text{floor}},\;
-  P_{\text{end}} + P_{\text{radial}} + P_{\text{rad}}
-  - f_{\alpha,\text{heat}}\,P_\alpha\right),
-\end{equation}
-%
-which is fed as the heating input to the shared MFE power balance of
-\cref{sec:inverse-balance}; the transport channel then conserves the
-undeposited alpha power, $p_{\text{transport}} = P_{\text{end}} +
-P_{\text{radial}} + (1 - f_{\alpha,\text{heat}})\,P_\alpha$, so the
-fusion-to-injected gain $Q_{\text{sci}} = P_{\text{fus}}/P_{\text{aux}}$
-and the engineering gain follow self-consistently from the confinement.
-The hot-electron plug is sustained at a real power cost: a plug power
-$P_{\text{plug}}$ (default 30~MW, anchored to the high-field tandem design
-point of \citet{frank2024}) is charged into the recirculating budget,
-since the plug ECH heats the plug electrons rather than the central cell.
-This plug power is the competing penalty that keeps the optimizer honest:
-deep plug confinement is not free.
-
-Because the Fowler-Logan potential of \cref{eq:phi-plug} is fixed by the
-plug rather than scaling with $T_i$, the ratio $e\phi/T_i$ falls as the
-central cell is heated, so the Pastukhov enhancement weakens with $T_i$:
-heating the central cell costs confinement. The length-sizing and
-LCOE-optimize search therefore settles the D-T central cell at a cool,
-genuinely driven operating point ($T_i \approx 23$~keV) with auxiliary
-sustainment well above the control floor, rather than running to ignition.
-
-\subsection{Plasma Beta and Operating Limits}
-\label{sec:mirror-beta}
-
-Midplane plasma beta is computed from the ion and electron pressures at
-the minimum field $B_{\min}$:
-%
-\begin{equation}
-\label{eq:beta-mirror}
-\beta = \frac{2\,\mu_0\,n_e\,(T_e + n_i/n_e \cdot T_i)\,e_{\text{keV}}}{B_{\min}^2}
-\end{equation}
-%
-where the $n_i/n_e$ dilution factor accounts for higher-charge advanced
-fuels.  An MHD stability constraint $\beta \le \beta_{\max}$ is
-enforced by \texttt{OperatingPointInfeasible} at error severity.
-
-\subsection{Inverse Contract and Length Sizing}
-\label{sec:mirror-inverse}
-
-The inverse mode fixes $T_e$ and $n_e$ as inputs and bisects over
-$T_i \in [T_{\min}, T_{\max}]$ (fuel-specific) to find the ion
-temperature that delivers a target net electric power $P_{\text{net}}^*$.
-A single pass is used: (i) call the MFE inverse power balance with the
-input direct-energy-conversion fraction $f_{\text{dec}}$ to obtain the
-required fusion power $P_{\text{fus}}^*$; (ii) bisect on $T_i$ until
-$P_{\text{fus}}(T_i, n_e, V) = P_{\text{fus}}^*$; (iii) run the full
-forward model at the solved $T_i$ to build the complete plasma state.
-The parameter $f_{\text{dec}}$ is an engineering input (default 0.30 for
-D-T), not derived from the plasma model.
-
-For length sizing ($P_{\text{net}} \to L$), the operating density is the
-minimum of three caps,
-%
-\begin{equation}
-\label{eq:n-resolution}
-n_e = \min\!\left(n_\beta,\; n_{\text{wall}},\; n_{\text{surf}}\right),
-\end{equation}
-%
-each the density at which a distinct first-wall or stability limit binds.
-The beta-pressure cap sets the density at a fraction $f_\beta$ of the MHD
-stability boundary:
-%
-\begin{equation}
-\label{eq:n-fbeta}
-n_\beta = f_\beta\,\beta_{\max}\,
-  \frac{B_{\min}^2}{2\,\mu_0\,(T_e + n_i/n_e\cdot T_i)\,e_{\text{keV}}}
-\end{equation}
-%
-The neutron wall-load cap limits the 14.1~MeV fluence on the first wall.
-Writing the neutron wall loading as
-%
-\begin{equation}
-\label{eq:q-wall}
-q_{\text{wall}} = \frac{P_{\text{neutron}}}{A_{\text{fw}}},
-  \qquad A_{\text{fw}} = 2\pi\,(a + t_{\text{vac}})\,L,
-\end{equation}
-%
-and using $P_{\text{neutron}} = f_n\,C_{\text{fus}}(T)\,n_e^2\,V$ with the
-plasma volume $V = \pi a^2 L$ (the $L$ cancels, so the cap is set by $a$,
-$n_e$, and $T$ alone), the wall-cap density follows in closed form,
-%
-\begin{equation}
-\label{eq:n-wall}
-n_{\text{wall}} = \sqrt{\frac{2\,q_{\text{wall}}^{\max}\,(a + t_{\text{vac}})}
-  {f_n\,C_{\text{fus}}(T)\,a^2}},
-\end{equation}
-%
-where $f_n$ is the neutron energy fraction and $C_{\text{fus}}(T)$ the
-per-$n_e^2$ fusion power density coefficient. The surface heat-flux cap
-limits the photon and cross-field charged-particle load deposited in the
-first microns of the wall,
-%
-\begin{equation}
-\label{eq:q-surface}
-q_{\text{surface}} = \frac{P_{\text{rad}} + P_{\text{radial}}}{A_{\text{fw}}}
-  \le q_{\text{surface}}^{\max},
-\end{equation}
-%
-with the axial end-loss excluded (it exits through the throats to the
-expander, not the lateral wall). Because radiation plus radial transport
-is monotone increasing in density at fixed $T$, $n_{\text{surf}}$ is found
-by a single uniform bisection on $n_e$ for all fuels. The default caps are
-$q_{\text{wall}}^{\max} = 5$~MW/m$^2$ and $q_{\text{surface}}^{\max} =
-1$~MW/m$^2$, sourced in the wall-limits provenance writeup. For D-T the
-neutron cap typically binds first; for advanced fuels the surface cap is
-the governing wall constraint. At the resolved density $P_{\text{fus}}
-\propto n_e^2 V \propto n_e^2 L$ is monotonically increasing in $L$ (for
-fixed $n_e$), so $L$ is located by bisection on $[L_{\min}, L_{\max}]$. If
-$L_{\max}$ is insufficient, or if even the capped density cannot reach
-$P_{\text{net}}^*$, a \texttt{SizingInfeasible} error is raised.
-
-\subsection{Two-Class Coil Scaling}
-\label{sec:mirror-coils}
-
-Mirror coil costs are divided into two classes: (i) central-cell
-solenoid coils, with continuous count $n_{\text{central}} = L /
-d_{\text{coil}}$ growing with chamber length at spacing
-$d_{\text{coil}}$ (default 5~m, no rounding so the expression is
-JAX-differentiable), at the design field $b_{\text{center}}$ and a bore
-$r_{\text{coil}} = r_{\text{vessel,out}} + 0.10$~m taken from the radial
-build, and (ii) end-plug coils with fixed count $n_{\text{plug}}$ (default
-4, two per end), at the throat field $R_m B_{\min}$ and a bore
-$r_{\text{coil}} = a/\sqrt{R_m} + 0.30$~m set by throat flux conservation.
-The two bores differ in kind: the central solenoids enclose the full
-plasma--blanket--shield--vessel stack, while the plug coils sit where the
-plasma necks down and no blanket extends. The total coil cost scales as a
-linear combination of the two counts, carrying the mirror markup
-$M = 1.7266$ calibrated at the YAML default chamber length of 20~m
-($n_{\text{central}} = 4$, $n_{\text{plug}} = 4$, baseline 513~M\$).
-
-\subsection{Validation Anchors}
-\label{sec:mirror-anchors}
-
-The confinement kernels are validated against two published machines
-(details in the test suite):
-
-\paragraph{GDT (gas-dynamic anchor.)}
-The Gas Dynamic Trap at Budker Institute \citep{bagryansky2015} operates
-with a 7~m central cell, $R_m = 35$, and deuterium.  In the warm-plasma
-gas-dynamic regime (no NBI, $T_e \approx 0.25$~keV,
-$n_e \approx 2 \times 10^{19}$~m$^{-3}$), \citet{endrizzi2023}
-(eq.~3.5) give $\tau_{\text{GD}} = 5.2\,R_m\,L_p\,T_e^{-1/2}$~$\mu$s,
-where $L_p$ is the half-length.  Evaluated at GDT parameters this gives
-1.27~ms.  The model kernel using the full length and the ion thermal
-speed gives 1.58~ms; the factor of $\sqrt{2}$ relative to the
-half-length/sound-speed convention is expected and documented.  Ratio
-1.25, within the 2x validation gate.
-
-\paragraph{WHAM (Pastukhov anchor.)}
-The Wisconsin HTS Axisymmetric Mirror design \citep{endrizzi2023} has
-$R_m \approx 19.8$, $n_e = 3 \times 10^{19}$~m$^{-3}$, and a
-midplane mean ion energy of 10~keV at beta~$= 0.2$.  The published
-Pastukhov/classical-mirror scaling (Endrizzi eq.~3.4) gives
-$n_{20}\,\tau_p = 250\,E_{b,100}^{3/2}\,\log_{10} R_m$~ms for a
-25~keV NBI beam, which evaluates to 135~ms.  The model Pastukhov kernel
-at the same midplane thermal point ($T_i = 10$~keV, $T_e = 1$~keV)
-gives 88~ms; the ratio 1.53 reflects the expected gap between a single
-thermal Maxwellian and the Fokker-Planck fast-ion calculation underlying
-the published scaling.  Within the 2x gate. The collisionality bridge of
-\cref{eq:tau-axial} places GDT on the gas-dynamic branch (collisional,
-$\xi$ above $1/R_m$) and WHAM on the Pastukhov branch (collisionless, $\xi$
-more than three decades below $1/R_m$), each within one percent of the
-governing kernel.
-
-\paragraph{Hammir (tandem anchor.)}
-The high-field axisymmetric tandem design point of \citet{frank2024} has a
-50~m central cell, $n_c/n_p = 0.55$, $T_i = 45$~keV,
-$T_{e,\text{plug}} = 125$~keV, $P_{\text{fus}} = 157$~MW, and 30~MW of
-plug NBI/ECH, giving a published gain $Q = P_{\text{fus}}/P_{\text{NBI}}
-\approx 5.2$. At this central cell the tandem confining potential of
-\cref{eq:phi-plug} gives $e\phi = 74.7$~keV, the central cell is not
-ignited, and the model gain lands within the 2x band; charging
-$P_{\text{plug}} = 30$~MW makes the engineering-gain accounting match the
-published $Q$, which counts the same plug power.
-
-\subsection{Headline Operating Point}
-\label{sec:mirror-headline}
-
-Sized to a 400~MWe net target at the default high-field tandem
-($f_\beta = 0.85$), the D-T mirror is a driven tandem at $T_i = 23$~keV
-with $Q_{\text{sci}} = 8.3$, energy confinement $\tau_E = 19$~s, auxiliary
-sustainment near 245~MW, engineering gain $Q_{\text{eng}} = 1.68$, and
-LCOE about 396~\$/MWh; the operating point is beta-bound. D-T is therefore
-net-positive but marginal, paying the full recirculating cost of its
-hot-electron plug. The advanced fuels (D-D, D-${}^3$He, p-${}^{11}$B) are
-each genuinely driven but net-negative at the modelled fields: the
-hot-electron plug needed to confine the central cell radiates against
-their lower or harder reactivity, so none reaches $Q_{\text{eng}} > 1$
-even with a cool central cell. Only D-T is economic in the 0D model.
-
-\subsection{Assumptions and Limitations}
-\label{sec:mirror-limits}
-
-The model makes the following approximations, inherited from the 0D
-design philosophy:
-\begin{itemize}
-\item Single thermal Maxwellian distribution. No fast-ion population,
-  sloshing-ion anisotropy, or NBI slowing-down physics is included.
-  Real mirror devices (GDT, WHAM) are beam-driven; the model is
-  appropriate for a steady-state reactor operating point where the
-  alpha population thermalizes quickly compared to $\tau_p$.
-\item The central-cell $T_e$ and the plug $T_{e,\text{plug}}$ are inputs;
-  there is no self-consistent electron power balance within the plug.
-\item $f_{\text{dec}}$ is an engineering input, not derived from
-  $f_{\text{axial}}$ of the plasma state. The diagnostic field
-  \texttt{f\_axial\_derived} is available for post-processing.
-\item The plug is modeled as a confining potential plus a fixed
-  sustainment power, not a self-consistent second fusion plasma; the
-  plug density ratio and plug power are inputs anchored to a single
-  published design point.
-\item MHD stability is enforced only via the $\beta \le \beta_{\max}$
-  gate. A collisionality-validity flag and a DCLC loss-cone proxy are
-  reported as informational diagnostics, but drift-resonance and
-  mirror-mode instabilities do not restrict the operating point.
-\item Geometry is a straight cylinder; end-cell and expander regions
-  are not modeled.
-\end{itemize}
 
 \section{Synchrotron radiation model details}
 \label{app:synchrotron}
@@ -4224,6 +3593,107 @@ differentiation during sensitivity analysis.
 
 
 %% ============================================================
+\section{Per-Concept Burn Fraction and Fuel Recovery}
+\label{app:burn-fraction}
+
+This appendix collects the per-concept single-pass burn fraction $f_b$
+(\texttt{burn\_fraction}) introduced in \cref{sec:fusion-power-split}, with a
+plausible design range and basis for each. Values are reactor-target (NOAK)
+design points, not experimental records: $f_b$ is bounded above by kinematic
+and confinement physics and fixed by operating-point design. Several entries
+are design-regime estimates with concept-specific sourcing still pending, and
+the electrostatic concepts (orbitron, polywell) carry MFE-class placeholders
+in the absence of a public reactor-scale study.
+
+\begin{table}[H]
+\centering
+\caption{Single-pass burn fraction $f_b$ by concept, with plausible design
+range and basis (reactor-target NOAK values).}
+\label{tab:burn-fraction}
+\begin{tabular}{l c c p{0.44\linewidth}}
+\toprule
+Concept & $f_b$ & Range & Basis \\
+\midrule
+Tokamak, stellarator, mirror & 0.05 & 0.02--0.10 & Shared moderate-$n\tau$ single-pass MFE regime; tokamak and stellarator reactor studies \citep{najmabadi2006ariesat, najmabadi2008stellarator}, mirror a modern axisymmetric tandem \citep{frank2024} (legacy MFTF/TARA quote 1--3\%). \\
+Orbitron, polywell & 0.05 & n/a & MFE-class placeholder; no public reactor-scale study. \\
+Laser IFE & 0.25 & 0.10--0.35 & Laser-ICF reactor studies (LIFE, HAPL) \citep{moses2009life, sethian2010hapl}. \\
+Heavy-ion IFE & 0.30 & 0.20--0.40 & Indirect-drive heavy-ion fusion (HIBALL) \citep{badger1984hiball}; higher uniformity than direct drive. \\
+Pulsed FRC & 0.15 & 0.10--0.25 & Magneto-inertial regime midpoint; Helion-class staged-compression FRC reports gain $Q$, not $f_b$ \citep{slough2024frc}. \\
+MagLIF & 0.15 & 0.08--0.25 & 2D radiation-MHD projections at full Z-driver \citep{slutz2010maglif}. \\
+Magnetized target & 0.10 & 0.05--0.15 & Acoustically-driven magnetized-target reactor projections \citep{laberge2007mtf}. \\
+Plasma jet (PJMIF) & 0.10 & 0.05--0.15 & Plasma-jet-driven MIF simulations \citep{hsu2019pjmif}. \\
+Staged Z-pinch & 0.10 & 0.05--0.15 & LANL staged-pinch designs; sourcing pending. \\
+Z-pinch (IFE) & 0.10 & 0.05--0.15 & Rayleigh--Taylor disassembly limit. \\
+Theta pinch & 0.05 & 0.03--0.08 & Faster expansion than Z-pinch; closer to the MFE bound. \\
+Dense plasma focus & 0.01 & 0.005--0.02 & Sub-microsecond pinch lifetime is binding \citep{lerner2023dpf}; genuinely low and materially raises DPF LCOE. \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Unburned fuel is recovered and recycled with efficiency $f_r$
+(\texttt{fuel\_recovery}), taken as a uniform NOAK value of $0.99$ across all
+concepts. ITER targets 99\% tritium recovery as the mature reference; the
+within-concept architectural spread (gas-phase exhaust versus target-factory
+residue) is at most about five percentage points at NOAK; and sensitivity to
+$f_r$ is highest at low $f_b$, exactly where concepts are most
+architecturally similar (all gas-phase MFE). A FOAK/NOAK-toggled $f_r$
+(e.g.\ 0.95/0.99) is a future refinement.
+
+\section{First-Wall Fluence Limits}
+\label{app:wall-limits}
+
+The fuel-dependent neutron fluence limits $\Phi_{\max}$ of
+\cref{eq:core-lifetime} set the fluence-based core-replacement lifetime for
+the steady-state magnetic concepts. This appendix records their basis. No
+value here is taken from or calibrated against a cost-modeling tool; all
+numbers come from peer-reviewed papers and fusion power-plant design studies.
+
+The end-of-life limit for a reduced-activation ferritic/martensitic (RAFM)
+steel first wall and blanket is set by displacement damage in the structural
+steel, with a widely used design limit of 200~dpa, beyond which embrittlement
+and loss of fracture toughness make the structure unacceptable. The ARIES
+nuclear assessment ties this to a fluence: the ferritic-steel structure ends
+its service life at 200~dpa, corresponding to 18~MW\,yr/m$^2$ of first-wall
+neutron fluence \citep{elguebaly_ariesat, elguebaly_uwfdm1108}, about 11~dpa per
+MW\,yr/m$^2$. Independent cross-checks bracket this window: the ARIES-AT
+SiC/SiC option reaches 18.5~MW\,yr/m$^2$ at its 3\% burnup limit
+\citep{elguebaly_ariesat}, and the EU-DEMO starter blanket is specified for
+2~MW\,yr/m$^2$ at about 20~dpa (10~dpa per MW\,yr/m$^2$)
+\citep{boccaccini_eudemo}, placing the RAFM end-of-life window at
+15--20~MW\,yr/m$^2$. The D-T reference adopts 18~MW\,yr/m$^2$.
+
+The per-fuel values scale with spectrum hardness \citep{konobeyev2017}: a
+softer neutron spectrum does less displacement damage per unit fluence,
+reaching the 200~dpa limit at
+higher fluence.
+
+\begin{table}[H]
+\centering
+\caption{Per-fuel first-wall neutron fluence limit $\Phi_{\max}$ and basis.}
+\label{tab:fluence-limits}
+\begin{tabular}{l c p{0.56\linewidth}}
+\toprule
+Fuel & $\Phi_{\max}$ [MW\,yr/m$^2$] & Basis \\
+\midrule
+D-T & 18 & ARIES ferritic-steel 200~dpa $=$ 18~MW\,yr/m$^2$ \citep{elguebaly_ariesat, elguebaly_uwfdm1108}; cross-checked by ARIES-AT SiC and EU-DEMO. Primary source. \\
+D-D & 36 & $2\times$ D-T: 2.45~MeV neutrons do roughly half the dpa per unit fluence of 14.1~MeV neutrons \citep{konobeyev2017}. Direction sourced; the factor of 2 is a modeling choice. \\
+D-${}^3$He & 108 & $6\times$ D-T: neutron load is only the few-percent D-D side channel, so the steel is effectively never fluence-limited. Magnitude a placeholder; the ordering is physical. \\
+p-${}^{11}$B & 180 & $10\times$ D-T: aneutronic to within a small side yield. Placeholder magnitude; the ordering is physical. \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Only the D-T value is anchored to a primary structural-limit source. The D-D
+factor follows the sourced spectrum direction, but its magnitude is a modeling
+choice; the D-${}^3$He and p-${}^{11}$B values are deliberately large
+placeholders encoding ``not fluence-limited'' (for these fuels the plant-life
+clamp binds first). EUROFER97 has been characterized to about 80~dpa
+\citep{gaganidze2012} while the
+200~dpa limit is a design extrapolation, the largest single materials
+uncertainty behind the basis. The damage limits are sourced from tokamak and
+generic-blanket studies; the material limits carry over to other geometries,
+but the plasma-to-wall mapping is the model's.
+
 \section{Reference Walkthrough Script}
 \label{sec:appendix-handoff-script}
 

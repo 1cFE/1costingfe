@@ -12,7 +12,7 @@ from pathlib import Path
 
 import matplotlib.pyplot as plt
 
-from costingfe import ConfinementConcept, CostModel, ForwardResult, Fuel
+from costingfe import ConfinementConcept, CostModel, ForwardResult, Fuel, PowerCycle
 
 # Three-bucket assignment.
 # model.sensitivity() returns keys: "engineering", "financial", "costing".
@@ -62,7 +62,7 @@ _BASE_KWARGS: dict = dict(
     b_center=12.0,
     r_bore=1.85,
     p_input=50.0,
-    eta_pin=0.60,
+    eta_couple=1.0,  # NBI coupling; eta_pin = 0.60 x 1.0 = 0.60
     eta_p=0.50,
     p_coils=5.0,
     p_cool=25.0,
@@ -70,8 +70,9 @@ _BASE_KWARGS: dict = dict(
     p_house=4.0,
     p_cryo=1.0,
     f_sub=0.03,
-    mn=1.05,
-    eta_th=0.40,
+    mn=1.0,
+    blanket_form="none",
+    blanket_fill="none",
     eta_de=0.70,
     f_dec=0.90,
     n_e=3.3e19,
@@ -83,7 +84,6 @@ _BASE_KWARGS: dict = dict(
     tau_ratio=3.0,
     R_w=0.4,
     dhe3_f_T=0.5,
-    dhe3_f_He3=0.1,
     dhe3_dd_frac=0.131,
     dd_f_T=0.969,
     dd_f_He3=0.689,
@@ -91,7 +91,11 @@ _BASE_KWARGS: dict = dict(
 
 
 def base_model_and_result() -> tuple[CostModel, ForwardResult]:
-    model = CostModel(concept=ConfinementConcept.MIRROR, fuel=Fuel.DHE3)
+    model = CostModel(
+        concept=ConfinementConcept.MIRROR,
+        fuel=Fuel.DHE3,
+        power_cycle=PowerCycle.RANKINE,
+    )
     result = model.forward(**_BASE_KWARGS)
     return model, result
 
@@ -108,7 +112,7 @@ def collect_elasticities(model: CostModel, base) -> list[tuple[str, float, str]]
 
 
 def render_tornado(rows: list[tuple[str, float, str]], out_path: Path) -> None:
-    rows = rows[:18]  # top 18 rows fit on one PDF page at this figsize
+    rows = rows[:12]  # top 12 rows by |elasticity| (one clean PDF page)
     rows_plot = list(reversed(rows))  # largest at top in matplotlib horizontal bar
     fig, ax = plt.subplots(figsize=(7.0, 0.32 * len(rows_plot) + 1.2))
     for i, (param, e, bucket) in enumerate(rows_plot):
