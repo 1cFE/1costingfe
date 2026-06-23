@@ -91,6 +91,13 @@ from costingfe.validation import CostingInput
 # disk but are unreachable through forward(). Flip to True to re-enable.
 SIZING_FEATURES_ENABLED = False
 
+# The bundled 0D physics models (use_0d_model: the 0D tokamak and mirror layers
+# that derive the plasma operating point from machine geometry) are gated off
+# for the released build, which focuses on costing a user-supplied physics
+# operating point. The layer modules (layers/tokamak.py, layers/mirror.py)
+# remain on disk but are unreachable through forward(). Flip to True to re-enable.
+MODELS_0D_ENABLED = False
+
 
 def _core_lifetime_fpy(cc, fuel, q_n, lifetime_yr, availability):
     """Fluence-based core lifetime [FPY]: Phi_max / q_n, clamped to [0.5,
@@ -951,12 +958,23 @@ class CostModel:
         # input route (YAML default or user override); the keys remain whitelisted
         # so this clear message fires instead of an "unknown parameter" error.
         if not SIZING_FEATURES_ENABLED and (
-            params.get("size_from_power", False)
-            or params.get("optimize_lcoe", False)
+            params.get("size_from_power", False) or params.get("optimize_lcoe", False)
         ):
             raise NotImplementedError(
                 "Power-to-geometry sizing (size_from_power) and LCOE "
                 "optimization (optimize_lcoe) are not available in this release."
+            )
+
+        # The bundled 0D physics models are gated off for the released build
+        # (the layer code stays on disk but is unreachable here). The framework
+        # costs a user-supplied physics operating point; the 0D layers that
+        # derive that operating point from machine geometry are out of scope for
+        # this release. Guarding on the effective param value catches every
+        # concept and every input route (YAML default or user override).
+        if not MODELS_0D_ENABLED and params.get("use_0d_model", False):
+            raise NotImplementedError(
+                "The bundled 0D physics models (use_0d_model) are not available "
+                "in this release; supply the physics operating point as inputs."
             )
 
         # optimize_lcoe implies size_from_power (you can only optimize the
@@ -1846,6 +1864,12 @@ class CostModel:
             # Pulsed driver
             "p_driver",
             "e_preheat_mj",
+            # Pulsed inductive-DEC conversion knobs: default-carried only by the
+            # genuinely inductive concepts (pulsed FRC, theta pinch); listed here
+            # so any pulsed concept can be switched to inductive_dec by passing
+            # them, without every thermal-mode YAML having to declare them.
+            "eta_dec",
+            "f_pdv",
             # IFE/MIF target factory capital (CAS22.01.08), three-term build-up;
             # in-situ concepts leave them unset (0) and carry no factory.
             "target_factory_capex_fixed",

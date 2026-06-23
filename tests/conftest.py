@@ -16,13 +16,15 @@ jax.config.update("jax_compilation_cache_dir", _CACHE_DIR)
 jax.config.update("jax_persistent_cache_min_compile_time_secs", 0.5)
 
 
-# Power-to-geometry sizing (size_from_power) and LCOE optimization
-# (optimize_lcoe) are gated off for the released build (see
-# costingfe.model.SIZING_FEATURES_ENABLED). Tests that exercise those code
-# paths through forward() hit the gate's NotImplementedError; convert that one
-# specific error into a skip so the suite stays green while the feature tests
-# are preserved on disk. Tests that call the pure solver functions directly are
-# unaffected (the solvers remain intact) and continue to run.
+# Power-to-geometry sizing (size_from_power), LCOE optimization (optimize_lcoe),
+# and the bundled 0D physics models (use_0d_model) are gated off for the
+# released build (see costingfe.model.SIZING_FEATURES_ENABLED and
+# MODELS_0D_ENABLED). Tests that exercise those code paths through forward() hit
+# the gate's NotImplementedError; convert that one specific error into a skip so
+# the suite stays green while the feature tests are preserved on disk. Tests
+# that call the pure solver/layer functions directly are unaffected (the code
+# remains intact) and continue to run. Both gate messages share the substring
+# below.
 _GATE_MESSAGE = "are not available in this release"
 
 
@@ -37,6 +39,6 @@ def pytest_runtest_call(item):
     ):
         outcome.force_exception(
             pytest.skip.Exception(
-                "size_from_power / optimize_lcoe gated off for release"
+                "size_from_power / optimize_lcoe / use_0d_model gated off for release"
             )
         )

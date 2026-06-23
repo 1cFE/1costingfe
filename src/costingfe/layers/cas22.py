@@ -345,9 +345,12 @@ def cas22_reactor_plant_equipment(
             concept == ConfinementConcept.MIRROR
             and coil_spacing > 0
             and n_plug_coils > 0
-            and r_bore_central > 0
-            and r_bore_plug > 0
         ):
+            # r_bore_central / r_bore_plug are derived geometry (always > 0 for
+            # a real mirror build); they are NOT guarded here because under
+            # jax.vmap (batch_lcoe) they are traced arrays and a Python boolean
+            # on them raises TracerBoolConversionError. The concrete selectors
+            # above (concept, coil_spacing, n_plug_coils) choose the branch.
             # -----------------------------------------------------------
             # Mirror two-class coil model (length-scaling, bore-resolved).
             #
