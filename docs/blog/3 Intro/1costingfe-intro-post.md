@@ -1,14 +1,14 @@
 # Introducing 1costingFE: the open-source engine behind our numbers
 
-Three posts by the 1cFE initiative have made concrete, checkable claims about the cost of fusion electricity. The [cost-floor post](https://1cf.energy/fusions-cost-floor-what-if-the-core-were-free/) asked what a fusion plant would cost if the core were free, and put numbers on the balance-of-plant floor for each fuel. The [direct energy conversion post](https://1cf.energy/direct-energy-conversion/) asked whether DEC moves that floor. The [pipeline post](https://1cf.energy/from-papers-to-plant-economics/) costed 38 fusion concepts in one automated pass. Every number in the first two posts, and the cost model under most of the concepts in the third (the exotica that fit no standard archetype got their own freeform treatment), came out of the same codebase.
+[1costingFE](https://github.com/1cFE/1costingfe) is an open-source framework that estimates the cost of fusion electricity. You give it a confinement concept, a fuel, and a design point; it returns a levelized cost of electricity, an account-by-account capital and operating breakdown, and the closed power balance behind them. It is calibrated and traceable through the [account justification documents](https://github.com/1cFE/1costingfe/tree/v0.1.0-alpha.1/docs/account_justification): one document per cost account, recording what the number is calibrated against and where the uncertainty lives. It covers 17 confinement concepts across magnetic, magneto-inertial, and inertial families, all four major fuels (D-T, D-D, D-He3, p-B11), and the aneutronic and direct-energy-conversion cases that most fusion cost tools do not reach. Because it is built on JAX, the same call that computes a cost also computes its sensitivity to every input at once.
 
-This post hands you that codebase. [1costingFE](https://github.com/1cFE/1costingfe) is open source, pinned for this post at tag [v0.1.0-alpha.1](https://github.com/1cFE/1costingfe/tree/v0.1.0-alpha.1), and small enough to read in an afternoon. We want you to clone it, run it, and tell us where it is wrong.
+It is for anyone who needs to ask "what would this plant cost, and what is driving that number" without committing to a full engineering design study: fusion developers pressure-testing their own economics, investors probing which assumptions the answer hangs on, and researchers who want a cost model they can read, run, and correct. It is small enough to read in an afternoon and open at tag [v0.1.0-alpha.1](https://github.com/1cFE/1costingfe/tree/v0.1.0-alpha.1). We want you to clone it, run it, and tell us where it is wrong.
+
+Three earlier posts by the 1cFE initiative leaned on this codebase. The [cost-floor post](https://1cf.energy/fusions-cost-floor-what-if-the-core-were-free/) asked what a plant would cost if the core were free and put numbers on the balance-of-plant floor for each fuel. The [direct energy conversion post](https://1cf.energy/direct-energy-conversion/) asked whether DEC moves that floor. The [pipeline post](https://1cf.energy/from-papers-to-plant-economics/) costed 38 concepts in one automated pass. Every number in the first two, and the cost model under most of the third, came out of 1costingFE. This post hands you that codebase.
 
 ## What it is
 
-1costingFE is a costing framework. Its inputs are: a confinement concept, a fuel, and a design point, the geometry that drives the component costs and the net electric power that fills the LCOE denominator. It outputs: a levelized cost of electricity, an account-by-account cost breakdown, and the closed power balance behind them. It is calibrated and traceable through the [account justification documents](https://github.com/1cFE/1costingfe/tree/v0.1.0-alpha.1/docs/account_justification): one document per cost account, recording what the number is calibrated against and where the uncertainty lives.
-
-It is composed of three modules:
+1costingFE is composed of three modules:
 
 - **Economics.** Levelized cost of electricity with the details that are easy to get wrong: capital recovery at the cost of capital, interest during construction accrued over the build window, and operating costs treated as a growing annuity rather than a flat stream. Scheduled component replacements (blankets, divertors, laser drivers) are discounted into the O&M stream against fuel-dependent lifetimes.
 - **Physics.** First-principles power partitioning for D-T, D-D, D-He3, and p-B11, including the secondary reaction chains that set each fuel's real neutron fraction. Radiation losses from bremsstrahlung, synchrotron, and impurity line radiation from sputtered wall material and seeded impurities. Power balances for both steady-state and pulsed concepts, including pulsed inductive direct energy conversion with explicit capacitor-bank round-trip losses.
@@ -18,11 +18,11 @@ The current release covers 17 confinement concepts across steady-state magnetic,
 
 ## Try it live
 
-The quickest way to get a feel for the model is the [live explorer](https://1costingfe-explorer.vercel.app). Pick a concept and a fuel, drag the sliders, and watch the LCOE, the account breakdown, and the sensitivity tornado recompute as you drag; an advanced panel exposes the engineering parameters, the unit-cost constants, and per-account M$ overrides. It is not a lookup table: a numpy port of the model runs on every input change, parity-tested against the original at 74 reference points.
+![The explorer: a D-T tokamak at 1 GWe, with the account breakdown, elasticity tornado, and the advanced input tabs](explorer_screenshot.png)
+
+The quickest way to get a feel for the model is the live [1costingfe explorer](https://1costingfe-explorer.vercel.app/). Pick a concept and a fuel, drag the sliders, and watch the LCOE, the account breakdown, and the sensitivity tornado recompute as you drag; an advanced panel exposes the engineering parameters, the unit-cost constants, and per-account M$ overrides. A numpy port of the model runs on every input change, parity-tested against the original at 74 reference points.
 
 Treat it as the appetizer. The explorer shows one design point at a time through a curated set of knobs; the interesting functionality, exact autodiff sensitivities, vectorized parameter sweeps, plant-size-aware override scaling, multi-module plants, and the full scriptable API, lives in the library, which is what the rest of this post is about.
-
-![The explorer: a D-T tokamak at 1 GWe, with the account breakdown, elasticity tornado, and the advanced input tabs](explorer_screenshot.png)
 
 ## Install and run
 
@@ -35,7 +35,7 @@ pip install 1costingfe
 For the full experience (the example scripts, the account justification documents, the tests), clone at the tag and install editable instead:
 
 ```bash
-git clone --branch v0.1.0-alpha.1 https://github.com/1cFE/1costingfe
+git clone --branch v0.1.0-alpha.1 <https://github.com/1cFE/1costingfe>
 cd 1costingfe
 pip install -e .
 ```
@@ -76,13 +76,13 @@ Total capital: $8,262/kW
 
 That is a 1 GWe D-T tokamak at 85% availability over a 30-year life; the capital figure includes interest during construction and is quoted per kW of net capacity. The five largest reactor-plant items are the magnets (C220103), the blanket and first wall (C220101), the shield (C220102), installation labor (C220111), and heating and current drive (C220104). The returned object also carries the full power balance from fusion power to grid, every intermediate parameter by name, and the set of accounts your inputs overrode.
 
-Swap the two enums and the same call costs a pulsed FRC burning D-He3 or a laser IFE plant burning D-T. The `examples/` folder has 26 scripts, including the ones that reproduce the numbers in the cost-floor and DEC posts, and the per-account justification documents live in `docs/account_justification/`.
+Swap the two enums and the same call costs a pulsed FRC burning D-He3 or a laser IFE plant burning D-T. The `examples/` folder includes scripts that reproduce the numbers in the cost-floor and DEC posts, and the per-account justification documents live in `docs/account_justification/`.
 
 ## Plugging in your own numbers
 
 If you work on fusion, there is probably one piece of this plant you know better than we do: a vendor quote for magnets, your own bottom-up model of a blanket, a better price on a breeder material. The framework is built so that knowledge can be grafted in at the right level, with the rest of the plant recomputing around it. There are three levels, depending on what you have.
 
-**You have a better design point.** Every concept's engineering parameters live in a YAML defaults file (`src/costingfe/data/defaults/steady_state_tokamak.yaml` and sixteen siblings), and any of them can be overridden per call:
+**You have a better design point.** Every concept's engineering parameters live in a YAML defaults file (`src/costingfe/data/defaults/steady_state_tokamak.yaml` and 16 siblings), and any of them can be overridden per call:
 
 ```yaml
 B: 10.0              # On-axis toroidal field [T]
@@ -180,4 +180,4 @@ In rough order of how much it helps us:
 3. **Validation cases.** A published design with a full cost breakdown that we cannot reproduce by overriding the relevant accounts is a case we want to study.
 4. **Bug reports.** [GitHub issues](https://github.com/1cFE/1costingfe/issues). We respond.
 
-Play with the [explorer](https://1costingfe-explorer.vercel.app). Clone the [repo](https://github.com/1cFE/1costingfe). Run the examples. The 423 tests pass, the numbers in our posts regenerate from the example scripts, and the fastest way to make the model better is for someone outside the project to find the place where it is wrong.
+Play with the [explorer](https://1costingfe-explorer.vercel.app/). Clone the [repo](https://github.com/1cFE/1costingfe). Run the examples. The test suite passes, the numbers in our posts regenerate from the example scripts, and the fastest way to make the model better is for someone outside the project to find the place where it is wrong.
