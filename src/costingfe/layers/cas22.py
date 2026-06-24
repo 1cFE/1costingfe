@@ -332,7 +332,7 @@ def cas22_reactor_plant_equipment(
         # coil's own b_center_stationary / r_bore_stationary.
         # ---------------------------------------------------------------
         lev_kAm = 4 * math.pi * b_center * r_bore**2 / (_MU0 * 1000)
-        lev_conductor = lev_kAm * coil_material.default_cost_per_kAm / 1e6
+        lev_conductor = lev_kAm * cc.conductor_cost_per_kam(coil_material) / 1e6
         floating_with_markup = lev_conductor * lev_coil_markup
         stationary_lift_cost = stationary_lift_coil_fraction * floating_with_markup
         c220103 = floating_with_markup + stationary_lift_cost + lev_coil_cryostat_cost
@@ -383,7 +383,7 @@ def cas22_reactor_plant_equipment(
             G_plug = n_plug_coils * 4 * math.pi
             kAm_central = G_central * b_center * r_bore_central**2 / (_MU0 * 1000)
             kAm_plug = G_plug * b_plug * r_bore_plug**2 / (_MU0 * 1000)
-            cond_per_kAm = coil_material.default_cost_per_kAm
+            cond_per_kAm = cc.conductor_cost_per_kam(coil_material)
             conductor_central = kAm_central * cond_per_kAm / 1e6
             conductor_plug = kAm_plug * cond_per_kAm / 1e6
             total_conductor = conductor_central + conductor_plug
@@ -438,7 +438,9 @@ def cas22_reactor_plant_equipment(
                     + m_steel * cc.coil_steel_price_per_kg * cc.coil_steel_fab_markup
                 ) / 1e6
             else:
-                conductor_cost = total_kAm * coil_material.default_cost_per_kAm / 1e6
+                conductor_cost = (
+                    total_kAm * cc.conductor_cost_per_kam(coil_material) / 1e6
+                )
                 c220103 = conductor_cost * coil_markup
 
     # -----------------------------------------------------------------------

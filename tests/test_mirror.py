@@ -513,7 +513,7 @@ class TestInverse:
 # plus the tandem hot-electron central cell (T_e = 125 keV, Hammir anchor for the
 # Fowler-Logan plug; the non-0D path reads YAML T_e for its radiation term). The
 # coil calibration pin (513.375 M$) is unaffected (T_e does not enter coils).
-_MIRROR_DT_PINNED_LCOE = 95.36759948730469
+_MIRROR_DT_PINNED_LCOE = 96.74519348144531
 
 
 class TestModelIntegration:
@@ -687,7 +687,6 @@ class TestMirrorCoilLengthScaling:
         The plug contribution (fixed n_plug_coils, fixed b_plug) must be
         UNCHANGED.  We test the contributions, not just the total.
         """
-        from costingfe.types import CoilMaterial
 
         MU0 = 4 * math.pi * 1e-7
         b_center = 12.0  # from steady_state_mirror.yaml
@@ -702,7 +701,7 @@ class TestMirrorCoilLengthScaling:
         b_plug = R_m * B  # 30.0 T
         n_plug = 4
         coil_spacing = 5.0
-        cost_per_kAm = CoilMaterial.REBCO_HTS.default_cost_per_kAm  # 50.0
+        cost_per_kAm = load_costing_constants().conductor_cost_rebco  # 50.0
 
         def _central_cost(L):
             n_c = L / coil_spacing
@@ -730,8 +729,6 @@ class TestMirrorCoilLengthScaling:
         r_double = self._base(chamber_length=40.0)
         # Delta from L=20 to L=40 equals one extra central_20 worth (times markup).
         # (C220103_L40 - C220103_L20) == central_20 * markup
-        from costingfe.defaults import load_costing_constants
-
         cc = load_costing_constants()
         markup = cc.coil_markup["mirror"]
 

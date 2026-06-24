@@ -24,24 +24,24 @@ def test_rankine_defaults_match_current_values():
     """Rankine preset should match the current CostingConstants defaults."""
     preset = POWER_CYCLE_DEFAULTS[PowerCycle.RANKINE]
     assert preset["eta_th"] == 0.40
-    assert preset["turbine_per_mw"] == 0.19764
-    assert preset["heat_rej_per_mw"] == 0.03416
+    assert preset["turbine_per_mw"] == 0.20284
+    assert preset["heat_rej_per_mw"] == 0.03506
 
 
 def test_brayton_sco2_defaults():
     """sCO2 Brayton preset values."""
     preset = POWER_CYCLE_DEFAULTS[PowerCycle.BRAYTON_SCO2]
     assert preset["eta_th"] == 0.47
-    assert preset["turbine_per_mw"] == 0.155
-    assert preset["heat_rej_per_mw"] == 0.022
+    assert preset["turbine_per_mw"] == 0.15908
+    assert preset["heat_rej_per_mw"] == 0.02258
 
 
 def test_combined_defaults():
     """Combined cycle preset values."""
     preset = POWER_CYCLE_DEFAULTS[PowerCycle.COMBINED]
     assert preset["eta_th"] == 0.53
-    assert preset["turbine_per_mw"] == 0.235
-    assert preset["heat_rej_per_mw"] == 0.018
+    assert preset["turbine_per_mw"] == 0.24118
+    assert preset["heat_rej_per_mw"] == 0.01847
 
 
 def test_power_cycle_enum_members():

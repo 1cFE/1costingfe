@@ -325,7 +325,7 @@ def test_backward_compat_sizing_off_unchanged():
     # re-pinned after the default tokamak geometry was re-baselined to the
     # size_from_power 1000 MWe operating point (R0 6.04 m, B 10 T, kappa 1.85,
     # was R0 3.0 / B 5 / kappa 3.0).
-    REF = 155.05081176757812
+    REF = 156.66529846191406
     if REF is not None:
         assert r.costs.lcoe == pytest.approx(REF, rel=1e-9)
 

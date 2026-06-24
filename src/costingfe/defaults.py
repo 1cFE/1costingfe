@@ -67,15 +67,27 @@ class CostingConstants:
     coil_struct_fraction: float = 0.6  # steel support mass / copper mass
     coil_steel_price_per_kg: float = 6.0  # fabricated structural steel, $/kg
     coil_steel_fab_markup: float = 3.0  # coil-case / inter-coil support fabrication
-    # 220104: Supplementary Heating — per-MW linear costs (M$/MW, 2023$)
-    # Vendor-purchased turnkey systems. Source: ARIES heating-system costs;
-    # NBI 7.06 calibrated to ITER NBI procurement (EUR 9-15M/MW FOAK -> NOAK
-    # discount), ECRH 5.0 to ITER gyrotron procurement (EUR 5-10M/MW).
+    # Superconducting-coil conductor (tape) cost per kA-m, by coil material
+    # [$/kA-m]. Promoted to CostingConstants so they are visible and enter the
+    # autodiff sensitivity; the active material's value flows into C220103.
+    conductor_cost_rebco: float = 50.0  # REBCO HTS tape (aggressive NOAK target)
+    conductor_cost_nb3sn: float = 7.0  # Nb3Sn (ITER conductor, mature)
+    conductor_cost_nbti: float = 7.0  # NbTi (LHC heritage)
+    conductor_cost_copper: float = (
+        1.0  # copper $/kA-m (resistive coils use the mass build-up above)
+    )
+    # 220104: Supplementary Heating — per-MW linear costs (M$/MW, 2025 USD)
+    # Vendor-purchased turnkey systems. Source: ARIES heating-system costs
+    # (2023$ base, CPI-escalated to 2025 USD); NBI 7.46 calibrated to ITER NBI
+    # procurement (EUR 9-15M/MW FOAK -> NOAK discount), ECRH 5.28 to ITER
+    # gyrotron procurement (EUR 5-10M/MW).
     # See docs/account_justification/CAS22_reactor_components.md
-    heating_nbi_per_mw: float = 7.0642  # Neutral Beam Injection
-    heating_icrf_per_mw: float = 4.1494  # Ion Cyclotron Resonance Frequency
-    heating_ecrh_per_mw: float = 5.0  # Electron Cyclotron Resonance Heating (gyrotrons)
-    heating_lhcd_per_mw: float = 4.0  # Lower Hybrid Current Drive (klystrons)
+    heating_nbi_per_mw: float = 7.4639  # Neutral Beam Injection
+    heating_icrf_per_mw: float = 4.3842  # Ion Cyclotron Resonance Frequency
+    heating_ecrh_per_mw: float = (
+        5.2829  # Electron Cyclotron Resonance Heating (gyrotrons)
+    )
+    heating_lhcd_per_mw: float = 4.2263  # Lower Hybrid Current Drive (klystrons)
     # Heating wall-plug source efficiency by method (wall-plug -> delivered
     # power, before plasma coupling). Combined with a per-concept eta_couple
     # (in the concept YAML) to form eta_pin = eta_source x eta_couple.
@@ -298,13 +310,13 @@ class CostingConstants:
     # See docs/account_justification/CAS27_special_materials.md
     cas27_fill_materials: dict[str, dict] = None
 
-    # CAS23-26 — BOP equipment (M$/MW gross electric, 2024$)
-    # Source: ARIES/NETL calibration (2019$ × 1.22 CPI inflation)
+    # CAS23-26 — BOP equipment (M$/MW gross electric, 2025 USD)
+    # Source: ARIES/NETL calibration (2019 base, CPI-escalated to 2025 USD)
     # See docs/account_justification/CAS23_26_balance_of_plant.md
-    turbine_per_mw: float = 0.19764  # Steam TG, condenser, feedwater
-    electric_per_mw: float = 0.08418  # Switchyard, transformers, cabling
-    misc_per_mw: float = 0.05124  # Fire protection, compressed air, HVAC
-    heat_rej_per_mw: float = 0.03416  # Cooling towers, circ water
+    turbine_per_mw: float = 0.20284  # Steam TG, condenser, feedwater
+    electric_per_mw: float = 0.08640  # Switchyard, transformers, cabling
+    misc_per_mw: float = 0.05259  # Fire protection, compressed air, HVAC
+    heat_rej_per_mw: float = 0.03506  # Cooling towers, circ water
 
     # CAS28 — Digital twin (M$, fixed). Software-dominated; does not scale
     # with plant size. Source: DOE ARPA-E GEMINA per-project reactor digital-
@@ -320,12 +332,13 @@ class CostingConstants:
     indirect_fraction: float = 0.20
     reference_construction_time: float = 6.0
 
-    # CAS40 — Capitalized owner's costs (M$ at 1 GWe reference, 2023$)
-    # Source: CAS40_capitalized_owners_costs.md — INL methodology on CAS71-73 staffing
-    owner_cost_dt: float = 39.0  # 117 staff, full neutron + tritium pre-op training
-    owner_cost_dd: float = 31.0  # 94 staff, reduced tritium scope
-    owner_cost_dhe3: float = 23.0  # 69 staff, light HP program
-    owner_cost_pb11: float = 20.0  # 59 staff, near-industrial, RSO-only
+    # CAS40 — Capitalized owner's costs (M$ at 1 GWe reference, 2025 USD)
+    # Source: CAS40_capitalized_owners_costs.md — INL methodology on CAS71-73
+    # staffing (2023$ base, CPI-escalated to 2025 USD)
+    owner_cost_dt: float = 41.2  # 117 staff, full neutron + tritium pre-op training
+    owner_cost_dd: float = 32.8  # 94 staff, reduced tritium scope
+    owner_cost_dhe3: float = 24.3  # 69 staff, light HP program
+    owner_cost_pb11: float = 21.1  # 59 staff, near-industrial, RSO-only
 
     # CAS50 — Capitalized supplementary costs
     # Source: CAS50_supplementary_costs.md — sub-account model
@@ -349,13 +362,14 @@ class CostingConstants:
     decom_provision_dhe3: float = 65.0  # M$ at 1 GWe — PV of $210M
     decom_provision_pb11: float = 53.0  # M$ at 1 GWe — PV of $170M
 
-    # CAS70 — Annual O&M cost (M$/yr at 1 GWe reference, 2023$)
-    # Source: CAS70_staffing_and_om_costs.md — staffing-based build-up by fuel type
+    # CAS70 — Annual O&M cost (M$/yr at 1 GWe reference, 2025 USD)
+    # Source: CAS70_staffing_and_om_costs.md — staffing-based build-up by fuel
+    # type (2023$ base, CPI-escalated to 2025 USD)
     # Power-law scaling: annual_om = om_cost(fuel) * (P_net / 1 GWe)^0.5
-    om_cost_dt: float = 52.0  # Full neutron + tritium operational overhead
-    om_cost_dd: float = 39.0  # ~1/3 DT neutron flux, smaller tritium inventory
-    om_cost_dhe3: float = 26.0  # ~5% neutron fraction, minimal tritium
-    om_cost_pb11: float = 24.0  # Aneutronic, no tritium, RSO-only
+    om_cost_dt: float = 54.9  # Full neutron + tritium operational overhead
+    om_cost_dd: float = 41.2  # ~1/3 DT neutron flux, smaller tritium inventory
+    om_cost_dhe3: float = 27.5  # ~5% neutron fraction, minimal tritium
+    om_cost_pb11: float = 25.4  # Aneutronic, no tritium, RSO-only
 
     # CAS80 — fuel isotope unit costs ($/kg)
     # STARFIRE (1980) inflation-adjusted via GDP IPD. Range: $1,500-3,500/kg.
@@ -473,6 +487,17 @@ class CostingConstants:
             Fuel.DHE3: self.f_rad_fus_dhe3,
         }.get(fuel)
 
+    def conductor_cost_per_kam(self, coil_material):
+        """Conductor (tape) cost [$/kA-m] for a coil material."""
+        from costingfe.types import CoilMaterial
+
+        return {
+            CoilMaterial.REBCO_HTS: self.conductor_cost_rebco,
+            CoilMaterial.NB3SN: self.conductor_cost_nb3sn,
+            CoilMaterial.NBTI: self.conductor_cost_nbti,
+            CoilMaterial.COPPER: self.conductor_cost_copper,
+        }[coil_material]
+
     def spare_parts_frac(self, fuel):
         """Initial spare parts fraction of CAS22-28 for a given fuel type."""
         from costingfe.types import Fuel
@@ -541,18 +566,18 @@ def load_engineering_defaults(concept_fuel: str) -> dict:
 POWER_CYCLE_DEFAULTS: dict[PowerCycle, dict[str, float]] = {
     PowerCycle.RANKINE: {
         "eta_th": 0.40,
-        "turbine_per_mw": 0.19764,
-        "heat_rej_per_mw": 0.03416,
+        "turbine_per_mw": 0.20284,
+        "heat_rej_per_mw": 0.03506,
     },
     PowerCycle.BRAYTON_SCO2: {
         "eta_th": 0.47,
-        "turbine_per_mw": 0.155,
-        "heat_rej_per_mw": 0.022,
+        "turbine_per_mw": 0.15908,
+        "heat_rej_per_mw": 0.02258,
     },
     PowerCycle.COMBINED: {
         "eta_th": 0.53,
-        "turbine_per_mw": 0.235,
-        "heat_rej_per_mw": 0.018,
+        "turbine_per_mw": 0.24118,
+        "heat_rej_per_mw": 0.01847,
     },
 }
 

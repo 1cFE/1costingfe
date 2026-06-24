@@ -42,6 +42,12 @@ coil_cu_fab_markup: 3.5              # winding, insulation, cooling, jointing, t
 coil_struct_fraction: 0.6            # steel support mass / copper mass
 coil_steel_price_per_kg: 6.0         # fabricated structural steel $/kg
 coil_steel_fab_markup: 3.0           # coil-case / inter-coil support fabrication
+# 220103 SC conductor (tape) cost per kA-m by coil material [$/kA-m]; the
+# active material's value enters C220103 and the autodiff sensitivity.
+conductor_cost_rebco: 50.0           # REBCO HTS tape (aggressive NOAK target)
+conductor_cost_nb3sn: 7.0            # Nb3Sn (ITER conductor, mature)
+conductor_cost_nbti: 7.0             # NbTi (LHC heritage)
+conductor_cost_copper: 1.0           # copper $/kA-m (resistive coils use the mass build-up above)
 # 220103 SC coil manufacturing markup (conductor -> installed magnet system),
 # keyed by concept. Applied on the $/kAm path; copper concepts use the mass
 # build-up markups above instead. tokamak 3.09 calibrated so the SPARC-class
@@ -199,14 +205,13 @@ cas27_fill_materials:
   li2o:         {density: 2013, vol_frac: 0.25, price: 150.0}  # Li2O ceramic
   none:         {density: 0,    vol_frac: 0.0,  price: 0.0}    # aneutronic / no breeder
 
-# CAS23-26 — BOP equipment (M$/MW gross electric, 2024$)
+# CAS23-26 — BOP equipment (M$/MW gross electric, 2025 USD)
 # turbine_per_mw and heat_rej_per_mw are now set by PowerCycle preset
 # in POWER_CYCLE_DEFAULTS (see defaults.py). CAS24/25 remain here:
-# Source: ARIES/NETL calibration (2019$ × 1.22 CPI inflation)
+# Source: ARIES/NETL calibration (2019 base, CPI-escalated to 2025 USD)
 # See docs/account_justification/CAS23_26_balance_of_plant.md
-inflation_2019_2024: 1.22
-electric_per_mw: 0.08418    # 0.069 * 1.22 — switchyard, transformers, cabling
-misc_per_mw: 0.05124        # 0.042 * 1.22 — fire protection, compressed air, HVAC
+electric_per_mw: 0.08640    # switchyard, transformers, cabling
+misc_per_mw: 0.05259        # fire protection, compressed air, HVAC
 
 # CAS28 — Digital twin (M$, fixed). Software-dominated; does not scale with plant size.
 # Source: DOE ARPA-E GEMINA per-project reactor digital-twin budgets
@@ -224,13 +229,14 @@ contingency_rate_noak: 0.0
 indirect_fraction: 0.20           # fraction of CAS20 (total direct cost)
 reference_construction_time: 6.0  # years (scaling baseline)
 
-# CAS40 — Capitalized owner's costs (M$ at 1 GWe reference, 2023$)
-# Source: CAS40_capitalized_owners_costs.md — INL methodology on CAS71-73 staffing
+# CAS40 — Capitalized owner's costs (M$ at 1 GWe reference, 2025 USD)
+# Source: CAS40_capitalized_owners_costs.md — INL methodology on CAS71-73
+# staffing (2023$ base, CPI-escalated to 2025 USD)
 # Power-law scaling: CAS40 = owner_cost(fuel) * (P_net / 1 GWe)^0.5
-owner_cost_dt: 39.0        # 117 staff, full neutron + tritium pre-op training
-owner_cost_dd: 31.0        # 94 staff, reduced tritium scope
-owner_cost_dhe3: 23.0      # 69 staff, light HP program
-owner_cost_pb11: 20.0      # 59 staff, near-industrial, RSO-only
+owner_cost_dt: 41.2        # 117 staff, full neutron + tritium pre-op training
+owner_cost_dd: 32.8        # 94 staff, reduced tritium scope
+owner_cost_dhe3: 24.3      # 69 staff, light HP program
+owner_cost_pb11: 21.1      # 59 staff, near-industrial, RSO-only
 
 # CAS50 — Capitalized supplementary costs
 # Source: CAS50_supplementary_costs.md — sub-account model
@@ -250,13 +256,14 @@ decom_provision_dd: 93.0          # M$ at 1 GWe — PV of $300M
 decom_provision_dhe3: 65.0        # M$ at 1 GWe — PV of $210M
 decom_provision_pb11: 53.0        # M$ at 1 GWe — PV of $170M
 
-# CAS70 — Annual O&M cost (M$/yr at 1 GWe reference, 2023$)
-# Source: CAS70_staffing_and_om_costs.md — staffing-based build-up by fuel type
+# CAS70 — Annual O&M cost (M$/yr at 1 GWe reference, 2025 USD)
+# Source: CAS70_staffing_and_om_costs.md — staffing-based build-up by fuel
+# type (2023$ base, CPI-escalated to 2025 USD)
 # Power-law scaling: annual_om = om_cost(fuel) * (P_net / 1 GWe)^0.5
-om_cost_dt: 52.0       # Full neutron + tritium operational overhead
-om_cost_dd: 39.0       # ~1/3 DT neutron flux, smaller tritium inventory
-om_cost_dhe3: 26.0     # ~5% neutron fraction, minimal tritium
-om_cost_pb11: 24.0     # Aneutronic, no tritium, RSO-only
+om_cost_dt: 54.9       # Full neutron + tritium operational overhead
+om_cost_dd: 41.2       # ~1/3 DT neutron flux, smaller tritium inventory
+om_cost_dhe3: 27.5     # ~5% neutron fraction, minimal tritium
+om_cost_pb11: 25.4     # Aneutronic, no tritium, RSO-only
 
 # CAS80 fuel isotope unit costs ($/kg)
 # u_deuterium: STARFIRE (1980) inflation-adjusted via GDP IPD ratio.

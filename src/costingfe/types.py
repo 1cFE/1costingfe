@@ -121,23 +121,10 @@ class CoilMaterial(Enum):
     COPPER = "copper"
 
     @property
-    def default_cost_per_kAm(self) -> float:
-        """Default conductor cost in $/kAm."""
-        return _COIL_MATERIAL_COST[self]
-
-    @property
     def is_superconducting(self) -> bool:
         """True for superconductors, which require a cryogenic plant; COPPER
         (normal-conducting) does not."""
         return self is not CoilMaterial.COPPER
-
-
-_COIL_MATERIAL_COST = {
-    CoilMaterial.REBCO_HTS: 50.0,
-    CoilMaterial.NB3SN: 7.0,
-    CoilMaterial.NBTI: 7.0,
-    CoilMaterial.COPPER: 1.0,
-}
 
 
 class BlanketForm(Enum):
