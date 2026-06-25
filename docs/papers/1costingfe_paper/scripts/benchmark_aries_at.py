@@ -43,7 +43,7 @@ def run(output_dir: Path) -> dict:
         "construction_time_yr": 6.0,  # default
         "interest_rate": 0.07,  # default
         "inflation_rate": 0.0245,  # default
-        "noak": True,
+        "noak": False,
         # Geometry components
         "plasma_t": 1.3,
         "blanket_t": 0.5,  # default: SiC blanket thickness
@@ -68,6 +68,20 @@ def run(output_dir: Path) -> dict:
 
     model = CostModel(concept=ConfinementConcept.TOKAMAK, fuel=Fuel.DT)
     result = model.forward(**inputs)
+
+    # LCOE elasticities (% change in LCOE per 1% change in parameter), ranked
+    # by magnitude across the engineering/costing/financial buckets.
+    sens = model.sensitivity(result.params)
+    elasticities = sorted(
+        (
+            (param, float(e))
+            for bucket in sens.values()
+            for param, e in bucket.items()
+            if abs(e) > 1e-4
+        ),
+        key=lambda kv: abs(kv[1]),
+        reverse=True,
+    )
 
     c = result.costs
     pt = result.power_table
@@ -102,6 +116,9 @@ def run(output_dir: Path) -> dict:
             "cas90": float(c.cas90),
         },
         "cas22_detail": {k: float(v) for k, v in result.cas22_detail.items()},
+        "elasticities_top": [
+            {"param": p, "elasticity": e} for p, e in elasticities[:8]
+        ],
     }
 
     (output_dir / "aries_at.json").write_text(json.dumps(payload, indent=2))

@@ -50,11 +50,28 @@ def run(input_dir: Path, figure_dir: Path) -> Path:
 
     fig, ax = plt.subplots(figsize=(7, 5))
 
+    # One fixed color per CAS group, shared by both bars, so the single legend
+    # entry per group matches the ARC and ARIES-AT stacks alike.
+    colors = plt.rcParams["axes.prop_cycle"].by_key()["color"]
     bottoms_arc = 0.0
     bottoms_aries = 0.0
-    for label in labels:
-        ax.bar([0], [arc_groups[label]], bottom=bottoms_arc, label=label, width=0.6)
-        ax.bar([1], [aries_groups[label]], bottom=bottoms_aries, width=0.6)
+    for i, label in enumerate(labels):
+        color = colors[i % len(colors)]
+        ax.bar(
+            [0],
+            [arc_groups[label]],
+            bottom=bottoms_arc,
+            label=label,
+            width=0.6,
+            color=color,
+        )
+        ax.bar(
+            [1],
+            [aries_groups[label]],
+            bottom=bottoms_aries,
+            width=0.6,
+            color=color,
+        )
         bottoms_arc += arc_groups[label]
         bottoms_aries += aries_groups[label]
 

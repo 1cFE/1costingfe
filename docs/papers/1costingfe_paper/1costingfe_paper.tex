@@ -3249,26 +3249,31 @@ family; divergence from heritage-scaling estimates is therefore
 expected, and the check is whether the divergences arise in the
 accounts predicted by the methodological change.
 All published costs are escalated to 2025~USD via the BLS Consumer
-Price Index for All Urban Consumers (CPI-U), matching the convention
-used by pyFECONS \citep{woodruff2026}.
+Price Index (CPI-U), matching the convention used by pyFECONS
+\citep{woodruff2026}: a factor of 2.295 for ARIES-AT (1992~USD basis)
+and 1.360 for ARC (FY2014~USD basis).
 % CPI-U annual averages (BLS series CUUR0000SA0): 1992 = 140.3,
 % 2014 = 236.736, 2025 = 321.943. Source: BLS historical CPI-U tables.
-The Najmabadi 2006 cost basis is in 1992~USD (paper p.~17, ``ARIES-AT
-power-plant economic parameters (1992 \$)''); the Sorbom 2015 cost
-basis is in FY2014~USD (paper p.~25, Section 6.6). The CPI-U
-escalation factors used are 2.295 for ARIES-AT (1992~USD $\to$
-2025~USD) and 1.360 for ARC (2014~USD $\to$ 2025~USD).
+The operating and financial assumptions that most influence the LCOE
+(availability, WACC, construction time, and operating lifetime) are listed
+with each design's parameters in \cref{tab:arc-inputs,tab:aries-inputs}.
+Both designs are run at FOAK, matching the FOAK basis of their published
+estimates.
 
 \subsection{ARC: Top-Level Comparison}
 \label{sec:benchmark-arc}
 
 ARC \citep{sorbom2015arc} is a 270\,MWe demountable-coil high-field
 tokamak with REBCO HTS magnets and a FLiBe blanket. The inputs used
-are summarized in \cref{tab:arc-inputs}.
+are summarized in \cref{tab:arc-inputs}. Inputs ARC does not publish (the
+radial-build thicknesses and power-balance auxiliaries) take the tokamak
+defaults.
 
 \begin{table}[h]
 \centering
-\caption{ARC inputs to \texttt{1costingfe}.}
+\caption{ARC inputs to \texttt{1costingfe}. Design parameters from
+\citet{sorbom2015arc}; $^\dagger$ marks framework defaults ARC does not
+publish.}
 \label{tab:arc-inputs}
 \begin{tabular}{lll}
 \toprule
@@ -3280,10 +3285,16 @@ $\kappa$ & 1.84 & elongation \\
 $B_0$ & 9.2\,T & on-axis field \\
 $P_\text{fus}$ & 525\,MW & fusion power \\
 $P_\text{net}$ & 270\,MWe & net electric \\
-$\eta_\text{th}$ & 0.40 & He-cooled \\
 Blanket & FLiBe (molten salt) & immersion; drives volume-based CAS27 \\
 Fuel & D-T & \\
 Coils & REBCO HTS, demountable & \\
+\midrule
+$\eta_\text{th}$ & 0.40$^\dagger$ & thermal conversion \\
+REBCO conductor & 200\,\$/kA-m$^\dagger$ & current market (\$150--300); NOAK floor 50 \\
+Availability & 0.85$^\dagger$ & capacity factor \\
+WACC $i$ & 0.07$^\dagger$ & \\
+$T_c$ & 6\,yr$^\dagger$ & construction time \\
+$n$ & 30\,yr$^\dagger$ & operating lifetime \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -3291,20 +3302,29 @@ Coils & REBCO HTS, demountable & \\
 % Sorbom 2015 p. 25, Section 6.6 "Cost feasibility": fabricated
 % component cost = $5.56B in FY2014 USD. Escalated: 5560 * 1.360 = 7562.
 The published fabricated-component cost is \$5{,}560M (FY2014~USD,
-\citep{sorbom2015arc} p.~25, Section 6.6), or \$7{,}562M after
-escalation to 2025~USD. \texttt{1costingfe} predicts an overnight
-capital cost of \$2{,}875M, an overnight specific cost of
-10{,}650~\$/kWe, and an LCOE of 143.3~\$/MWh under the framework's
-NOAK default assumptions. The implied delta on overnight cost is
-$-62$\,\%. Sorbom's volumetric estimate uses a single \$1.06M/tonne
-fabricated multiplier averaged across four heritage burning-plasma
-designs (FIRE, BPX, PCAST5, ARIES-RS), with the dominant contribution
-from a 4{,}350-tonne SS316LN structural support priced at \$4.6\,B.
-\texttt{1costingfe} replaces this with bottom-up CAS21 (buildings,
-fuel-cycle-dependent scoping) and CAS22 (procurement-grounded magnet,
-vessel, and shielding costs); the gap is consistent with replacing a
-heritage burning-plasma multiplier with current procurement data and
-reflects a NOAK assumption not present in Sorbom's estimate.
+\citep{sorbom2015arc} p.~25), or \$7{,}562M escalated to 2025~USD.
+Run at FOAK, with ARC's REBCO coils priced at the current market
+(200~\$/kA-m, not the framework's aggressive default of 50~\$/kA-m),
+\texttt{1costingfe} predicts a \$5{,}392M capital cost (19{,}969~\$/kWe)
+and a 245.2~\$/MWh LCOE, a $-29$\,\% delta.
+
+The residual gap is the structural steel. Sorbom applies a single
+\$1.06M/tonne fabricated multiplier averaged across four heritage
+burning-plasma designs (FIRE, BPX, PCAST5, ARIES-RS), dominated by a
+4{,}350-tonne SS316LN structural support priced at \$4.6\,B (FY2014~USD,
+\$6.3\,B escalated) --- a single line that by itself exceeds
+\texttt{1costingfe}'s entire \$5.4\,B estimate, even with the coils at the
+current REBCO price (\$1.58B, 29\,\% of capital). \texttt{1costingfe}
+instead builds CAS21 and CAS22 bottom-up from current procurement data, so
+the divergence is that heritage steel multiplier rather than the reactor
+equipment. The two estimates price the same steel on different bases. That multiplier
+is \$1{,}060/kg, a fabricated-fusion-component figure carried over from
+one-off research machines that bundles design, instrumentation, and
+assembly, whereas \texttt{1costingfe} prices the support as welded
+structural steel at commodity material (\$6/kg) plus a fabrication markup,
+about \$18/kg. That factor of roughly 55 (about 75 after
+escalating Sorbom to 2025) is a heritage-versus-commodity pricing choice for
+bulk steel, not a model error on either side.
 
 \subsection{ARIES-AT: Per-Account Cross-Walk}
 \label{sec:benchmark-aries}
@@ -3313,11 +3333,14 @@ ARIES-AT \citep{najmabadi2006ariesat} is a 1\,GWe advanced-tokamak
 plant with low-temperature superconducting Nb$_3$Sn coils, a
 SiC-composite He-cooled Brayton power cycle, and a published
 per-account cost table that this section uses as the published-side
-reference. The inputs used are summarized in \cref{tab:aries-inputs}.
+reference. The inputs used are summarized in \cref{tab:aries-inputs};
+inputs the paper does not specify take the tokamak defaults.
 
 \begin{table}[h]
 \centering
-\caption{ARIES-AT inputs to \texttt{1costingfe}.}
+\caption{ARIES-AT inputs to \texttt{1costingfe}. Design parameters from
+\citet{najmabadi2006ariesat}; $^\dagger$ marks framework defaults the paper
+does not publish.}
 \label{tab:aries-inputs}
 \begin{tabular}{lll}
 \toprule
@@ -3332,6 +3355,11 @@ $P_\text{net}$ & 1000\,MWe & \\
 $\eta_\text{th}$ & 0.59 & SiC composite, Brayton \\
 Fuel & D-T & \\
 Coils & LTS Nb$_3$Sn & \\
+\midrule
+Availability & 0.85$^\dagger$ & capacity factor \\
+WACC $i$ & 0.07$^\dagger$ & \\
+$T_c$ & 6\,yr$^\dagger$ & construction time \\
+$n$ & 30\,yr$^\dagger$ & operating lifetime \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -3345,10 +3373,11 @@ direct cost maps to CAS21--27; the \texttt{1costingfe} ``Overnight'' row
 sums CAS10--50 (everything before interest during construction), and the
 ``Total'' row adds CAS60 (IDC).
 
-% Direct: published 1521.1 M$ (1992) * 2.295 = 3491; 1cfe sum CAS21+22+23+24+25+26+27 = 3518
-% Overnight $/kWe: published 2441 (1992) * 2.295 = 5602; 1cfe (CAS10-50)/kWe = 4765
-% Total: published 2844 M$ (1992) * 2.295 = 6527; 1cfe total_capital = 5681
-% LCOE: published 47.53 mill/kWh (1992) * 2.295 = 109.1 $/MWh; 1cfe = 76.7
+% FOAK run (noak=False) to match the ARIES FOAK basis.
+% Direct: published 1521.1 M$ (1992) * 2.295 = 3491; 1cfe sum CAS21+22+23+24+25+26+27 = 3507
+% Overnight $/kWe: published 2441 (1992) * 2.295 = 5602; 1cfe (CAS10-50)/kWe = 5257
+% Total: published 2844 M$ (1992) * 2.295 = 6527; 1cfe total_capital = 6267
+% LCOE: published 47.53 mill/kWh (1992) * 2.295 = 109.1 $/MWh; 1cfe = 83.6
 \begin{table}[h]
 \centering
 \caption{ARIES-AT cross-walk against published top-level rollups.
@@ -3359,57 +3388,51 @@ escalated from 1992~USD to 2025~USD by a factor of 2.295.}
 \toprule
 Account & Published (2025~USD) & \texttt{1costingfe} & $\Delta$ (\%) \\
 \midrule
-Direct cost (Account 90), M\$       & 3{,}491 & 3{,}518 &  $+0.8$ \\
-Overnight specific cost, \$/kWe     & 5{,}602 & 4{,}765 & $-14.9$ \\
-Total cost (Account 99), M\$        & 6{,}527 & 5{,}681 & $-13.0$ \\
-LCOE, \$/MWh                        &   109.1 &    76.7 & $-29.7$ \\
+Direct cost (Account 90), M\$       & 3{,}491 & 3{,}507 &  $+0.5$ \\
+Overnight specific cost, \$/kWe     & 5{,}602 & 5{,}257 &  $-6.2$ \\
+Total cost (Account 99), M\$        & 6{,}527 & 6{,}267 &  $-4.0$ \\
+LCOE, \$/MWh                        &   109.1 &    83.6 & $-23.4$ \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-The direct-cost row matches closely (within 1\,\%), indicating
-that the bottom-up CAS21--27 procurement basis agrees with the heritage 2002
-ARIES systems-study estimate at the top level. The overnight specific
-cost is 15\,\% lower; this is consistent with \texttt{1costingfe}'s
-NOAK default assumption replacing the FOAK-with-learning-multiplier
-convention used in the ARIES program. The LCOE divergence ($-30$\,\%)
-is dominated by the same NOAK effect propagated through the capital
-recovery factor.
+Run at FOAK to match the ARIES program's convention, \texttt{1costingfe}
+reproduces the published capital closely: direct cost within 1\,\%
+($+0.5$\,\%), overnight specific cost within 6\,\% ($-6.2$\,\%), and total
+cost within 4\,\% ($-4.0$\,\%). The residual LCOE divergence ($-23$\,\%)
+is not a capital-cost difference but reflects the differing financial and
+O\&M assumptions of the 2002 ARIES systems study (fixed-charge rate,
+lifetime, staffing) versus the framework defaults. Unlike ARC, ARIES-AT
+needs no conductor-price adjustment: its LTS Nb$_3$Sn coils are already
+priced at the mature ITER cost (7~\$/kA-m), not an aggressive NOAK target,
+so there is no NOAK-versus-current gap to swap as there is for ARC's REBCO.
 
 \subsection{LCOE Composition}
 \label{sec:benchmark-bars}
 
 \Cref{fig:benchmark-stacks} shows capital cost in M\$ broken out by
 major CAS account group for both reference designs side by side,
-computed under the framework's NOAK default assumptions.
+computed at FOAK.
 
 \begin{figure}[h]
 \centering
 \includegraphics[width=0.7\textwidth]{figures/benchmark_lcoe_stacks.pdf}
 \caption{Capital cost composition by major CAS account group for ARC
-and ARIES-AT, computed by \texttt{1costingfe} under NOAK defaults.
+and ARIES-AT, computed by \texttt{1costingfe} at FOAK.
 Annualised costs (CAS70 O\&M, CAS80 fuel, CAS90 financial) are not
 included in this view; see \cref{tab:aries-crosswalk} for the full
 LCOE breakdown. All values in 2025~USD.}
 \label{fig:benchmark-stacks}
 \end{figure}
 
-Both ARC and ARIES-AT produce broadly similar capital stacks dominated
-by CAS22 (reactor plant equipment), followed by the aggregated indirect
-and owner's costs (the ``Other capital'' group, which bundles CAS30
-indirect services) and the CAS60 financial charge. CAS21 (buildings) is
-the largest single direct-equipment account after the reactor, though
-smaller than those aggregated indirect and financial groups in both
-cases. The principal compositional
-difference is the absolute scale: ARC's compact 270\,MWe footprint
-produces a smaller absolute capital stack than the 1\,GWe ARIES-AT
-but a higher \$/kWe figure, reflecting diseconomies of scale in CAS21
-buildings and CAS30 indirect services that do not shrink linearly with
-plant size. The $\eta_\text{th}=0.40$ vs.\ 0.59 thermal-cycle gap
-shifts gross-electric recirculation but does not materially shift the
-capital-stack composition shown here, since
-\cref{fig:benchmark-stacks} reports capital cost rather than LCOE per
-MWh.
+Both designs produce similar capital stacks, dominated by CAS22 (reactor
+plant equipment), then the aggregated indirect and owner's costs (the
+``Other capital'' group, including CAS30) and the CAS60 financial charge;
+CAS21 (buildings) is the largest direct account after the reactor. The
+principal difference is scale: ARC's compact 270\,MWe footprint gives a
+smaller absolute stack than the 1\,GWe ARIES-AT but a higher \$/kWe,
+reflecting CAS21 and CAS30 diseconomies that do not shrink linearly with
+plant size.
 
 
 %% ============================================================

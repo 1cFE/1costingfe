@@ -14,10 +14,19 @@ Run as a script:
 
 from __future__ import annotations
 
+import dataclasses
 import json
 from pathlib import Path
 
 from costingfe import ConfinementConcept, CostModel, Fuel
+from costingfe.defaults import load_costing_constants
+
+# ARC is a published real-design cross-check, so its coils are priced at the
+# current-market REBCO cost rather than the framework's hard-NOAK floor
+# (50 $/kAm). Current market is $150-300/kAm; 200 is the representative value
+# (docs/account_justification/CAS22_reactor_components.md). Baseline concept
+# costing elsewhere keeps the NOAK floor.
+REBCO_CURRENT_USD_PER_KAM = 200.0
 
 
 def run(output_dir: Path) -> dict:
@@ -44,7 +53,7 @@ def run(output_dir: Path) -> dict:
         "construction_time_yr": 6.0,  # default
         "interest_rate": 0.07,  # default
         "inflation_rate": 0.0245,  # default
-        "noak": True,
+        "noak": False,  # FOAK, matching the FOAK basis of Sorbom's ARC estimate
         # ARC uses a FLiBe liquid-immersion blanket (Sorbom et al. 2015), not the
         # generic tokamak PbLi default — material drives the volume-based CAS27.
         "blanket_form": "molten_salt",
@@ -70,8 +79,27 @@ def run(output_dir: Path) -> dict:
         "p_cryo": 0.5,  # default
     }
 
-    model = CostModel(concept=ConfinementConcept.TOKAMAK, fuel=Fuel.DT)
+    cc = dataclasses.replace(
+        load_costing_constants(), conductor_cost_rebco=REBCO_CURRENT_USD_PER_KAM
+    )
+    model = CostModel(
+        concept=ConfinementConcept.TOKAMAK, fuel=Fuel.DT, costing_constants=cc
+    )
     result = model.forward(**inputs)
+
+    # LCOE elasticities (% change in LCOE per 1% change in parameter), ranked
+    # by magnitude across the engineering/costing/financial buckets.
+    sens = model.sensitivity(result.params)
+    elasticities = sorted(
+        (
+            (param, float(e))
+            for bucket in sens.values()
+            for param, e in bucket.items()
+            if abs(e) > 1e-4
+        ),
+        key=lambda kv: abs(kv[1]),
+        reverse=True,
+    )
 
     c = result.costs
     pt = result.power_table
@@ -81,6 +109,7 @@ def run(output_dir: Path) -> dict:
         "fuel": "DT",
         "concept": "TOKAMAK",
         "inputs": inputs,
+        "rebco_usd_per_kam": REBCO_CURRENT_USD_PER_KAM,
         "predicted_overnight_musd": float(c.total_capital),
         "predicted_overnight_per_kwe_usd": float(c.capital_per_kw),
         "predicted_lcoe_usd_per_mwh": float(c.lcoe),
@@ -106,6 +135,9 @@ def run(output_dir: Path) -> dict:
             "cas90": float(c.cas90),
         },
         "cas22_detail": {k: float(v) for k, v in result.cas22_detail.items()},
+        "elasticities_top": [
+            {"param": p, "elasticity": e} for p, e in elasticities[:8]
+        ],
     }
 
     (output_dir / "arc.json").write_text(json.dumps(payload, indent=2))
