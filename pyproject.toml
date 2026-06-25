@@ -1,5 +1,5 @@
 [project]
-name = "costingfe"
+name = "1costingfe"
 version = "0.1.0"
 description = "JAX-native fusion power plant costing framework"
 license = "MIT"
