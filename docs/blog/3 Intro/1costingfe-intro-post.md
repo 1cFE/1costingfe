@@ -20,7 +20,7 @@ The current release covers 17 confinement concepts across steady-state magnetic,
 
 ![The explorer: a D-T tokamak at 1 GWe, with the account breakdown, elasticity tornado, and the advanced input tabs](explorer_screenshot.png)
 
-The quickest way to get a feel for the model is the live [1costingfe explorer](https://1costingfe-explorer.vercel.app/). Pick a concept and a fuel, drag the sliders, and watch the LCOE, the account breakdown, and the sensitivity tornado recompute as you drag; an advanced panel exposes the engineering parameters, the unit-cost constants, and per-account M$ overrides. A numpy port of the model runs on every input change, parity-tested against the original at 74 reference points.
+The quickest way to get a feel for the model is the live [1costingfe explorer](https://1costingfe-explorer.1cf.energy/). Pick a concept and a fuel, drag the sliders, and watch the LCOE, the account breakdown, and the sensitivity tornado recompute as you drag; an advanced panel exposes the engineering parameters, the unit-cost constants, and per-account M$ overrides. A numpy port of the model runs on every input change, parity-tested against the original at 74 reference points.
 
 Treat it as the appetizer. The explorer shows one design point at a time through a curated set of knobs; the interesting functionality, exact autodiff sensitivities, vectorized parameter sweeps, plant-size-aware override scaling, multi-module plants, and the full scriptable API, lives in the library, which is what the rest of this post is about.
 
@@ -180,4 +180,4 @@ In rough order of how much it helps us:
 3. **Validation cases.** A published design with a full cost breakdown that we cannot reproduce by overriding the relevant accounts is a case we want to study.
 4. **Bug reports.** [GitHub issues](https://github.com/1cFE/1costingfe/issues). We respond.
 
-Play with the [explorer](https://1costingfe-explorer.vercel.app/). Clone the [repo](https://github.com/1cFE/1costingfe). Run the examples. The test suite passes, the numbers in our posts regenerate from the example scripts, and the fastest way to make the model better is for someone outside the project to find the place where it is wrong.
+Play with the [explorer](https://1costingfe-explorer.1cf.energy/). Clone the [repo](https://github.com/1cFE/1costingfe). Run the examples. The test suite passes, the numbers in our posts regenerate from the example scripts, and the fastest way to make the model better is for someone outside the project to find the place where it is wrong.
