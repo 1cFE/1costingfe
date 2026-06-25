@@ -513,7 +513,10 @@ class TestInverse:
 # plus the tandem hot-electron central cell (T_e = 125 keV, Hammir anchor for the
 # Fowler-Logan plug; the non-0D path reads YAML T_e for its radiation term). The
 # coil calibration pin (513.375 M$) is unaffected (T_e does not enter coils).
-_MIRROR_DT_PINNED_LCOE = 96.74519348144531
+# re-pinned: CAS10 land changed to sqrt(plant-total power) scaling (CAS50/40/70
+# n_mod fixes are no-ops at n_mod=1), then gross-electric reference unified to
+# 1100 MWe (ref_gross_power_mwe); LCOE moved 100.5444 -> 100.5561 -> below.
+_MIRROR_DT_PINNED_LCOE = 100.40650939941406
 
 
 class TestModelIntegration:

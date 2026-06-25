@@ -136,33 +136,21 @@ Common equipment across all pB11 concepts:
 | **CAS21 hot_cell** (93.4 $/kW) | Includes both building and equipment | Building only — RH equipment moves to C220110 |
 | **CAS220111 installation** (14% of reactor subtotal) | Includes initial installation labor | Unchanged — C220110 is equipment capital, not labor |
 | **CAS72 replacement** (annualized) | Component cost only | Should include RH operational cost per event (TBD — future enhancement) |
-| **CAS71 O&M staffing** | RH operators included in maintenance staff | Concept-aware via `om_concept_scale` (mirror=0.85). See `CAS70_staffing_and_om_costs.md`. |
+| **CAS71 O&M staffing** | RH operators included in maintenance staff | No concept factor in CAS70 (uniform staffing baseline). See `CAS70_staffing_and_om_costs.md`. |
 
 **Important:** Adding C220110 does NOT double-count with the hot cell building cost. The hot cell building (CAS21) pays for the shielded structure. C220110 pays for the robotic equipment inside it and the in-vessel equipment that enters the tokamak.
 
 ---
 
-## Concept-Aware Availability Default
+## Availability Default
 
-The same linear/open-end maintenance ergonomics that drive the 0.55x
-capex scaling in C220110 and the 0.85x opex scaling in CAS70 also
-shorten scheduled outages. Default availability is therefore
-concept-aware:
-
-| Concept | Default availability | Rationale |
-|---------|---------------------:|-----------|
-| Tokamak | 0.85 | ARIES heritage; port-limited blanket replacement campaigns. |
-| Stellarator | 0.85 | Toroidal continuity must be re-established; 3D coil routing does not improve outage duration. |
-| Mirror | 0.87 | Axial extraction of blanket rings; shorter scheduled-outage duration. |
-| Other | 0.85 | No concept-specific basis claimed. |
-
-The 0.87 mirror default is conservative — gas-dynamic-trap experimental
-practice suggests open-end machines could ultimately approach
-combined-cycle gas-turbine availability (0.92-0.95). The 2-percentage-
-point uplift over the toroidal default is the smallest defensible
-delta given current maintenance models. Implemented in
-`default_availability(concept)` in `src/costingfe/validation.py`;
-explicit `availability=...` kwargs override the default.
+Default plant availability is 0.85 for all concepts (ARIES heritage).
+No concept-specific availability premium is applied: no concept has a
+sourced operational-availability basis to claim a higher figure (an
+earlier mirror-only 0.87 default was removed as an unsourced,
+mirror-only credit). Implemented in `default_availability(concept)` in
+`src/costingfe/validation.py`; explicit `availability=...` kwargs
+override the default.
 
 ---
 

@@ -2,6 +2,15 @@
 # and docs/account_justification/; values stand on vendor/procurement,
 # ARIES/ITER, Gen-IV EMWG, and primary-literature sources.
 
+# Shared reference: plant-total net electric power (1 GWe) at which the
+# net-electric-scaling coefficients are calibrated (CAS10 land, CAS22
+# plant-wide, CAS40, CAS50 startup/decom, CAS70 O&M).
+ref_net_power_mwe: 1000.0   # MWe
+# Shared reference: gross electric power of the reference plant (net plus
+# recirculating). Used by the gross-electric (p_et) accounts: CAS21 buildings,
+# CAS22 structure/vessel/power-supplies/remote-handling.
+ref_gross_power_mwe: 1100.0 # MWe gross
+
 # CAS10 (bureaucracy: licensing, permits, studies)
 site_permits: 3.0           # M$
 plant_studies_foak: 20.0    # M$
@@ -9,7 +18,7 @@ plant_studies_noak: 4.0     # M$
 plant_permits: 2.0          # M$
 plant_reports: 1.0          # M$
 other_precon: 1.0           # M$
-land_intensity: 0.25        # acres per MWe (CFS ARC: 100 acres / 400 MWe)
+land_intensity: 0.25        # acres/MWe at ref_net_power (CFS ARC: 100 acres / 400 MWe)
 land_cost: 10000.0          # $/acre (industrial-zoned US average)
 licensing_cost_dt: 5.0      # M$
 licensing_cost_dd: 3.0
@@ -251,10 +260,10 @@ startup_fuel_dt: 40.0             # M$ at 1 GWe — tritium startup inventory
 startup_fuel_dd: 0.1              # M$ at 1 GWe — deuterium
 startup_fuel_dhe3: 10.0           # M$ at 1 GWe — He3
 startup_fuel_pb11: 0.1            # M$ at 1 GWe — H + B11
-decom_provision_dt: 127.0         # M$ at 1 GWe — PV of $410M over 40yr at 3%
-decom_provision_dd: 93.0          # M$ at 1 GWe — PV of $300M
-decom_provision_dhe3: 65.0        # M$ at 1 GWe — PV of $210M
-decom_provision_pb11: 53.0        # M$ at 1 GWe — PV of $170M
+decom_provision_dt: 272.0         # M$ at 1 GWe — PV of $600M over 40yr at 2%
+decom_provision_dd: 199.0         # M$ at 1 GWe — PV of $440M
+decom_provision_dhe3: 140.0       # M$ at 1 GWe — PV of $310M
+decom_provision_pb11: 113.0       # M$ at 1 GWe — PV of $250M
 
 # CAS70 — Annual O&M cost (M$/yr at 1 GWe reference, 2025 USD)
 # Source: CAS70_staffing_and_om_costs.md — staffing-based build-up by fuel

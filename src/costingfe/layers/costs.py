@@ -7,8 +7,6 @@ Costs returned in millions USD (M$).
 Source: pyFECONs costing/calculations/cas*.py
 """
 
-import math
-
 import jax.numpy as jnp
 
 from costingfe.layers.economics import (
@@ -52,8 +50,21 @@ def _total_project_time(cc, construction_time, fuel, noak):
 
 
 def cas10_preconstruction(cc, p_net, n_mod, fuel, noak):
-    """CAS10: Pre-construction costs. Returns M$."""
-    land = cc.land_intensity * p_net * math.sqrt(n_mod) * cc.land_cost / 1e6
+    """CAS10: Pre-construction costs. Returns M$.
+
+    Land scales with the square root of plant-total net electric power
+    (p_net * n_mod): a compact, exclusion-zone-free site whose footprint
+    grows sublinearly, like a gas combined-cycle station sharing one site
+    across blocks. land_intensity (acres/MWe) is anchored at
+    ref_net_power_mwe, so a single module at the reference power keeps the
+    linear-intensity result; the sqrt scaling applies away from it.
+    """
+    land = (
+        cc.land_intensity
+        * jnp.sqrt(p_net * n_mod * cc.ref_net_power_mwe)
+        * cc.land_cost
+        / 1e6
+    )
     licensing = cc.licensing_cost(fuel)
     studies = cc.plant_studies_noak if noak else cc.plant_studies_foak
     subtotal = (
@@ -69,8 +80,12 @@ def cas10_preconstruction(cc, p_net, n_mod, fuel, noak):
     return subtotal + contingency
 
 
-def cas21_buildings(cc, p_et, p_the, p_th, p_fus, n_mod, fuel, noak, coil_material):
+def cas21_buildings(cc, p_et, p_the, p_th, p_fus, n_mod, fuel, coil_material):
     """CAS21: Buildings. Returns M$.
+
+    Returned raw, without contingency: CAS21 is part of the CAS20 series, so
+    its contingency is applied once by CAS29 over the CAS21-28 sum, like the
+    other CAS2x accounts.
 
     Each building is priced per fuel type with its own scaling basis.
     Fuel-dependent buildings have dt/dd/dhe3/pb11 costs (M$ at 1 GWe ref).
@@ -85,8 +100,8 @@ def cas21_buildings(cc, p_et, p_the, p_th, p_fus, n_mod, fuel, noak, coil_materi
     See docs/account_justification/CAS21_buildings.md
     """
     # Reference power levels at 1 GWe calibration point
-    P_ET_REF = 1150.0  # MW gross electric (~1 GWe net)
-    P_THE_REF = 1150.0  # MW thermal electric (steam-only, = p_et when no DEC)
+    P_ET_REF = cc.ref_gross_power_mwe  # MW gross electric (~1 GWe net)
+    P_THE_REF = cc.ref_gross_power_mwe  # MW thermal-electric (= p_et, no DEC)
     P_TH_REF = 2500.0  # MW thermal
     P_FUS_REF = 2300.0  # MW fusion
 
@@ -126,8 +141,7 @@ def cas21_buildings(cc, p_et, p_the, p_th, p_fus, n_mod, fuel, noak, coil_materi
         ratio = scale_map.get(scales, 1.0)
         total += base_cost * ratio
 
-    contingency = cc.contingency_rate(noak) * total
-    return total + contingency
+    return total
 
 
 def cas23_turbine(cc, p_the, n_mod):
@@ -165,16 +179,17 @@ def cas26_heat_rejection(cc, p_th, n_mod):
     return n_mod * p_th * cc.heat_rej_per_mw
 
 
-def cas27_special_materials(cc, blanket_fill: BlanketFill, blanket_vol):
+def cas27_special_materials(cc, blanket_fill: BlanketFill, blanket_vol, n_mod):
     """CAS27: Special materials, initial blanket-fill inventory. Returns M$.
 
     The blanket fill (PbLi, Li, FLiBe, Be/ceramic pebbles) is a material
     inventory: its cost is set by blanket *volume*, not net electric power.
     CAS220101 covers the blanket *structure*; CAS27 covers the *material fill*.
 
-    Volume-based mass build-up, keyed on blanket_fill:
+    Volume-based mass build-up, keyed on blanket_fill, per module then scaled
+    by the module count (blanket_vol is per-module, like the CAS22 components):
 
-        CAS27 = blanket_vol x vol_frac x density x price / 1e6
+        CAS27 = n_mod x blanket_vol x vol_frac x density x price / 1e6
 
     where vol_frac is the fraction of the blanket region occupied by that
     material (liquid fill fraction for liquids; breeder/multiplier-zone x
@@ -184,7 +199,7 @@ def cas27_special_materials(cc, blanket_fill: BlanketFill, blanket_vol):
     See docs/account_justification/CAS27_special_materials.md
     """
     m = cc.cas27_fill_materials[blanket_fill.value]
-    return blanket_vol * m["vol_frac"] * m["density"] * m["price"] / 1e6
+    return n_mod * blanket_vol * m["vol_frac"] * m["density"] * m["price"] / 1e6
 
 
 def cas28_digital_twin(cc):
@@ -221,7 +236,7 @@ def cas30_indirect(cc, cas20, construction_time):
     )
 
 
-def cas40_owner(cc, fuel, p_net):
+def cas40_owner(cc, fuel, p_net, n_mod):
     """CAS40: Capitalized owner's costs. Returns M$.
 
     Pre-operational costs to recruit, train, house, and compensate
@@ -233,28 +248,34 @@ def cas40_owner(cc, fuel, p_net):
     pre-COD costs, CAS70 covers post-COD costs.  No double-counting.
 
     Power-law exponent 0.5 reflects staffing economy of scale
-    (INL SFR data: 165 MWe to 3108 MWe, alpha ~ 0.5).
+    (INL SFR data: 165 MWe to 3108 MWe, alpha ~ 0.5), applied to
+    plant-total net electric (p_net * n_mod) like CAS70.
 
     See docs/account_justification/CAS40_capitalized_owners_costs.md
     """
-    return cc.owner_cost(fuel) * (p_net / 1000.0) ** 0.5
+    return cc.owner_cost(fuel) * (p_net * n_mod / cc.ref_net_power_mwe) ** 0.5
 
 
-def cas50_supplementary(cc, fuel, cas20, cas22_to_28, cas30, p_net, noak):
+def cas50_supplementary(cc, fuel, cas20, cas22_to_28, cas30, p_net, n_mod, noak):
     """CAS50: Capitalized supplementary costs. Returns M$.
 
     Sub-account model with fuel-dependent spare parts, startup
     inventory, and decommissioning provisions.  Shipping, taxes,
     and insurance scale with plant cost (fuel-independent).
 
+    Startup fuel (c55) and the decommissioning provision (c56) are linear in
+    plant-total net electric (p_net * n_mod): the startup inventory and the
+    end-of-life obligation both accrue once per module.
+
     See docs/account_justification/CAS50_supplementary_costs.md
     """
+    p_net_total = p_net * n_mod
     c51_shipping = cc.shipping_frac * cas20
     c52_spares = cc.spare_parts_frac(fuel) * cas22_to_28
     c53_taxes = cc.tax_frac * cas20
     c54_insurance = cc.construction_insurance_frac * (cas20 + cas30)
-    c55_fuel = cc.startup_fuel(fuel) * (p_net / 1000.0)
-    c56_decom = cc.decom_provision(fuel) * (p_net / 1000.0)
+    c55_fuel = cc.startup_fuel(fuel) * (p_net_total / cc.ref_net_power_mwe)
+    c56_decom = cc.decom_provision(fuel) * (p_net_total / cc.ref_net_power_mwe)
     subtotal = (
         c51_shipping + c52_spares + c53_taxes + c54_insurance + c55_fuel + c56_decom
     )
@@ -322,23 +343,14 @@ def cas70_om(
            annualized via CRF). core_lifetime is in FPY, converted to calendar
            years via availability.
     """
-    # CAS71: Annual O&M — fuel-dependent staffing-based coefficient,
-    # modulated by concept-dependent maintenance ergonomics.
-    # Power-law exponent 0.5: staffing economy of scale (INL SFR data).
-    # Concept scale: linear/open-end concepts (mirror) need fewer maintenance
-    # FTEs because blanket rings slide off axially and components are reachable
-    # without entering a closed torus through narrow ports. Same logic as the
-    # 0.55x scale on C220110 remote-handling capex; the opex effect is smaller
-    # because health physics, tritium accountability, and engineering staffing
-    # are fuel-driven and concept-agnostic.
+    # CAS71: Annual O&M — fuel-dependent staffing-based base cost, scaled by
+    # plant size. Power-law exponent 0.5: staffing economy of scale (INL SFR
+    # data, plant-total basis). Uses plant-total net electric (p_net * n_mod):
+    # one operated plant, so staffing scales with total output, not per module.
+    # No concept-dependent factor: no concept has a sourced O&M-ergonomics
+    # basis, so all concepts share the fuel-driven staffing baseline.
     # Source: docs/account_justification/CAS70_staffing_and_om_costs.md
-    om_concept_scale = {
-        ConfinementConcept.TOKAMAK: 1.0,
-        ConfinementConcept.STELLARATOR: 1.0,
-        ConfinementConcept.MIRROR: 0.85,
-    }
-    om_scale = om_concept_scale.get(concept, 1.0)
-    annual_om = cc.om_cost(fuel) * om_scale * (p_net / 1000.0) ** 0.5  # M$
+    annual_om = cc.om_cost(fuel) * (p_net * n_mod / cc.ref_net_power_mwe) ** 0.5  # M$
     t_project = _total_project_time(cc, construction_time, fuel, noak)
     cas71 = levelized_annual_cost(
         annual_om, interest_rate, inflation_rate, lifetime_yr, t_project

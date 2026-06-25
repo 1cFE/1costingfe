@@ -47,15 +47,17 @@ _BASE = dict(
         # re-pinned after the tokamak default geometry was re-baselined to the
         # size_from_power 1000 MWe operating point (R0 6.04 m, B 10 T); costing
         # that machine at this 200 MWe point raises LCOE (was 208.41 at R0 3.0).
-        (C.TOKAMAK, Fuel.DT, 293.90),
+        # re-pinned: gross-electric reference unified to 1100 MWe (ref_gross_power_mwe;
+        # CAS21 was 1150, C220107/C220110 were 1000), small downshift across concepts.
+        (C.TOKAMAK, Fuel.DT, 295.32),
         # re-pinned 2026-06-15: mirror central-cell T_e raised 20->125 keV (the
         # tandem hot-electron plug required by the fixed Fowler-Logan potential
         # e*phi = T_e*ln(n_p/n_c)); the non-0D default radiation term reads this
         # T_e, so the MIRROR-DT benchmark LCOE moved 182.71 -> 210.42. Mirror-only;
         # tokamak/stellarator/dipole/polywell pins unchanged. See
         # docs/account_justification/mirror_confinement_regimes.md.
-        (C.MIRROR, Fuel.DT, 213.41),
-        (C.STELLARATOR, Fuel.DT, 329.09),
+        (C.MIRROR, Fuel.DT, 218.36),
+        (C.STELLARATOR, Fuel.DT, 330.54),
         # DIPOLE re-benchmarked after the radial-build inversion + spherical
         # geometry dispatch + Li2O blanket fill + C220108 divertor zeroing +
         # external stationary lift coil restructured as
@@ -63,13 +65,16 @@ _BASE = dict(
         # alignment). +7.4% here is the volumetric CAS27: the dipole's large
         # thin Li2O blanket (C220101 ~$360M) was previously costed at ~$0.6M of
         # fill; it is now ~$235M, consistent with the blanket structure.
-        (C.DIPOLE, Fuel.DHE3, 278.14),
+        (C.DIPOLE, Fuel.DHE3, 279.07),
         # POLYWELL re-benchmarked after two right-sizings for this electrostatic,
         # copper-magnet concept: (1) C220108 divertor zeroed (charged particles
         # exhaust to the direct converter, no W-monoblock cassette), then (2) the
         # CAS21 cryogenics building zeroed (normal-conducting magnets need no
         # cryoplant). Cumulative -9.6% from the original 53.08.
-        (C.POLYWELL, Fuel.PB11, 48.77),
+        # re-pinned: CAS10 land now sqrt(plant-total power); at this 200 MWe
+        # off-reference point the small-plant land rises (was 49.55), then gross
+        # reference unified to 1100 (was 49.63).
+        (C.POLYWELL, Fuel.PB11, 49.50),
     ],
 )
 def test_benchmark_lcoe_preserved(concept, fuel, expected):

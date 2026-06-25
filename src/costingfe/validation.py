@@ -24,20 +24,12 @@ _PLASMA_0D_FIELDS = ["q95", "f_GW", "M_ion", "lambda_q", "use_0d_model"]
 
 
 def default_availability(concept: ConfinementConcept) -> float:
-    """Concept-aware availability default.
+    """Default plant availability, 0.85 for all concepts (ARIES heritage).
 
-    Linear/open-end geometries (mirror) achieve higher steady-state availability
-    than port-limited toroidal geometries because blanket and first-wall
-    components can be exchanged axially without re-establishing toroidal
-    vacuum/structural continuity. Same physical basis as the C220110 0.55x
-    remote-handling capex scaling and the CAS70 0.85x O&M scaling.
-
-    Tokamak/stellarator: 0.85 (ARIES heritage).
-    Mirror: 0.87 (shorter scheduled outages).
-    Other concepts: 0.85 (no concept-specific basis to claim better).
+    No concept-specific availability premium is applied: no concept has a
+    sourced operational-availability basis to claim a higher figure than the
+    ARIES-heritage 0.85.
     """
-    if concept == ConfinementConcept.MIRROR:
-        return 0.87
     return 0.85
 
 
@@ -220,6 +212,15 @@ class CostingInput(BaseModel):
         """Fill customer parameters that depend on the concept when not set."""
         if self.availability is None:
             self.availability = default_availability(self.concept)
+        return self
+
+    @model_validator(mode="after")
+    def check_non_negative_overrides(self):
+        """Account costs and unit costs are non-negative (M$ / $/unit)."""
+        for name in ("cost_overrides", "costing_overrides"):
+            neg = {k: v for k, v in getattr(self, name).items() if v < 0}
+            if neg:
+                raise ValueError(f"{name} must be non-negative; got {neg}")
         return self
 
     @model_validator(mode="after")

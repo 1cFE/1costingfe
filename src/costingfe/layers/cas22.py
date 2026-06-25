@@ -221,7 +221,7 @@ def cas22_reactor_plant_equipment(
     """
     # Reference power levels at calibration geometry (1 GWe DT tokamak)
     P_TH_REF = 2500.0  # MW thermal
-    P_ET_REF = 1100.0  # MW gross electric
+    P_ET_REF = cc.ref_gross_power_mwe  # MW gross electric
 
     # -----------------------------------------------------------------------
     # 220101: First Wall + Blanket + Neutron Multiplier
@@ -551,7 +551,7 @@ def cas22_reactor_plant_equipment(
         # $/J_stored basis: pulsed driver (cap bank, laser, accelerator)
         c220107 = cc.c_cap_allin_per_joule * e_stored_mj  # $/J * MJ = M$
     else:
-        c220107 = cc.power_supplies_base * (p_et / 1000.0) ** 0.7
+        c220107 = cc.power_supplies_base * (p_et / P_ET_REF) ** 0.7
 
     # -----------------------------------------------------------------------
     # 220108: Divertor (MFE) or Target Factory (IFE/MIF)
@@ -634,14 +634,15 @@ def cas22_reactor_plant_equipment(
         Fuel.DHE3: cc.remote_handling_dhe3_base,
         Fuel.PB11: cc.remote_handling_pb11_base,
     }
-    # Toroidal vessels (narrow ports) vs linear (end-access)
+    # Toroidal vessels need articulated manipulators through narrow ports
+    # (scale 1.0); all non-toroidal (end-access) geometries share the 0.55
+    # linear discount.
     rh_concept_scale = {
         ConfinementConcept.TOKAMAK: 1.0,
         ConfinementConcept.STELLARATOR: 1.0,
-        ConfinementConcept.MIRROR: 0.55,
     }
-    concept_scale = rh_concept_scale.get(concept, 0.5)
-    c220110 = rh_base[fuel] * concept_scale * (p_et / 1000.0) ** 0.5
+    concept_scale = rh_concept_scale.get(concept, 0.55)
+    c220110 = rh_base[fuel] * concept_scale * (p_et / P_ET_REF) ** 0.5
 
     # -----------------------------------------------------------------------
     # 220111: Installation Labor — 14% of reactor subtotal
@@ -680,7 +681,7 @@ def cas22_reactor_plant_equipment(
     p_th_total = n_mod * p_th
     p_net_total = n_mod * p_net
 
-    c220201 = 166.0 * (p_net_total / 1000.0)  # Primary coolant
+    c220201 = 166.0 * (p_net_total / cc.ref_net_power_mwe)  # Primary coolant
     c220202 = 40.6 * (p_th_total / 3500.0) ** 0.55  # Intermediate coolant
     c220200 = c220201 + c220202
 
@@ -714,13 +715,13 @@ def cas22_reactor_plant_equipment(
         Fuel.DHE3: cc.fuel_handling_dhe3_base,
         Fuel.PB11: cc.fuel_handling_pb11_base,
     }
-    c220500 = fuel_handling_base[fuel] * (p_net_total / 1000.0) ** 0.7
+    c220500 = fuel_handling_base[fuel] * (p_net_total / cc.ref_net_power_mwe) ** 0.7
 
     # -----------------------------------------------------------------------
     # 220600: Other Reactor Plant Equipment — catch-all
     # See docs/account_justification/CAS22_plant_systems.md
     # -----------------------------------------------------------------------
-    c220600 = 11.5 * (p_net_total / 1000.0) ** 0.8
+    c220600 = 11.5 * (p_net_total / cc.ref_net_power_mwe) ** 0.8
 
     # -----------------------------------------------------------------------
     # 220700: Instrumentation & Control — plasma control, diagnostics,

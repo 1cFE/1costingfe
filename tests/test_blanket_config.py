@@ -79,14 +79,14 @@ def test_cas27_volumetric_all_fills(fill):
     bv = 643.5
     m = cc.cas27_fill_materials[fill]
     expected = bv * m["vol_frac"] * m["density"] * m["price"] / 1e6
-    got = float(cas27_special_materials(cc, BlanketFill(fill), bv))
+    got = float(cas27_special_materials(cc, BlanketFill(fill), bv, 1))
     assert got == pytest.approx(expected, rel=1e-9)
     if fill == "none":
         assert got == 0.0
     else:
         assert got > 0.0
         # doubles with blanket volume; no dependence on net power at all.
-        got2 = float(cas27_special_materials(cc, BlanketFill(fill), 2 * bv))
+        got2 = float(cas27_special_materials(cc, BlanketFill(fill), 2 * bv, 1))
         assert got2 == pytest.approx(2 * got, rel=1e-9)
 
 

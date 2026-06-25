@@ -135,6 +135,43 @@ class TestTier1FieldConstraints:
         )
         assert inp.override_reference_mw is None
 
+    def test_negative_cost_override_rejected(self):
+        with pytest.raises(ValidationError, match="cost_overrides"):
+            CostingInput(
+                concept=ConfinementConcept.TOKAMAK,
+                fuel=Fuel.DT,
+                net_electric_mw=1000.0,
+                cost_overrides={"C220103": -50.0},
+            )
+
+    def test_negative_costing_override_rejected(self):
+        with pytest.raises(ValidationError, match="costing_overrides"):
+            CostingInput(
+                concept=ConfinementConcept.TOKAMAK,
+                fuel=Fuel.DT,
+                net_electric_mw=1000.0,
+                costing_overrides={"conductor_cost_rebco": -10.0},
+            )
+
+    def test_zero_cost_override_allowed(self):
+        inp = CostingInput(
+            concept=ConfinementConcept.TOKAMAK,
+            fuel=Fuel.DT,
+            net_electric_mw=1000.0,
+            cost_overrides={"C220108": 0.0},
+        )
+        assert inp.cost_overrides["C220108"] == 0.0
+
+    def test_forward_rejects_negative_cost_override(self):
+        m = CostModel(concept=ConfinementConcept.TOKAMAK, fuel=Fuel.DT)
+        with pytest.raises(ValueError, match="cost_overrides must be non-negative"):
+            m.forward(
+                net_electric_mw=1000.0,
+                availability=0.85,
+                lifetime_yr=30.0,
+                cost_overrides={"C220103": -50.0},
+            )
+
     def test_concept_string_accepted(self):
         """Concept can be passed as string (adapter path)."""
         inp = CostingInput(

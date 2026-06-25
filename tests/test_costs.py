@@ -141,7 +141,6 @@ def test_cas21_scales_with_power():
         p_fus=1150.0,
         n_mod=1,
         fuel=Fuel.DT,
-        noak=True,
     )
     cost_high = cas21_buildings(
         CC,
@@ -152,7 +151,6 @@ def test_cas21_scales_with_power():
         p_fus=2300.0,
         n_mod=1,
         fuel=Fuel.DT,
-        noak=True,
     )
     assert cost_high > cost_low
 
@@ -168,7 +166,6 @@ def test_cas21_fuel_differentiation():
         p_fus=2300.0,
         n_mod=1,
         fuel=Fuel.DT,
-        noak=True,
     )
     cost_pb = cas21_buildings(
         CC,
@@ -179,7 +176,6 @@ def test_cas21_fuel_differentiation():
         p_fus=2300.0,
         n_mod=1,
         fuel=Fuel.PB11,
-        noak=True,
     )
     assert cost_pb < cost_dt
     # pB11 should be roughly 55-65% of DT (308/502 ~ 61%)
@@ -196,11 +192,10 @@ def test_cas21_cryogenics_gated_on_superconducting_magnets():
         p_fus=2300.0,
         n_mod=1,
         fuel=Fuel.DT,
-        noak=True,
     )
     sc = cas21_buildings(CC, **kw, coil_material=CoilMaterial.REBCO_HTS)
     cu = cas21_buildings(CC, **kw, coil_material=CoilMaterial.COPPER)
-    cryo = CC.building_costs["cryogenics"]["all"] * (1 + CC.contingency_rate(True))
+    cryo = CC.building_costs["cryogenics"]["all"]
     assert cu < sc
     assert sc - cu == pytest.approx(cryo)
 
@@ -221,7 +216,6 @@ def test_cas21_admin_building_scales_sqrt_of_power():
         p_fus=0.0,
         n_mod=1,
         fuel=Fuel.DT,
-        noak=True,
     )
     quad = cas21_buildings(
         cc,
@@ -232,9 +226,8 @@ def test_cas21_admin_building_scales_sqrt_of_power():
         p_fus=0.0,
         n_mod=1,
         fuel=Fuel.DT,
-        noak=True,
     )
-    # 4x power -> 2x cost (sqrt), not 4x. noak contingency=0 so ratio is clean.
+    # 4x power -> 2x cost (sqrt), not 4x.
     assert quad / ref == pytest.approx(2.0, rel=1e-3)
 
 
@@ -250,7 +243,6 @@ def test_cas21_n_mod_feeds_total_power():
         p_fus=115.0,
         n_mod=20,
         fuel=Fuel.DT,
-        noak=True,
     )
     total = cas21_buildings(
         CC,
@@ -261,7 +253,6 @@ def test_cas21_n_mod_feeds_total_power():
         p_fus=2300.0,
         n_mod=1,
         fuel=Fuel.DT,
-        noak=True,
     )
     assert per_module == pytest.approx(total)
 
@@ -283,7 +274,6 @@ def test_cas21_ventilation_driven_by_fusion_power():
             p_fus=p_fus,
             n_mod=1,
             fuel=Fuel.DT,
-            noak=True,
         )
         rest = cas21_buildings(
             cc_no_vent,
@@ -294,7 +284,6 @@ def test_cas21_ventilation_driven_by_fusion_power():
             p_fus=p_fus,
             n_mod=1,
             fuel=Fuel.DT,
-            noak=True,
         )
         return full - rest
 

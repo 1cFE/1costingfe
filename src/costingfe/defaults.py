@@ -14,6 +14,17 @@ _DATA_DIR = Path(__file__).parent / "data" / "defaults"
 class CostingConstants:
     """All costing coefficients. Immutable — use .replace() for overrides."""
 
+    # Shared reference: plant-total net electric power (1 GWe) at which the
+    # net-electric-scaling coefficients are calibrated. Used wherever an account
+    # normalizes net electric to "per GWe" (CAS10 land, CAS22 plant-wide,
+    # CAS40, CAS50 startup/decom, CAS70 O&M).
+    ref_net_power_mwe: float = 1000.0
+    # Shared reference: gross electric power of the reference plant (net plus
+    # recirculating, ~1100 MWe for a 1 GWe-net plant). Used by the gross-electric
+    # (p_et) scaling accounts: CAS21 buildings, CAS22 structure/vessel/power-
+    # supplies/remote-handling.
+    ref_gross_power_mwe: float = 1100.0
+
     # CAS10
     site_permits: float = 3.0
     plant_studies_foak: float = 20.0
@@ -21,7 +32,7 @@ class CostingConstants:
     plant_permits: float = 2.0
     plant_reports: float = 1.0
     other_precon: float = 1.0
-    land_intensity: float = 0.25  # acres/MWe (CFS ARC: 100 acres / 400 MWe)
+    land_intensity: float = 0.25  # acres/MWe at ref_net_power (CFS 100ac/400MWe)
     land_cost: float = 10000.0  # $/acre (industrial-zoned US average)
     licensing_cost_dt: float = 5.0
     licensing_cost_dd: float = 3.0
@@ -357,10 +368,10 @@ class CostingConstants:
     startup_fuel_dd: float = 0.1  # M$ at 1 GWe — deuterium, commodity
     startup_fuel_dhe3: float = 10.0  # M$ at 1 GWe — He3, supply-constrained
     startup_fuel_pb11: float = 0.1  # M$ at 1 GWe — H + B11, industrial commodities
-    decom_provision_dt: float = 127.0  # M$ at 1 GWe — PV of $410M over 40yr at 3%
-    decom_provision_dd: float = 93.0  # M$ at 1 GWe — PV of $300M
-    decom_provision_dhe3: float = 65.0  # M$ at 1 GWe — PV of $210M
-    decom_provision_pb11: float = 53.0  # M$ at 1 GWe — PV of $170M
+    decom_provision_dt: float = 272.0  # M$ at 1 GWe — PV of $600M over 40yr at 2%
+    decom_provision_dd: float = 199.0  # M$ at 1 GWe — PV of $440M
+    decom_provision_dhe3: float = 140.0  # M$ at 1 GWe — PV of $310M
+    decom_provision_pb11: float = 113.0  # M$ at 1 GWe — PV of $250M
 
     # CAS70 — Annual O&M cost (M$/yr at 1 GWe reference, 2025 USD)
     # Source: CAS70_staffing_and_om_costs.md — staffing-based build-up by fuel

@@ -25,7 +25,7 @@ def main() -> None:
     result = model.forward(
         # Customer parameters
         net_electric_mw=1000.0,
-        availability=0.87,  # mirror default (axial access shortens outages)
+        availability=0.85,  # default plant availability (ARIES heritage)
         lifetime_yr=30,
         construction_time_yr=6.0,
         interest_rate=0.07,

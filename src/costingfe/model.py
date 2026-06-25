@@ -831,6 +831,10 @@ class CostModel:
         construction_time_yr = overrides.pop(
             "construction_time_yr", self._eng_defaults["construction_time_yr"]
         )
+        if cost_overrides:
+            _neg = {k: v for k, v in cost_overrides.items() if v < 0}
+            if _neg:
+                raise ValueError(f"cost_overrides must be non-negative M$; got {_neg}")
         if override_reference_mw is not None and cost_overrides:
             cost_overrides = self._scale_overrides(
                 cost_overrides,
@@ -1239,7 +1243,6 @@ class CostModel:
                 pt.p_fus,
                 n_mod,
                 self.fuel,
-                noak,
                 coil_material,
             ),
         )
@@ -1468,7 +1471,7 @@ class CostModel:
 
         c27 = co.get(
             "CAS27",
-            cas27_special_materials(cc, blanket_fill, blanket_vol),
+            cas27_special_materials(cc, blanket_fill, blanket_vol, n_mod),
         )
         if "CAS27" in co:
             overridden.append("CAS27")
@@ -1481,9 +1484,16 @@ class CostModel:
         c29 = cas29_contingency(cc, cas2x_pre_contingency, noak)
         c20 = cas2x_pre_contingency + c29
         c30 = cas30_indirect(cc, c20, construction_time_yr)
-        c40 = cas40_owner(cc, self.fuel, pt.p_net)
+        c40 = cas40_owner(cc, self.fuel, pt.p_net, n_mod)
         c50 = cas50_supplementary(
-            cc, self.fuel, c20, c23 + c24 + c25 + c26 + c27 + c28, c30, pt.p_net, noak
+            cc,
+            self.fuel,
+            c20,
+            c23 + c24 + c25 + c26 + c27 + c28,
+            c30,
+            pt.p_net,
+            n_mod,
+            noak,
         )
         overnight_cost = c10 + c20 + c30 + c40 + c50
         c60 = cas60_idc(interest_rate, overnight_cost, construction_time_yr)

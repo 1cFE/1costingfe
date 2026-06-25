@@ -45,7 +45,7 @@ FIG_DIR = _SCRIPT_DIR.parent / "figures"
 # Canonical kwargs matching examples/external_physics_handoff.py exactly.
 _BASE_KWARGS: dict = dict(
     net_electric_mw=1000.0,
-    availability=0.87,
+    availability=0.85,
     lifetime_yr=30,
     construction_time_yr=6.0,
     interest_rate=0.07,

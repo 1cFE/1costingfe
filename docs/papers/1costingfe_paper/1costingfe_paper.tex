@@ -214,8 +214,8 @@ framework to fusion introduces two further challenges:
   changes will affect the actual costs of the finalized designs.
 \end{enumerate}
 
-These challenges cannot be resolved in software. Instead, we
-built \texttt{1costingfe} as a flexible costing framework that
+These challenges cannot be resolved in software. Instead,
+\texttt{1costingfe} was built as a flexible costing framework that
 computes LCOE from customer-level requirements across all fuel
 cycles, structured to cost any reactor concept, conventional
 or otherwise. The bulk of the work is in the cost accounts
@@ -225,8 +225,8 @@ from current procurement data, vendor pricing, and cross-industry
 benchmarks, displacing the heritage scaling laws that dominate
 these accounts in prior fusion cost models. The framework also
 exposes exact LCOE gradients via reverse-mode automatic
-differentiation, making sensitivity sweeps and Monte Carlo
-uncertainty propagation routine.
+differentiation, enabling sensitivity sweeps and Monte Carlo
+uncertainty propagation.
 \texttt{1costingfe} is the deterministic cost-accounting layer of a broader fusion
 techno-economic analysis pipeline; the upstream concept-ingestion,
 SysML, and code-generation stages are developed separately in the
@@ -266,8 +266,8 @@ the accounts for which independent justification studies have been completed.
 
 \texttt{1costingfe} is a thin physics layer over a thick costing
 layer. Users supply whichever physics outputs they have for whichever
-confinement concept; the framework backs out the rest from defaults
-and sizes the cost stack accordingly. Vendor quotes or known costs
+confinement concept; the framework derives the remainder from defaults
+and sizes the cost accounts accordingly. Vendor quotes or known costs
 enter through CAS-level overrides without re-running the physics.
 
 \Cref{fig:pipeline} sketches the dataflow. The leftmost box
@@ -418,17 +418,17 @@ CAS22        & Reactor plant equipment                      & 1911.9 \\
 CAS23--29    & Other direct (BOP, special materials, contingency) & 242.0 \\
 CAS30        & Capitalized indirect services                & 495.2 \\
 CAS40        & Owner's costs                                & 24.3 \\
-CAS50        & Supplementary costs                          & 185.1 \\
-CAS60        & Interest during construction                 & 614.1 \\
+CAS50        & Supplementary costs                          & 260.1 \\
+CAS60        & Interest during construction                 & 628.5 \\
 \midrule
-\multicolumn{2}{l}{Total overnight}                          & 3809.1 \\
-\multicolumn{2}{l}{Overnight specific cost (\$/kW)}          & 3809 \\
+\multicolumn{2}{l}{Total overnight}                          & 3898.6 \\
+\multicolumn{2}{l}{Overnight specific cost (\$/kW)}          & 3899 \\
 \midrule
-CAS70 (M\$/yr) & O\&M and scheduled replacement             & 36.3 \\
-CAS80 (M\$/yr) & Fuel (raw isotopes)                        & 256.4 \\
-CAS90 (M\$/yr) & Annualized financial (CRF, \cref{eq:crf})   & 307.0 \\
+CAS70 (M\$/yr) & O\&M and scheduled replacement             & 41.9 \\
+CAS80 (M\$/yr) & Fuel (raw isotopes)                        & 250.5 \\
+CAS90 (M\$/yr) & Annualized financial (CRF, \cref{eq:crf})   & 314.2 \\
 \midrule
-\multicolumn{2}{l}{\textbf{LCOE (\$/MWh)}}                  & \textbf{78.7} \\
+\multicolumn{2}{l}{\textbf{LCOE (\$/MWh)}}                  & \textbf{81.5} \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -465,7 +465,7 @@ moves LCOE by $+0.10\%$. Recorded by
 
 Parameters with the longest bars (highest elasticity) are the most
 influential in driving LCOE. For the reference scenario the dominant
-parameter is \texttt{fuel\_recovery} (elasticity $-7.27$), in the
+parameter is \texttt{fuel\_recovery} (elasticity $-7.02$), in the
 physics-outputs band; the most consequential cost unit price is
 \texttt{u\_he3}, the ${}^3$He purchase price ($+0.43$); and the most
 consequential financial parameter is \texttt{interest\_rate} ($+0.40$).
@@ -594,26 +594,26 @@ production is:
 
 \begin{equation}
 \label{eq:e-annual}
-E_{\text{annual}} = 8760 \times P_{\text{net}} \times N_{\text{mod}} \times A
+E_{\text{annual}} = 8760 \times P_{\text{net}} \times n_{\text{mod}} \times f_{\text{avail}}
 \quad [\text{MWh/yr}]
 \end{equation}
 
 \noindent where $P_{\text{net}}$ is the net electric power per module in MW,
-$N_{\text{mod}}$ is the number of reactor modules, $A$ is the plant
+$n_{\text{mod}}$ is the number of reactor modules, $f_{\text{avail}}$ is the plant
 availability (capacity factor), and 8760 is the number of hours per year.
 The computation of $P_{\text{net}}$ from fusion power and
 engineering coefficients is described in the physics module
 (\cref{sec:physics-module}).
-The default availability is concept-aware: 0.85 for toroidal concepts
-(tokamak, stellarator) and 0.87 for mirrors, reflecting the shorter
-scheduled-outage duration achievable with axial extraction of blanket
-and first-wall components versus port-limited toroidal access.
-Explicit values supplied at call time override this default.
+The default availability is 0.85 for all concepts (ARIES heritage);
+explicit values supplied at call time override this default.
 
 \Cref{fig:cashflow} illustrates the cash-flow structure. Total capital
 expenditure (CAPEX) is disbursed during the construction period, after
 which revenue from electricity sales and annual operating expenditure
-(OPEX) flow in opposite directions over the plant lifetime.
+(OPEX) flow in opposite directions over the plant lifetime. OPEX is
+stated in base-year dollars and levelized to a constant annual charge
+over the plant life; because that levelization applies to the operating
+accounts, its procedure is given with them in \cref{sec:lac}.
 
 \begin{figure}[htbp]
 \centering
@@ -715,56 +715,6 @@ C_{\text{annual}} = \text{CRF}(i, n) \times (C + \text{IDC})
 \noindent At reference conditions ($i = \refWACC$,
 $T_c = \pgfmathprintnumber[precision=0]{\refTc}$~yr), the IDC adds
 \pgfmathprintnumber[precision=1]{\refIDCpct}\% to the overnight cost.
-
-\subsection{Levelized Annual Operating Cost}
-\label{sec:lac}
-
-Annual operating costs are stated in constant
-base-year dollars but escalate at the inflation rate $g$ in nominal
-terms over the plant lifetime. The levelized annual cost accounts for
-this growth using a three-step procedure.
-
-First, the base-year annual operating cost $M_0$ is inflated to
-first-year-of-operation dollars:
-
-\begin{equation}
-\label{eq:inflate}
-A_1 = M_0 \, (1 + g)^{T_c}
-\end{equation}
-
-\noindent where $T_c$ is the construction time (or total project time
-for first-of-a-kind plants, which includes licensing).
-
-Second, the present value of the resulting growing annuity is:
-
-\begin{equation}
-\label{eq:growing-annuity}
-\text{PV} =
-\begin{cases}
-\displaystyle A_1 \cdot \frac{1 - \left(\frac{1+g}{1+i}\right)^n}{i - g}
-  & \text{if } i \neq g \\[12pt]
-\displaystyle A_1 \cdot \frac{n}{1+i}
-  & \text{if } i = g
-\end{cases}
-\end{equation}
-
-Third, the levelized annual cost is obtained by applying the CRF:
-
-\begin{equation}
-\label{eq:levelized}
-M_{\text{annual}} = \text{CRF}(i, n) \times \text{PV}
-\end{equation}
-
-\noindent For example, at $M_0 = \pgfmathprintnumber[precision=0]{\refCbase}$~M\$,
-$i = \refWACC$, $g = \refG$,
-$n = \pgfmathprintnumber[precision=0]{\refN}$~yr,
-$T_c = \pgfmathprintnumber[precision=0]{\refTc}$~yr, the levelized
-cost is \pgfmathprintnumber[precision=1]{\refLevelized}~M\$/yr
-compared to \pgfmathprintnumber[precision=1]{\refAone}~M\$/yr from the
-na\"{\i}ve single-year inflation formula, a
-\pgfmathprintnumber[precision=0]{\refUnderestimate}\% underestimate
-when the growing annuity is neglected.
-
 
 %% ------------------------------------------------------------
 \section{Physics Module}
@@ -1342,12 +1292,12 @@ of a method-level source efficiency and a device-level coupling efficiency,
 where $i$ runs over the heating methods (NBI, ICRF, ECRH, LHCD) in the mix,
 $\eta_{\text{src}}(i)$ is the wall-plug-to-delivered source efficiency of method
 $i$ (negative-ion NBI $0.60$, ICRF $0.70$, ECRH $0.50$, LHCD $0.50$), and
-$\eta_{\text{cpl}}$ is the concept's delivered-to-absorbed coupling. This makes
-the recirculating heating load track the actual driver: a beam-driven FRC,
+$\eta_{\text{cpl}}$ is the concept's delivered-to-absorbed coupling. As a result,
+the recirculating heating load reflects the actual driver: a beam-driven FRC,
 whose tangential injection through long ducts and short plasma path give a
-coupling of only $\eta_{\text{cpl}} \approx 0.43$ (C-2W), lands at
+coupling of only $\eta_{\text{cpl}} \approx 0.43$ (C-2W), yields
 $\eta_{\text{pin}} = 0.60 \times 0.43 = 0.26$, whereas an RF-driven device
-couples far better. Concepts whose input power is not delivered by an NBI/RF
+couples substantially more efficiently. Concepts whose input power is not delivered by an NBI/RF
 heating system (electrostatic confinement; pulsed drivers) specify
 $\eta_{\text{pin}}$ directly. The per-concept $\eta_{\text{cpl}}$ values are
 chosen so the product reproduces each benchmarked concept's calibrated
@@ -1385,7 +1335,7 @@ provides two pulsed power balance variants, selected by the
 \texttt{PulsedConversion} parameter.
 
 \subsubsection{Per-Pulse Energy Framework}
-As in the steady-state balance, we trace the per-pulse energy from the
+As in the steady-state balance, the per-pulse energy is traced from the
 driver through to the grid. A driver delivers $E_{\text{drv}}$ (MJ) per pulse,
 drawn from stored energy $E_{\text{stored}} = E_{\text{drv}} /
 \eta_{\text{pin}}$, where $\eta_{\text{pin}}$ is the pulsed-driver wall-plug
@@ -1445,7 +1395,7 @@ decelerator \citep{lerner2023dpf}; the model captures this
 charged-particle recovery but not the separate photoelectric recovery of
 the X-ray power, which still thermalises.
 The full driver draw $P_{\text{drv}}/\eta_{\text{pin}}$ still enters
-the recirculating load --- unlike the inductive case below, the
+the recirculating load; unlike the inductive case below, the
 thermal-mode driver charge is not recovered.
 
 \subsubsection{Pulsed Inductive DEC Conversion}
@@ -1569,6 +1519,14 @@ CAS & Description & Disposition & Method \\
 \end{tabular}
 \end{table}
 
+A contingency rate $f_{\text{cont}}$ is applied to the direct accounts
+(CAS10, the CAS21--28 sum via CAS29, and CAS50): $f_{\text{cont}} =
+10\%$ for FOAK and $0\%$ for NOAK, following the Gen-IV EMWG convention
+\citep{emwg2007}. The 10\% FOAK rate is conservative relative to the EMWG
+recommendation of 15--20\% for advanced reactors (the CAS22 sub-accounts
+already carry conservative fabrication markups); the 0\% NOAK rate
+reflects a mature, standardised design with resolved construction risk.
+
 The following subsections detail the methodology for each account
 that has undergone independent review and justification.
 
@@ -1580,13 +1538,42 @@ that has undergone independent review and justification.
 CAS10 covers land acquisition, site and plant permits, licensing,
 engineering studies, and pre-construction reports. It is typically less
 than 1\% of total capital; individual sub-accounts do not warrant
-detailed parametric modeling.
+detailed parametric modeling. The account is the land cost plus the fixed
+pre-construction items, with contingency:
+\begin{equation}
+\label{eq:cas10}
+\text{CAS10} = (1 + f_{\text{cont}})\left[
+  C_{11} + c_{\text{site}} + C_{13} + c_{\text{studies}}
+  + c_{\text{permit}} + c_{\text{reports}} + c_{\text{other}}
+\right],
+\end{equation}
+where $C_{11}$ is the land cost (\cref{sec:cas11}), $C_{13}$ the
+fuel-dependent licensing cost (\cref{sec:cas13}), $c_{\text{studies}}$ the FOAK or NOAK
+engineering-study cost, the remaining $c$s the site-permit, plant-permit,
+report, and other items, and $f_{\text{cont}}$ the contingency rate
+defined above. The fixed line-item values are listed in \cref{app:cas10}.
 
 \subsubsection{Land and Land Rights (CAS11)}
-Modern compact fusion plant designs require 20--200 acres, far less
-than the legacy 1{,}000-acre assumption in earlier ARIES studies.
-A representative compact pilot-plant filing \citep{cfs_arc} plans 100 acres for 400\,MWe,
-yielding a land intensity of \refLandIntensity~acres/MWe. At US
+\label{sec:cas11}
+The land cost scales with the square root of plant-total net electric
+power,
+\begin{equation}
+\label{eq:cas11}
+C_{11} = I_{\text{land}}\, \sqrt{P_{\text{net}}\, n_{\text{mod}}\, P_{\text{ref}}}\, c_{\text{land}}/10^6,
+\end{equation}
+where $I_{\text{land}}$ is the land intensity (acres/MWe), $P_{\text{ref}}
+= 1000$\,MWe the reference net electric power, and $c_{\text{land}}$ the
+land price (\$/acre). $P_{\text{ref}}$ is the common 1\,GWe normalization
+at which the net-electric-scaling coefficients are calibrated; it recurs in
+the staffing (CAS40, CAS71) and supplementary (CAS50) accounts below. The
+square-root form gives a compact site whose footprint grows sublinearly
+with plant size, as in a gas combined-cycle station that shares one site
+across generating blocks, so that a 1\,GWe single-module plant recovers the
+intensity $I_{\text{land}}$ directly. Modern compact fusion plant designs require
+20--200 acres, far less than the legacy 1{,}000-acre assumption in earlier
+ARIES studies. A representative compact pilot-plant filing \citep{cfs_arc}
+plans 100 acres for 400\,MWe, giving a land intensity of
+\refLandIntensity~acres/MWe. At US
 industrial-zoned land costs of approximately
 \$\pgfmathprintnumber[1000 sep={{\,}}, precision=0]{\refLandCost}/acre
 (consistent with USDA farmland averages scaled for
@@ -1594,30 +1581,43 @@ industrial zoning\footnote{USDA NASS, \emph{Land Values 2024 Summary}, August 20
 \$\pgfmathprintnumber[precision=1]{\refLandTotal}M, negligible in the context of multi-billion-dollar capital
 investments.
 
-The compact siting is enabled by the absence of an exclusion zone:
+The compact siting follows from the absence of an exclusion zone:
 the NRC's 2023 decision to regulate fusion energy systems under
 10~CFR~Part~30 (byproduct materials) rather than Part~50/52 (reactor licensing)
 eliminates the large-radius emergency planning zone required for
 fission plants \citep{nrc2023}.
 
 \subsubsection{Plant Licensing (CAS13)}
-Licensing timelines are fuel-dependent and affect first-of-a-kind
-(FOAK) builds by extending the total project time, which flows into
-the levelized annual cost calculation for CAS70 and CAS80.
-\Cref{tab:licensing} summarizes the adopted values.
+\label{sec:cas13}
+Licensing is fuel-dependent and enters the model two ways. A fixed
+licensing cost CAS13 is charged in CAS10 (\cref{eq:cas10}).
+Separately, the licensing time $t_{\text{lic}}(f)$ extends the total
+project time of a first-of-a-kind (FOAK) build,
+\begin{equation}
+\label{eq:project-time}
+T_{\text{project}} =
+\begin{cases}
+T_c + t_{\text{lic}}(f) & \text{FOAK} \\
+T_c & \text{NOAK} ,
+\end{cases}
+\end{equation}
+where $T_c$ is the construction time. $T_{\text{project}}$ is the
+inflation horizon $T_c$ used in the levelized annual cost of CAS70 and
+CAS80 (\cref{eq:inflate}); the $n$th-of-a-kind build incurs no licensing
+delay. \Cref{tab:licensing} lists the adopted values.
 
 \begin{table}[htbp]
-\caption{Licensing timeline by fuel cycle.}
+\caption{Licensing cost and timeline by fuel cycle.}
 \label{tab:licensing}
 \centering
-\begin{tabular}{lll}
+\begin{tabular}{llll}
 \toprule
-Fuel & Licensing time (yr) & Rationale \\
+Fuel & CAS13 (M\$) & $t_{\text{lic}}$ (yr) & Rationale \\
 \midrule
-D-T   & 2.0 & Part~30 licensing, upper end of 1--2~yr range \\
-D-D   & 1.5 & Reduced tritium inventory \\
-D-${}^3$He & 0.75 & Minimal radioactivity \\
-p-${}^{11}$B & 0.0 & No radioactivity \\
+D-T   & 5.0 & 2.0 & Part~30 licensing, upper end of 1--2~yr range \\
+D-D   & 3.0 & 1.5 & Reduced tritium inventory \\
+D-${}^3$He & 1.0 & 0.75 & Minimal radioactivity \\
+p-${}^{11}$B & 0.1 & 0.0 & No radioactivity \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -1630,15 +1630,27 @@ p-${}^{11}$B & 0.0 & No radioactivity \\
 CAS21 covers all buildings and structures on the fusion plant site.
 Each building is priced individually per fuel type based on its
 physical scope and construction grade, not a blanket multiplier.
-All fusion plants are regulated under 10~CFR~Part~30 (byproduct
-materials), not Part~50 (reactor license), which means no Seismic
-Category~I requirements, no NQA-1 program for most buildings, and
-no fission-style containment structure.
+Under the Part~30 regulatory basis (\cref{sec:cas10}), most buildings
+are costed at conventional industrial construction grade, with elevated
+radiological standards applied only to the tritium and
+activated-component areas.
 
 \subsubsection{Fuel and Power Scaling}
-Each building is costed for what it physically is; the per-fuel totals
-(each a sum of the individually-costed buildings) are summarized in
-\cref{tab:cas21-fuel}.
+Each building is costed for what it physically is, and scales with its
+own driver (fixed footprint, plant power, or staff), so the account is
+the sum
+\begin{equation}
+\label{eq:cas21}
+C_{21} = \sum_b c_b(f)
+  \left(\frac{P_b}{P_{b,\text{ref}}}\right)^{\alpha_b},
+\end{equation}
+where $c_b(f)$ is building $b$'s fuel-dependent reference cost
+(\cref{tab:cas21-buildings}), $P_b$ its plant-total scaling power with
+$P_{b,\text{ref}}$ the 1\,GWe reference, and $\alpha_b \in \{0,
+\tfrac{1}{2}, 1\}$ for fixed, staff-scaled, and power-scaled buildings.
+The superconducting-magnet cryoplant building is included only for
+superconducting-coil concepts. The per-fuel totals (each a sum of the
+individually-costed buildings) are summarized in \cref{tab:cas21-fuel}.
 
 \begin{table}[htbp]
 \caption{CAS21 buildings cost by fuel cycle.}
@@ -1692,11 +1704,11 @@ Assembly hall & \multicolumn{4}{c}{21} & fixed \\
 \end{tabular}
 \end{table}
 
-The fuel dependence is an activation and tritium-handling story: the
+The fuel dependence is governed by activation and tritium handling: the
 buildings that shield neutrons or confine tritium (reactor building, hot
-cell, ventilation/HVAC) ease from D-T through D-${}^3$He as the neutron
-energy and tritium inventory fall, and the hot cell vanishes entirely for
-aneutronic p-${}^{11}$B (nothing activates). Ventilation scales with
+cell, ventilation/HVAC) decline from D-T through D-${}^3$He as the neutron
+energy and tritium inventory fall, and the hot cell is eliminated entirely for
+aneutronic p-${}^{11}$B (no material activation occurs). Ventilation scales with
 $P_{\text{fus}}$ because its dominant load is confinement rad-ventilation of
 the reactor building, not office comfort HVAC. The cryogenics building is
 the magnet cryoplant, present only for superconducting-magnet concepts and
@@ -1708,7 +1720,6 @@ $n_{\text{mod}}$ times the per-module power (the same total the
 balance-of-plant accounts CAS23--26 use), reaching plant scale rather than
 being pinned to a single module; fixed buildings are charged once per site.
 
-\subsubsection{Comparison with Benchmarks}
 \Cref{tab:cas21-benchmarks} situates the fuel-dependent CAS21 figures
 of \cref{tab:cas21-fuel} against non-fusion plant types.
 
@@ -1727,10 +1738,10 @@ Fission nuclear (Part~50) & 800--1{,}300 & Nuclear-grade \\
 \end{tabular}
 \end{table}
 
-The fusion p-${}^{11}$B figure of 384~\$/kW sits at roughly
+The fusion p-${}^{11}$B figure of 384~\$/kW corresponds to roughly
 1.7$\times$ CCGT, and the D-T figure of 626~\$/kW at roughly
 3.0$\times$ CCGT.
-The values are derived from-scratch using industrial construction
+The values are derived from first principles using industrial construction
 benchmarks \citep{cushman_wakefield_2025, netl2022, nrel_atb2024}.
 
 
@@ -1760,7 +1771,8 @@ re-derived here.
 
 \subsubsection{CAS22.01.01: First Wall and Blanket}
 Sub-account CAS22.01.01 (first wall + blanket) prices the blanket volume
-$V_{\text{blk}}$ at a fuel-keyed unit cost $c_{\text{blk}}(f)$, with a
+$V_{\text{blk}}$ (the first-wall, blanket, and reflector volume from the
+geometry model) at a fuel-keyed unit cost $c_{\text{blk}}(f)$, with a
 power scaling and a blanket-form structural complexity factor
 $s(\mathrm{form}) \in \{1.0, 1.3, 1.2, 0.0\}$ for liquid-metal,
 molten-salt, solid-breeder, and no-blanket architectures. The D-T unit
@@ -1772,7 +1784,10 @@ priced at mature, Nth-of-a-kind unit costs:
 \label{eq:cas2201}
 C_{22.01.01} = c_{\text{blk}}(f) \cdot s(\mathrm{form}) \cdot V_{\text{blk}} \cdot \left( \frac{P_{\text{th}}}{P_{\text{th,ref}}} \right)^{0.6}
 \end{equation}
-The structural factor captures the cassette/canister fabrication
+where $P_{\text{th,ref}} = 2500$~MWth is the reference machine's thermal
+power (also used for the shield, CAS22.01.02) and the 0.6 exponent captures
+the sublinear growth of blanket cost with thermal load at fixed volume.
+The structural factor represents the cassette/canister fabrication
 premium for molten-salt designs (Hastelloy-N corrosion liner on
 FLiBe-wetted surfaces) and solid-breeder designs (pebble-bed canisters
 with separate breeder and multiplier zones), all relative to the
@@ -1819,7 +1834,7 @@ Barakah), and a smaller but positive effect on the Chinese AP1000
 pairs (Sanmen, Haiyang). The European EPR pairs (Olkiluoto,
 Flamanville, Hinkley Point~C) show no clear twin-unit effect in
 public data, with FOAK and regulatory churn dominating. The 8\%
-default sits below the middle of the 5--15\% empirical range.
+default lies below the midpoint of the 5--15\% empirical range.
 
 This factor is deliberately \emph{not} a Wright's-Law learning curve.
 Wright-style cost reductions apply to fleet-cumulative manufactured
@@ -1860,7 +1875,7 @@ C_{220103} = \frac{G \cdot B \cdot R_0 \cdot r_{\text{coil}}}
 
 \noindent For a linear device (mirror, FRC, dipole, pulsed) the magnet is
 a true circular loop or solenoid, for which $B = \mu_0 N I / (2R)$ and the
-turn length is $2\pi R$, giving the textbook $r^2$ scaling
+turn length is $2\pi R$, giving the standard $r^2$ scaling
 $C_{220103} \propto G \cdot B \cdot r_{\text{coil}}^2 / \mu_0$. Here $G$ is
 a geometry factor (tokamak: $4\pi^2$; stellarator:
 $4\pi^2 \times f_{\text{path}}$, the $f_{\text{path}}=2$ capturing the
@@ -1947,8 +1962,8 @@ existing product, making the aggressive target more defensible.
 The \$/kA-m model is correct where an expensive superconductor dominates
 cost. For low-field resistive copper coils (an FRC at near-unity beta
 runs external fields of order $0.1$--$1$~T) the conductor is cheap per
-kA-m, so that path collapses to a near-zero, unphysical figure while the
-machine still has tonnes of copper to wind and support. When the
+kA-m, so that basis yields a near-zero, unphysical figure while the
+machine still requires tonnes of copper to wind and support. When the
 conductor material is copper, the account is instead a \emph{mass
 build-up} that re-prices the same ampere-metres by mass:
 \begin{equation}
@@ -2021,7 +2036,7 @@ $P_{\text{in}}/\eta_{\text{pin}}$ enters the recirculating power, not this
 capital line. To keep the costed power identical to the power-balance
 power, the split is the heating \emph{mix} and is normalized so
 $\sum_i P_i = P_{\text{in}}$; overriding $P_{\text{in}}$ rescales the
-split, so the costed heating always tracks the physics. A fully zero
+split, so the costed heating remains consistent with the power balance. A fully zero
 split (electrostatic concepts whose input power is not NBI/RF heating,
 e.g.\ orbitron, polywell) stays zero, leaving their heating capital at
 \$0. Pricing the supply-dominated NBI capital on wall-plug power
@@ -2043,8 +2058,9 @@ charge, coaxial-gun size and peak current) and not by how often the driver
 fires. Repetition rate adds cooling and consumable replacement, which are
 sub-dominant capital and operating costs rather than a multiplier on the
 driver hardware itself. Costing on average power $E_{\text{drv}}
-f_{\text{rep}}$ would instead price one physical laser across the $0.1$ to
-$15$~Hz range concepts run at as though it were a hundred different machines.
+f_{\text{rep}}$ would instead price one physical laser, across the $0.1$ to
+$15$~Hz range of concept repetition rates, as if it were a hundred distinct
+machines.
 Hence
 \begin{equation}
 C_{220104} = c^{E}_{\text{drv}} \times E_{\text{drv}} \quad [\text{M\$}]
@@ -2100,8 +2116,8 @@ direct-energy-converter grid, and capacitor bank. The first set is capital
 pump diodes carry a NOAK shot life (about $10^{10}$) that exceeds a 30-year plant
 at $10$~Hz, so they are effectively a capital item and the operating burden is
 dominated by the final optics; for flashlamp-pumped Nd:glass the lamp shot life
-(about $10^4$) is sub-annual and the replacement term is prohibitive, which is
-the standard reason NIF-class drivers are not viable for rep-rated energy.
+(about $10^4$) is sub-annual and the replacement term is prohibitive, the
+established reason NIF-class drivers are not viable for rep-rated energy.
 
 For MagLIF the main driver is the electrical Z-pinch, costed in
 CAS22.01.07; the only CAS22.01.04 contribution is an optional laser
@@ -2128,8 +2144,12 @@ CAS22.01.06 is a sum of two parts with different cost drivers:
 The \emph{vessel shell} (welded stainless chamber, ports, gauges, leak
 detection) is volume-based, scaling with reactor size:
 \begin{equation}
-  C_{\text{vessel}} = c_{\text{ves}}\, V_{\text{ves}} \left( \frac{P_{\text{et}}}{1100} \right)^{0.6}, \qquad c_{\text{ves}} = 0.72~\text{M\$/m}^3.
+  C_{\text{vessel}} = c_{\text{ves}}\, V_{\text{ves}} \left( \frac{P_{\text{et}}}{P_{\text{et,ref}}} \right)^{0.6}, \qquad c_{\text{ves}} = 0.72~\text{M\$/m}^3,
 \end{equation}
+where $P_{\text{et,ref}} = 1100$\,MWe is the reference gross electric power
+(net plus recirculating, for a 1\,GWe-net reference plant); it is the
+common gross-electric normalization for the buildings (CAS21), structure,
+power-supply (\cref{eq:cas2207-ps}), and remote-handling accounts.
 The \emph{pumping} system is sized by gas throughput, not vessel volume.
 A pump of speed $S$ removes a throughput $Q = S P$, so the installed
 speed required to hold an operating (plenum) pressure $P_{\text{op}}$ is
@@ -2147,7 +2167,11 @@ beam particle, calibrated to the C-2W machine's roughly 2000~m$^3$/s
 divertor pumping), reference NBI energy $E_b = 120$~keV (the NBI gas
 load scales as $1/E_b$), $n_{\text{ion}} = 2$ ions consumed per
 reaction, and $E_{\text{fus}}$ the fuel-dependent energy per reaction.
-Then $C_{\text{pump}} = c_{\text{pump}}(Q_{\text{NBI}} + Q_{\text{fuel}})/P_{\text{op}}$.
+The pumping cost is then
+\begin{equation}
+\label{eq:cas2206-pump}
+C_{\text{pump}} = c_{\text{pump}}\,\frac{Q_{\text{NBI}} + Q_{\text{fuel}}}{P_{\text{op}}}.
+\end{equation}
 
 The operating pressure $P_{\text{op}}$ is the dominant, concept-specific
 driver, set per concept: a few~Pa for tokamak and stellarator divertor
@@ -2160,7 +2184,7 @@ term at reactor beam energies; because aneutronic p-B$^{11}$ releases
 about half the energy per reaction of D-T, it runs about twice the
 reaction rate and pumps about twice the fuel throughput at equal fusion
 power. The pumping model applies uniformly to every concept, so these
-differences fall out of the inputs rather than per-concept hand-tuning.
+differences follow from the inputs rather than per-concept manual adjustment.
 
 \paragraph{Reporting convention.} Where a single account aggregates
 components with distinct cost bases, the model emits informational
@@ -2182,15 +2206,17 @@ switchgear. The account has two modes.
 For tokamaks, stellarators, and mirrors, the cost scales with gross
 electric output:
 \begin{equation}
-  C_{220107} = 80 \times (P_{\text{et}} / 1000)^{0.7} \quad [\text{M\$}]
+\label{eq:cas2207-ps}
+  C_{220107} = c_{\text{ps}} \times (P_{\text{et}} / P_{\text{et,ref}})^{0.7} \quad [\text{M\$}]
 \end{equation}
-The \$80M reference at 1\,GWe originates from the ARIES-CS design study
+where $c_{\text{ps}} = \$80$M is the power-supply reference cost at
+$P_{\text{et,ref}}$ (\cref{sec:cas2206}). It originates from the ARIES-CS design study
 (\$70.6M in 2004\$ for a 1.3\,GWe stellarator, approximately \$78/kW).
 Cross-checks against GW-scale HVDC converter stations
 (\$100--250/kW installed)\footnote{HVDC converter station vendor literature, Siemens Energy and Hitachi ABB Power Grids, 2022--2024.} and utility-scale solar inverters
-(\$30--50/kW \citep{nrel_atb2024}) bracket the figure: fusion magnet supplies
-operate at lower voltage and higher current than HVDC, which is the
-cheaper regime for power electronics. No direct vendor quote exists at
+(\$30--50/kW \citep{nrel_atb2024}) bound the reference value: fusion magnet supplies
+operate at lower voltage and higher current than HVDC, the
+lower-cost regime for power electronics. No direct vendor quote exists at
 fusion-relevant parameters (1--10~kV, 10--100~kA, 100+~MW).
 Uncertainty: $\pm$20\%.
 
@@ -2222,8 +2248,12 @@ discounted at the project interest rate.
 \paragraph{Divertor}
 The divertor sub-account (CAS22.01.08) keeps the inherited pyFECONS scaling
 for steady-state MFE concepts that exhaust onto a material target,
-$C_{220108} = c_{\text{div}}\,(P_{\text{th}}/1000)^{0.5}$ with
-$c_{\text{div}} = 60$~M\$. Concepts
+\begin{equation}
+\label{eq:cas2208-div}
+C_{220108} = c_{\text{div}}\,(P_{\text{th}}/1000)^{0.5},
+\end{equation}
+with $c_{\text{div}} = 60$~M\$ the reference cost at 1\,GWth (the $1000$
+normalizes the thermal power $P_{\text{th}}$ to GW). Concepts
 that exhaust charged particles without a material target carry no
 manufactured divertor cassette and $C_{220108} = 0$: the levitated
 dipole (closed-field-line topology, loss-cone exhaust at the chamber
@@ -2241,11 +2271,11 @@ a fixed building and tritium-confinement shell ($c_{\text{fix}}$); precision
 production lines that scale with throughput, i.e.\ the repetition rate
 $f_{\text{rep}}$ ($c_{\text{line}}$); and material handling, cryogenics, and
 post-shot recovery that scale with mass-energy flow $P_{\text{fus}}$
-($c_{\text{flow}}$). A separate target-size term is unnecessary: at fixed
+normalized to 1\,GW of fusion power ($c_{\text{flow}}$). A separate target-size term is unnecessary: at fixed
 module count the per-shot yield $P_{\text{fus}}/f_{\text{rep}}$ is determined
 by these two variables, and target size follows from the yield.
 
-The two factory archetypes differ sharply in cost. A laser or heavy-ion
+The two factory archetypes differ substantially in cost. A laser or heavy-ion
 capsule factory is a precision cleanroom whose tritium-handling back half
 (DT fill, ice-layering, contained assembly, injection) adds a
 dual-confinement premium and whose throughput is oversized by the inverse
@@ -2253,7 +2283,7 @@ acceptance yield; it totals about 725--780~M\$, calibrated so its optimistic
 corner reproduces the LIFE~\cite{anklam2011life} target factory (about
 \$600~M, \$0.25/target). A MagLIF or Z-pinch load is instead a
 stamped-and-filled metal liner, a casting-shop process near 150~M\$, roughly
-five times cheaper.
+a factor of five lower in cost.
 
 The per-shot target cost (\cref{sec:cas80}) is sourced from fully-loaded
 studies that already amortize the plant, so the capital and per-shot accounts
@@ -2264,7 +2294,7 @@ $c_{\text{fac}}$; concepts that form their plasma or liner in situ
 pinch, dense plasma focus, and sheared-flow / staged Z-pinch) set both to
 zero and carry $C_{220108} = 0$.
 
-\subsubsection{CAS22.01.09: Direct Energy Converter (electrostatic)}
+\subsubsection{CAS22.01.09: Direct Energy Converter (venetian blind)}
 \label{sec:cas2209}
 
 CAS22.01.09 covers add-on direct energy converters for linear devices
@@ -2330,7 +2360,7 @@ The cost model is:
 \begin{equation}
 \label{eq:cas2210}
 C_{220110} = C_{\text{RH,base}}(f) \times S_{\text{concept}}
-             \times \left(\frac{P_{\text{et}}}{1000}\right)^{0.5}
+             \times \left(\frac{P_{\text{et}}}{P_{\text{et,ref}}}\right)^{0.5}
 \end{equation}
 
 \noindent where $C_{\text{RH,base}}(f)$ is a fuel-dependent base cost
@@ -2360,10 +2390,10 @@ p-${}^{11}$B &  20 & Conventional maintenance equipment (no rad-hardening) \\
 
 \paragraph{Concept Dependence}
 Toroidal vessels (tokamak, stellarator) require articulated multi-axis
-manipulators to reach components through narrow ports, while linear
-geometries (mirror, FRC) permit simpler end-access tooling.
-Toroidal concepts use $S_{\text{concept}} = 1.0$; linear concepts
-use $S_{\text{concept}} = 0.55$.
+manipulators to reach components through narrow ports, while open and
+end-access geometries (mirror, FRC, and the other non-toroidal concepts)
+permit simpler tooling. Toroidal concepts use $S_{\text{concept}} = 1.0$;
+all non-toroidal concepts use $S_{\text{concept}} = 0.55$.
 
 
 %% ------------------------------------------------------------
@@ -2415,7 +2445,7 @@ CAS22.03 & Auxiliary coolant & 1.10 & $P_{\text{th}}/1000$ & 1.0 \\
 CAS22.04 & Radioactive waste management & 1.96 & $P_{\text{th}}/1000$ & 1.0 \\
 CAS22.05 & Fuel handling \& storage & 120/60/40/15 & $P_{\text{net}}/1000$ & 0.7 \\
 CAS22.06 & Other reactor plant equipment & 11.5 & $P_{\text{net}}/1000$ & 0.8 \\
-CAS22.07 & Instrumentation \& control & 85 & $P_{\text{th}}/3500$ & 0.65 \\
+CAS22.07 & Instrumentation, control, diagnostics & 85 & $P_{\text{th}}/3500$ & 0.65 \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -2508,7 +2538,8 @@ keyed on the blanket fill:
 \label{eq:cas27}
 C_{27} = V_{\text{blk}} \cdot \nu(\mathrm{fill}) \cdot \rho(\mathrm{fill}) \cdot c(\mathrm{fill})
 \end{equation}
-where $V_{\text{blk}}$ is the first-wall + blanket + reflector volume,
+where $V_{\text{blk}}$ is the blanket volume of \cref{eq:cas2201}
+(first-wall, blanket, and reflector),
 $\nu$ the fraction of that region occupied by the costed material
 (liquid fill fraction; or breeder/multiplier-zone $\times$ pebble
 packing $\approx 0.25$ for solid pebble beds), $\rho$ its density, and
@@ -2563,8 +2594,11 @@ breeding blanket), recovering minimal special-material inventory.
 \subsection{CAS28: Digital Twin}
 \label{sec:cas28}
 
-CAS28 covers a plant-wide digital twin for operator training, predictive
-maintenance, and operational optimization. A fixed cost of \$5M is adopted,
+CAS28 covers a plant-wide operations digital twin for operator training,
+predictive maintenance, and operational optimization; it is not a plasma
+physics or real-time plasma-control model. Plasma control and diagnostics
+are costed under instrumentation and control (CAS22.07,
+\cref{tab:cas2207-cluster}). A fixed cost of \$5M is adopted,
 independent of plant size, fuel type, or number of modules: the digital twin
 is software-dominated, and its complexity scales with the number of modeled
 subsystems rather than plant capacity.
@@ -2574,26 +2608,21 @@ budgets. Under the DOE ARPA-E GEMINA program \citep{arpae_gemina2020}, the
 University of Michigan received \$5.2M to develop a scalable reactor digital
 twin (first validated on a campus molten-salt loop, then applied to the
 Kairos Power design), alongside a complementary \$2.2M Argonne award for
-O\&M automation. A single plant-wide reactor twin therefore lands at the
+O\&M automation. A single plant-wide reactor twin therefore corresponds to the
 adopted \$5M, consistent with industrial digital twin deployments for large
 thermal plants (\$2--10M; Siemens MindSphere, GE Predix, AVEVA).
 
 
 %% ------------------------------------------------------------
-\subsection{CAS29: Contingency on Direct Costs}
+\subsection{CAS29: Contingency on Reactor Plant Equipment}
 \label{sec:cas29}
 
-CAS29 is a percentage-based contingency allowance on the sum of CAS21--28:
+CAS29 applies the contingency rate $f_{\text{cont}}$ (defined above) to
+the sum of the CAS20-series reactor-plant-equipment accounts CAS21--28:
 \begin{equation}
 \label{eq:cas29}
-C_{29} = f_{\text{cont}} \times \sum_{i=21}^{28} C_i
+C_{29} = f_{\text{cont}} \times \sum_{i=21}^{28} C_i .
 \end{equation}
-\noindent where $f_{\text{cont}} = 10\%$ for FOAK and $0\%$ for NOAK,
-following the Gen-IV EMWG convention \citep{emwg2007}. The 10\% FOAK
-contingency is conservative relative to the EMWG recommendation of 15--20\%
-for advanced reactors; individual CAS22 sub-accounts already include
-conservative fabrication markups. The 0\% NOAK contingency reflects the
-assumption of a mature, standardised design with resolved construction risk.
 
 
 %% ------------------------------------------------------------
@@ -2605,40 +2634,7 @@ plant systems: field indirect costs (equipment rental, temporary
 structures, consumables), construction supervision, and offsite design
 services \citep{emwg2007}.
 
-\subsubsection{Literature Review}
-Three methodologies exist in the fusion costing literature:
-
-\begin{enumerate}
-\item \textbf{Schulte (1978):} A fixed 35\% of total direct cost (TDC),
-  split as 15\% construction supervision, 15\% design services,
-  5\% field indirect costs \citep{schulte1978}.
-
-\item \textbf{Miller/ARIES LSA fractions:} A Level of Safety Assurance
-  (LSA) dependent fraction of TDC, ranging from 21.7\% at LSA=1
-  (inherently safe, minimal nuclear-grade requirements) to 29.0\% at
-  LSA=4 (full nuclear-grade construction) \citep{miller1998, piet1986,
-  logan1985}. The LSA concept \citep{piet1986} captures the cost
-  reduction from eliminating nuclear-grade construction requirements
-  where the physics permits.
-
-\item \textbf{pyFECONS bottom-up:} A power-scaling formula
-  calibrated from a staffing model for a 150\,MWe reference plant
-  \citep{woodruff2026}. This yields 5.8\% of TDC at 1\,GWe, reflecting
-  the labor component; non-labor indirect costs (equipment rental,
-  temporary structures, consumables) that dominate CAS31 scope are
-  not included in the staffing model.
-\end{enumerate}
-
-No real fusion construction data exists to calibrate CAS30. Private
-fusion companies do not publish cost breakdowns at this granularity;
-ITER is a one-of-a-kind research facility; and UK~STEP and EU-DEMO
-cost studies use ARIES-lineage models. For context, efficient
-series-built fission plants (Korean APR1400, Chinese Hualong~One)
-achieve indirect costs of 12--20\% of TDC, while troubled FOAK
-projects (US Vogtle~3\&4) exceed 35\%.
-
-\subsubsection{Adopted Model}
-A simpler aggregate model is adopted:
+An aggregate model is adopted:
 
 \begin{equation}
 \label{eq:cas30}
@@ -2652,18 +2648,15 @@ $T_{\text{ref}} = \pgfmathprintnumber[precision=0]{\refTc}$~yr is a
 reference duration. The construction-time scaling captures the primary driver
 that varies between scenarios.
 
-The default of 20\% is chosen as:
-\begin{itemize}
-\item Below Schulte's 35\% (1978 fission baseline, too high for NOAK fusion),
-\item Below Miller's LSA=2 value of 23.2\% (ARIES tradition, likely
-  somewhat high for NOAK),
-\item Above pyFECONS's 5.8\% (labor-only staffing model),
-\item Consistent with efficient NOAK nuclear construction internationally
-  (15--20\% of TDC).
-\end{itemize}
-
-Sub-account precision (C31/C32/C35 splits) is not empirically
-distinguishable for fusion and is not modeled.
+No fusion construction data exists at this granularity to calibrate CAS30, so
+the 20\% default is set by triangulation against established conventions: below
+Schulte's 35\% of total direct cost \citep{schulte1978} (a 1978 fission
+baseline, high for NOAK fusion); below the Miller/ARIES value of 23.2\%
+\citep{miller1998, piet1986, logan1985}; above the labor-only pyFECONS staffing
+figure of 5.8\% \citep{woodruff2026}; and consistent with efficient NOAK nuclear
+construction internationally (15--20\% of total direct cost). Sub-account
+precision (CAS31/CAS32/CAS35 splits) is not empirically distinguishable for fusion
+and is not modeled.
 
 
 %% ------------------------------------------------------------
@@ -2672,42 +2665,27 @@ distinguishable for fusion and is not modeled.
 
 CAS40 covers one-time costs incurred by the plant owner during
 construction to build an operating organization before commercial
-operation: staff recruitment and training (C41), staff
-housing/relocation (C42), and salary-related costs during the
-pre-operational period (C43) \citep{emwg2007, prosser2024}.
+operation: staff recruitment and training (CAS41), staff
+housing/relocation (CAS42), and salary-related costs during the
+pre-operational period (CAS43) \citep{emwg2007, prosser2024}.
 
-\subsubsection{Relationship to CAS70}
-CAS40 and CAS70 share the same underlying staff pool but cover
-different time periods. CAS40 is the capital cost of \emph{building}
-the operations team (pre-COD); CAS70 is the annual cost of
-\emph{running} it (post-COD). Both are derived from the same
-fuel-specific staffing analysis (\cref{sec:cas70}), applied
-through different cost models. There is no double-counting.
-
-\subsubsection{Methodology}
-The INL first-principles SFR cost study \citep{prosser2024}
-estimates CAS40 sub-accounts as:
-\begin{itemize}
-\item C41: 1.5~years of salary for 110\% of staff (IAEA-recommended
-  overhire for training attrition), plus a 25\% recruiting fee.
-\item C42: \$40k relocation cost for 50\% of staff.
-\item C43: Benefits at 57--59\% of salary during the training period.
-\end{itemize}
-Applying this methodology to the fuel-specific staffing estimates
-yields total pre-operational costs that scale as roughly 3.2$\times$
-annual labor-plus-benefits.
-
-\subsubsection{Adopted Model}
+CAS40 shares the same fuel-specific staff pool as CAS70
+(\cref{sec:cas70}) but covers the pre-COD period rather than annual
+operation, so there is no double-counting. It scales with plant-total net
+electric power as
 \begin{equation}
 \label{eq:cas40}
 \text{CAS40} = C_{\text{owner}}(f) \times
-               \left(\frac{P_{\text{net}}}{1000}\right)^{0.5}
+               \left(\frac{P_{\text{net}}\,n_{\text{mod}}}{P_{\text{ref}}}\right)^{0.5}
 \end{equation}
 
 \noindent where $C_{\text{owner}}(f)$ is a fuel-dependent base cost
-(M\$ at 1\,GWe reference) and the exponent 0.5 captures
-staffing economy of scale. \Cref{tab:cas40-fuel} lists the adopted
-values.
+(M\$ at 1\,GWe reference) and the 0.5 exponent, shared with CAS70,
+follows from staff-count scaling in the S-PRISM/INL data
+\citep{prosser2024}. The base costs (\cref{tab:cas40-fuel}) apply the
+INL first-principles staffing build-up (training overhire, relocation,
+and pre-operational benefits, totalling roughly 3.2$\times$ annual
+labor-plus-benefits) to the fuel-specific headcounts.
 
 \begin{table}[htbp]
 \caption{Capitalized owner's cost by fuel cycle (1\,GWe reference).}
@@ -2725,19 +2703,9 @@ p-${}^{11}$B &  59 & 21.1 & Near-industrial, radiation safety officer (RSO) only
 \end{tabular}
 \end{table}
 
-\subsubsection{Power-Law Scaling}
-The exponent of 0.5 is derived from S-PRISM/INL staffing data in
-\cref{sec:cas70}. Both accounts are driven by total staff count and
-share the same exponent.
-
-\subsubsection{Comparison with Prior Methods}
-pyFECONS uses the same LSA factor (\texttt{fac\_91}) for both CAS32
-(construction supervision) and CAS40 (owner's costs), fundamentally
-different scopes. This artifact of the old ARIES Account~91 mapping
-produces CAS40 $\approx$ 11--15\% of TDC, implicitly assuming
-fission-level staffing (500 per GWe). The staffing-based
-approach adopted here yields 1--2\% of TDC for fusion, correctly reflecting the
-4--8$\times$ reduction in headcount under Part~30 regulation.
+The staffing basis yields 1--2\% of total direct cost, well below the
+fission-level staffing that LSA-factor methods imply, reflecting the
+4--8$\times$ headcount reduction under Part~30 regulation.
 
 
 %% ------------------------------------------------------------
@@ -2756,82 +2724,121 @@ are fuel-dependent:
              + C_{59}
 \end{equation}
 
-\subsubsection{Fuel-Independent Sub-Accounts}
-\begin{itemize}
-\item \textbf{C51 (Shipping/transportation):} 1.5\% of CAS20. World
-  Nuclear Association reports transportation at 2\% of overnight
-  cost for fission \citep{wna2025}; fusion avoids the extreme mass of
-  reactor pressure vessels and containment structures.
-\item \textbf{C53 (Taxes):} 1\% of CAS20. Sales and use tax on
-  construction materials, net of exemptions typical for large energy
-  projects (e.g.\ NY RPTL \S485, state manufacturing equipment exemptions).
-\item \textbf{C54 (Construction insurance):} 1.5\% of (CAS20 + CAS30).
-  Builder's risk premiums for large projects are typically 1--3\% of
-  insured value. Fusion under Part~30 avoids Price-Anderson nuclear
-  liability insurance required for Part~50 reactors.
-\end{itemize}
+\noindent where CAS20 is the direct capital account and CAS30 the
+capitalized indirect services. The sub-accounts are detailed below; the
+fuel-dependent parameters ($s_{\text{spare}}$, startup fuel, and the
+decommissioning provision) are collected in \cref{tab:cas50-fuel}.
 
-\subsubsection{Fuel-Dependent Sub-Accounts}
-\begin{itemize}
-\item \textbf{C52 (Spare parts):} Initial on-site inventory at COD.
-  D-T plants require spare blanket modules, first-wall tiles, and
-  divertor cassettes due to neutron damage; p-${}^{11}$B plants need
-  only conventional industrial spares. Expressed as a fraction of
-  CAS22--28 (reactor plant equipment plus BOP).
-\item \textbf{C55 (Startup fuel/inventory):} The fusion analogue of
-  the fission ``first core'' (3\% of overnight cost,
-  \$120M for a 1\,GWe PWR). D-T requires 1--2~kg of tritium at
-  \$30{,}000/g (\$40M); p-${}^{11}$B requires only
-  commodity hydrogen and boron ($<$\$0.1M).
-\item \textbf{C56 (Decommissioning provision):} The present value of
-  the future decommissioning obligation, discounted over the plant
-  lifetime. See below.
-\end{itemize}
+\subsubsection{CAS51: Shipping and Transportation}
+\begin{equation}
+\label{eq:cas51}
+C_{51} = s_{\text{ship}}\,\text{CAS20}, \qquad s_{\text{ship}} = 1.5\%.
+\end{equation}
+The World Nuclear Association reports transportation at 2\% of overnight
+cost for fission \citep{wna2025}; fusion avoids the extreme mass of
+reactor pressure vessels and containment structures, so a lower fraction
+is adopted.
 
-\noindent C59 (contingency) is applied at the same rate as other
-accounts.
+\subsubsection{CAS52: Spare Parts}
+\begin{equation}
+\label{eq:cas52}
+C_{52} = s_{\text{spare}}(f)\,\textstyle\sum_{i=22}^{28} C_i,
+\end{equation}
+the initial on-site inventory at commercial operation, taken as a
+fuel-dependent fraction $s_{\text{spare}}(f)$ of reactor-plant and
+balance-of-plant capital. D-T plants require spare blanket modules,
+first-wall tiles, and divertor cassettes because of neutron damage,
+whereas p-${}^{11}$B plants need only conventional industrial spares.
 
-\subsubsection{Decommissioning Cost Analysis}
-Fission decommissioning costs \$750--1{,}250/kWe (OECD-NEA median
-\$1{,}000/kWe) \citep{oecd_nea_decom2016}, driven by spent fuel
+\subsubsection{CAS53: Taxes}
+\begin{equation}
+\label{eq:cas53}
+C_{53} = s_{\text{tax}}\,\text{CAS20}, \qquad s_{\text{tax}} = 1\%.
+\end{equation}
+Sales and use tax on construction materials, net of exemptions typical
+for large energy projects (for example NY RPTL \S485 and state
+manufacturing-equipment exemptions).
+
+\subsubsection{CAS54: Construction Insurance}
+\begin{equation}
+\label{eq:cas54}
+C_{54} = s_{\text{ins}}\,(\text{CAS20}+\text{CAS30}), \qquad s_{\text{ins}} = 1.5\%.
+\end{equation}
+Builder's-risk premiums for large projects are typically 1--3\% of
+insured value. Under Part~30, fusion avoids the Price-Anderson nuclear
+liability insurance required for Part~50 reactors.
+
+\subsubsection{CAS55: Startup Fuel and Inventory}
+\begin{equation}
+\label{eq:cas55}
+C_{55} = c_{\text{fuel}}(f)\,\tfrac{P_{\text{net}}\,n_{\text{mod}}}{P_{\text{ref}}},
+\end{equation}
+the fusion analogue of the fission ``first core'' (3\% of overnight
+cost, \$120M for a 1\,GWe PWR). D-T requires 1--2~kg of tritium at
+\$30{,}000/g (\$40M); p-${}^{11}$B requires only commodity hydrogen and
+boron ($<$\$0.1M).
+
+\subsubsection{CAS56: Decommissioning Provision}
+\begin{equation}
+\label{eq:cas56}
+C_{56} = c_{\text{dec}}(f)\,\tfrac{P_{\text{net}}\,n_{\text{mod}}}{P_{\text{ref}}},
+\end{equation}
+the present value of the future decommissioning obligation. Fission
+decommissioning costs \$750--1{,}250/kWe (OECD-NEA median
+\$1{,}000/kWe) \citep{oecd_nea_decom2016}, driven by spent-fuel
 management, long-lived actinide disposal, and Part~50 regulatory
-overhead. Fusion eliminates all three: no spent fuel exists, activated
+overhead. Fusion avoids the spent-fuel and actinide burden (activated
 materials decay to clearance levels within 50--100~years
-\citep{iaea_fusion_decom2020}, and Part~30 decommissioning requirements
-are far lighter.
+\citep{iaea_fusion_decom2020}) and is regulated under the lighter
+Part~30, but dismantling the large activated structure (vessel, blanket,
+shield, magnets) with remote handling, together with D-T tritium
+decontamination, keeps the dismantling cost comparable to fission.
 
-Total decommissioning cost is estimated by starting from the fission
-reference and removing inapplicable cost drivers (spent fuel
-\$300/kWe, actinide waste \$200/kWe, Part~50 overhead
-\$100/kWe, armed security \$100/kWe), then adding
-fusion-specific costs (tritium decontamination for D-T). The
-capitalized provision is the present value at a 3\% real discount
-rate over a 40-year plant life (PV factor $\approx 0.31$).
+The D-T provision is therefore anchored at \$600/kWe: the fission
+reference less the spent-fuel (\$300/kWe) and actinide-disposal
+(\$200/kWe) drivers that fusion lacks, with near-fission dismantling and
+remote handling retained and D-T tritium decontamination added.
+Lower-activation fuels scale down accordingly. The capitalized provision
+is the present value of this obligation over a 40-year plant life at a
+2\% real discount rate (PV factor $\approx 0.45$). The 2\% rate is the
+conservative real return assumed for a segregated decommissioning trust
+fund (NRC 10~CFR~50.75 default earnings credit; OECD-NEA practice), not
+the plant's higher cost of capital, since such funds are escrowed in
+low-risk instruments.
+
+\subsubsection{CAS59: Contingency}
+\begin{equation}
+\label{eq:cas59}
+C_{59} = f_{\text{cont}}\sum_{i=51}^{56} C_i,
+\end{equation}
+the contingency on the CAS50 sub-accounts, applied at the same rate
+$f_{\text{cont}}$ as the other direct accounts (\cref{sec:cas}).
 
 \Cref{tab:cas50-fuel} summarizes the adopted values.
 
 \begin{table}[htbp]
-\caption{CAS50 fuel-dependent parameters (1\,GWe reference).}
+\caption{CAS50 fuel-dependent parameters (1\,GWe reference). The
+decommissioning row is the capitalized present value (PV factor 0.45) of
+the undiscounted end-of-life obligation (\$600/kWe for D-T).}
 \label{tab:cas50-fuel}
 \centering
 \begin{tabular}{lrrrr}
 \toprule
 Sub-account & D-T & D-D & D-${}^3$He & p-${}^{11}$B \\
 \midrule
-C52 spare parts (\% of CAS22--28) & 3\% & 2.5\% & 1.5\% & 1\% \\
-C55 startup fuel (M\$) & 40 & 0.1 & 10 & 0.1 \\
-C56 decom.\ provision (M\$) & 127 & 93 & 65 & 53 \\
+CAS52 spare parts (\% of CAS22--28) & 3\% & 2.5\% & 1.5\% & 1\% \\
+CAS55 startup fuel (M\$) & 40 & 0.1 & 10 & 0.1 \\
+CAS56 decom.\ provision, PV (M\$) & 272 & 199 & 140 & 113 \\
 \midrule
-\textit{CAS50 total at 1\,GWe (M\$)} & \textit{493} & \textit{391} & \textit{336} & \textit{293} \\
-\textit{\% of CAS20} & \textit{12.3} & \textit{9.8} & \textit{8.4} & \textit{7.3} \\
+\textit{CAS50 total at 1\,GWe (M\$)} & \textit{638} & \textit{497} & \textit{411} & \textit{353} \\
+\textit{\% of CAS20} & \textit{15.9} & \textit{12.5} & \textit{10.3} & \textit{8.8} \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\subsubsection{Comparison with Prior Methods}
-The D-T CAS50 estimate of 8\% of total capital is consistent with the
+The D-T CAS50 estimate of 10\% of total capital is consistent with the
 Woodruff MIF example at 10\% \citep{woodruff2026}; the p-${}^{11}$B
-estimate of 5\% reflects reduced spare parts, negligible fuel cost,
+estimate of 6\% reflects reduced spare parts, negligible fuel cost,
 and lighter decommissioning.
 
 
@@ -2839,104 +2846,45 @@ and lighter decommissioning.
 \subsection{CAS60: Interest During Construction}
 \label{sec:cas60}
 
-Interest during construction (IDC) represents the cost of financing
-the plant during the construction period, as introduced in
-\cref{sec:capex-annual}.
-
-\subsubsection{Formula}
-The uniform-spending IDC formula is derived in \cref{sec:capex-annual}
-(\cref{eq:idc-lcoe}); CAS60 reuses it directly:
-\begin{equation}
-\label{eq:idc}
-\text{IDC} = C \left[ \frac{(1+i)^{T_c} - 1}{i\,T_c} - 1 \right]
-           = f_{\text{IDC}}(i, T_c) \times C
-\end{equation}
-
-\noindent At reference conditions ($i = \refWACC$,
+Interest during construction (IDC) is the cost of financing the plant
+over the construction period. The uniform-spending IDC formula is
+derived in \cref{sec:capex-annual} (\cref{eq:idc-lcoe}) and applied
+directly here as $\text{IDC} = f_{\text{IDC}}(i, T_c)\,C$; at reference
+conditions ($i = \refWACC$,
 $T_c = \pgfmathprintnumber[precision=0]{\refTc}$~yr),
 $f_{\text{IDC}} = \pgfmathprintnumber[precision=3]{\refIDCfrac}$.
 
-\subsubsection{Interaction with CAS90}
-CAS60 and CAS90 must use complementary conventions to avoid
-double-counting construction-period financing. Two valid approaches
-exist:
-
-\begin{itemize}
-\item \textbf{Option~A} (adopted): Explicit IDC in CAS60, plain CRF
-  in CAS90.
-  \begin{equation}
-  \text{Total capital} = C + \text{IDC}, \quad
-  \text{CAS90} = \text{CRF} \times \text{Total capital}
-  \end{equation}
-
-\item \textbf{Option~B}: No CAS60, effective CRF in CAS90.
-  \begin{equation}
-  \text{CAS90} = \text{CRF} \times (1+i)^T \times C
-  \end{equation}
-\end{itemize}
-
-\noindent Option~A is adopted because it makes IDC visible as a separate
-line item, uses the more realistic uniform-spending assumption (versus
-lump-sum in Option~B), and is consistent with EMWG/ARIES cost reporting
-conventions \citep{emwg2007}.
+To avoid double-counting construction-period financing, CAS60 and CAS90
+use complementary conventions: IDC is charged explicitly in CAS60, and
+CAS90 applies a plain capital recovery factor to the IDC-inclusive
+capital,
+\begin{equation}
+\text{Total capital} = C + \text{IDC}, \quad
+\text{CAS90} = \text{CRF} \times \text{Total capital}.
+\end{equation}
+Charging IDC as a separate line item, rather than folding it into an
+effective CRF, keeps it visible, uses the realistic uniform-spending
+assumption, and follows EMWG/ARIES cost-reporting conventions
+\citep{emwg2007}.
 
 %% ------------------------------------------------------------
 \subsection{CAS70: Annualized O\&M and Replacement}
 \label{sec:cas70}
 
-CAS70 comprises two sub-accounts:
-
-\begin{itemize}
-\item \textbf{CAS71}: Annual operations and maintenance, scaled from
-  a fuel-dependent base cost per MW of net electric capacity.
-\item \textbf{CAS72}: Annualized scheduled component replacement.
-  Replacement costs are discounted to present value at the time of
-  each replacement event and annualized via the CRF. For the
-  steady-state magnetic-confinement concepts (tokamak, stellarator,
-  mirror, steady-state FRC) the core first-wall and blanket are replaced
-  on a neutron-fluence schedule: the full-power-year lifetime is the
-  per-fuel fluence limit divided by the neutron wall loading,
-  \begin{equation}
-  \label{eq:core-lifetime}
-  L_{\text{core}} = \mathrm{clamp}\!\left(
-    \frac{\Phi_{\max}(f)}{q_{\text{wall}}},\;
-    L_{\text{floor}},\; L_{\text{plant}}\right),
-  \end{equation}
-  with $\Phi_{\max}$ the fuel-dependent fluence limit (D-T 18, D-D 36,
-  D-${}^3$He 108, p-${}^{11}$B 180~MW\,yr/m$^2$; D-T anchored to the
-  ARIES~FS 200~dpa RAFM-steel window, the others scaled by spectrum
-  hardness) and $q_{\text{wall}}$ the neutron wall loading (neutron
-  power per unit first-wall area). A higher-$q_{\text{wall}}$ machine wears its core out
-  sooner and carries a larger annualized replacement charge; the lifetime
-  is clamped between a 0.5~FPY floor (keeping the $1/q_{\text{wall}}$
-  gradient finite at extreme wall loading) and the plant full-power life
-  (nothing is replaced beyond it). Limits and sources are documented in
-  \cref{app:wall-limits}. For
-  pulsed
-  inductive DEC concepts, CAS72 includes capacitor bank scheduled
-  replacement, whose lifetime is derived from cycle count and
-  repetition rate. For the electromagnetic-gun concepts (sheared-flow
-  Z-pinch and plasma jet), CAS72 also includes formation-electrode
-  replacement: the plasma-facing coaxial-gun electrodes erode under high
-  current density. Because their shot lifetime can imply sub-annual
-  replacement, this term is taken as a levelized annual recurring cost,
-  $c_{\text{rep}}\,C_{220104}\,N_{\text{shots/yr}}/N_{\text{life}}$, rather
-  than as discrete events. Here $c_{\text{rep}} = 0.5$ is the
-  consumable-electrode share of the driver capital $C_{220104}$ (range
-  $0.25$--$0.75$), $N_{\text{life}} = 10^{8}$ shots is the electrode
-  lifetime before replacement (range $10^{7}$--$10^{9}$, high uncertainty
-  with no NOAK data), and $N_{\text{shots/yr}} = f_{\text{rep}}\times
-  8760\times 3600\times a$ is the annual shot count at repetition rate
-  $f_{\text{rep}}$ and availability $a$; the term scales with the module
-  count $n_{\text{mod}}$.
-\end{itemize}
+CAS70 comprises two sub-accounts: CAS71, annual operations and
+maintenance, scaled from a fuel-dependent base cost per MW of net
+electric capacity; and CAS72, annualized scheduled component
+replacement, detailed below.
 
 \subsubsection{CAS71: Staffing-Based O\&M}
-The CAS71 O\&M coefficient is derived from a bottom-up staffing model
-that estimates headcount and compensation by division (operations,
-maintenance, administration, technical, offsite) for each fuel type,
-then adds non-labor costs (maintenance materials, insurance, supplies,
-regulatory fees, waste treatment, and general overhead). The staffing
+CAS71 is set by a fuel-dependent base annual O\&M cost,
+$C_{\text{O\&M}}(f)$ (M\$/yr at the 1\,GWe reference), which is then
+scaled by plant size (\cref{eq:cas71}). This base
+cost is derived from a bottom-up staffing model that estimates headcount
+and compensation by division (operations, maintenance, administration,
+technical, offsite) for each fuel type, then adds non-labor costs
+(maintenance materials, insurance, supplies, regulatory fees, waste
+treatment, and general overhead). The staffing
 model is grounded in two reference datasets: the S-PRISM sodium fast
 reactor staffing estimate \citep{boardman2000} (494~staff for a
 1{,}520\,MWe fission plant) and INL's first-principles SFR cost
@@ -2945,46 +2893,42 @@ different plant sizes. Conventional gas CCGT staffing data (25--35
 staff for 1\,GWe) anchors the lower bound.
 
 The key differentiator between fuels is neutron-related operational
-overhead. All fusion machines are regulated under 10~CFR~Part~30
-(byproduct material), not Part~50 (reactor licensing), eliminating
-the armed security force, licensed operator requirements, emergency
-planning zones, and nuclear QA programs that drive fission plant
-staffing. However, fuels with higher neutron production require
-radiation protection programs, radwaste management, and
-radiation-controlled maintenance, costs that scale roughly with
-neutron flux. The resulting fuel-dependent coefficients are listed
+overhead. Under the Part~30 basis (\cref{sec:cas10}), the plant is
+staffed as an industrial facility with a radiation-protection and
+health-physics program scaled to its neutron output: fuels with higher
+neutron production require larger radiation-protection programs, radwaste
+management, and radiation-controlled maintenance, with cost scaling
+roughly with neutron flux. The resulting fuel-dependent coefficients are listed
 in \cref{tab:cas71-staffing}.
 
 \begin{table}[htbp]
 \caption{CAS71 staffing-based O\&M coefficients by fuel cycle (1\,GWe reference).}
 \label{tab:cas71-staffing}
 \centering
-\begin{tabular}{lrrrl}
+\begin{tabular}{lrrl}
 \toprule
-Fuel & Staff & O\&M (M\$/yr) & O\&M (k\$/MW/yr) & Key drivers \\
+Fuel & Staff & O\&M (M\$/yr) & Key drivers \\
 \midrule
-D-T   & 117 & 54.9 & 55 & Tritium systems, HP dept, radwaste, remote handling \\
-D-D   &  94 & 40.9 & 41 & Reduced neutron flux ($\tfrac{1}{3}$ D-T), smaller T inventory \\
-D-${}^3$He &  69 & 27.5 & 28 & 5\% neutron fraction, minimal tritium \\
-p-${}^{11}$B &  59 & 24.9 & 25 & Aneutronic, no tritium, RSO only \\
+D-T   & 117 & 54.9 & Tritium systems, HP dept, radwaste, remote handling \\
+D-D   &  94 & 40.9 & Reduced neutron flux ($\tfrac{1}{3}$ D-T), smaller T inventory \\
+D-${}^3$He &  69 & 27.5 & 5\% neutron fraction, minimal tritium \\
+p-${}^{11}$B &  59 & 24.9 & Aneutronic, no tritium, RSO only \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 \noindent All values are at a 1\,GWe reference. For
 comparison, S-PRISM fission O\&M is \$50k/MW/yr and modern gas CCGT
-is \$12k/MW/yr. The pB11 estimate (\$25k/MW/yr) sits at roughly
+is \$12k/MW/yr. The pB11 estimate (\$25k/MW/yr) is approximately
 twice the conventional CCGT level, reflecting fusion-specific system
 complexity (vacuum, magnets, plasma-facing components) rather than
 regulatory burden.
 
-Annual O\&M scales with plant size via a power law and is modulated by
-a concept-dependent factor reflecting maintenance ergonomics:
+Annual O\&M scales with plant size via a power law:
 \begin{equation}
 \label{eq:cas71}
-\text{CAS71}_{\text{annual}} = C_{\text{O\&M}}(f) \cdot
-               S_{\text{O\&M}}(c) \cdot
-               \left(\frac{P_{\text{net}}}{1000}\right)^{0.5}
+C_{71,\,\text{annual}} = C_{\text{O\&M}}(f) \cdot
+               \left(\frac{P_{\text{net}}\,n_{\text{mod}}}{P_{\text{ref}}}\right)^{0.5}
 \end{equation}
 
 \noindent where the exponent 0.5 captures staffing economy of scale.
@@ -2992,50 +2936,146 @@ The INL SFR data \citep{prosser2024} shows staff scaling from
 236~at 165\,MWe to 1{,}040 at 3{,}108\,MWe ($\alpha \approx 0.5$),
 driven by the large fixed component in administration, technical, and
 offsite divisions. The same exponent is used for CAS40
-(\cref{sec:cas40}), which shares the same staffing basis.
+(\cref{sec:cas40}), which shares the same staffing basis. No
+concept-dependent factor is applied: health physics, tritium
+accountability, engineering, and security staffing dominate the
+headcount and are fuel-driven rather than geometry-driven, and no
+concept has a sourced maintenance-ergonomics basis to claim a discount.
 
-The concept factor $S_{\text{O\&M}}(c)$ is 1.0 for toroidal geometries
-(tokamak, stellarator) and 0.85 for linear/open-end geometries
-(mirror). The fuel-baseline numbers in \cref{tab:cas71-staffing} are
-calibrated to a toroidal device; mirrors require fewer maintenance
-and operations FTEs because blanket rings and first-wall components
-can be exchanged axially without re-establishing toroidal vacuum and
-structural continuity, scheduled outages are shorter, and the
-planned-maintenance crew rotation is smaller. The 0.85 scale is
-conservative because health physics, tritium accountability,
-engineering, and security staffing are fuel-driven and concept-
-agnostic; the accessible concept-specific savings are concentrated in
-maintenance and hot-cell-operator categories. The same maintenance
-ergonomics drive the 0.55$\times$ capex scaling on CAS22.01.10
-remote handling (\cref{sec:cas2210}) and the 0.87 default
-availability for mirrors versus 0.85 for toroidal concepts.
+\subsubsection{CAS72: Scheduled Component Replacement}
+CAS72 covers the components that wear out during operation and must be
+replaced on their own schedules rather than lasting the plant life: the
+neutron-damaged core (first wall and blanket) for the steady-state
+magnetic concepts, and the driver consumables (capacitor banks,
+formation electrodes) for the pulsed concepts. Each replacement is
+charged at its cost discounted to present value at the time of the event
+and annualized via the CRF. For the steady-state
+magnetic-confinement concepts (tokamak, stellarator, mirror,
+steady-state FRC) the core first-wall and blanket are replaced on a
+neutron-fluence schedule: the core full-power-year lifetime
+$L_{\text{core}}$ is the per-fuel fluence limit divided by the neutron
+wall loading, bounded to the plant life,
+\begin{equation}
+\label{eq:core-lifetime}
+L_{\text{core}} = \min\!\left(
+  \max\!\left(\frac{\Phi_{\max}(f)}{q_{\text{wall}}},\; L_{\text{floor}}\right),\;
+  L_{\text{plant}}\right),
+\end{equation}
+with $\Phi_{\max}$ the fuel-dependent fluence limit (D-T 18, D-D 36,
+D-${}^3$He 108, p-${}^{11}$B 180~MW\,yr/m$^2$; D-T anchored to the
+ARIES~FS 200~dpa RAFM-steel window, the others scaled by spectrum
+hardness), $q_{\text{wall}}$ the neutron wall loading (neutron power
+per unit first-wall area), $L_{\text{floor}} = 0.5$~FPY a numerical
+floor, and $L_{\text{plant}}$ the plant full-power life. A machine with
+higher $q_{\text{wall}}$ exhausts its core lifetime sooner and carries a
+larger annualized replacement charge. The floor keeps the
+$1/q_{\text{wall}}$ gradient finite at extreme wall loading; the
+plant-life cap reflects that nothing is replaced beyond it. Limits and
+sources are documented in \cref{app:wall-limits}.
 
-\subsubsection{Levelization}
-Both sub-accounts are levelized using the procedure of \cref{sec:lac};
-neglecting the growing annuity would underestimate by the percentage
-given there.
+The set of components treated as periodically replaced is configured
+through the \texttt{replaceable\_accounts} list (default: first wall and
+blanket, C220101, plus divertor, C220108). The per-event cost is the sum
+of those accounts' capital, charged every core lifetime; adding an
+account code to the list (for example C220103 for a thin-shield design
+whose coils need periodic replacement) makes that component replaceable
+on the same schedule:
+
+\begin{minipage}{\linewidth}
+\begin{lstlisting}
+from costingfe import CostModel, ConfinementConcept, Fuel
+from costingfe.defaults import load_costing_constants
+
+# add the coils (C220103) to the replaced set
+cc = load_costing_constants().replace(
+    replaceable_accounts=("C220101", "C220108", "C220103"),
+)
+model = CostModel(ConfinementConcept.TOKAMAK, Fuel.DT,
+                  costing_constants=cc)
+\end{lstlisting}
+\end{minipage}
+
+Each replaceable item is charged as the present value of its discrete
+replacement series, annualized by the CRF. An item costing
+$C_{\text{evt}}$ per replacement, replaced every $t_{\text{rep}}$ years
+over a plant life of $n$ years, contributes an annual charge
+\begin{equation}
+\label{eq:cas72-repl}
+a_{\text{rep}} = \text{CRF}(i,n)\; C_{\text{evt}}\; \frac{s\,(1 - s^{n_{\text{rep}}})}{1 - s},
+\qquad s = (1+i)^{-t_{\text{rep}}},\quad
+n_{\text{rep}} = \max\!\big(0,\, \lceil n/t_{\text{rep}}\rceil - 1\big),
+\end{equation}
+where $\text{CRF}(i,n)$ is the capital recovery factor (\cref{eq:crf})
+and the first set is capital (already in CAS22), so only the
+$n_{\text{rep}}$ later replacements are charged. CAS72 sums
+$a_{\text{rep}}$ over the replaced items: the core, with $C_{\text{evt}} = n_{\text{mod}}\sum_{k\in\text{repl}} C_k$
+and $t_{\text{rep}} = L_{\text{core}}/f_{\text{avail}}$ (calendar years);
+the DEC grid; and, for pulsed concepts, the capacitor bank and laser
+subsystems on their shot-derived lifetimes, plus the electrode-wear term
+below.
+
+Pulsed concepts add driver-specific consumables. Inductive-DEC capacitor
+banks are replaced on a cycle-count and repetition-rate schedule. The
+electromagnetic-gun concepts (sheared-flow Z-pinch and plasma jet)
+replace formation electrodes, whose plasma-facing surfaces erode under
+high current density; because their shot lifetime can be sub-annual, the
+charge is levelized as an annual recurring cost rather than discrete
+events,
+\begin{equation}
+C_{72,\,\text{elec}} = c_{\text{rep}}\,C_{220104}\,
+  \frac{N_{\text{shots/yr}}}{N_{\text{life}}},
+\end{equation}
+with $c_{\text{rep}} = 0.5$ the consumable-electrode share of the driver
+capital (range $0.25$--$0.75$), $N_{\text{life}} = 10^{8}$ shots the
+electrode lifetime (range $10^{7}$--$10^{9}$, high uncertainty with no
+NOAK data), and $N_{\text{shots/yr}} = f_{\text{rep}}\cdot 8760\cdot
+3600\cdot f_{\text{avail}}$ the annual shot count at repetition rate
+$f_{\text{rep}}$ and availability $f_{\text{avail}}$; it scales with the
+module count $n_{\text{mod}}$.
+
+The two sub-accounts are summed,
+\begin{equation}
+\label{eq:cas70-total}
+\text{CAS70} = C_{71} + C_{72},
+\end{equation}
+where $C_{71}$ is the levelized annual O\&M (the base-year value of
+\cref{eq:cas71}, levelized over the plant life by \cref{sec:lac}) and
+$C_{72}$ the replacement charge developed above. Neglecting the growing
+annuity in $C_{71}$ would underestimate the levelized cost by the
+percentage reported in \cref{sec:lac}.
 
 
 %% ------------------------------------------------------------
 \subsection{CAS80: Annualized Fuel Cost}
 \label{sec:cas80}
 
-CAS80 covers the annualized cost of fuel isotope consumables. The
-annual fuel expenditure is computed from the fusion power, the
-energy per reaction, and the unit cost of fuel isotopes:
+CAS80 covers the annualized cost of fuel consumables: the burn-corrected
+fuel cost plus, for inertial and magneto-inertial concepts, the per-shot
+target consumable,
+\begin{equation}
+\label{eq:cas80-total}
+\text{CAS80} = A_{\text{fuel}}^{\text{eff}} + A_{\text{target}},
+\end{equation}
+with the two terms developed below ($A_{\text{target}} = 0$ for concepts
+with no manufactured target). These are base-year annual costs; like
+CAS70 they are then levelized over the plant life (\cref{sec:lac}). The gross fuel expenditure
+$A_{\text{fuel}}$, before the incomplete-burn correction
+(\cref{eq:cas80-burn}), is computed from the fusion power, the energy per
+reaction, and the unit cost of the feedstock isotopes:
 
 \begin{equation}
 \label{eq:cas80-base}
-A_{\text{fuel}} = N_{\text{mod}} \cdot P_{\text{fus}}\,[\text{W}] \cdot
+A_{\text{fuel}} = n_{\text{mod}} \cdot P_{\text{fus}}\,[\text{W}] \cdot
   \frac{8760 \times 3600 \cdot f_{\text{avail}} \cdot c_{\text{rxn}}}
        {Q_{\text{eff}} \cdot e_{\text{MeV}}}
 \end{equation}
 
 \noindent where $P_{\text{fus}}$ is in watts, $c_{\text{rxn}}$ is the cost per fusion reaction
-(summing the unit costs of the consumed isotopes weighted by their
+(summing the unit costs of the feedstock isotopes weighted by their
 per-reaction masses), $Q_{\text{eff}}$ is the effective energy per
 reaction in MeV (fuel-dependent; see \cref{tab:fusion-reactions}), and
-$e_{\text{MeV}} = 1.602 \times 10^{-13}$~J/MeV. The factor
+$e_{\text{MeV}} = 1.602 \times 10^{-13}$~J/MeV, and $f_{\text{avail}}$ the
+plant availability (capacity factor, \cref{eq:e-annual}). The factor
 $8760 \times 3600$ converts one year to seconds. Fuel-specific
 unit costs are listed in \cref{tab:fuel-prices}.
 
@@ -3056,94 +3096,120 @@ B-11 (enriched) & 10{,}000 & FOAK estimate (B-10 tails) \\
 \end{tabular}
 \end{table}
 
+A plant must inject more fuel than it burns. Only a fraction $f_b$ of the
+injected fuel fuses per pass (the single-pass burn fraction of
+\cref{sec:fusion-power-split}); of the unburned $(1-f_b)$, a fraction
+$f_r$ is recovered from the exhaust and recycled, and the rest is lost
+and must be replaced with fresh feedstock. The gross cost of
+\cref{eq:cas80-base} therefore understates the fuel bill: per fused
+reaction the make-up purchase exceeds the stoichiometric amount by
+$(1-f_b)(1-f_r)/f_b$, giving the burn-corrected fuel cost
+
+\begin{equation}
+\label{eq:cas80-burn}
+A_{\text{fuel}}^{\text{eff}} = A_{\text{fuel}} \left[
+  1 + \frac{1 - f_b}{f_b}\left(1 - f_r\right)
+\right]
+\end{equation}
+
+\noindent The multiplier equals unity when either $f_b = 1$ (complete
+burn) or $f_r = 1$ (perfect fuel recovery). For inexpensive fuels
+(deuterium at \$2{,}175/kg) the correction is negligible; for expensive
+fuels (He-3 at \$2{,}000{,}000/kg) it is economically significant: at
+$f_b = 0.10$, $f_r = 0.95$ the effective fuel cost is $1.45\times$ the
+full-burn estimate, and at $f_b = 0.05$, $f_r = 0.90$ it rises to
+$2.9\times$.
+
+Per-concept $f_b$ values, with ranges and basis, are listed in
+\cref{app:burn-fraction}; $f_r = 0.99$ is uniform across concepts. At the
+MFE-class point ($f_b = 0.05$) the multiplier is $1.19$.
+
 \subsubsection{Target Consumable for Inertial and Magneto-Inertial Concepts}
 \label{sec:cas80-target}
 For inertial and magneto-inertial concepts the fuel-bearing consumable
 is not only the isotope but the fabricated target destroyed on every
 shot: the capsule and hohlraum of a laser or heavy-ion target, the
 beryllium liner and recyclable transmission line of a MagLIF or Z-pinch
-load. Following the fission convention---where CAS80 holds the
+load. Following the fission convention, in which CAS80 holds the
 fabricated fuel \emph{assembly} (cladding and structure included), not
-only the raw isotope---this hardware is added to CAS80 as a per-shot
+only the raw isotope, this hardware is added to CAS80 as a per-shot
 term parallel to \cref{eq:cas80-base}:
 \begin{equation}
 \label{eq:cas80-target}
-A_{\text{target}} = N_{\text{mod}} \cdot \dot{N}_{\text{shot}} \cdot c_{\text{target}},
+A_{\text{target}} = n_{\text{mod}} \cdot \dot{N}_{\text{shot}} \cdot c_{\text{target}},
 \qquad
 \dot{N}_{\text{shot}} = f_{\text{rep}} \cdot 8760 \times 3600 \cdot f_{\text{avail}},
 \end{equation}
 where $c_{\text{target}}$ is the per-shot target cost (one target per
-shot per module) and $f_{\text{rep}}$ is the repetition rate. The
-burn-fraction correction below does not apply to $A_{\text{target}}$:
+shot per module), $f_{\text{rep}}$ is the repetition rate, and
+$f_{\text{avail}}$ is the plant availability (\cref{eq:e-annual}). The
+burn-fraction correction above does not apply to $A_{\text{target}}$:
 the target is consumed whole each shot regardless of fuel burnup.
+
 $c_{\text{target}}$ is a per-concept input, zero for magnetic concepts
 and for in-situ-formation pulsed concepts (\cref{sec:cas2208}),
-and it carries only the \emph{non-capital} per-shot cost---materials,
+and it carries only the \emph{non-capital} per-shot cost (materials,
 factory operating labour, and post-shot radiological handling, divided
-by the acceptance yield---because the factory capital is funded once, in
-$C_{220108}$. This separation matters: published NOAK target costs
-(\$0.20--0.30/shot~\cite{anklam2011life}) are fully-loaded values that
-already amortize the plant, so charging them in CAS80 \emph{and} a
-standalone factory capital double-counts the factory. Disentangled and
-built up from first principles---sub-cent materials (a diamond ablator
-shell, or a 3~g lead hohlraum) marked up by tritium-confined
-handling and divided by yield, the per-shot cost is about \$0.50--0.62
-for laser and heavy-ion capsules and several dollars for the
-liner-plus-transmission-line loads (the transmission line being net of
-in-situ recycling). A subtlety the prior treatment omitted is that all
+by the acceptance yield), because the factory capital is funded once in
+$C_{220108}$ (\cref{sec:cas2208}). Built up this way from sub-cent
+materials (a diamond ablator shell, or a 3~g lead hohlraum) marked up by
+tritium-confined handling and divided by yield, $c_{\text{target}}$ is
+about \$0.50--0.62 for laser and heavy-ion capsules and several dollars
+for the liner-plus-transmission-line loads (the transmission line being
+net of in-situ recycling).
+
+A further consideration is that all
 post-shot debris is tritiated and neutron-activated, so it must be either
 recovered in a contained hot cell or conditioned and disposed as
 low-level waste; for the LIFE-standard lead hohlraum the recovered metal
 is worth less than the recovery facility, so single-use disposal is the
-default and is competitive with recycling. Because the rep rate enters
+default and is competitive with recycling.
+
+Because the rep rate enters
 linearly, a high-rep laser plant at $f_{\text{rep}} = 10$~Hz consumes
 about $2.7\times10^{8}$ targets per year, so even a sub-dollar capsule
-contributes a multiple-percent share of LCOE; once the factory capital
-and these radiological premiums are costed honestly rather than
+contributes a several-percent share of LCOE; once the factory capital
+and these radiological premiums are costed explicitly rather than
 amortized into an optimistic sub-dollar number, the high-rep capsule
-concepts sit above their magnetic counterparts in LCOE, as the
-inertial-fusion economics literature expects.
+concepts exceed their magnetic counterparts in LCOE, consistent with the
+inertial-fusion economics literature.
 
-\subsubsection{Burn Fraction and Fuel Recovery}
-\Cref{eq:cas80-base} implicitly assumes that all injected fuel
-undergoes fusion. In practice, only a fraction $\beta_{\text{burn}}$
-of the injected fuel fuses per plasma pulse or confinement cycle;
-the remainder must be exhausted, processed, and either recycled or
-repurchased. The fuel recovery fraction $\eta_{\text{rec}}$ captures
-the efficiency of recycling unburned fuel from the exhaust stream.
-The effective annual fuel cost becomes:
 
+
+%% ------------------------------------------------------------
+\subsection{Levelized Annual Operating Cost}
+\label{sec:lac}
+
+The levelization foreshadowed in \cref{sec:lcoe} is carried out here. A
+base-year operating cost $M_0$ (CAS70, CAS80) becomes a constant annual
+charge $M_{\text{annual}}$ in two steps. First, it is inflated at the
+rate $g$ to first-year-of-operation dollars,
 \begin{equation}
-\label{eq:cas80-burn}
-A_{\text{fuel}}^{\text{eff}} = A_{\text{fuel}} \left[
-  1 + \frac{1 - \beta_{\text{burn}}}{\beta_{\text{burn}}}
-      \left(1 - \eta_{\text{rec}}\right)
-\right]
+\label{eq:inflate}
+A_1 = M_0 \, (1 + g)^{T_c},
 \end{equation}
+where $T_c$ is the construction time, taken as the total project time
+$T_{\text{project}}$ (\cref{eq:project-time}) for first-of-a-kind plants
+so that the licensing delay is carried in the escalation. Second, the
+escalating stream is discounted at $i$ over the plant life and annualized
+by the capital recovery factor (\cref{eq:crf}), giving the levelized charge
+\begin{equation}
+\label{eq:levelized}
+M_{\text{annual}} = A_1\,\text{CRF}(i, n)\,
+  \frac{1 - \left(\frac{1+g}{1+i}\right)^{n}}{i - g},
+\end{equation}
+the standard growing-annuity levelization (for the degenerate case $i = g$
+the final factor reduces to $n/(1+i)$).
 
-\noindent The multiplier equals unity when either
-$\beta_{\text{burn}} = 1$ (complete burn) or
-$\eta_{\text{rec}} = 1$ (perfect fuel recovery). For inexpensive
-fuels (deuterium at \$2{,}175/kg), the correction is negligible.
-For expensive fuels (particularly He-3 at \$2{,}000{,}000/kg),
-the multiplier is economically significant: at
-$\beta_{\text{burn}} = 0.10$ and $\eta_{\text{rec}} = 0.95$,
-the effective fuel cost is $1.45\times$ the full-burn estimate;
-at $\beta_{\text{burn}} = 0.05$ and $\eta_{\text{rec}} = 0.90$,
-it rises to $2.9\times$.
-
-Values are declared per concept. The MFE regime default is
-$\beta_{\text{burn}} = 0.05$, reflecting typical MCF plasma
-conditions where single-pass burn fractions of 1--10\% are
-expected; inertial and magneto-inertial concepts use individual
-values in the 0.01--0.30 range. $\eta_{\text{rec}} = 0.99$ is
-uniform across concepts, reflecting modern exhaust fuel processing.
-At the MFE-class values the multiplier is $1 + 19 \times 0.01 =
-1.19$.
-
-\subsubsection{Levelization}
-CAS80 is levelized using the same growing-annuity procedure as
-CAS70 (\cref{sec:lac}).
+\noindent For example, at $M_0 = \pgfmathprintnumber[precision=0]{\refCbase}$~M\$,
+$i = \refWACC$, $g = \refG$,
+$n = \pgfmathprintnumber[precision=0]{\refN}$~yr,
+$T_c = \pgfmathprintnumber[precision=0]{\refTc}$~yr, the levelized
+cost is \pgfmathprintnumber[precision=1]{\refLevelized}~M\$/yr
+compared to \pgfmathprintnumber[precision=1]{\refAone}~M\$/yr from the
+na\"{\i}ve single-year inflation formula, a
+\pgfmathprintnumber[precision=0]{\refUnderestimate}\% underestimate
+when the growing annuity is neglected.
 
 
 %% ------------------------------------------------------------
@@ -3180,8 +3246,8 @@ reference designs, ARC \citep{sorbom2015arc} and ARIES-AT
 framework's contribution is procurement-grounded re-derivation
 of the cost accounts most sensitive to fuel cycle and confinement
 family; divergence from heritage-scaling estimates is therefore
-expected, and the check is whether the divergences fall in the
-accounts where the methodological change predicts they should.
+expected, and the check is whether the divergences arise in the
+accounts predicted by the methodological change.
 All published costs are escalated to 2025~USD via the BLS Consumer
 Price Index for All Urban Consumers (CPI-U), matching the convention
 used by pyFECONS \citep{woodruff2026}.
@@ -3227,10 +3293,10 @@ Coils & REBCO HTS, demountable & \\
 The published fabricated-component cost is \$5{,}560M (FY2014~USD,
 \citep{sorbom2015arc} p.~25, Section 6.6), or \$7{,}562M after
 escalation to 2025~USD. \texttt{1costingfe} predicts an overnight
-capital cost of \$2{,}829M, an overnight specific cost of
-10{,}500~\$/kWe, and an LCOE of 141.4~\$/MWh under the framework's
+capital cost of \$2{,}875M, an overnight specific cost of
+10{,}650~\$/kWe, and an LCOE of 143.3~\$/MWh under the framework's
 NOAK default assumptions. The implied delta on overnight cost is
-$-63$\,\%. Sorbom's volumetric estimate uses a single \$1.06M/tonne
+$-62$\,\%. Sorbom's volumetric estimate uses a single \$1.06M/tonne
 fabricated multiplier averaged across four heritage burning-plasma
 designs (FIRE, BPX, PCAST5, ARIES-RS), with the dominant contribution
 from a 4{,}350-tonne SS316LN structural support priced at \$4.6\,B.
@@ -3271,20 +3337,18 @@ Coils & LTS Nb$_3$Sn & \\
 \end{table}
 
 \Cref{tab:aries-crosswalk} compares published top-level costs
-(escalated to 2025~USD) with \texttt{1costingfe}'s prediction. The
-Najmabadi 2006 paper publishes only the EMWG-style top-level
-rollups (account 90 ``Direct cost'', account 94 ``Owner's cost'',
-account 99 ``Total cost''), not a full per-CAS-account decomposition;
-the cross-walk is therefore at the top-level granularity. Direct
-cost is mapped to the sum of CAS21+CAS22+CAS23+CAS24+CAS25+CAS26+CAS27.
-The 1costingfe ``Overnight'' row reports CAS10+CAS21+CAS22+CAS23+CAS24+CAS25+CAS26+CAS27+CAS28+CAS29+CAS30+CAS40+CAS50
-(everything before interest during construction); the 1costingfe
-``Total'' row also includes CAS60 (IDC).
+(escalated to 2025~USD) with \texttt{1costingfe}'s prediction.
+\citet{najmabadi2006ariesat} publishes only EMWG-style rollups
+(accounts~90 ``Direct'', 94 ``Owner's'', 99 ``Total''), not a per-account
+decomposition, so the cross-walk is at top-level granularity. Published
+direct cost maps to CAS21--27; the \texttt{1costingfe} ``Overnight'' row
+sums CAS10--50 (everything before interest during construction), and the
+``Total'' row adds CAS60 (IDC).
 
 % Direct: published 1521.1 M$ (1992) * 2.295 = 3491; 1cfe sum CAS21+22+23+24+25+26+27 = 3518
-% Overnight $/kWe: published 2441 (1992) * 2.295 = 5602; 1cfe (CAS10-50)/kWe = 4620
-% Total: published 2844 M$ (1992) * 2.295 = 6527; 1cfe total_capital = 5508
-% LCOE: published 47.53 mill/kWh (1992) * 2.295 = 109.1 $/MWh; 1cfe = 74.8
+% Overnight $/kWe: published 2441 (1992) * 2.295 = 5602; 1cfe (CAS10-50)/kWe = 4765
+% Total: published 2844 M$ (1992) * 2.295 = 6527; 1cfe total_capital = 5681
+% LCOE: published 47.53 mill/kWh (1992) * 2.295 = 109.1 $/MWh; 1cfe = 76.7
 \begin{table}[h]
 \centering
 \caption{ARIES-AT cross-walk against published top-level rollups.
@@ -3296,19 +3360,19 @@ escalated from 1992~USD to 2025~USD by a factor of 2.295.}
 Account & Published (2025~USD) & \texttt{1costingfe} & $\Delta$ (\%) \\
 \midrule
 Direct cost (Account 90), M\$       & 3{,}491 & 3{,}518 &  $+0.8$ \\
-Overnight specific cost, \$/kWe     & 5{,}602 & 4{,}620 & $-17.5$ \\
-Total cost (Account 99), M\$        & 6{,}527 & 5{,}508 & $-15.6$ \\
-LCOE, \$/MWh                        &   109.1 &    74.8 & $-31.4$ \\
+Overnight specific cost, \$/kWe     & 5{,}602 & 4{,}765 & $-14.9$ \\
+Total cost (Account 99), M\$        & 6{,}527 & 5{,}681 & $-13.0$ \\
+LCOE, \$/MWh                        &   109.1 &    76.7 & $-29.7$ \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 The direct-cost row matches closely (within 1\,\%), indicating
-that the bottom-up CAS21--27 procurement basis lands on the heritage 2002
+that the bottom-up CAS21--27 procurement basis agrees with the heritage 2002
 ARIES systems-study estimate at the top level. The overnight specific
-cost is 18\,\% lower; this is consistent with \texttt{1costingfe}'s
+cost is 15\,\% lower; this is consistent with \texttt{1costingfe}'s
 NOAK default assumption replacing the FOAK-with-learning-multiplier
-convention used in the ARIES program. The LCOE divergence ($-31$\,\%)
+convention used in the ARIES program. The LCOE divergence ($-30$\,\%)
 is dominated by the same NOAK effect propagated through the capital
 recovery factor.
 
@@ -3336,7 +3400,7 @@ and owner's costs (the ``Other capital'' group, which bundles CAS30
 indirect services) and the CAS60 financial charge. CAS21 (buildings) is
 the largest single direct-equipment account after the reactor, though
 smaller than those aggregated indirect and financial groups in both
-cases. The most informative compositional
+cases. The principal compositional
 difference is the absolute scale: ARC's compact 270\,MWe footprint
 produces a smaller absolute capital stack than the 1\,GWe ARIES-AT
 but a higher \$/kWe figure, reflecting diseconomies of scale in CAS21
@@ -3405,6 +3469,31 @@ and \texttt{docs/papers/1costingfe\_paper/scripts/make\_tornado.py}
 
 \appendix
 
+\section{CAS10 Pre-Construction Line Items}
+\label{app:cas10}
+
+The fixed pre-construction line items in the CAS10 build-up
+(\cref{eq:cas10}) are flat charges, independent of plant power and module
+count. \Cref{tab:cas10-items} lists the adopted values; the land cost
+(CAS11) and licensing cost (CAS13) are given in \cref{sec:cas11,sec:cas13}.
+
+\begin{table}[htbp]
+\caption{Fixed CAS10 pre-construction line items.}
+\label{tab:cas10-items}
+\centering
+\begin{tabular}{lll}
+\toprule
+Item & Symbol & Value (M\$) \\
+\midrule
+Site permits & $c_{\text{site}}$ & 3.0 \\
+Engineering studies & $c_{\text{studies}}$ & 20.0 (FOAK), 4.0 (NOAK) \\
+Plant permits & $c_{\text{permit}}$ & 2.0 \\
+Pre-construction reports & $c_{\text{reports}}$ & 1.0 \\
+Other & $c_{\text{other}}$ & 1.0 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
 \section{Synchrotron radiation model details}
 \label{app:synchrotron}
 
@@ -3413,8 +3502,8 @@ radiation model summarized in equation~\eqref{eq:p-sync}.
 
 \subsection{Profile Assumptions and Central-Value Conversion}
 
-The Albajar model is a model of synchrotron radiation out of a tokamak
-plasma, and it requires central (on-axis) values of electron
+The Albajar model describes synchrotron radiation from a tokamak
+plasma and requires central (on-axis) values of electron
 temperature and density, whereas \texttt{1costingfe}'s power balance
 operates on volume-averaged quantities. The assumed radial profiles
 follow the convention of \citet{albajar2001}:
@@ -3592,7 +3681,7 @@ Plasma jet (PJMIF) & 0.10 & 0.05--0.15 & Plasma-jet-driven MIF simulations \cite
 Staged Z-pinch & 0.10 & 0.05--0.15 & LANL staged-pinch designs; sourcing pending. \\
 Z-pinch (IFE) & 0.10 & 0.05--0.15 & Rayleigh--Taylor disassembly limit. \\
 Theta pinch & 0.05 & 0.03--0.08 & Faster expansion than Z-pinch; closer to the MFE bound. \\
-Dense plasma focus & 0.01 & 0.005--0.02 & Sub-microsecond pinch lifetime is binding \citep{lerner2023dpf}; genuinely low and materially raises DPF LCOE. \\
+Dense plasma focus & 0.01 & 0.005--0.02 & Sub-microsecond pinch lifetime is binding \citep{lerner2023dpf}; the value is low and materially raises DPF LCOE. \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -3622,7 +3711,7 @@ and loss of fracture toughness make the structure unacceptable. The ARIES
 nuclear assessment ties this to a fluence: the ferritic-steel structure ends
 its service life at 200~dpa, corresponding to 18~MW\,yr/m$^2$ of first-wall
 neutron fluence \citep{elguebaly_ariesat, elguebaly_uwfdm1108}, about 11~dpa per
-MW\,yr/m$^2$. Independent cross-checks bracket this window: the ARIES-AT
+MW\,yr/m$^2$. Independent cross-checks constrain this window: the ARIES-AT
 SiC/SiC option reaches 18.5~MW\,yr/m$^2$ at its 3\% burnup limit
 \citep{elguebaly_ariesat}, and the EU-DEMO starter blanket is specified for
 2~MW\,yr/m$^2$ at about 20~dpa (10~dpa per MW\,yr/m$^2$)
@@ -3659,7 +3748,7 @@ clamp binds first). EUROFER97 has been characterized to about 80~dpa
 200~dpa limit is a design extrapolation, the largest single materials
 uncertainty behind the basis. The damage limits are sourced from tokamak and
 generic-blanket studies; the material limits carry over to other geometries,
-but the plasma-to-wall mapping is the model's.
+but the plasma-to-wall mapping is specific to the present model.
 
 \section{Reference Walkthrough Script}
 \label{sec:appendix-handoff-script}
