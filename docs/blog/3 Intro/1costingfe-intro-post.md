@@ -16,6 +16,8 @@ Three earlier posts by the 1cFE initiative leaned on this codebase. The [cost-fl
 
 The current release covers 17 confinement concepts across steady-state magnetic, pulsed magneto-inertial, and inertial families, and all four fuels.
 
+The equations behind every account, the physics power balances, and the framework's benchmarking against published reference designs are documented in the [methodology paper](https://github.com/1cFE/1costingfe/releases/download/v0.1.0/1costingfe_paper.pdf).
+
 ## Try it live
 
 ![The explorer: a D-T tokamak at 1 GWe, with the account breakdown, elasticity tornado, and the advanced input tabs](explorer_screenshot.png)
