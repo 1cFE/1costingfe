@@ -66,7 +66,6 @@ def main() -> None:
         T_e=70.0,  # keV, electron temperature
         Z_eff=1.3,  # effective ion charge
         B=3.0,  # T, central-cell field
-        plasma_volume=400.0,  # m^3 (pi * plasma_t^2 * chamber_length)
         T_edge=0.20,  # keV, edge temperature (open field lines)
         tau_ratio=3.0,  # impurity confinement time / energy confinement time
         R_w=0.4,  # wall reflectivity (lower for open ends)
@@ -99,8 +98,9 @@ def main() -> None:
         ("CAS30", costs.cas30),
         ("CAS40", costs.cas40),
         ("CAS50", costs.cas50),
+        ("Overnight (CAS10-50)", costs.overnight_cost),
         ("CAS60", costs.cas60),
-        ("Total overnight", costs.total_capital),
+        ("Total capital (incl. IDC)", costs.total_capital),
         ("CAS70 (M$/yr)", costs.cas70),
         ("CAS80 (M$/yr)", costs.cas80),
         ("CAS90 (M$/yr)", costs.cas90),
@@ -116,7 +116,8 @@ def main() -> None:
     print(f"  Q_eng:   {pt.q_eng:.2f}")
     print(f"  Recirc:  {pt.rec_frac:.1%}")
     print()
-    print(f"Overnight specific cost: {costs.capital_per_kw:.0f} $/kW")
+    print(f"Overnight specific cost: {costs.overnight_cost * 1e3 / pt.p_net:.0f} $/kW")
+    print(f"Total specific cost (incl. IDC): {costs.capital_per_kw:.0f} $/kW")
     print(f"LCOE: {costs.lcoe:.1f} $/MWh")
 
 

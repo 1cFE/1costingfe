@@ -126,7 +126,7 @@ The code uses the Code of Accounts Structure (CAS) approach, used in
 the ARIES program and later formalized by the Generation~IV Economic
 Modeling Working Group, and adopted and developed under ARPA-E funding
 by Woodruff and colleagues in the pyFECONS code.
-The framework covers D-T, p-${}^{11}$B, and D-D and D-${}^3$He
+The framework covers D-T, D-D, D-${}^3$He, and p-${}^{11}$B
 cycles across the uncatalyzed, semi-catalyzed, and fully catalyzed
 regimes, with tritium and ${}^3$He burn-up fractions exposed as
 independent parameters. \texttt{1costingfe} is a costing
@@ -377,7 +377,7 @@ model  = CostModel(
     power_cycle=PowerCycle.RANKINE,
 )
 result = model.forward(
-    net_electric_mw=1000.0, availability=0.87, lifetime_yr=30,
+    net_electric_mw=1000.0, availability=0.85, lifetime_yr=30,
     chamber_length=80.0, plasma_t=0.4, b_center=12.0,
     T_e=70.0, n_e=3.3e19,
     blanket_form="none", blanket_fill="none", mn=1.0,
@@ -413,22 +413,24 @@ scenario, in 2025\,USD. Recorded by
 CAS account & Description & M\$ \\
 \midrule
 CAS10        & Pre-construction (land, permits, licensing)  & 14.5 \\
-CAS21        & Buildings \& structures                      & 322.1 \\
-CAS22        & Reactor plant equipment                      & 1911.9 \\
+CAS21        & Buildings \& structures                      & 324.1 \\
+CAS22        & Reactor plant equipment                      & 1904.4 \\
 CAS23--29    & Other direct (BOP, special materials, contingency) & 242.0 \\
-CAS30        & Capitalized indirect services                & 495.2 \\
+CAS30        & Capitalized indirect services                & 494.1 \\
 CAS40        & Owner's costs                                & 24.3 \\
-CAS50        & Supplementary costs                          & 260.1 \\
-CAS60        & Interest during construction                 & 628.5 \\
+CAS50        & Supplementary costs                          & 259.9 \\
 \midrule
-\multicolumn{2}{l}{Total overnight}                          & 3898.6 \\
-\multicolumn{2}{l}{Overnight specific cost (\$/kW)}          & 3899 \\
+\multicolumn{2}{l}{Overnight capital (CAS10--50)}            & 3263.3 \\
+\midrule
+CAS60        & Interest during construction                 & 627.3 \\
+\multicolumn{2}{l}{Total capital (incl.\ IDC)}               & 3890.6 \\
+\multicolumn{2}{l}{Specific cost (\$/kW, incl.\ IDC)}        & 3891 \\
 \midrule
 CAS70 (M\$/yr) & O\&M and scheduled replacement             & 41.9 \\
 CAS80 (M\$/yr) & Fuel (raw isotopes)                        & 250.5 \\
-CAS90 (M\$/yr) & Annualized financial (CRF, \cref{eq:crf})   & 314.2 \\
+CAS90 (M\$/yr) & Annualized financial (CRF, \cref{eq:crf})   & 313.5 \\
 \midrule
-\multicolumn{2}{l}{\textbf{LCOE (\$/MWh)}}                  & \textbf{81.5} \\
+\multicolumn{2}{l}{\textbf{LCOE (\$/MWh)}}                  & \textbf{81.4} \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -494,7 +496,7 @@ example, to test a more optimistic ${}^3$He price:
 \begin{minipage}{\linewidth}
 \begin{lstlisting}
 result = model.forward(
-    net_electric_mw=1000.0, availability=0.87, lifetime_yr=30,
+    net_electric_mw=1000.0, availability=0.85, lifetime_yr=30,
     u_he3=1_000_000.0,  # $/kg, optimistic He-3 price
 )
 \end{lstlisting}
@@ -510,7 +512,7 @@ estimate without re-running the physics:
 \begin{minipage}{\linewidth}
 \begin{lstlisting}
 result = model.forward(
-    net_electric_mw=1000.0, availability=0.87, lifetime_yr=30,
+    net_electric_mw=1000.0, availability=0.85, lifetime_yr=30,
     cost_overrides={"C220103": 436.0},  # M$, mirror coil quote
 )
 \end{lstlisting}
@@ -803,7 +805,7 @@ A complementary fuel-cycle quantity is the \emph{single-pass burn
 fraction} $f_b$ (\texttt{burn\_fraction}; sometimes called injection
 burnup): the fraction of fuel atoms injected into the plasma that
 undergo fusion before being exhausted. For magnetic confinement at
-reactor-relevant densities and confinement times, $f_b$ of order 1--$10\%$.
+reactor-relevant densities and confinement times, $f_b$ is of order 1--$10\%$.
 Unburned fuel is exhausted, separated, and recycled with efficiency
 $f_r$ (\texttt{fuel\_recovery}); the resulting cumulative fusion
 probability of an injected atom is $f_b / [1 - f_r(1-f_b)]$,
@@ -1522,7 +1524,7 @@ CAS & Description & Disposition & Method \\
 A contingency rate $f_{\text{cont}}$ is applied to the direct accounts
 (CAS10, the CAS21--28 sum via CAS29, and CAS50): $f_{\text{cont}} =
 10\%$ for FOAK and $0\%$ for NOAK, following the Gen-IV EMWG convention
-\citep{emwg2007}. The 10\% FOAK rate is conservative relative to the EMWG
+\citep{emwg2007}. The 10\% FOAK rate is optimistic relative to the EMWG
 recommendation of 15--20\% for advanced reactors (the CAS22 sub-accounts
 already carry conservative fabrication markups); the 0\% NOAK rate
 reflects a mature, standardised design with resolved construction risk.
@@ -1649,27 +1651,9 @@ where $c_b(f)$ is building $b$'s fuel-dependent reference cost
 $P_{b,\text{ref}}$ the 1\,GWe reference, and $\alpha_b \in \{0,
 \tfrac{1}{2}, 1\}$ for fixed, staff-scaled, and power-scaled buildings.
 The superconducting-magnet cryoplant building is included only for
-superconducting-coil concepts. The per-fuel totals (each a sum of the
-individually-costed buildings) are summarized in \cref{tab:cas21-fuel}.
-
-\begin{table}[htbp]
-\caption{CAS21 buildings cost by fuel cycle.}
-\label{tab:cas21-fuel}
-\centering
-\begin{tabular}{lrl}
-\toprule
-Fuel & Value at 1\,GWe (M\$) & Construction grade \\
-\midrule
-D-T    & 629 & Enhanced industrial (tritium confinement, hot cell, rad-HVAC) \\
-D-D    & 576 & Enhanced industrial (reduced tritium/activation scope) \\
-D-${}^3$He & 452 & Light enhanced industrial \\
-p-${}^{11}$B & 385 & Industrial (no hot cell, no tritium, standard HVAC) \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-\Cref{tab:cas21-buildings} lists each building with its per-fuel cost at the
-1\,GWe reference and the power quantity it scales with.
+superconducting-coil concepts. \Cref{tab:cas21-buildings} lists each
+building with its per-fuel cost at the 1\,GWe reference and the power
+quantity it scales with, with the per-fuel totals in the final row.
 
 \begin{table}[htbp]
 \caption{CAS21 buildings by fuel cycle and scaling driver (M\$ at the
@@ -1700,6 +1684,8 @@ Power supply & \multicolumn{4}{c}{17} & $P_{\text{et}}$ \\
 On-site AC & \multicolumn{4}{c}{12} & $P_{\text{et}}$ \\
 Cryogenics & \multicolumn{4}{c}{14} & fixed (superconducting only) \\
 Assembly hall & \multicolumn{4}{c}{21} & fixed \\
+\midrule
+\textbf{Total} & \textbf{579} & \textbf{527} & \textbf{413} & \textbf{356} & \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -1721,7 +1707,7 @@ balance-of-plant accounts CAS23--26 use), reaching plant scale rather than
 being pinned to a single module; fixed buildings are charged once per site.
 
 \Cref{tab:cas21-benchmarks} situates the fuel-dependent CAS21 figures
-of \cref{tab:cas21-fuel} against non-fusion plant types.
+of \cref{tab:cas21-buildings} against non-fusion plant types.
 
 \begin{table}[htbp]
 \caption{CAS21 buildings \$/kW benchmark comparison.}
@@ -1738,9 +1724,9 @@ Fission nuclear (Part~50) & 800--1{,}300 & Nuclear-grade \\
 \end{tabular}
 \end{table}
 
-The fusion p-${}^{11}$B figure of 384~\$/kW corresponds to roughly
-1.7$\times$ CCGT, and the D-T figure of 626~\$/kW at roughly
-3.0$\times$ CCGT.
+The fusion p-${}^{11}$B figure of 356~\$/kW corresponds to roughly
+1.8$\times$ CCGT, and the D-T figure of 579~\$/kW to roughly
+2.9$\times$ CCGT.
 The values are derived from first principles using industrial construction
 benchmarks \citep{cushman_wakefield_2025, netl2022, nrel_atb2024}.
 
@@ -2211,7 +2197,8 @@ electric output:
 \end{equation}
 where $c_{\text{ps}} = \$80$M is the power-supply reference cost at
 $P_{\text{et,ref}}$ (\cref{sec:cas2206}). It originates from the ARIES-CS design study
-(\$70.6M in 2004\$ for a 1.3\,GWe stellarator, approximately \$78/kW).
+(\$70.6M in 2004\$, about \$120M escalated to 2025\$, for a 1.3\,GWe
+stellarator, approximately \$93/kW).
 Cross-checks against GW-scale HVDC converter stations
 (\$100--250/kW installed)\footnote{HVDC converter station vendor literature, Siemens Energy and Hitachi ABB Power Grids, 2022--2024.} and utility-scale solar inverters
 (\$30--50/kW \citep{nrel_atb2024}) bound the reference value: fusion magnet supplies
