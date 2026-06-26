@@ -31,7 +31,7 @@ def test_external_physics_handoff_runs():
         "CAS70",
         "CAS80",
         "CAS90",
-        "Total overnight",
+        "Overnight (CAS10-50)",
         "LCOE",
     ):
         assert key in out, f"missing rollup row: {key}"
