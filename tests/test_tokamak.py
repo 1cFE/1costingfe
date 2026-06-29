@@ -5,6 +5,7 @@ import jax.numpy as jnp
 import pytest
 
 from costingfe import ConfinementConcept, CostModel, Fuel, PlasmaState
+from costingfe._backend import HAS_JAX
 from costingfe.layers.physics import mfe_forward_power_balance
 from costingfe.layers.tokamak import (
     apply_disruption_penalty,
@@ -82,6 +83,10 @@ class TestBoschHale:
         sv = float(sigma_v_dt(65.0))
         assert 5e-22 < sv < 1.2e-21, f"sigma_v(65 keV) = {sv}"
 
+    @pytest.mark.skipif(
+        not HAS_JAX,
+        reason="exercises jax.grad directly; numpy mode uses finite differences",
+    )
     def test_jax_differentiable(self):
         """Should be differentiable with jax.grad."""
         grad_fn = jax.grad(lambda T: sigma_v_dt(T))
@@ -510,12 +515,20 @@ class TestBackwardCompat:
 # 12. JAX autodiff through 0D pipeline
 # ---------------------------------------------------------------------------
 class TestJAXAutodiff:
+    @pytest.mark.skipif(
+        not HAS_JAX,
+        reason="exercises jax.grad directly; numpy mode uses finite differences",
+    )
     def test_sigma_v_grad(self):
         """sigma_v_dt should have finite positive gradient at 15 keV."""
         g = jax.grad(sigma_v_dt)(15.0)
         assert jnp.isfinite(g)
         assert g > 0
 
+    @pytest.mark.skipif(
+        not HAS_JAX,
+        reason="exercises jax.grad directly; numpy mode uses finite differences",
+    )
     def test_fusion_power_grad(self):
         """Fusion power should have finite gradient w.r.t. T_e."""
 
@@ -525,6 +538,10 @@ class TestJAXAutodiff:
         g = jax.grad(p_fus_fn)(15.0)
         assert jnp.isfinite(g)
 
+    @pytest.mark.skipif(
+        not HAS_JAX,
+        reason="exercises jax.grad directly; numpy mode uses finite differences",
+    )
     def test_beta_N_grad(self):
         """beta_N should have finite gradient w.r.t. T_e."""
 
@@ -568,6 +585,10 @@ class TestDisruptionRate:
         r3 = float(compute_disruption_rate(f_GW=0.95, beta_N=2.5, q95=3.5))
         assert r1 < r2 < r3
 
+    @pytest.mark.skipif(
+        not HAS_JAX,
+        reason="exercises jax.grad directly; numpy mode uses finite differences",
+    )
     def test_jax_differentiable(self):
         """disruption_rate should be differentiable w.r.t. f_GW."""
 

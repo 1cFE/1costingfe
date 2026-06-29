@@ -8,9 +8,9 @@ All core functions are pure and JAX-differentiable.
 
 from dataclasses import dataclass
 
-import jax
-import jax.numpy as jnp
-
+from costingfe._backend import Tracer
+from costingfe._backend import fori_loop as jax_fori_loop
+from costingfe._backend import xp as jnp
 from costingfe.layers.physics import (
     OperatingPointInfeasible as OperatingPointInfeasible,  # noqa: F401 — re-exported for existing importers
 )
@@ -397,21 +397,6 @@ def _find_T_for_pfus(
     return 0.5 * (lo + hi)
 
 
-def _import_fori_loop():
-    import jax.lax
-
-    return jax.lax.fori_loop
-
-
-# Use jax.lax.fori_loop but import lazily to avoid issues
-try:
-    import jax.lax
-
-    jax_fori_loop = jax.lax.fori_loop
-except Exception:
-    jax_fori_loop = None
-
-
 def tokamak_0d_inverse(
     p_net_target,
     R,
@@ -583,7 +568,7 @@ def tokamak_0d_inverse(
     # geometry. An implied point beyond an error-severity stability limit is
     # a verdict on the claim, not an operating point: refuse to cost it.
     # Skipped under JAX tracing (sensitivity), where values are abstract.
-    if enforce_plasma_limits and not isinstance(plasma_state.beta_N, jax.core.Tracer):
+    if enforce_plasma_limits and not isinstance(plasma_state.beta_N, Tracer):
         errors = [
             msg for sev, msg in check_plasma_limits(plasma_state) if sev == "error"
         ]
