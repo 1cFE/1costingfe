@@ -7,8 +7,7 @@ Costs returned in millions USD (M$).
 Source: pyFECONs costing/calculations/cas*.py
 """
 
-import jax.numpy as jnp
-
+from costingfe._backend import xp as jnp
 from costingfe.layers.economics import (
     compute_crf,
     levelized_annual_cost,

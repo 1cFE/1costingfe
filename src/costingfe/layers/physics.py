@@ -1,7 +1,6 @@
 """Layer 2: Physics — fuel physics, power balance (forward + inverse)."""
 
-import jax.numpy as jnp
-
+from costingfe._backend import xp as jnp
 from costingfe.layers.radiation import (
     compute_impurity_fraction,
     compute_p_rad,
