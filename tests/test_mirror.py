@@ -510,13 +510,17 @@ class TestInverse:
 # independent changes landing on it: (1) construction_time_yr now reads the mirror
 # YAML value (5.0 yr) instead of a generic 6.0 signature default, lowering
 # IDC/indirect; (2) the fluence-based CAS72 basis change (wall_limits_and_fluence.md)
-# plus the tandem hot-electron central cell (T_e = 125 keV, Hammir anchor for the
-# Fowler-Logan plug; the non-0D path reads YAML T_e for its radiation term). The
-# coil calibration pin (513.375 M$) is unaffected (T_e does not enter coils).
+# plus the central-cell electron temperature the non-0D path reads from YAML for
+# its radiation term. The coil calibration pin (513.375 M$) is unaffected (T_e
+# does not enter coils).
 # re-pinned: CAS10 land changed to sqrt(plant-total power) scaling (CAS50/40/70
 # n_mod fixes are no-ops at n_mod=1), then gross-electric reference unified to
-# 1100 MWe (ref_gross_power_mwe); LCOE moved 100.5444 -> 100.5561 -> below.
-_MIRROR_DT_PINNED_LCOE = 100.40650939941406
+# 1100 MWe (ref_gross_power_mwe); LCOE moved 100.5444 -> 100.5561 -> 100.4065.
+# re-pinned: central-cell T_i and T_e corrected to the near-Maxwellian Hammir/WHAM
+# value (10 keV), from the prior 125 keV plug hot-electron value that had been read
+# onto the bulk cell. This removes the spurious high-T_e synchrotron term, so the
+# default-path LCOE moved 100.4065 -> 98.9895 (Q_eng 3.5 -> 4.6, recirc 28% -> 22%).
+_MIRROR_DT_PINNED_LCOE = 98.98950958251953
 
 
 class TestModelIntegration:

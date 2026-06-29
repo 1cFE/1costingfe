@@ -50,13 +50,15 @@ _BASE = dict(
         # re-pinned: gross-electric reference unified to 1100 MWe (ref_gross_power_mwe;
         # CAS21 was 1150, C220107/C220110 were 1000), small downshift across concepts.
         (C.TOKAMAK, Fuel.DT, 295.32),
-        # re-pinned 2026-06-15: mirror central-cell T_e raised 20->125 keV (the
-        # tandem hot-electron plug required by the fixed Fowler-Logan potential
-        # e*phi = T_e*ln(n_p/n_c)); the non-0D default radiation term reads this
-        # T_e, so the MIRROR-DT benchmark LCOE moved 182.71 -> 210.42. Mirror-only;
+        # re-pinned: mirror central-cell T_i and T_e corrected to the near-Maxwellian
+        # Hammir/WHAM value (10 keV). A 2026-06-15 change had raised central T_e to
+        # 125 keV (the tandem PLUG hot-electron value that sets the Fowler-Logan
+        # potential e*phi = T_e_plug*ln(n_p/n_c)) and read it onto the BULK cell via
+        # the non-0D radiation term, inflating the MIRROR-DT benchmark with a spurious
+        # high-T_e synchrotron term. Corrected here: 218.36 -> 190.52. Mirror-only;
         # tokamak/stellarator/dipole/polywell pins unchanged. See
         # docs/account_justification/mirror_confinement_regimes.md.
-        (C.MIRROR, Fuel.DT, 218.36),
+        (C.MIRROR, Fuel.DT, 190.52),
         (C.STELLARATOR, Fuel.DT, 330.54),
         # DIPOLE re-benchmarked after the radial-build inversion + spherical
         # geometry dispatch + Li2O blanket fill + C220108 divertor zeroing +

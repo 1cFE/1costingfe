@@ -134,7 +134,7 @@ q_surface_max: 1.0  # Surface heat-flux cap on the first wall [MW/m^2] (photons 
 
 # Mirror 0D model parameters
 R_m: 10.0  # Mirror ratio B_max_throat / B_min (dimensionless)
-T_i: 20.0  # Ion temperature [keV]; forward-mode 0D input (inverse mode solves T_i)
+T_i: 10.0  # Ion temperature [keV]; central-cell near-Maxwellian value (Hammir/WHAM, Frank et al. 2024 arXiv:2411.06644). Forward-mode 0D input; inverse mode solves T_i
 beta_max: 0.5  # MHD stability limit on midplane beta (user constraint)
 use_0d_model: false  # Opt-in 0D mirror physics model (flip after anchor validation)
 enforce_plasma_limits: true  # Raise OperatingPointInfeasible when beta > beta_max
@@ -154,16 +154,15 @@ n_e: 5.0e19  # Electron density [m^-3]
 # CENTRAL-CELL electron temperature that sets central-cell bremsstrahlung /
 # radiation (compute_p_rad, beta, stored energy), NOT the plug potential. The
 # confining potential is built by the separate HOT-ELECTRON plug at T_e_plug
-# (below); see plug_density_ratio above. Real advanced-fuel tandems run a hot
-# plug DISTINCT from a coolable central cell, so the central cell can keep its
-# electrons cool to limit bremsstrahlung while the plug stays hot. For the D-T
-# REFERENCE machine the central cell genuinely runs hot: the Realta Hammir Q>5
-# design point (Frank et al. 2024 arXiv:2411.06644 sec. 3.5) has a central cell at
-# T_e = 125 keV (>> T_i = 45 keV), so the default stays 125 for D-T. Advanced-fuel
-# configs/examples OVERRIDE this cool (e.g. 20-40 keV) to control bremsstrahlung
-# while keeping T_e_plug hot. See
+# (below), which stays hot (125 keV) to hold e*phi; see plug_density_ratio above.
+# The central cell is near-Maxwellian and cool: Frank et al. 2024
+# (arXiv:2411.06644) find conservative Hammir/WHAM operating points with a
+# central cell of order 10 keV, with T_e close to T_i. The 125 keV figure is the
+# PLUG hot-electron temperature (carried only by T_e_plug below), not the bulk
+# central cell. Keeping central T_e cool is also what lets advanced fuels limit
+# bremsstrahlung while the plug stays hot. See
 # docs/account_justification/mirror_confinement_regimes.md.
-T_e: 125.0  # Central-cell electron temperature [keV] (radiation; Hammir D-T reference)
+T_e: 10.0  # Central-cell electron temperature [keV] (radiation; near-Maxwellian central cell, Hammir/WHAM)
 # Plug hot-electron temperature [keV]. Sets the Fowler-Logan confining potential
 # e*phi = T_e_plug * ln(n_p/n_c) (see plug_density_ratio). The plug confines
 # through the ELECTRON temperature, so a tandem must run HOT plug electrons
