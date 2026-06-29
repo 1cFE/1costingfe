@@ -4,6 +4,7 @@ import jax
 import jax.numpy as jnp
 import pytest
 
+from costingfe._backend import HAS_JAX
 from costingfe.layers.physics import ash_neutron_split, event_energies
 from costingfe.layers.reactivity import (
     fusion_power,
@@ -57,6 +58,10 @@ class TestFitPhysics:
         # NRL formulary: DT <sigma v> at 100 keV ~ 8.54e-16 cm^3/s
         assert float(sigv_dt(100.0)) == pytest.approx(8.54e-22, rel=0.15)
 
+    @pytest.mark.skipif(
+        not HAS_JAX,
+        reason="skipped in numpy (uses finite differences)",
+    )
     def test_dt_peak_location(self):
         # Bosch-Hale DT reactivity peaks near 64-67 keV
         Ts = jnp.linspace(10.0, 100.0, 91)
@@ -69,6 +74,10 @@ class TestFitPhysics:
         assert float(sigv_dhe3(15.0)) < 0.01 * float(sigv_dt(15.0))
         assert float(sigv_dd_n(15.0) + sigv_dd_p(15.0)) < 0.05 * float(sigv_dt(15.0))
 
+    @pytest.mark.skipif(
+        not HAS_JAX,
+        reason="skipped in numpy (uses finite differences)",
+    )
     def test_pb11_peak_in_literature_range(self):
         # NS HT-branch peak: broad, ~3.7e-22 m^3/s near 400-500 keV
         Ts = jnp.linspace(50.0, 500.0, 451)
@@ -76,6 +85,10 @@ class TestFitPhysics:
         assert 3.0e-22 < float(jnp.max(vs)) < 4.5e-22
         assert float(Ts[jnp.argmax(vs)]) > 350.0
 
+    @pytest.mark.skipif(
+        not HAS_JAX,
+        reason="skipped in numpy (uses finite differences)",
+    )
     def test_all_fits_differentiable_and_positive(self):
         for fn, T in [
             (sigv_dt, 15.0),
@@ -221,6 +234,10 @@ class TestFusionPowerDensity:
         assert float(p) == pytest.approx(expected, rel=1e-5)
         assert float(frac) == 0.0
 
+    @pytest.mark.skipif(
+        not HAS_JAX,
+        reason="skipped in numpy (uses finite differences)",
+    )
     def test_dhe3_dispatch_differentiable(self):
         import jax
 
@@ -232,6 +249,10 @@ class TestFusionPowerDensity:
         assert jnp.isfinite(g)
         assert g > 0.0  # below the D-He3 peak, power rises with T_i
 
+    @pytest.mark.skipif(
+        not HAS_JAX,
+        reason="skipped in numpy (uses finite differences)",
+    )
     def test_jit_matches_eager_all_fuels(self):
         import jax
 
