@@ -4,9 +4,8 @@ import difflib
 import math
 import numbers
 
-import jax
-import jax.numpy as jnp
-
+from costingfe._backend import HAS_JAX, Tracer, grad, vmap
+from costingfe._backend import xp as jnp
 from costingfe.defaults import (
     POWER_CYCLE_DEFAULTS,
     CostingConstants,
@@ -921,7 +920,7 @@ class CostModel:
             params.setdefault("f_rad", self.cc.f_rad(self.fuel))
 
         # Validate merged parameters (skip under JAX tracing)
-        _tracing = any(isinstance(v, jax.core.Tracer) for v in params.values())
+        _tracing = any(isinstance(v, Tracer) for v in params.values())
         if not _tracing:
             CostingInput(
                 concept=self.concept,
@@ -1993,13 +1992,17 @@ class CostModel:
         non-differentiable comparison -- so it disagrees with the concrete
         forward(). Those paths fall back to finite differences on forward().
         """
-        if params.get("use_0d_model", False) or params.get("size_from_power", False):
+        if (
+            not HAS_JAX
+            or params.get("use_0d_model", False)
+            or params.get("size_from_power", False)
+        ):
             return self._sensitivity_fd(params, cost_overrides)
 
         lcoe_fn, keys, base_vals = self._build_lcoe_fn(params, cost_overrides)
         base_lcoe = float(lcoe_fn(base_vals))
 
-        grad_fn = jax.grad(lcoe_fn)
+        grad_fn = grad(lcoe_fn)
         grads = grad_fn(base_vals)
 
         engineering = {}
@@ -2106,18 +2109,22 @@ class CostModel:
         lcoe_fn, keys, base_vals = self._build_lcoe_fn(params, cost_overrides)
 
         n = len(next(iter(param_sets.values())))
-        # Build matrix: each row is a param vector
-        rows = []
-        for _ in range(n):
-            rows.append(base_vals)
-        batch = jnp.stack(rows)
 
-        # Override the varying params
-        for param_name, values in param_sets.items():
-            if param_name in keys:
-                idx = keys.index(param_name)
-                batch = batch.at[:, idx].set(jnp.array(values))
+        if HAS_JAX:
+            batch = jnp.stack([base_vals for _ in range(n)])
+            for param_name, values in param_sets.items():
+                if param_name in keys:
+                    idx = keys.index(param_name)
+                    batch = batch.at[:, idx].set(jnp.array(values))
+            results = vmap(lcoe_fn)(batch)
+            return [float(r) for r in results]
 
-        vmapped = jax.vmap(lcoe_fn)
-        results = vmapped(batch)
-        return [float(r) for r in results]
+        # numpy: no vmap / no .at — loop the rows
+        results = []
+        for r in range(n):
+            vec = list(base_vals)
+            for param_name, values in param_sets.items():
+                if param_name in keys:
+                    vec[keys.index(param_name)] = values[r]
+            results.append(float(lcoe_fn(jnp.array(vec))))
+        return results
