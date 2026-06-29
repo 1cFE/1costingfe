@@ -24,6 +24,7 @@ else:
 if HAS_JAX:
     import jax
     import jax.lax
+    import jax.numpy as xp  # noqa: F401 - exported
 
     Tracer = jax.core.Tracer
     grad = jax.grad
@@ -31,6 +32,7 @@ if HAS_JAX:
     fori_loop = jax.lax.fori_loop
     optimization_barrier = jax.lax.optimization_barrier
 else:
+    import numpy as xp  # noqa: F401 - exported
 
     class Tracer:  # noqa: D401 - sentinel; nothing is ever an instance
         """Placeholder so isinstance(x, Tracer) is always False under numpy."""
