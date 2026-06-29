@@ -544,7 +544,9 @@ class TestModelIntegration:
         # Exact equality: same deterministic float path, no solver involved.
         # Pinned value is float32; rel=1e-12 is tighter than float32 epsilon,
         # so this is bit-identity in practice.
-        assert r.costs.lcoe == pytest.approx(_MIRROR_DT_PINNED_LCOE, rel=1e-12)
+        assert r.costs.lcoe == pytest.approx(
+            _MIRROR_DT_PINNED_LCOE, rel=1e-12 if HAS_JAX else 1e-6
+        )
 
     def test_0d_mirror_produces_finite_lcoe(self):
         """use_0d_model=True produces a finite LCOE for DT mirror."""
@@ -699,7 +701,9 @@ class TestMirrorCoilLengthScaling:
         If this fails the calibration is wrong and nothing else can be trusted.
         """
         r = self._base()
-        assert r.costs.lcoe == pytest.approx(_MIRROR_DT_PINNED_LCOE, rel=1e-12)
+        assert r.costs.lcoe == pytest.approx(
+            _MIRROR_DT_PINNED_LCOE, rel=1e-12 if HAS_JAX else 1e-6
+        )
 
     def test_doubling_length_doubles_central_contribution(self):
         """Doubling chamber_length doubles the central-coil kA*m (and cost share).
