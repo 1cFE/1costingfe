@@ -1,7 +1,7 @@
 """Layer 2c: 0D Axisymmetric Mirror Plasma Model.
 
 Confinement, end losses, and plasma state for axisymmetric magnetic
-mirrors, following the tokamak 0D pattern. Pure JAX; runtime math is
+mirrors, following the tokamak 0D pattern. Backend-agnostic; runtime math is
 float32-safe, constants pre-folded in float64.
 Physics per docs/superpowers/specs/2026-06-11-mirror-0d-sizing-design.md:
 classical (Bing & Roberts 1961), Pastukhov electrostatic plugging

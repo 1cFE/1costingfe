@@ -2,11 +2,13 @@
 
 import math
 
-import jax
-import jax.numpy as jnp
 import pytest
 
 from costingfe._backend import HAS_JAX
+
+if HAS_JAX:
+    import jax
+    import jax.numpy as jnp
 from costingfe.defaults import load_costing_constants
 from costingfe.layers.mirror import (
     _KEV_TO_J,
