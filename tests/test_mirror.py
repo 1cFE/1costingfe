@@ -17,6 +17,7 @@ from costingfe.layers.mirror import (
     _V_THI_PREFACTOR,
     MirrorPlasmaState,
     SizingInfeasible,
+    _confinement_and_losses,
     _density_from_f_beta,
     _density_from_surface_cap,
     _density_from_wall_cap,
@@ -2329,3 +2330,21 @@ def test_alpha_electron_fraction_decreasing_in_Te():
     f_lo = float(alpha_electron_fraction(10.0, 3500.0, 33.0))
     f_hi = float(alpha_electron_fraction(40.0, 3500.0, 33.0))
     assert f_hi < f_lo
+
+
+def test_confinement_helper_loss_split_partitions_total():
+    out = _confinement_and_losses(
+        10.0,
+        n_e=5e19,
+        T_i=10.0,
+        n_i_frac=1.0,
+        M_ion=2.5,
+        R_m=10.0,
+        L=50.0,
+        a=0.5,
+        B_min=3.0,
+        phi=74.7,
+    )
+    assert out["p_end"] > 0.0
+    assert out["p_radial"] > 0.0
+    assert abs(out["p_end"] + out["p_radial"] - out["W_th_MW"] / out["tau_E"]) < 1e-6

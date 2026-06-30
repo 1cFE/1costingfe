@@ -352,6 +352,46 @@ def compute_dclc_parameter(a, T_i, A, B_min):
     return a / rho_i
 
 
+def _confinement_and_losses(T_e, *, n_e, T_i, n_i_frac, M_ion, R_m, L, a, B_min, phi):
+    """Confinement times and the axial/radial loss split at a given central-cell T_e.
+
+    Pure function of T_e and the fixed operating point, so the electron-balance
+    solver can evaluate p_end(T_e). Extracted verbatim from mirror_0d_forward; the
+    physics is unchanged. tau_classical/tau_Pastukhov/tau_GD are diagnostic only.
+    """
+    n_i = n_i_frac * n_e
+    tau_ii = compute_tau_ii(n_i, T_i, M_ion)
+    tau_classical = compute_tau_classical(tau_ii, R_m)
+    tau_Pastukhov = compute_tau_pastukhov(tau_ii, R_m, phi, T_i)
+    tau_GD = compute_tau_gas_dynamic(R_m, L, T_i, M_ion)
+    tau_radial = compute_tau_radial(tau_ii, a, T_i, M_ion, B_min)
+    tau_axial = compute_tau_axial(tau_ii, R_m, L, T_i, M_ion, phi, n_i)
+    inv_tau_axial = 1.0 / tau_axial
+    inv_tau_p = inv_tau_axial + 1.0 / tau_radial
+    tau_p = 1.0 / inv_tau_p
+    tau_E = tau_p * (1.5 * (T_i + T_e)) / (2.0 * phi + T_i + T_e)
+    V_plasma = jnp.pi * a**2 * L
+    W_th_MW = 1.5 * n_e * (T_e + n_i_frac * T_i) * _KEV_TO_J * V_plasma * 1e-6
+    P_total = W_th_MW / tau_E
+    axial_frac = inv_tau_axial / inv_tau_p
+    p_end = P_total * axial_frac
+    p_radial = P_total - p_end
+    v_thi = _V_THI_PREFACTOR * jnp.sqrt(T_i / M_ion)
+    collisionality = L / (v_thi * tau_ii)
+    return {
+        "tau_E": tau_E,
+        "W_th_MW": W_th_MW,
+        "p_end": p_end,
+        "p_radial": p_radial,
+        "axial_frac": axial_frac,
+        "tau_p": tau_p,
+        "collisionality": collisionality,
+        "tau_classical": tau_classical,
+        "tau_Pastukhov": tau_Pastukhov,
+        "tau_GD": tau_GD,
+    }
+
+
 def mirror_aux_heating(state, p_aux_floor, f_alpha_heat):
     """Auxiliary heating power [MW] required to sustain a mirror operating point.
 
@@ -499,11 +539,7 @@ def mirror_0d_forward(
         )
     p_rad = jnp.minimum(p_rad, p_alpha)
 
-    # 6. Ion-ion collision time; n_i = n_i_frac * n_e is the fuel-dilution mix.
-    n_i = n_i_frac * n_e
-    tau_ii = compute_tau_ii(n_i, T_i, M_ion)
-
-    # 7. Tandem plug confining potential (BOUNDED, FIXED by the plug hardware).
+    # 6. Tandem plug confining potential (BOUNDED, FIXED by the plug hardware).
     # The cost model commits to a tandem (n_plug_coils = 4, Hammir class), so the
     # central-cell ions are confined by the end-plug electrostatic potential
     # e*phi = T_e_plug*ln(n_p/n_c) (Fowler & Logan 1977; Frank et al. 2024 eq. 18),
@@ -518,38 +554,27 @@ def mirror_0d_forward(
     # simple-mirror Boltzmann value is kept only as a diagnostic.
     phi = compute_plug_potential(T_e_plug, plug_density_ratio)
 
-    # 8. Confinement time chain
-    # tau_classical is diagnostic only; confinement chain uses Pastukhov + gas-dynamic.
-    tau_classical = compute_tau_classical(tau_ii, R_m)
-    tau_Pastukhov = compute_tau_pastukhov(tau_ii, R_m, phi, T_i)
-    tau_GD = compute_tau_gas_dynamic(R_m, L, T_i, M_ion)
-    tau_radial = compute_tau_radial(tau_ii, a, T_i, M_ion, B_min)
-
-    # Combined axial: collisionality-gated gas-dynamic vs Pastukhov bridge.
-    # tau_Pastukhov and tau_GD are kept above for the state diagnostic fields.
-    tau_axial = compute_tau_axial(tau_ii, R_m, L, T_i, M_ion, phi, n_i)
-    inv_tau_axial = 1.0 / tau_axial
-
-    # Total particle: 1/tau_p = 1/tau_axial + 1/tau_radial
-    inv_tau_p = inv_tau_axial + 1.0 / tau_radial
-    tau_p = 1.0 / inv_tau_p
-
-    # 9. Energy confinement time
-    # tau_E = tau_p * 1.5*(T_i+T_e) / (2*phi + T_i + T_e)
-    tau_E = tau_p * (1.5 * (T_i + T_e)) / (2.0 * phi + T_i + T_e)
-
-    # 10. Stored thermal energy [MW when divided by tau_E in seconds]
-    W_th_MW = 1.5 * n_e * (T_e + n_i_frac * T_i) * _KEV_TO_J * V_plasma * 1e-6
-
-    # 11. End-loss power split between axial and radial channels
-    # Total loss: P_total = W_th / tau_E
-    # Axial fraction: (1/tau_axial) / (1/tau_p) = inv_tau_axial / inv_tau_p
-    # p_end (axial) = P_total * axial_fraction
-    # p_radial = P_total - p_end
-    P_total = W_th_MW / tau_E
-    axial_frac = inv_tau_axial / inv_tau_p
-    p_end = P_total * axial_frac
-    p_radial = P_total - p_end
+    # 8-11. Confinement times and the axial/radial loss split (extracted helper).
+    cl = _confinement_and_losses(
+        T_e,
+        n_e=n_e,
+        T_i=T_i,
+        n_i_frac=n_i_frac,
+        M_ion=M_ion,
+        R_m=R_m,
+        L=L,
+        a=a,
+        B_min=B_min,
+        phi=phi,
+    )
+    tau_classical = cl["tau_classical"]
+    tau_Pastukhov = cl["tau_Pastukhov"]
+    tau_GD = cl["tau_GD"]
+    tau_p = cl["tau_p"]
+    tau_E = cl["tau_E"]
+    p_end = cl["p_end"]
+    p_radial = cl["p_radial"]
+    collisionality = cl["collisionality"]
 
     # 12. Diagnostic: f_axial_derived = p_end / (p_end + p_radial)
     # By construction this equals the tau-channel weight (axial_frac), but
@@ -567,11 +592,6 @@ def mirror_0d_forward(
     # Axial end losses (p_end) exit through the throats to the expander/DEC
     # plates and never touch the lateral first wall.
     q_surface = (p_rad + p_radial) / fw_area
-
-    # 15. Collisionality: L / ion mean free path
-    # Mean free path = v_thi * tau_ii
-    v_thi = _V_THI_PREFACTOR * jnp.sqrt(T_i / M_ion)
-    collisionality = L / (v_thi * tau_ii)
 
     # 15b. Stability / validity diagnostics (Task 3; informational, not constraints).
     # Pastukhov-Maxwellian validity flag: 1.0 when collisional enough for the bare
