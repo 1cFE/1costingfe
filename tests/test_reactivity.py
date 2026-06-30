@@ -18,6 +18,7 @@ from costingfe.layers.reactivity import (
     sigv_dhe3,
     sigv_dt,
     sigv_pb11,
+    sigv_pb11_ns,
     z_eff_fuel,
 )
 from costingfe.types import Fuel
@@ -34,8 +35,21 @@ _REF = {
     50.0: (8.6491e-22, 5.5539e-23, 1.1330e-23, 9.8383e-24),
     100.0: (8.4477e-22, 1.7185e-22, 2.6817e-23, 2.2439e-23),
 }
+# Tentori & Belloni (2023) HT-branch reference (table 2, "This work"); the
+# current default. Computed in float64 from the published P1..P7 coefficients
+# and verified to reproduce the paper's NS->TB ratios (~30% at 300 keV,
+# ~50% at 500 keV).
 _REF_PB11 = {
-    # T_keV: sigv_pb11 [m^3/s], Nevins-Swain HT branch
+    # T_keV: sigv_pb11 [m^3/s], Tentori-Belloni HT branch
+    100.0: 7.0654e-23,
+    200.0: 2.9575e-22,
+    300.0: 4.3872e-22,
+    400.0: 5.1469e-22,
+    500.0: 5.6194e-22,
+}
+# Legacy Nevins-Swain (2000) HT-branch reference, retained as a regression
+# guard on sigv_pb11_ns.
+_REF_PB11_NS = {
     100.0: 6.1526e-23,
     200.0: 2.4274e-22,
     300.0: 3.3852e-22,
@@ -53,8 +67,17 @@ class TestFitValues:
         assert float(sigv_dd_p(T)) == pytest.approx(ref_ddp, rel=1e-3)
 
     @pytest.mark.parametrize("T", sorted(_REF_PB11))
-    def test_pb11_nevins_swain_ht_branch(self, T):
+    def test_pb11_tentori_belloni_ht_branch(self, T):
         assert float(sigv_pb11(T)) == pytest.approx(_REF_PB11[T], rel=1e-3)
+
+    @pytest.mark.parametrize("T", sorted(_REF_PB11_NS))
+    def test_pb11_nevins_swain_legacy(self, T):
+        assert float(sigv_pb11_ns(T)) == pytest.approx(_REF_PB11_NS[T], rel=1e-3)
+
+    @pytest.mark.parametrize("T", [100.0, 200.0, 300.0, 500.0])
+    def test_pb11_tb_exceeds_ns(self, T):
+        # Tentori-Belloni is the higher, modern fit at every operating T.
+        assert float(sigv_pb11(T)) > float(sigv_pb11_ns(T))
 
 
 class TestFitPhysics:
@@ -83,10 +106,11 @@ class TestFitPhysics:
         reason="skipped in numpy (uses finite differences)",
     )
     def test_pb11_peak_in_literature_range(self):
-        # NS HT-branch peak: broad, ~3.7e-22 m^3/s near 400-500 keV
+        # Tentori-Belloni HT branch rises monotonically across the bracket,
+        # peaking near 500 keV at ~5.6e-22 m^3/s.
         Ts = jnp.linspace(50.0, 500.0, 451)
         vs = jax.vmap(sigv_pb11)(Ts)
-        assert 3.0e-22 < float(jnp.max(vs)) < 4.5e-22
+        assert 5.0e-22 < float(jnp.max(vs)) < 6.0e-22
         assert float(Ts[jnp.argmax(vs)]) > 350.0
 
     @pytest.mark.skipif(

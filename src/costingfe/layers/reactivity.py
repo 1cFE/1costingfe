@@ -9,13 +9,15 @@ Sources:
 - D-T, D-D (both branches), D-He3: Bosch & Hale, Nucl. Fusion 32 (1992) 611.
   Identical coefficients to the float64 verification in
   examples/dhe3_mix_optimization.py, which stays independent on purpose.
-- p-B11: Nevins & Swain, Nucl. Fusion 40 (2000) 865, high-temperature branch
-  (valid 50-500 keV; below ~50 keV the 148 keV resonance contribution is
-  underestimated, acceptable because the p-B11 operating bracket starts at
-  50 keV). Coefficients as tabulated by Tentori & Belloni, Nucl. Fusion 63
-  (2023). Tentori & Belloni's own updated fit and Putvinski et al., Nucl.
-  Fusion 59 (2019) 076018 give higher reactivity (up to +50% at the tail)
-  and are the optimistic alternatives; Nevins-Swain is the default.
+- p-B11: Tentori & Belloni, Nucl. Fusion 63 (2023) 086001, high-temperature
+  branch (their table 2, "This work"), valid 70-500 keV. Built on the
+  Sikora-Weller (2016) cross section; supersedes the older Nevins & Swain
+  (2000 Nucl. Fusion 40 865) fit, which underestimates the reactivity above
+  ~30 keV (~12% at 100 keV, ~30% at 300 keV, ~50% at 500 keV). The p-B11
+  operating bracket (optimum ~300 keV) sits well inside the HT window. The
+  legacy Nevins-Swain fit is retained as sigv_pb11_ns for reference and
+  regression; Putvinski et al. (2019 Nucl. Fusion 59 076018) is an
+  intermediate alternative (~20% over NS at 300 keV).
 """
 
 from costingfe._backend import optimization_barrier
@@ -126,30 +128,63 @@ def sigv_dd_p(T_keV):
     )
 
 
-# p-11B Gamow energy E_G = B_G^2 [keV] and reduced mass energy [keV]
-# (Tentori & Belloni 2023, after Nevins & Swain 2000).
+# p-11B Gamow energy E_G = B_G^2 [keV] and reduced mass energy mu*c^2 [keV],
+# shared by the Tentori-Belloni and Nevins-Swain HT reactivity fits (both use
+# the identical Peres/Pade functional form; Tentori & Belloni 2023, eqs 7-8).
 _PB11_EG = 22589.0
 _PB11_MRC2 = 859526.0
 
+# HT-branch (T >= 70 keV) Pade coefficients (P1..P7) for <sigma v>(T) [m^3/s],
+# Tentori & Belloni, Nucl. Fusion 63 (2023) 086001, table 2. P1 is in
+# keV m^3/s (no cm^3 -> m^3 conversion, unlike the Bosch-Hale fits above).
+#   _PB11_TB  "This work": built on the Sikora-Weller (2016) cross section; the
+#             current reference. Reproduces the paper's NS->TB ratios (~30% at
+#             300 keV, ~50% at 500 keV) and matches a direct Sikora-Weller
+#             reactivity integral to <1%.
+#   _PB11_NS  Nevins & Swain (2000): the older, conservative fit, retained for
+#             reference / regression via sigv_pb11_ns.
+_PB11_TB = (
+    9.7827e-14,
+    -5.1610e-2,
+    1.3240e-1,
+    3.8446e-4,
+    1.2499e-3,
+    -5.6715e-6,
+    1.1615e-6,
+)
+_PB11_NS = (
+    4.4467e-14,
+    -5.9357e-2,
+    2.0165e-1,
+    1.0404e-3,
+    2.7621e-3,
+    -9.1653e-6,
+    9.8305e-7,
+)
+
 
 def sigv_pb11(T_keV):
-    """p + 11B -> 3 alpha reactivity [m^3/s], Nevins-Swain HT branch.
+    """p + 11B -> 3 alpha thermal reactivity [m^3/s], Tentori-Belloni 2023.
 
-    Valid 50-500 keV. The C1 coefficient is in keV m^3/s (no cm^3 -> m^3
-    conversion, unlike the Bosch-Hale fits above).
+    Tentori & Belloni, Nucl. Fusion 63 (2023) 086001, HT-branch fit (table 2,
+    "This work"), valid 70-500 keV. Built on the Sikora-Weller (2016) cross
+    section; supersedes Nevins-Swain (2000), which underestimates <sigma v>
+    above ~30 keV (by ~30% at 300 keV, ~50% at 500 keV). The p-B11 operating
+    bracket (optimum ~300 keV) is well inside the HT window; below ~70 keV the
+    fit is used as a smooth extrapolation (finite and positive down to 50 keV).
+    Use sigv_pb11_ns for the legacy Nevins-Swain values.
     """
-    return _bosch_hale(
-        T_keV,
-        _PB11_EG**0.5,
-        _PB11_MRC2,
-        4.4467e-14,
-        -5.9357e-2,
-        2.0165e-1,
-        1.0404e-3,
-        2.7621e-3,
-        -9.1653e-6,
-        9.8305e-7,
-    )
+    return _bosch_hale(T_keV, _PB11_EG**0.5, _PB11_MRC2, *_PB11_TB)
+
+
+def sigv_pb11_ns(T_keV):
+    """p + 11B -> 3 alpha reactivity [m^3/s], legacy Nevins-Swain (2000) HT
+    branch (Tentori & Belloni 2023 table 2, "Nevins and Swain" column).
+
+    Retained for reference and regression only; sigv_pb11 (Tentori-Belloni) is
+    the default and ~12-50% higher over 100-500 keV.
+    """
+    return _bosch_hale(T_keV, _PB11_EG**0.5, _PB11_MRC2, *_PB11_NS)
 
 
 # ---------------------------------------------------------------------------
