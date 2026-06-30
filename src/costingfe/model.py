@@ -2033,8 +2033,9 @@ class CostModel:
     ) -> dict[str, dict[str, float]]:
         """Finite-difference elasticities by re-running forward() concretely.
 
-        The fallback for the 0D / sizing paths (see sensitivity()): central
-        differences on forward() with plain Python floats reproduce the
+        The fallback for the 0D / sizing paths (see sensitivity()) under JAX,
+        and the sole sensitivity path for all concepts under the numpy backend.
+        Central differences on forward() with plain Python floats reproduce the
         concrete execution the slider runs, including the bisection solve and
         the heating-mix renormalization that JAX tracing skips. Same key
         selection and categorization as the jax.grad path.
@@ -2095,7 +2096,9 @@ class CostModel:
         params: dict,
         cost_overrides: dict[str, float] | None = None,
     ) -> list[float]:
-        """Evaluate LCOE for many parameter sets using jax.vmap.
+        """Evaluate LCOE for many parameter sets.
+
+        Uses vmap (JAX backend) or a row-wise loop (numpy backend).
 
         Args:
             param_sets: Dict of param_name -> list of values (all same length).
