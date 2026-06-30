@@ -154,6 +154,39 @@ which sit more than a decade from their `1/R_m` boundaries.
 - In the collisionless regime the Pastukhov formula itself overestimates
   confinement when the plasma is too collisionless to be Maxwellian; that is a
   separate validity flag (Part 3 of the parent spec), not handled by this bridge.
+
+### n*tau ceiling on the axial confinement (Task 10)
+
+The bare Pastukhov enhancement `x*exp(x)`, `x = e*phi/T_i`, over-credits axial
+confinement in the deeply collisionless / deep-plug regime: `tau_ii ~ 1/n` grows
+long at thin density and `x` grows large at low `T_i` or a deep plug, so the
+formula runs `tau_axial` away to about 90 s at off-design points (for example
+`n = 5e19 m^-3`, `T_i = 15 keV`, where the uncapped axial time is about 98 s).
+The 0D confinement cannot physically exceed the canonical mirror Lawson /
+ignition-class `n*tau` scale, of order `1e21 m^-3 s` (Fowler 2017, "Fusion energy
+from a magnetic mirror"). A floor loss rate is therefore added to the axial
+loss-rate sum,
+
+```
+inv_tau_axial = 1/tau_Pastukhov + g(collisionality)*(1/tau_GD) + n_i/_N_TAU_CEILING
+```
+
+with `_N_TAU_CEILING = 1e21 m^-3 s`, which caps `tau_axial` at
+`_N_TAU_CEILING / n_i`. This is a smooth, differentiable additive term (not a
+hard `min`). The ceiling is `about 3 s` at reactor density (`n ~ 3.3e20`, the
+validated Hammir point) and `about 20 s` at thin density (`n ~ 5e19`), so it
+bounds the off-design runaway (`98 s -> 17 s` at the thin point above; a deep
+`phi = 150 keV` plug at reactor density is bounded `26 s -> 3 s`) while leaving
+the design-point physics order-seconds.
+
+The model is validated at reactor density (the Hammir `phi = 74.7 keV` design
+point); extreme thin / cold operating points remain approximate. Caveat: because
+the cap is a harmonic (additive-loss-rate) term rather than a `min`, it also
+lowers the already-realistic reactor-density axial time somewhat (about
+`2.4 s -> 1.3 s` at the MARS/Hammir point), which feeds the ambipolar electron
+balance and cools the solved central-cell `T_e` correspondingly. At the bare
+MARS point this is enough to move `T_e` to the cool side of the validated
+`20-28 keV` central-cell band.
 - The bridge is float32-safe: the gate argument is built from `log10` of an
   order-unity-to-1e-5 collisionality, the prefactors are folded in float64, and
   every intermediate stays in a benign range. The logistic argument is clamped to

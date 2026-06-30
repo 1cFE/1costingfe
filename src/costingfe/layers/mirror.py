@@ -101,6 +101,22 @@ _RHO_I_PREFACTOR = math.sqrt(2.0 * _M_P * _KEV_TO_J) / _EV  # 4.5694e-3
 _REGIME_GATE_WIDTH_DECADES = 0.13
 _LN10 = math.log(10.0)  # natural log of 10, for log10 in JAX
 
+# Axial confinement n*tau ceiling [m^-3 s]. The bare Pastukhov enhancement
+# x*exp(x), x = e*phi/T_i, over-credits axial confinement in the deeply
+# collisionless / deep-plug regime: tau_ii ~ 1/n grows long at thin density and
+# x grows large at low T_i or a deep plug, so the formula runs tau away to ~90 s
+# at off-design points (e.g. n = 5e19, T_i = 15 keV). The 0D confinement cannot
+# physically exceed the canonical mirror Lawson / ignition-class n*tau scale,
+# n*tau ~ 1e21 m^-3 s (Fowler 2017, "Fusion energy from a magnetic mirror"; the
+# mirror n*tau for net energy is order 1e20-1e21). Adding a floor loss rate
+# n_i/_N_TAU_CEILING to the axial loss-rate sum caps tau_axial at
+# _N_TAU_CEILING/n_i (a smooth, differentiable additive term, NOT a hard min):
+# ~3 s at reactor density (n ~ 3.3e20, the validated Hammir point, where it only
+# modestly lowers the already-realistic ~2.4 s) and ~20 s at thin density
+# (n ~ 5e19, where it tames the ~90 s runaway). See
+# docs/account_justification/mirror_confinement_regimes.md.
+_N_TAU_CEILING = 1.0e21
+
 
 # ---------------------------------------------------------------------------
 # MirrorPlasmaState
@@ -373,11 +389,25 @@ def compute_tau_axial(tau_ii, R_m, L, T_i, A, phi_keV, n_i):
     gradient at every collisionality (no NaN from a saturated logistic under
     jax.grad). float32-safe (constants folded float64).
 
+    An n*tau ceiling caps the Pastukhov over-credit. The bare Pastukhov factor
+    x*exp(x) runs away in the deeply collisionless / deep-plug regime (long
+    tau_ii ~ 1/n at thin density, large x = e*phi/T_i at low T_i or deep plug),
+    so a floor loss rate n_i/_N_TAU_CEILING is added to the axial loss-rate sum:
+
+        inv_tau_axial = 1/tau_Pastukhov + g*(1/tau_GD) + n_i/_N_TAU_CEILING,
+
+    which caps tau_axial at _N_TAU_CEILING/n_i (the canonical mirror Lawson /
+    ignition-class n*tau, Fowler 2017). This is a smooth additive term, not a
+    hard min: at reactor density (n ~ 3.3e20) the ceiling is ~3 s so it only
+    modestly lowers the already-realistic value, while at thin density
+    (n ~ 5e19) it caps the ~90 s runaway near ~20 s. The term n_i/_N_TAU_CEILING
+    is ~3e-1 at reactor density, well within float32.
+
     See docs/account_justification/mirror_confinement_regimes.md.
 
     tau_ii [s], R_m [-], L [m], T_i [keV], A ion mass number, phi_keV = e*phi
-    [keV], n_i [m^-3] (accepted for signature parity / callers; collisionality
-    is computed from L, v_thi(T_i, A), and tau_ii).
+    [keV], n_i [m^-3] (collisionality is computed from L, v_thi(T_i, A), and
+    tau_ii; n_i sets the n*tau ceiling term).
     """
     tau_Pastukhov = compute_tau_pastukhov(tau_ii, R_m, phi_keV, T_i)
     tau_GD = compute_tau_gas_dynamic(R_m, L, T_i, A)
@@ -398,7 +428,10 @@ def compute_tau_axial(tau_ii, R_m, L, T_i, A, phi_keV, n_i):
     arg = jnp.clip((log10_coll - log10_crit) / _REGIME_GATE_WIDTH_DECADES, -30.0, 30.0)
     gate = 1.0 / (1.0 + jnp.exp(-arg))
 
-    inv_tau_axial = 1.0 / tau_Pastukhov + gate / tau_GD
+    # n*tau ceiling: floor loss rate that caps tau_axial at _N_TAU_CEILING/n_i,
+    # bounding the Pastukhov over-credit in the deeply collisionless / deep-plug
+    # regime. Smooth and differentiable (additive loss rate, no hard min).
+    inv_tau_axial = 1.0 / tau_Pastukhov + gate / tau_GD + n_i / _N_TAU_CEILING
     return 1.0 / inv_tau_axial
 
 

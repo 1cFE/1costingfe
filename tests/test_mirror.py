@@ -936,12 +936,12 @@ def _sz_params(
 class TestMirrorSizing:
     def test_sized_L_grows_with_net_power(self):
         """A higher net power target requires a longer chamber."""
-        # High target lowered 600 -> 400 MW: channel-specific lnLambda_ii
-        # (~20-23, vs the retired constant 17) correctly lowers confinement, so
-        # 600 MW now exceeds the L_max=200 m ceiling for this geometry. The
-        # monotonic L(net) relation is unchanged; 400 MW keeps both feasible.
+        # High target lowered 400 -> 300 MW (Task 10): the n*tau ceiling caps the
+        # Pastukhov over-credit and so lowers confinement, dropping the max net
+        # power at L_max=200 m to ~314 MW. The monotonic L(net) relation is
+        # unchanged; 200/300 MW keep both feasible (L ~ 140/193 m).
         p_lo = dict(_sz_params(200.0), n_mod=1)
-        p_hi = dict(_sz_params(400.0), n_mod=1)
+        p_hi = dict(_sz_params(300.0), n_mod=1)
         L_lo = mirror_size_from_power(p_lo, Fuel.DT)
         L_hi = mirror_size_from_power(p_hi, Fuel.DT)
         assert L_hi > L_lo, (
@@ -1387,11 +1387,14 @@ class TestWallConstraint:
         # re-pinned (Task 9): channel-specific lnLambda_ii (~20-23 at fusion T,
         # vs the retired constant 17) correctly lowers ion confinement, so a
         # longer chamber is needed to reach the target: L = 86.139396520 m here
-        # (was 77.842279425 m under the constant Coulomb log). See
+        # (was 77.842279425 m under the constant Coulomb log).
+        # re-pinned (Task 10): the n*tau ceiling caps the Pastukhov over-credit,
+        # lowering confinement further, so a longer chamber is needed:
+        # L = 140.424590008 m (was 86.139396520 m). See
         # docs/account_justification/mirror_confinement_regimes.md.
         params = dict(_SIZING_PARAMS, q_wall_max=50.0)
         L, _, _ = _size(params)
-        assert L == pytest.approx(86.139396520, rel=1e-4)
+        assert L == pytest.approx(140.424590008, rel=1e-4)
 
     def test_infeasible_under_cap_raises_naming_cap(self):
         with pytest.raises(SizingInfeasible, match=r"q_wall_max"):
@@ -1612,8 +1615,17 @@ class TestRegimeBridge:
         # sanity: this point is collisionless (tau_gd << tau_p)
         assert tau_gd < 0.01 * tau_p
         tau_axial = float(compute_tau_axial(tii, R_m, L, T, A, phi, n))
-        # bridge must pick (near) Pastukhov, within a small factor, not tau_GD
-        assert tau_axial > 0.5 * tau_p
+        # Bridge picks the collisionless (Pastukhov) side, NOT the much shorter
+        # gas-dynamic time: tau_axial is orders of magnitude above tau_gd.
+        assert tau_axial > 100.0 * tau_gd
+        # Re-pinned (Task 10): the bare Pastukhov time over-credits here (~57 s);
+        # the n*tau ceiling (~10 s at n=1e20) now bounds tau_axial, so it sits at
+        # the density-set ceiling rather than 0.5*tau_p. See
+        # docs/account_justification/mirror_confinement_regimes.md.
+        from costingfe.layers.mirror import _N_TAU_CEILING
+
+        assert tau_axial <= _N_TAU_CEILING / n * (1.0 + 1e-6)
+        assert tau_axial > 0.5 * (_N_TAU_CEILING / n)
 
     def test_collisional_uses_gas_dynamic_branch(self):
         # High n, low T: collisional, gas-dynamic governs (tau_axial ~ tau_GD).
@@ -1664,6 +1676,36 @@ class TestRegimeBridge:
 
         g = float(jax.grad(f)(2000.0))
         assert jnp.isfinite(g)
+
+    def test_axial_confinement_capped_at_n_tau_ceiling(self):
+        # Root cause #2: bare Pastukhov x*exp(x) over-credits at a thin/low-T_i
+        # (deeply collisionless, long tau_ii ~ 1/n) point, running tau away to
+        # ~90 s. The n*tau ceiling bounds tau_axial at _N_TAU_CEILING / n_i.
+        from costingfe.layers.mirror import _N_TAU_CEILING
+
+        n, T, A, R_m, L, phi = 5.0e19, 15.0, 2.5, 10.0, 130.0, 74.7
+        tii = float(compute_tau_ii(n, T, A))
+        tau_axial = float(compute_tau_axial(tii, R_m, L, T, A, phi, n))
+        ceiling = _N_TAU_CEILING / n  # ~20 s at this thin density
+        # The capped axial time cannot exceed the density-set n*tau ceiling.
+        assert tau_axial <= ceiling * (1.0 + 1e-6)
+        # And it really did cap a runaway: bare Pastukhov is well above the ceiling.
+        tau_p_bare = float(compute_tau_pastukhov(tii, R_m, phi, T))
+        assert tau_p_bare > 3.0 * ceiling
+
+    def test_axial_confinement_barely_capped_at_reactor_density(self):
+        # At the validated Hammir reactor point (n ~ 3.3e20) the ceiling is ~3 s,
+        # near the uncapped axial time, so the model stays order-seconds (it is NOT
+        # collapsed to the much shorter gas-dynamic time, nor a 90 s runaway).
+        from costingfe.layers.mirror import _N_TAU_CEILING
+
+        n, T, A, R_m, L, phi = 3.3e20, 28.0, 2.5, 10.0, 130.0, 74.7
+        tii = float(compute_tau_ii(n, T, A))
+        tau_axial = float(compute_tau_axial(tii, R_m, L, T, A, phi, n))
+        ceiling = _N_TAU_CEILING / n  # ~3.03 s
+        assert tau_axial <= ceiling * (1.0 + 1e-6)
+        # Order-seconds confinement preserved at the design point (uncapped ~2.4 s).
+        assert 1.0 <= tau_axial <= ceiling
 
 
 class TestEnergyBalanceClosure:
