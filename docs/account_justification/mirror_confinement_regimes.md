@@ -160,33 +160,41 @@ which sit more than a decade from their `1/R_m` boundaries.
 The bare Pastukhov enhancement `x*exp(x)`, `x = e*phi/T_i`, over-credits axial
 confinement in the deeply collisionless / deep-plug regime: `tau_ii ~ 1/n` grows
 long at thin density and `x` grows large at low `T_i` or a deep plug, so the
-formula runs `tau_axial` away to about 90 s at off-design points (for example
-`n = 5e19 m^-3`, `T_i = 15 keV`, where the uncapped axial time is about 98 s).
-The 0D confinement cannot physically exceed the canonical mirror Lawson /
+formula runs `tau_axial` away to unbounded values at off-design points (for
+example `n = 5e19 m^-3`, `T_i = 15 keV`, where the uncapped axial time is about
+124 s). The 0D confinement cannot physically exceed the canonical mirror Lawson /
 ignition-class `n*tau` scale, of order `1e21 m^-3 s` (Fowler 2017, "Fusion energy
-from a magnetic mirror"). A floor loss rate is therefore added to the axial
-loss-rate sum,
+from a magnetic mirror"). This is an empirical bound on achievable mirror
+confinement, not a first-principles loss rate. A differentiable soft-min is
+therefore applied after computing `tau_axial`:
 
 ```
-inv_tau_axial = 1/tau_Pastukhov + g(collisionality)*(1/tau_GD) + n_i/_N_TAU_CEILING
+tau_ceil  = _N_TAU_CEILING / n_i
+tau_capped = tau_axial / (1 + (tau_axial/tau_ceil)**_CAP_SHARPNESS)**(1/_CAP_SHARPNESS)
 ```
 
-with `_N_TAU_CEILING = 1e21 m^-3 s`, which caps `tau_axial` at
-`_N_TAU_CEILING / n_i`. This is a smooth, differentiable additive term (not a
-hard `min`). The ceiling is `about 3 s` at reactor density (`n ~ 3.3e20`, the
-validated Hammir point) and `about 20 s` at thin density (`n ~ 5e19`), so it
-bounds the off-design runaway (`98 s -> 17 s` at the thin point above; a deep
-`phi = 150 keV` plug at reactor density is bounded `26 s -> 3 s`) while leaving
-the design-point physics order-seconds.
+with `_N_TAU_CEILING = 1e21 m^-3 s` and `_CAP_SHARPNESS = 8`. This is a soft
+MIN, not an additive loss rate: when `tau_axial << tau_ceil` the ratio
+`(tau_axial/tau_ceil)**8` underflows to zero and `tau_capped -> tau_axial`
+(no reduction); when `tau_axial >> tau_ceil` the expression saturates to
+`tau_ceil`. The three representative operating points are:
 
-The model is validated at reactor density (the Hammir `phi = 74.7 keV` design
-point); extreme thin / cold operating points remain approximate. Caveat: because
-the cap is a harmonic (additive-loss-rate) term rather than a `min`, it also
-lowers the already-realistic reactor-density axial time somewhat (about
-`2.4 s -> 1.3 s` at the MARS/Hammir point), which feeds the ambipolar electron
-balance and cools the solved central-cell `T_e` correspondingly. At the bare
-MARS point this is enough to move `T_e` to the cool side of the validated
-`20-28 keV` central-cell band.
+- MARS reactor density (`n = 3.3e20 m^-3`, `phi = 74.7 keV`): uncapped
+  `tau_axial = 2.40 s`, capped `2.36 s` (about 2% reduction, essentially
+  untouched). The solved central-cell electron temperature is `T_e = 20.70 keV`,
+  inside the validated 20-28 keV warm band.
+- Thin point (`n = 5e19 m^-3`, `T_i = 15 keV`): uncapped about 124 s, capped
+  20 s (the density ceiling `1e21 / 5e19 = 20 s`).
+- Deep plug (`phi = 150 keV` at reactor density): capped near the 3 s density
+  ceiling.
+
+Future refinement: the physics-based treatment of anomalous axial losses is a
+loss-cone-instability (DCLC) confinement degradation, using the `a/rho_i`
+diagnostic with a warm-fraction stabilization threshold (Kolmes et al. 2024,
+loss-cone stabilization; Post 1987). Anomalous (Bohm) radial transport is a
+further candidate. Both are documented improvements beyond the current empirical
+ceiling.
+
 - The bridge is float32-safe: the gate argument is built from `log10` of an
   order-unity-to-1e-5 collisionality, the prefactors are folded in float64, and
   every intermediate stays in a benign range. The logistic argument is clamped to
