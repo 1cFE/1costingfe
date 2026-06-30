@@ -20,14 +20,14 @@
   `E_crit/T_e = 33.0`.
 - The 0D mirror model is gated off in the release (`MODELS_0D_ENABLED = False` in
   `model.py`); tests call the layer functions directly, which bypasses the gate.
-- COORDINATION: a parallel effort is making JAX optional (a backend-agnostic
-  array namespace with a numpy fallback). This plan's code is written against
-  `jnp` for current master. When the JAX-optional shim lands, the new functions
-  must use that array namespace instead of `jnp` directly. Avoid JAX-only control
-  flow: the `solve_T_e` bisection uses a bounded Python loop, NOT
-  `jax.lax.fori_loop`; if `jnp.trapezoid` is absent under the shim use a manual
-  trapezoid sum. Sequence the merges to avoid conflicts on `mirror.py` /
-  `radiation.py` (both branches edit these files).
+- BACKEND (the JAX-optional refactor has LANDED: numpy is the default backend,
+  jax optional). Use the shim: `from costingfe._backend import xp as jnp` and
+  `fori_loop` are ALREADY imported at the top of both `mirror.py` and
+  `radiation.py`, so new functions in those files need no new import. `jnp.*`
+  routes to numpy or jax.numpy. Do NOT call `jax.lax.*` directly. Do NOT use
+  `jnp.trapezoid` (absent on numpy < 2.0): use a manual trapezoid sum. Use the
+  shim `fori_loop(lo, hi, body, init)` for bounded loops (body signature
+  `body(i, carry) -> carry`; tuple carries are supported on both backends).
 - Commit messages are one line, no `Co-Authored-By` line. Docs use no em dashes
   and no `~` for approximate values (write "about").
 
@@ -245,8 +245,9 @@ def alpha_electron_fraction(T_e, E_alpha_keV, e_crit_over_te):
     e_crit = e_crit_over_te * T_e
     u = E_alpha_keV / e_crit
     xs = jnp.linspace(0.0, u, 256)
-    integrand = 1.0 / (1.0 + xs**1.5)
-    integral = jnp.trapezoid(integrand, xs)
+    y = 1.0 / (1.0 + xs**1.5)
+    # Manual trapezoid (jnp.trapezoid is not backend-safe on numpy < 2.0).
+    integral = jnp.sum(0.5 * (y[1:] + y[:-1]) * (xs[1:] - xs[:-1]))
     f_ion = integral / u
     return 1.0 - f_ion
 ```
@@ -254,8 +255,8 @@ def alpha_electron_fraction(T_e, E_alpha_keV, e_crit_over_te):
 - [ ] **Step 4: Run test to verify it passes**
 
 Run: `.venv/bin/python -m pytest tests/test_mirror.py -k alpha_electron -v`
-Expected: PASS. (If `jnp.trapezoid` is unavailable in the installed JAX, use
-`jnp.trapz`; verify with `.venv/bin/python -c "import jax.numpy as jnp; print(hasattr(jnp,'trapezoid'))"`.)
+Expected: PASS. Also run once under the numpy backend to confirm parity:
+`COSTINGFE_BACKEND=numpy .venv/bin/python -m pytest tests/test_mirror.py -k alpha_electron -v`.
 
 - [ ] **Step 5: Commit**
 
@@ -455,15 +456,17 @@ def solve_T_e(*, n_e, T_i, p_alpha, Z_eff, Z_i, A, n_i_frac, R_m, L, a, B_min,
         gamma_e = T_e / (T_e + n_i_frac * T_i)
         return a_e * p_alpha + p_ie - p_brem - gamma_e * cl["p_end"]
 
-    # Bounded Python loop (not jax.lax.fori_loop): portable to a numpy backend
-    # and JIT-traceable (fixed 60 iterations unroll). See the JAX-optional note.
-    lo, hi = 0.1, 2.0 * T_i
-    for _ in range(60):
+    # Backend-agnostic bounded bisection via the shim fori_loop (already imported
+    # in mirror.py). residual is monotone decreasing -> r > 0 means root above mid.
+    def body(_, bounds):
+        lo, hi = bounds
         mid = 0.5 * (lo + hi)
-        r = residual(mid)
-        above = r > 0  # residual decreasing: r > 0 -> root above mid
+        above = residual(mid) > 0
         lo = jnp.where(above, mid, lo)
         hi = jnp.where(above, hi, mid)
+        return (lo, hi)
+
+    lo, hi = fori_loop(0, 60, body, (0.1, 2.0 * T_i))
     return 0.5 * (lo + hi)
 ```
 
