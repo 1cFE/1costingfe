@@ -24,6 +24,7 @@ from costingfe.layers.physics import (
     mfe_forward_power_balance,
     mfe_inverse_power_balance,
 )
+from costingfe.layers.radiation import compute_p_brem_rel
 from costingfe.layers.reactivity import (
     fusion_power,
     n_i_over_n_e,
@@ -1643,3 +1644,63 @@ def alpha_electron_fraction(T_e, E_alpha_keV, e_crit_over_te):
     integral = jnp.sum(0.5 * (y[1:] + y[:-1]) * (xs[1:] - xs[:-1]))
     f_ion = integral / u
     return 1.0 - f_ion
+
+
+def solve_T_e(
+    *,
+    n_e,
+    T_i,
+    p_alpha,
+    Z_eff,
+    Z_i,
+    A,
+    n_i_frac,
+    R_m,
+    L,
+    a,
+    B_min,
+    phi,
+    f_alpha_heat,
+    e_crit_over_te,
+    E_alpha_keV,
+):
+    """Solve the central-cell electron power balance for T_e [keV].
+
+    alpha_e(T_e)*p_alpha + K_ie(T_i-T_e) = P_brem(T_e) + gamma_e*p_end(T_e)
+    gamma_e = T_e/(T_e + n_i_frac*T_i)  (electron pressure fraction, axial only)
+    Residual is monotone decreasing in T_e -> bisection on [0.1, 2*T_i].
+    """
+    n_i = n_i_frac * n_e
+    volume = jnp.pi * a**2 * L
+
+    def residual(T_e):
+        a_e = f_alpha_heat * alpha_electron_fraction(T_e, E_alpha_keV, e_crit_over_te)
+        p_ie = compute_K_ie(n_e, n_i, T_i, T_e, Z_i, A, volume)
+        p_brem = compute_p_brem_rel(n_e, T_e, Z_eff, volume)
+        cl = _confinement_and_losses(
+            T_e,
+            n_e=n_e,
+            T_i=T_i,
+            n_i_frac=n_i_frac,
+            M_ion=A,
+            R_m=R_m,
+            L=L,
+            a=a,
+            B_min=B_min,
+            phi=phi,
+        )
+        gamma_e = T_e / (T_e + n_i_frac * T_i)
+        return a_e * p_alpha + p_ie - p_brem - gamma_e * cl["p_end"]
+
+    # Backend-agnostic bounded bisection via the shim fori_loop (already imported
+    # in mirror.py). residual is monotone decreasing -> r > 0 means root above mid.
+    def body(_, bounds):
+        lo, hi = bounds
+        mid = 0.5 * (lo + hi)
+        above = residual(mid) > 0
+        lo = jnp.where(above, mid, lo)
+        hi = jnp.where(above, hi, mid)
+        return (lo, hi)
+
+    lo, hi = fori_loop(0, 60, body, (0.1, 2.0 * T_i))
+    return 0.5 * (lo + hi)

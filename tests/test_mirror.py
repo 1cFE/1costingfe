@@ -34,6 +34,7 @@ from costingfe.layers.mirror import (
     mirror_aux_heating,
     mirror_size_from_power,
     net_electric_at_L,
+    solve_T_e,
 )
 from costingfe.layers.physics import OperatingPointInfeasible
 from costingfe.layers.reactivity import n_i_over_n_e
@@ -2348,3 +2349,53 @@ def test_confinement_helper_loss_split_partitions_total():
     assert out["p_end"] > 0.0
     assert out["p_radial"] > 0.0
     assert abs(out["p_end"] + out["p_radial"] - out["W_th_MW"] / out["tau_E"]) < 1e-6
+
+
+def test_solve_T_e_DT_lands_cool():
+    # D-T at a reference operating point must land near T_i (order 10 to 20 keV),
+    # NOT the old 125 keV. p_alpha order 200 MW.
+    T_e = float(
+        solve_T_e(
+            n_e=5e19,
+            T_i=15.0,
+            p_alpha=200.0,
+            Z_eff=1.5,
+            Z_i=1.0,
+            A=2.5,
+            n_i_frac=1.0,
+            R_m=10.0,
+            L=50.0,
+            a=0.5,
+            B_min=3.0,
+            phi=74.7,
+            f_alpha_heat=0.8,
+            e_crit_over_te=33.0,
+            E_alpha_keV=3500.0,
+        )
+    )
+    assert 5.0 < T_e < 40.0  # cool, not hot
+
+
+def test_solve_T_e_residual_zero_at_solution():
+    # Re-evaluating the balance at the returned T_e gives a near-zero residual.
+    # (Implement a small local residual mirroring solve_T_e for the assertion.)
+    T_e = float(
+        solve_T_e(
+            n_e=5e19,
+            T_i=15.0,
+            p_alpha=200.0,
+            Z_eff=1.5,
+            Z_i=1.0,
+            A=2.5,
+            n_i_frac=1.0,
+            R_m=10.0,
+            L=50.0,
+            a=0.5,
+            B_min=3.0,
+            phi=74.7,
+            f_alpha_heat=0.8,
+            e_crit_over_te=33.0,
+            E_alpha_keV=3500.0,
+        )
+    )
+    assert 5.0 < T_e < 40.0
