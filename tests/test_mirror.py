@@ -20,6 +20,7 @@ from costingfe.layers.mirror import (
     _density_from_f_beta,
     _density_from_surface_cap,
     _density_from_wall_cap,
+    alpha_electron_fraction,
     compute_ambipolar_potential,
     compute_tau_axial,
     compute_tau_classical,
@@ -2314,3 +2315,17 @@ def test_K_ie_sign_and_zero():
     assert float(compute_K_ie(1e20, 1e20, 10.0, 20.0, 1.0, 2.5, 1.0)) < 0.0
     # T_e == T_i -> zero.
     assert abs(float(compute_K_ie(1e20, 1e20, 12.0, 12.0, 1.0, 2.5, 1.0))) < 1e-9
+
+
+def test_alpha_electron_fraction_DT_reference():
+    # D-T: E_alpha=3500 keV, E_crit/T_e=33. At T_e=10 keV, E_crit=330,
+    # u=10.6, f_e about 0.83 (most alpha energy heats electrons).
+    f_e = float(alpha_electron_fraction(10.0, 3500.0, 33.0))
+    assert 0.78 <= f_e <= 0.87
+
+
+def test_alpha_electron_fraction_decreasing_in_Te():
+    # Hotter electrons -> higher E_crit -> smaller u -> more energy to ions.
+    f_lo = float(alpha_electron_fraction(10.0, 3500.0, 33.0))
+    f_hi = float(alpha_electron_fraction(40.0, 3500.0, 33.0))
+    assert f_hi < f_lo

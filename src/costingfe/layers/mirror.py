@@ -1606,3 +1606,20 @@ def mirror_size_from_power(params, fuel):
         else:
             hi = mid
     return 0.5 * (lo + hi)
+
+
+def alpha_electron_fraction(T_e, E_alpha_keV, e_crit_over_te):
+    """Fraction of fast-alpha slowing-down energy delivered to electrons.
+
+    Stix (1972) ion heating fraction f_i(u) = (1/u) int_0^u dx/(1+x^1.5),
+    u = E_alpha / E_crit, E_crit = e_crit_over_te * T_e. Returns 1 - f_i.
+    e_crit_over_te is about 33 for D-T alphas. Fixed 256-node trapezoid.
+    """
+    e_crit = e_crit_over_te * T_e
+    u = E_alpha_keV / e_crit
+    xs = jnp.linspace(0.0, u, 256)
+    y = 1.0 / (1.0 + xs**1.5)
+    # Manual trapezoid (jnp.trapezoid is not backend-safe on numpy < 2.0).
+    integral = jnp.sum(0.5 * (y[1:] + y[:-1]) * (xs[1:] - xs[:-1]))
+    f_ion = integral / u
+    return 1.0 - f_ion
