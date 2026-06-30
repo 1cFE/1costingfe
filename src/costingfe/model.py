@@ -36,6 +36,7 @@ from costingfe.layers.costs import (
 from costingfe.layers.economics import compute_lcoe
 from costingfe.layers.geometry import RadialBuild, compute_geometry
 from costingfe.layers.mirror import (
+    mirror_0d_forward,
     mirror_0d_inverse,
     mirror_size_from_power,
     net_electric_at_L,
@@ -510,14 +511,24 @@ class CostModel:
     def _power_balance_mirror_0d(self, params, n_mod):
         """0D mirror power balance: derives p_fus from mirror plasma physics.
 
-        Maps YAML params to mirror_0d_inverse, stores the resulting
-        MirrorPlasmaState on self._plasma_state, and returns the PowerTable.
-        Parameter mapping per the spec:
+        Dispatches on ``0d_mode`` (default "inverse"):
+          - "forward": a fixed (T_i, T_e, n_e) operating point is run through
+            mirror_0d_forward; for D-T the central-cell T_e is SOLVED from the
+            ambipolar electron power balance (solve_te=True). Non-DT fuels keep
+            the pinned/input T_e (solve_te=False) pending the multi-species
+            advanced-fuel generalization.
+          - "inverse" (default): mirror_0d_inverse bisects T_i to hit the net
+            target. The inverse keeps the pinned T_e (the electron-T_e solve is
+            a forward-path feature for now).
+
+        Stores the resulting MirrorPlasmaState on self._plasma_state and returns
+        the PowerTable. Parameter mapping per the spec:
           chamber_length -> L, plasma_t -> a, B -> B_min, R_m -> R_m.
         R_w comes from YAML (0.4 for mirrors per the open-ended radiation
         geometry). Synchrotron geometry (R_eff = L / 2pi) is handled inside
         mirror_0d_inverse / mirror_0d_forward; do not remap here.
         """
+        mode = params.get("0d_mode", "inverse")
         L = params["chamber_length"]
         a = params["plasma_t"]
         B_min = params["B"]
@@ -532,6 +543,89 @@ class CostModel:
         wall_mat = None
         if wm_raw is not None:
             wall_mat = WallMaterial(wm_raw) if isinstance(wm_raw, str) else wm_raw
+
+        if mode == "forward":
+            # Forward 0D: a fixed (T_i, T_e, n_e) operating point. solve_te is the
+            # D-T central-cell electron-balance solve (it replaces the pinned T_e
+            # with the value that closes the ambipolar electron balance); advanced
+            # fuels keep the pinned T_e pending the multi-species generalization.
+            # Synchrotron geometry and first-wall area match the inverse path.
+            fw_area = 2.0 * jnp.pi * (a + params["vacuum_t"]) * L
+            R_eff = L / (2.0 * jnp.pi)
+            # Fold the plug sustainment power into the recirculating coil bucket,
+            # matching the inverse path's p_coils_eff.
+            p_coils_eff = params["p_coils"] + params["p_plug"]
+            plasma_state = mirror_0d_forward(
+                L=L,
+                a=a,
+                B_min=B_min,
+                R_m=R_m,
+                T_i=_to_num(params["T_i"]),
+                T_e=_to_num(T_e),
+                n_e=_to_num(params["n_e"]),
+                p_input=params["p_input"],
+                fuel=self.fuel,
+                M_ion=params.get("M_ion", 2.5),
+                Z_eff=_to_num(params["Z_eff"]),
+                R_w=params["R_w"],
+                dd_f_T=params["dd_f_T"],
+                dd_f_He3=params["dd_f_He3"],
+                dhe3_dd_frac_pin=params["dhe3_dd_frac_pin"],
+                dhe3_f_T=params["dhe3_f_T"],
+                dhe3_f_He3=self._dhe3_f_He3_eff(params),
+                pb11_f_alpha_n=params["pb11_f_alpha_n"],
+                pb11_f_p_n=params["pb11_f_p_n"],
+                dhe3_fuel_ratio=params["dhe3_fuel_ratio"],
+                pb11_fuel_ratio=params["pb11_fuel_ratio"],
+                vacuum_t=params["vacuum_t"],
+                plug_density_ratio=params["plug_density_ratio"],
+                collisionality_min=params["collisionality_min"],
+                T_e_plug=_to_num(params["T_e_plug"]),
+                f_rad_fus=params.get("f_rad_fus"),
+                f_alpha_heat=params["f_alpha_heat"],
+                solve_te=(self.fuel == Fuel.DT),
+            )
+            pt = mfe_forward_power_balance(
+                p_fus=plasma_state.p_fus,
+                fuel=self.fuel,
+                p_input=params["p_input"],
+                mn=params["mn"],
+                eta_th=params["eta_th"],
+                eta_p=params["eta_p"],
+                eta_pin=params["eta_pin"],
+                eta_de=params["eta_de"],
+                f_sub=params["f_sub"],
+                f_dec=params["f_dec"],
+                p_coils=p_coils_eff,
+                p_cool=params["p_cool"],
+                p_pump=params["p_pump"],
+                p_trit=params["p_trit"],
+                p_house=params["p_house"],
+                p_cryo=params["p_cryo"],
+                n_e=plasma_state.n_e,
+                T_e=plasma_state.T_e,
+                Z_eff=_to_num(params["Z_eff"]),
+                plasma_volume=plasma_state.V_plasma,
+                B=B_min,
+                R_major=R_eff,
+                a_minor=a,
+                kappa=1.0,
+                R_w=params["R_w"],
+                wall_material=wall_mat,
+                T_edge=params["T_edge"],
+                tau_ratio=params["tau_ratio"],
+                fw_area=fw_area,
+                dd_f_T=params["dd_f_T"],
+                dd_f_He3=params["dd_f_He3"],
+                dhe3_dd_frac=plasma_state.dhe3_dd_frac_eff,
+                dhe3_f_T=params["dhe3_f_T"],
+                dhe3_f_He3=self._dhe3_f_He3_eff(params),
+                pb11_f_alpha_n=params["pb11_f_alpha_n"],
+                pb11_f_p_n=params["pb11_f_p_n"],
+                f_rad_fus=params.get("f_rad_fus"),
+            )
+            self._plasma_state = plasma_state
+            return pt
 
         plasma_state, pt = mirror_0d_inverse(
             p_net_target=params["net_electric_mw"],

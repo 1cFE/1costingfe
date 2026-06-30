@@ -2610,3 +2610,11 @@ def test_forward_solve_te_false_keeps_pin():
         R_m=10.0,
     )
     assert float(ps.T_e) == pytest.approx(125.0)
+
+
+def test_forward_solve_te_nondt_raises():
+    # solve_te uses the D-T alpha slowing-down constants, so it must REFUSE a
+    # non-DT fuel rather than solve against the wrong alpha-to-electron heating.
+    # The deferred multi-species boundary is guarded with NotImplementedError.
+    with pytest.raises(NotImplementedError, match="solve_te is D-T only"):
+        _forward(fuel=Fuel.DHE3, T_i=70.0, T_e=70.0, solve_te=True)

@@ -696,6 +696,16 @@ def mirror_0d_forward(
     # the model's own phi and p_alpha. e_crit_over_te / E_alpha_keV are the D-T
     # alpha slowing-down constants; fuel generalization is the deferred follow-on.
     if solve_te:
+        # D-T only: the alpha slowing-down constants below (_E_CRIT_OVER_TE_DT,
+        # _E_ALPHA_KEV_DT) are the D-T values, so a non-DT fuel would silently
+        # solve against the wrong alpha-to-electron heating. Guard the deferred
+        # boundary explicitly; the multi-species generalization is the follow-on.
+        if fuel != Fuel.DT:
+            raise NotImplementedError(
+                "solve_te is D-T only (the alpha slowing-down constants are the "
+                f"D-T values); fuel {fuel} is not supported pending the "
+                "multi-species advanced-fuel generalization. Pass solve_te=False."
+            )
         T_e = solve_T_e(
             n_e=n_e,
             T_i=T_i,

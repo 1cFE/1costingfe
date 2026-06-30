@@ -1,7 +1,15 @@
 # Mirror central-cell electron power balance (solve T_e)
 
 Date: 2026-06-29 (revised 2026-06-30 after literature validation)
-Status: design validated empirically; formalizing
+Status: D-T model IMPLEMENTED and VALIDATED. The forward 0D mirror model solves
+the central-cell T_e from the self-consistent ambipolar electron power balance
+for D-T (solve_te=True), reproducing the MARS warm central cell (T_e about 0.8
+T_i, about 24 keV at the reactor design point). The model dispatch wires
+solve_te on for D-T and off for other fuels; the layer guards the deferred
+boundary by raising when solve_te is requested for a non-DT fuel. The released
+default path (use_0d_model=False) is untouched and its bit-identical LCOE pin
+holds. Advanced fuels (multi-species alpha slowing-down constants) and the
+deeply collisionless Pastukhov / DCLC physics-cap are documented follow-ons.
 
 ## Problem
 
