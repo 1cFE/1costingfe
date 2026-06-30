@@ -1,7 +1,6 @@
 """Plasma radiation model: bremsstrahlung, synchrotron, impurity line radiation."""
 
-import jax.numpy as jnp
-
+from costingfe._backend import xp as jnp
 from costingfe.types import ImpurityMix, WallMaterial
 
 # ---------------------------------------------------------------------------

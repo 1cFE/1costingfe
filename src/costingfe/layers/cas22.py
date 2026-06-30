@@ -15,9 +15,8 @@ All costs in M$. Source: pyFECONs costing/calculations/cas22/
 
 import math
 
-import jax
-import jax.numpy as jnp
-
+from costingfe._backend import Tracer
+from costingfe._backend import xp as jnp
 from costingfe.defaults import CostingConstants
 from costingfe.types import (
     BlanketFill,
@@ -415,10 +414,7 @@ def cas22_reactor_plant_equipment(
                 # but only on concrete values: under JAX tracing (sensitivity /
                 # uncertainty) these are positive-valued tracers and a Python
                 # comparison would raise TracerBoolConversionError.
-                _concrete = not (
-                    isinstance(R0, jax.core.Tracer)
-                    or isinstance(r_coil, jax.core.Tracer)
-                )
+                _concrete = not (isinstance(R0, Tracer) or isinstance(r_coil, Tracer))
                 if _concrete and (R0 <= 0 or r_coil <= 0):
                     raise ValueError(
                         f"{concept.value} coil cost needs R0>0 and r_coil>0, "

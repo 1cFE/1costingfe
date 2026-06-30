@@ -1,4 +1,9 @@
-import jax
+import pytest
+
+from costingfe._backend import HAS_JAX
+
+if HAS_JAX:
+    import jax
 
 from costingfe.layers.physics import (
     mfe_forward_power_balance,
@@ -73,6 +78,10 @@ def test_mfe_forward_no_dec():
     assert abs(pt.p_dee) < 0.001
 
 
+@pytest.mark.skipif(
+    not HAS_JAX,
+    reason="exercises jax.grad directly; numpy mode uses finite differences",
+)
 def test_mfe_forward_is_differentiable():
     """JAX should be able to differentiate p_net w.r.t. p_fus."""
 

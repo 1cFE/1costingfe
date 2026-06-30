@@ -2,10 +2,13 @@
 
 import math
 
-import jax
-import jax.numpy as jnp
 import pytest
 
+from costingfe._backend import HAS_JAX
+
+if HAS_JAX:
+    import jax
+    import jax.numpy as jnp
 from costingfe.defaults import load_costing_constants
 from costingfe.layers.mirror import (
     _KEV_TO_J,
@@ -143,6 +146,10 @@ class TestConfinement:
         tp = float(compute_tau_pastukhov(tii, R_m=10.0, phi_keV=phi, T_i=_TI))
         assert tr > tp  # radial losses subdominant in a well-confined mirror
 
+    @pytest.mark.skipif(
+        not HAS_JAX,
+        reason="exercises jax.grad/jit directly; numpy mode uses finite differences",
+    )
     def test_jit_matches_eager(self):
         def chain(n, T):
             tii = compute_tau_ii(n, T, 2.5)
@@ -154,6 +161,10 @@ class TestConfinement:
         assert jnp.isfinite(jitted)
         assert jitted == pytest.approx(eager, rel=1e-4)
 
+    @pytest.mark.skipif(
+        not HAS_JAX,
+        reason="exercises jax.grad/jit directly; numpy mode uses finite differences",
+    )
     def test_differentiable(self):
         g = float(jax.grad(lambda T: compute_tau_ii(_N, T, 2.5))(_TI))
         assert jnp.isfinite(g)
@@ -259,6 +270,10 @@ class TestForward:
             (Fuel.DHE3, 70.0, 70.0, {}),
             (Fuel.PB11, 200.0, 200.0, {}),
         ],
+    )
+    @pytest.mark.skipif(
+        not HAS_JAX,
+        reason="exercises jax.grad/jit directly; numpy mode uses finite differences",
     )
     def test_jit_equals_eager_all_fuels(self, fuel, T_i, T_e, extra):
         def run(n_e):
@@ -531,7 +546,9 @@ class TestModelIntegration:
         # Exact equality: same deterministic float path, no solver involved.
         # Pinned value is float32; rel=1e-12 is tighter than float32 epsilon,
         # so this is bit-identity in practice.
-        assert r.costs.lcoe == pytest.approx(_MIRROR_DT_PINNED_LCOE, rel=1e-12)
+        assert r.costs.lcoe == pytest.approx(
+            _MIRROR_DT_PINNED_LCOE, rel=1e-12 if HAS_JAX else 1e-6
+        )
 
     def test_0d_mirror_produces_finite_lcoe(self):
         """use_0d_model=True produces a finite LCOE for DT mirror."""
@@ -686,7 +703,9 @@ class TestMirrorCoilLengthScaling:
         If this fails the calibration is wrong and nothing else can be trusted.
         """
         r = self._base()
-        assert r.costs.lcoe == pytest.approx(_MIRROR_DT_PINNED_LCOE, rel=1e-12)
+        assert r.costs.lcoe == pytest.approx(
+            _MIRROR_DT_PINNED_LCOE, rel=1e-12 if HAS_JAX else 1e-6
+        )
 
     def test_doubling_length_doubles_central_contribution(self):
         """Doubling chamber_length doubles the central-coil kA*m (and cost share).
@@ -1153,6 +1172,10 @@ class TestMirrorSizing:
             (Fuel.PB11, 200.0, 200.0),
         ],
     )
+    @pytest.mark.skipif(
+        not HAS_JAX,
+        reason="exercises jax.grad/jit directly; numpy mode uses finite differences",
+    )
     def test_density_from_f_beta_jit_matches_eager_all_fuels(self, fuel, T_i, T_e):
         """_density_from_f_beta: jit matches eager (rel 1e-4) and gradient is finite.
 
@@ -1373,6 +1396,10 @@ class TestWallConstraint:
         assert r.costs.lcoe < 1e7  # not the sentinel; a real LCOE
 
     @pytest.mark.parametrize("fuel", [Fuel.DT, Fuel.DD, Fuel.DHE3, Fuel.PB11])
+    @pytest.mark.skipif(
+        not HAS_JAX,
+        reason="exercises jax.grad/jit directly; numpy mode uses finite differences",
+    )
     def test_n_wall_jit_matches_eager_all_fuels(self, fuel):
         # Same harness as test_density_from_f_beta_jit_matches_eager_all_fuels:
         # copy its per-fuel mix kwargs verbatim.
@@ -1573,6 +1600,10 @@ class TestRegimeBridge:
         assert tau_axial == pytest.approx(tau_gd, rel=0.5)
 
     @pytest.mark.parametrize("fuel", [Fuel.DT, Fuel.DD, Fuel.DHE3, Fuel.PB11])
+    @pytest.mark.skipif(
+        not HAS_JAX,
+        reason="exercises jax.grad/jit directly; numpy mode uses finite differences",
+    )
     def test_bridge_jit_matches_eager_and_differentiable(self, fuel):
         n, A, R_m, L = 1.0e20, 2.5, 10.0, 20.0
 
@@ -1588,6 +1619,10 @@ class TestRegimeBridge:
         g = float(jax.grad(f)(30.0))
         assert jnp.isfinite(g)
 
+    @pytest.mark.skipif(
+        not HAS_JAX,
+        reason="exercises jax.grad/jit directly; numpy mode uses finite differences",
+    )
     def test_grad_finite_at_extreme_collisionless_point(self):
         # Far past any physical operating point (n -> ~1e12, T -> 2000 keV) the
         # logistic argument saturates beyond the float32 exp() overflow band, so
@@ -1777,6 +1812,10 @@ class TestAlphaHeating:
         assert lost_alpha > 1.0
 
     @pytest.mark.parametrize("fuel", [Fuel.DT, Fuel.DD, Fuel.DHE3, Fuel.PB11])
+    @pytest.mark.skipif(
+        not HAS_JAX,
+        reason="exercises jax.grad/jit directly; numpy mode uses finite differences",
+    )
     def test_alpha_heating_jit_and_grad(self, fuel):
         # jit == eager and finite grad through mirror_aux_heating across fuels.
         from costingfe.layers.mirror import mirror_aux_heating as _aux
@@ -1895,6 +1934,10 @@ class TestTandemConfinement:
         assert q_model < 15.0, f"Q = {q_model:.1f} too high; tandem is plug-limited"
 
     @pytest.mark.parametrize("fuel", [Fuel.DT, Fuel.DD, Fuel.DHE3, Fuel.PB11])
+    @pytest.mark.skipif(
+        not HAS_JAX,
+        reason="exercises jax.grad/jit directly; numpy mode uses finite differences",
+    )
     def test_plug_potential_jit_and_grad(self, fuel):
         # e*phi = T_e * ln(n_p/n_c): differentiate w.r.t. the central-cell electron
         # temperature T_e (the plug potential is set by T_e and the fixed density
@@ -2026,6 +2069,10 @@ class TestPlugDecoupling:
         assert 330.0 <= lcoe <= 410.0, f"D-T LCOE={lcoe:.1f} outside tolerance of 369"
 
     @pytest.mark.parametrize("fuel", [Fuel.DT, Fuel.DD, Fuel.DHE3, Fuel.PB11])
+    @pytest.mark.skipif(
+        not HAS_JAX,
+        reason="exercises jax.grad/jit directly; numpy mode uses finite differences",
+    )
     def test_plug_decoupling_jit_and_grad(self, fuel):
         # jit == eager and finite grad of the forward phi w.r.t. T_e_plug across
         # fuels (the plug potential is the decoupled knob).
@@ -2083,6 +2130,10 @@ class TestStabilityDiagnostics:
         assert float(ps.dclc_parameter) == pytest.approx(a / rho_i, rel=1e-4)
 
     @pytest.mark.parametrize("fuel", [Fuel.DT, Fuel.DD, Fuel.DHE3, Fuel.PB11])
+    @pytest.mark.skipif(
+        not HAS_JAX,
+        reason="exercises jax.grad/jit directly; numpy mode uses finite differences",
+    )
     def test_dclc_kernel_jit_matches_eager_and_differentiable(self, fuel):
         from costingfe.layers.mirror import compute_dclc_parameter
 

@@ -8,12 +8,16 @@ pollution); JAX manages eviction.
 
 import os
 
-import jax
 import pytest
 
-_CACHE_DIR = os.path.expanduser("~/.cache/costingfe-jax")
-jax.config.update("jax_compilation_cache_dir", _CACHE_DIR)
-jax.config.update("jax_persistent_cache_min_compile_time_secs", 0.5)
+from costingfe._backend import HAS_JAX
+
+if HAS_JAX:
+    import jax
+
+    _CACHE_DIR = os.path.expanduser("~/.cache/costingfe-jax")
+    jax.config.update("jax_compilation_cache_dir", _CACHE_DIR)
+    jax.config.update("jax_persistent_cache_min_compile_time_secs", 0.5)
 
 
 # Power-to-geometry sizing (size_from_power), LCOE optimization (optimize_lcoe),

@@ -199,7 +199,7 @@ class TestFeasibilityGate:
             m.forward(net_electric_mw=200.0, use_0d_model=True, **self._KW)
 
     def test_escape_hatch_returns_without_nan(self):
-        import jax.numpy as jnp
+        import math
 
         m = CostModel(ConfinementConcept.TOKAMAK, Fuel.DHE3)
         r = m.forward(
@@ -210,15 +210,15 @@ class TestFeasibilityGate:
         )
         # The floored availability turns the absurd point into an absurd
         # (possibly infinite) LCOE, never NaN/-inf cost components.
-        assert not bool(jnp.isnan(r.costs.lcoe))
-        assert not bool(jnp.isneginf(r.costs.cas80))
+        assert not math.isnan(float(r.costs.lcoe))
+        assert not (math.isinf(float(r.costs.cas80)) and float(r.costs.cas80) < 0)
 
     def test_dt_at_sane_point_unaffected(self):
+        import math
+
         m = CostModel(ConfinementConcept.TOKAMAK, Fuel.DT)
         r = m.forward(net_electric_mw=200.0, use_0d_model=True, **self._KW)
-        import jax.numpy as jnp
-
-        assert bool(jnp.isfinite(r.costs.lcoe))
+        assert math.isfinite(float(r.costs.lcoe))
 
     def test_availability_floor(self):
         from costingfe.layers.tokamak import apply_disruption_penalty

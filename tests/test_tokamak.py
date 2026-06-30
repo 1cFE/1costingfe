@@ -1,10 +1,15 @@
 """Tests for the 0D tokamak plasma model."""
 
-import jax
-import jax.numpy as jnp
+import math
+
 import pytest
 
 from costingfe import ConfinementConcept, CostModel, Fuel, PlasmaState
+from costingfe._backend import HAS_JAX
+
+if HAS_JAX:
+    import jax
+    import jax.numpy as jnp
 from costingfe.layers.physics import mfe_forward_power_balance
 from costingfe.layers.tokamak import (
     apply_disruption_penalty,
@@ -67,8 +72,8 @@ _PB_PHYSICS = dict(
 class TestBoschHale:
     def test_monotonic_below_peak(self):
         """<sigma*v> should increase monotonically from 1 to ~65 keV."""
-        temps = jnp.array([1.0, 5.0, 10.0, 15.0, 20.0, 30.0, 50.0, 65.0])
-        svs = jnp.array([sigma_v_dt(t) for t in temps])
+        temps = [1.0, 5.0, 10.0, 15.0, 20.0, 30.0, 50.0, 65.0]
+        svs = [float(sigma_v_dt(t)) for t in temps]
         for i in range(len(svs) - 1):
             assert svs[i] < svs[i + 1], f"Not monotonic at T={temps[i + 1]}"
 
@@ -82,6 +87,10 @@ class TestBoschHale:
         sv = float(sigma_v_dt(65.0))
         assert 5e-22 < sv < 1.2e-21, f"sigma_v(65 keV) = {sv}"
 
+    @pytest.mark.skipif(
+        not HAS_JAX,
+        reason="exercises jax.grad directly; numpy mode uses finite differences",
+    )
     def test_jax_differentiable(self):
         """Should be differentiable with jax.grad."""
         grad_fn = jax.grad(lambda T: sigma_v_dt(T))
@@ -106,7 +115,7 @@ class TestPlasmaCurrentDensity:
     def test_greenwald_density(self):
         """n_GW = I_p / (pi * a^2) in 10^20 m^-3."""
         n_GW = float(compute_greenwald_density(I_p_MA=15.0, a=2.0))
-        expected = 15.0 / (jnp.pi * 2.0**2)
+        expected = 15.0 / (math.pi * 2.0**2)
         assert abs(n_GW - expected) < 0.01
 
 
@@ -510,12 +519,20 @@ class TestBackwardCompat:
 # 12. JAX autodiff through 0D pipeline
 # ---------------------------------------------------------------------------
 class TestJAXAutodiff:
+    @pytest.mark.skipif(
+        not HAS_JAX,
+        reason="exercises jax.grad directly; numpy mode uses finite differences",
+    )
     def test_sigma_v_grad(self):
         """sigma_v_dt should have finite positive gradient at 15 keV."""
         g = jax.grad(sigma_v_dt)(15.0)
         assert jnp.isfinite(g)
         assert g > 0
 
+    @pytest.mark.skipif(
+        not HAS_JAX,
+        reason="exercises jax.grad directly; numpy mode uses finite differences",
+    )
     def test_fusion_power_grad(self):
         """Fusion power should have finite gradient w.r.t. T_e."""
 
@@ -525,6 +542,10 @@ class TestJAXAutodiff:
         g = jax.grad(p_fus_fn)(15.0)
         assert jnp.isfinite(g)
 
+    @pytest.mark.skipif(
+        not HAS_JAX,
+        reason="exercises jax.grad directly; numpy mode uses finite differences",
+    )
     def test_beta_N_grad(self):
         """beta_N should have finite gradient w.r.t. T_e."""
 
@@ -568,6 +589,10 @@ class TestDisruptionRate:
         r3 = float(compute_disruption_rate(f_GW=0.95, beta_N=2.5, q95=3.5))
         assert r1 < r2 < r3
 
+    @pytest.mark.skipif(
+        not HAS_JAX,
+        reason="exercises jax.grad directly; numpy mode uses finite differences",
+    )
     def test_jax_differentiable(self):
         """disruption_rate should be differentiable w.r.t. f_GW."""
 

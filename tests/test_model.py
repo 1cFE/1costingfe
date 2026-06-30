@@ -1,3 +1,5 @@
+import os
+
 import pytest
 
 from costingfe import ConfinementConcept, CostModel, Fuel
@@ -884,3 +886,23 @@ def test_n_mod_does_not_scale_per_module_core_lifetime():
         f"CAS72 at n_mod=2 ({cas72_two:.4f}) expected to be 2x CAS72 at "
         f"n_mod=1 ({cas72_one:.4f}); ratio = {cas72_two / cas72_one:.4f}"
     )
+
+
+def test_sensitivity_and_batch_numpy_mode():
+    """Under numpy, sensitivity uses FD and batch_lcoe loops — both must work."""
+    if os.environ.get("COSTINGFE_BACKEND") != "numpy":
+        import pytest
+
+        pytest.skip("numpy-mode-only behavior check")
+    from costingfe._backend import HAS_JAX
+
+    assert HAS_JAX is False
+    model = CostModel(concept=ConfinementConcept.TOKAMAK, fuel=Fuel.DT)
+    result = model.forward(net_electric_mw=1000.0, availability=0.85, lifetime_yr=30)
+    params = result.params
+    sens = model.sensitivity(params)
+    assert set(sens) == {"engineering", "financial", "costing"}
+    key = next(iter(sens["engineering"]))  # a varying continuous lever
+    base = float(params[key])
+    out = model.batch_lcoe({key: [base, base * 1.01]}, params)
+    assert len(out) == 2 and all(isinstance(v, float) for v in out)

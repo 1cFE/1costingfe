@@ -1,7 +1,7 @@
 """Layer 2c: 0D Axisymmetric Mirror Plasma Model.
 
 Confinement, end losses, and plasma state for axisymmetric magnetic
-mirrors, following the tokamak 0D pattern. Pure JAX; runtime math is
+mirrors, following the tokamak 0D pattern. Backend-agnostic; runtime math is
 float32-safe, constants pre-folded in float64.
 Physics per docs/superpowers/specs/2026-06-11-mirror-0d-sizing-design.md:
 classical (Bing & Roberts 1961), Pastukhov electrostatic plugging
@@ -13,9 +13,8 @@ import math
 import warnings
 from dataclasses import dataclass
 
-import jax
-import jax.numpy as jnp
-
+from costingfe._backend import Tracer, fori_loop
+from costingfe._backend import xp as jnp
 from costingfe.layers.physics import (
     OperatingPointInfeasible,
     SizingInfeasible,  # noqa: F401 — re-exported so tests can import from mirror
@@ -614,7 +613,7 @@ def _find_T_i_for_pfus(
         hi = jnp.where(p_mid >= target_pfus, mid, hi)
         return (lo, hi)
 
-    lo, hi = jax.lax.fori_loop(0, n_iter, body, (T_lo, T_hi))
+    lo, hi = fori_loop(0, n_iter, body, (T_lo, T_hi))
     return 0.5 * (lo + hi)
 
 
@@ -844,7 +843,7 @@ def mirror_0d_inverse(
 
     # Step 5: Feasibility gate — tracer-skip guard matches the tokamak pattern.
     # Under JAX tracing (jit/grad), beta is an abstract tracer; skip the gate.
-    if enforce_plasma_limits and not isinstance(plasma_state.beta, jax.core.Tracer):
+    if enforce_plasma_limits and not isinstance(plasma_state.beta, Tracer):
         beta_val = float(plasma_state.beta)
         if beta_val > beta_max:
             raise OperatingPointInfeasible(

@@ -18,9 +18,8 @@ Sources:
   and are the optimistic alternatives; Nevins-Swain is the default.
 """
 
-import jax.lax
-import jax.numpy as jnp
-
+from costingfe._backend import optimization_barrier
+from costingfe._backend import xp as jnp
 from costingfe.layers.physics import MEV_TO_JOULES, event_energies
 from costingfe.types import Fuel
 
@@ -34,7 +33,7 @@ def _density_1e10(n_e):
     depending on how the constants gather) under jit. Differentiable and
     an identity in eager mode.
     """
-    return jax.lax.optimization_barrier(n_e * 1e-10)
+    return optimization_barrier(n_e * 1e-10)
 
 
 def _bosch_hale(T_keV, BG, mrc2, C1, C2, C3, C4, C5, C6, C7):
