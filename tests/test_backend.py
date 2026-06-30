@@ -1,10 +1,21 @@
 import importlib
 
+import pytest
+
 
 def _reload_backend():
     import costingfe._backend as b
 
     return importlib.reload(b)
+
+
+@pytest.fixture(autouse=True)
+def restore_backend_after_reload():
+    """Reload the backend after each test so module-level state changes
+    (from explicit importlib.reload calls) don't contaminate other tests."""
+    yield
+    # At this point monkeypatch has already restored env vars.
+    _reload_backend()
 
 
 def test_numpy_backend_surface(monkeypatch):
@@ -26,8 +37,6 @@ def test_force_jax_when_present(monkeypatch):
     import importlib.util
 
     if importlib.util.find_spec("jax") is None:
-        import pytest
-
         pytest.skip("jax not installed")
     monkeypatch.setenv("COSTINGFE_BACKEND", "jax")
     b = _reload_backend()

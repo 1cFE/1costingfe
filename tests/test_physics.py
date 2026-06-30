@@ -1,4 +1,9 @@
-import jax
+import pytest
+
+from costingfe._backend import HAS_JAX
+
+if HAS_JAX:
+    import jax
 
 from costingfe.layers.physics import ash_neutron_split
 from costingfe.layers.radiation import (
@@ -56,6 +61,10 @@ def test_dhe3_mostly_aneutronic():
     assert abs((p_ash + p_neutron) - p_fus) < 0.001
 
 
+@pytest.mark.skipif(
+    not HAS_JAX,
+    reason="exercises jax.grad directly; numpy mode uses finite differences",
+)
 def test_ash_neutron_split_is_jax_differentiable():
     """Verify JAX can differentiate through the ash/neutron split."""
 

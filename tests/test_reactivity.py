@@ -1,10 +1,14 @@
 """Tests for the fusion reactivity fits and fuel-mix algebra."""
 
-import jax
-import jax.numpy as jnp
+import math
+
 import pytest
 
 from costingfe._backend import HAS_JAX
+
+if HAS_JAX:
+    import jax
+    import jax.numpy as jnp
 from costingfe.layers.physics import ash_neutron_split, event_energies
 from costingfe.layers.reactivity import (
     fusion_power,
@@ -113,7 +117,7 @@ class TestFitPhysics:
             (sigv_pb11, 400.0),
         ]:
             v = float(fn(T))
-            assert jnp.isfinite(v)
+            assert math.isfinite(v)
             assert v > 0.0
 
 

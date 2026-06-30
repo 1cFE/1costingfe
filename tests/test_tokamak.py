@@ -1,11 +1,15 @@
 """Tests for the 0D tokamak plasma model."""
 
-import jax
-import jax.numpy as jnp
+import math
+
 import pytest
 
 from costingfe import ConfinementConcept, CostModel, Fuel, PlasmaState
 from costingfe._backend import HAS_JAX
+
+if HAS_JAX:
+    import jax
+    import jax.numpy as jnp
 from costingfe.layers.physics import mfe_forward_power_balance
 from costingfe.layers.tokamak import (
     apply_disruption_penalty,
@@ -68,8 +72,8 @@ _PB_PHYSICS = dict(
 class TestBoschHale:
     def test_monotonic_below_peak(self):
         """<sigma*v> should increase monotonically from 1 to ~65 keV."""
-        temps = jnp.array([1.0, 5.0, 10.0, 15.0, 20.0, 30.0, 50.0, 65.0])
-        svs = jnp.array([sigma_v_dt(t) for t in temps])
+        temps = [1.0, 5.0, 10.0, 15.0, 20.0, 30.0, 50.0, 65.0]
+        svs = [float(sigma_v_dt(t)) for t in temps]
         for i in range(len(svs) - 1):
             assert svs[i] < svs[i + 1], f"Not monotonic at T={temps[i + 1]}"
 
@@ -111,7 +115,7 @@ class TestPlasmaCurrentDensity:
     def test_greenwald_density(self):
         """n_GW = I_p / (pi * a^2) in 10^20 m^-3."""
         n_GW = float(compute_greenwald_density(I_p_MA=15.0, a=2.0))
-        expected = 15.0 / (jnp.pi * 2.0**2)
+        expected = 15.0 / (math.pi * 2.0**2)
         assert abs(n_GW - expected) < 0.01
 
 

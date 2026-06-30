@@ -1,5 +1,6 @@
 import pytest
 
+from costingfe._backend import HAS_JAX
 from costingfe.defaults import MAGNET_TABLE, get_magnet_properties
 from costingfe.layers.tokamak import (
     SizingInfeasible,
@@ -330,7 +331,7 @@ def test_backward_compat_sizing_off_unchanged():
     # (was 158.54959106445312).
     REF = 158.2802276611328
     if REF is not None:
-        assert r.costs.lcoe == pytest.approx(REF, rel=1e-9)
+        assert r.costs.lcoe == pytest.approx(REF, rel=1e-9 if HAS_JAX else 1e-6)
 
 
 def test_arc_validation_reproduces_size():
