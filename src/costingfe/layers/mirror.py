@@ -108,14 +108,28 @@ _LN10 = math.log(10.0)  # natural log of 10, for log10 in JAX
 # at off-design points (e.g. n = 5e19, T_i = 15 keV). The 0D confinement cannot
 # physically exceed the canonical mirror Lawson / ignition-class n*tau scale,
 # n*tau ~ 1e21 m^-3 s (Fowler 2017, "Fusion energy from a magnetic mirror"; the
-# mirror n*tau for net energy is order 1e20-1e21). Adding a floor loss rate
-# n_i/_N_TAU_CEILING to the axial loss-rate sum caps tau_axial at
-# _N_TAU_CEILING/n_i (a smooth, differentiable additive term, NOT a hard min):
-# ~3 s at reactor density (n ~ 3.3e20, the validated Hammir point, where it only
-# modestly lowers the already-realistic ~2.4 s) and ~20 s at thin density
-# (n ~ 5e19, where it tames the ~90 s runaway). See
+# mirror n*tau for net energy is order 1e20-1e21). The ceiling sets a
+# density-dependent confinement-time cap tau_ceil = _N_TAU_CEILING/n_i and is
+# applied as a differentiable SOFT-MIN (NOT an additive loss rate, which would
+# always shorten tau even below the ceiling, and NOT a hard min):
+#
+#     tau_capped = tau / (1 + (tau/tau_ceil)**_CAP_SHARPNESS)**(1/_CAP_SHARPNESS)
+#
+# When tau << tau_ceil the ratio**_CAP_SHARPNESS underflows to ~0 and
+# tau_capped -> tau (NO reduction); when tau >> tau_ceil the term dominates and
+# tau_capped -> tau_ceil (saturates). At reactor density (n ~ 3.3e20) the ceiling
+# is ~3 s, above the already-realistic ~2.4 s uncapped value, so the soft-min
+# leaves it essentially untouched; at thin density (n ~ 5e19) the ceiling is
+# ~20 s and tames the ~90 s runaway. The soft-min base is the O(1) ratio
+# (tau/tau_ceil), float32-safe: ratio**8 underflows harmlessly to 0 for tiny tau
+# and is ~1e12 at most for the thinnest runaway. See
 # docs/account_justification/mirror_confinement_regimes.md.
 _N_TAU_CEILING = 1.0e21
+# Sharpness exponent for the soft-min n*tau cap. Larger -> closer to a hard min;
+# 8 keeps below-ceiling values within a few percent of uncapped while saturating
+# runaways near tau_ceil. Even exponent, so the ratio**_CAP_SHARPNESS is positive
+# without an abs(); float32-safe (the ratio is O(1e-5..30), ratio**8 <= ~1e12).
+_CAP_SHARPNESS = 8.0
 
 
 # ---------------------------------------------------------------------------
@@ -392,16 +406,20 @@ def compute_tau_axial(tau_ii, R_m, L, T_i, A, phi_keV, n_i):
     An n*tau ceiling caps the Pastukhov over-credit. The bare Pastukhov factor
     x*exp(x) runs away in the deeply collisionless / deep-plug regime (long
     tau_ii ~ 1/n at thin density, large x = e*phi/T_i at low T_i or deep plug),
-    so a floor loss rate n_i/_N_TAU_CEILING is added to the axial loss-rate sum:
+    so the regime-bridge tau_axial = 1/inv_tau_axial is passed through a
+    differentiable SOFT-MIN against tau_ceil = _N_TAU_CEILING/n_i:
 
-        inv_tau_axial = 1/tau_Pastukhov + g*(1/tau_GD) + n_i/_N_TAU_CEILING,
+        tau_capped = tau / (1 + (tau/tau_ceil)**_CAP_SHARPNESS)**(1/_CAP_SHARPNESS)
 
-    which caps tau_axial at _N_TAU_CEILING/n_i (the canonical mirror Lawson /
-    ignition-class n*tau, Fowler 2017). This is a smooth additive term, not a
-    hard min: at reactor density (n ~ 3.3e20) the ceiling is ~3 s so it only
-    modestly lowers the already-realistic value, while at thin density
-    (n ~ 5e19) it caps the ~90 s runaway near ~20 s. The term n_i/_N_TAU_CEILING
-    is ~3e-1 at reactor density, well within float32.
+    where _N_TAU_CEILING is the canonical mirror Lawson / ignition-class n*tau
+    (Fowler 2017). Unlike an additive loss rate (which always shortens tau, even
+    below the ceiling), the soft-min leaves below-ceiling times essentially
+    untouched and only saturates the runaways: when tau << tau_ceil the ratio
+    underflows so tau_capped -> tau (no reduction), and when tau >> tau_ceil it
+    saturates to tau_ceil. At reactor density (n ~ 3.3e20) the ceiling is ~3 s,
+    above the already-realistic ~2.4 s uncapped value, so it is barely touched;
+    at thin density (n ~ 5e19) the ceiling is ~20 s and tames the ~90 s runaway.
+    float32-safe: the soft-min base is the O(1) ratio (tau/tau_ceil).
 
     See docs/account_justification/mirror_confinement_regimes.md.
 
@@ -428,11 +446,16 @@ def compute_tau_axial(tau_ii, R_m, L, T_i, A, phi_keV, n_i):
     arg = jnp.clip((log10_coll - log10_crit) / _REGIME_GATE_WIDTH_DECADES, -30.0, 30.0)
     gate = 1.0 / (1.0 + jnp.exp(-arg))
 
-    # n*tau ceiling: floor loss rate that caps tau_axial at _N_TAU_CEILING/n_i,
-    # bounding the Pastukhov over-credit in the deeply collisionless / deep-plug
-    # regime. Smooth and differentiable (additive loss rate, no hard min).
-    inv_tau_axial = 1.0 / tau_Pastukhov + gate / tau_GD + n_i / _N_TAU_CEILING
-    return 1.0 / inv_tau_axial
+    inv_tau_axial = 1.0 / tau_Pastukhov + gate / tau_GD
+    tau_axial = 1.0 / inv_tau_axial
+
+    # n*tau ceiling as a differentiable soft-min against tau_ceil = ceiling/n_i.
+    # Leaves below-ceiling times essentially untouched (ratio**_CAP_SHARPNESS -> 0)
+    # and saturates runaways toward tau_ceil; no hard min, no over-reduction below
+    # the ceiling. float32-safe (base is the O(1) ratio tau_axial/tau_ceil).
+    tau_ceil = _N_TAU_CEILING / n_i
+    ratio = tau_axial / tau_ceil
+    return tau_axial / (1.0 + ratio**_CAP_SHARPNESS) ** (1.0 / _CAP_SHARPNESS)
 
 
 def compute_tau_radial(tau_ii, a, T_i, A, B_min):

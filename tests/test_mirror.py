@@ -1388,13 +1388,17 @@ class TestWallConstraint:
         # vs the retired constant 17) correctly lowers ion confinement, so a
         # longer chamber is needed to reach the target: L = 86.139396520 m here
         # (was 77.842279425 m under the constant Coulomb log).
-        # re-pinned (Task 10): the n*tau ceiling caps the Pastukhov over-credit,
-        # lowering confinement further, so a longer chamber is needed:
-        # L = 140.424590008 m (was 86.139396520 m). See
+        # re-pinned (Task 10, soft-min cap): the n*tau ceiling is now a smooth-min
+        # that leaves below-ceiling confinement essentially untouched (the earlier
+        # additive cap over-reduced tau even below the ceiling, forcing a 140 m
+        # chamber). At reactor density the soft-min barely trims the ~2.4 s axial
+        # time, so the length returns near the pre-cap value: L = 87.479175126 m
+        # (was 140.424590008 m under the over-reducing additive cap; Task 9 value
+        # was 86.139396520 m). See
         # docs/account_justification/mirror_confinement_regimes.md.
         params = dict(_SIZING_PARAMS, q_wall_max=50.0)
         L, _, _ = _size(params)
-        assert L == pytest.approx(140.424590008, rel=1e-4)
+        assert L == pytest.approx(87.479175126, rel=1e-4)
 
     def test_infeasible_under_cap_raises_naming_cap(self):
         with pytest.raises(SizingInfeasible, match=r"q_wall_max"):
@@ -1687,16 +1691,21 @@ class TestRegimeBridge:
         tii = float(compute_tau_ii(n, T, A))
         tau_axial = float(compute_tau_axial(tii, R_m, L, T, A, phi, n))
         ceiling = _N_TAU_CEILING / n  # ~20 s at this thin density
-        # The capped axial time cannot exceed the density-set n*tau ceiling.
+        # The capped axial time cannot exceed the density-set n*tau ceiling, and
+        # because the uncapped runaway is well above the ceiling the soft-min
+        # saturates right at it.
         assert tau_axial <= ceiling * (1.0 + 1e-6)
+        assert tau_axial == pytest.approx(ceiling, rel=0.05)
         # And it really did cap a runaway: bare Pastukhov is well above the ceiling.
         tau_p_bare = float(compute_tau_pastukhov(tii, R_m, phi, T))
         assert tau_p_bare > 3.0 * ceiling
 
     def test_axial_confinement_barely_capped_at_reactor_density(self):
         # At the validated Hammir reactor point (n ~ 3.3e20) the ceiling is ~3 s,
-        # near the uncapped axial time, so the model stays order-seconds (it is NOT
-        # collapsed to the much shorter gas-dynamic time, nor a 90 s runaway).
+        # ABOVE the uncapped axial time (~2.4 s), so the soft-min must leave the
+        # confinement essentially untouched: it is NOT collapsed to the much
+        # shorter gas-dynamic time, NOT a 90 s runaway, and NOT pinned at the
+        # ceiling (the earlier additive cap wrongly dragged it well below).
         from costingfe.layers.mirror import _N_TAU_CEILING
 
         n, T, A, R_m, L, phi = 3.3e20, 28.0, 2.5, 10.0, 130.0, 74.7
@@ -1704,8 +1713,10 @@ class TestRegimeBridge:
         tau_axial = float(compute_tau_axial(tii, R_m, L, T, A, phi, n))
         ceiling = _N_TAU_CEILING / n  # ~3.03 s
         assert tau_axial <= ceiling * (1.0 + 1e-6)
-        # Order-seconds confinement preserved at the design point (uncapped ~2.4 s).
-        assert 1.0 <= tau_axial <= ceiling
+        # Below-ceiling preservation: the soft-min keeps tau within a few percent
+        # of the uncapped ~2.40 s bridge value (not pinned at the ~3.03 s ceiling).
+        assert tau_axial == pytest.approx(2.40, rel=0.05)
+        assert tau_axial < ceiling
 
 
 class TestEnergyBalanceClosure:
