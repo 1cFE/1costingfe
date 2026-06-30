@@ -51,6 +51,18 @@ _AMU_G = 1.66053906660e-24  # atomic mass unit [g]
 # stays near unity in float32 (XLA constant-gathering hazard, see reactivity.py):
 _TAU_II_PREFACTOR_20 = 2.09e13 * (1.0e3) ** 1.5 * 1e-20  # 6.609e-3
 
+# Electron-electron collision time prefactor [s] for T in keV, n in 1e20 m^-3.
+# NRL formulary electron collision time tau_e = 3.44e5 * T_eV^1.5 / (n_cm3 * lnL)
+# [s] (Huba). Refolded into the same pre-folded style as _TAU_II_PREFACTOR_20
+# (n in 1e20 m^-3, T in keV): n_cm3 = n20 * 1e14 (1e20 m^-3 -> cm^-3) and
+# T_eV^1.5 = T_keV^1.5 * (1e3)^1.5, so the constant absorbs (1e3)^1.5 / 1e14.
+# The constant is benign (order 1e-4) and every intermediate stays near unity in
+# float32. By construction _TAU_II_PREFACTOR_20 / _TAU_EE_PREFACTOR_20 = 60.8, so
+# tau_ii / tau_ee = 60.8 * sqrt(A) (electrons collide about 60-96x faster than
+# ions for A = 2.5-1, the expected sqrt(m_i/m_e) ordering). This is the genuine
+# NRL ELECTRON formula, not compute_tau_ii with a spoofed mass number.
+_TAU_EE_PREFACTOR_20 = 3.44e5 * (1.0e3) ** 1.5 / 1e14  # 1.088e-4
+
 # Ion-electron energy equilibration prefactor [s^-1 per (n_i_20 * Z^2 * sqrt(A) /
 # (m_e_g * T_i_keV + m_i_g * T_e_keV)^1.5)].  Absorbs: the 1.8e-19 NRL constant,
 # sqrt(m_e_g * m_amu_g), lnL, the n unit conversion (n_i_20 -> cm^-3: ×1e14),
@@ -1646,6 +1658,85 @@ def alpha_electron_fraction(T_e, E_alpha_keV, e_crit_over_te):
     return 1.0 - f_ion
 
 
+def compute_tau_ee(n_e, T_e):
+    """Electron-electron collision time [s]. tau_ee ~ T_e^1.5 / n.
+
+    NRL formulary electron collision time (Huba), Z = 1: the electron analog of
+    compute_tau_ii. n_e in m^-3, T_e in [keV]. Internally n is rescaled to
+    1e20 m^-3 units (see _TAU_EE_PREFACTOR_20) so all intermediates stay near
+    unity in float32. Electrons collide about 60-96x faster than ions
+    (tau_ii / tau_ee = 60.8 * sqrt(A)); this is the genuine electron formula,
+    not compute_tau_ii evaluated with a spoofed mass number.
+    """
+    n20 = n_e * 1e-20
+    return _TAU_EE_PREFACTOR_20 * T_e**1.5 / (n20 * _LN_LAMBDA)
+
+
+def compute_p_e_endloss(T_e, g_amb, n_e, R_m, volume):
+    """Central-cell electron Pastukhov end-loss power [MW].
+
+    Electrons escape axially over the AMBIPOLAR electron-confining potential
+    phi_e = g_amb * T_e (Forest 2024; Post 1987), at the electron Pastukhov rate
+    built from the ELECTRON collision time tau_ee (NOT the ion compute_tau_ii).
+    Each escaping electron carries about (g_amb + 2) * T_e of energy. Because
+    phi_e = g_amb * T_e the Pastukhov argument x = phi_e / T_e = g_amb, so the
+    rate is set by g_amb * exp(g_amb) and is exponentially sensitive to the well
+    depth g_amb (which is pinned by ambipolarity in solve_g_amb_ambipolar, not a
+    free constant). T_e [keV], g_amb [-], n_e [m^-3], R_m [-], volume [m^3].
+    """
+    tau_ee = compute_tau_ee(n_e, T_e)
+    tau_e_p = compute_tau_pastukhov(tau_ee, R_m, g_amb * T_e, T_e)
+    loss_rate = n_e * volume / tau_e_p  # electrons lost per second
+    return loss_rate * (g_amb + 2.0) * T_e * _KEV_TO_J * 1e-6  # -> MW
+
+
+# Bisection iterations for the ambipolar g_amb solve. g_amb is pinned only
+# logarithmically by the ion confinement (g*exp(g) = C), so the bisection
+# converges fast and is not knife-edge; 60 iterations resolve [0, 40] to < 1e-10.
+_G_AMB_BISECT_ITERS = 60
+# Upper bracket for g_amb [-]. Physical ambipolar depths are about 5-9; 40 is a
+# generous ceiling that keeps g*exp(g) (<= 4e19) well inside float32 range.
+_G_AMB_MAX = 40.0
+
+
+def solve_g_amb_ambipolar(T_e, n_e, R_m, tau_i_ion):
+    """Ambipolar electron-confining well depth g_amb = e*phi_e / T_e [-].
+
+    In steady state, with Z = 1 and n_e = n_i, the electron and ion particle loss
+    rates must be equal, so the electron-confining Pastukhov time must match the
+    ion confinement:
+
+        tau_e_electron(g_amb, T_e) = tau_i_ion,
+        tau_e_electron = compute_tau_pastukhov(tau_ee, R_m, g_amb*T_e, T_e).
+
+    Since the Pastukhov argument x = phi_e / T_e = g_amb, this is
+    tau_ee * bracket(R_m) * g_amb * exp(g_amb) = tau_i_ion, monotone increasing in
+    g_amb, so a bounded bisection on [0, _G_AMB_MAX] solves it. (The closed form is
+    a Lambert-W, but that is not backend-traceable; the bisection is the
+    JAX/numpy-safe equivalent. g_amb depends only LOGARITHMICALLY on tau_i_ion, so
+    the old exp(g_amb) knife-edge is gone and a short solve converges.) Feeding
+    tau_i_ion = the model's own ion confinement faithfully transmits the ion
+    confinement into the electron well depth. T_e [keV], n_e [m^-3], R_m [-],
+    tau_i_ion [s].
+    """
+    tau_ee = compute_tau_ee(n_e, T_e)
+
+    def tau_e_electron(g):
+        return compute_tau_pastukhov(tau_ee, R_m, g * T_e, T_e)
+
+    # tau_e_electron is monotone increasing in g; bisect for the matching depth.
+    def body(_, bounds):
+        lo, hi = bounds
+        mid = 0.5 * (lo + hi)
+        below = tau_e_electron(mid) < tau_i_ion
+        lo = jnp.where(below, mid, lo)
+        hi = jnp.where(below, hi, mid)
+        return (lo, hi)
+
+    lo, hi = fori_loop(0, _G_AMB_BISECT_ITERS, body, (0.0, _G_AMB_MAX))
+    return 0.5 * (lo + hi)
+
+
 def solve_T_e(
     *,
     n_e,
@@ -1664,19 +1755,33 @@ def solve_T_e(
     e_crit_over_te,
     E_alpha_keV,
 ):
-    """Solve the central-cell electron power balance for T_e [keV].
+    """Solve the coupled central-cell electron power balance for T_e [keV].
 
-    alpha_e(T_e)*p_alpha + K_ie(T_i-T_e) = P_brem(T_e) + gamma_e*p_end(T_e)
-    gamma_e = T_e/(T_e + n_i_frac*T_i)  (electron pressure fraction, axial only)
-    Residual is monotone decreasing in T_e -> bisection on [0.1, 2*T_i].
+    Steady-state electron energy balance:
+
+        alpha_e(T_e)*p_alpha + K_ie(T_i - T_e) = P_brem(T_e) + P_e_endloss(T_e),
+        [ alpha -> e heat ]   [ equilibration ]  [ brems ]    [ electron end-loss ]
+
+    where the electron sink is a dedicated electron Pastukhov end-loss
+    (compute_p_e_endloss) over the SELF-CONSISTENT ambipolar well g_amb, NOT the
+    old gamma_e * p_end ion convective loss (that gave ~0.2 MW and T_e ~ 350 keV).
+    At each T_e the inner ambipolar solve sets g_amb so the electron particle loss
+    matches the model's own ion confinement tau_i_ion = tau_p (from
+    _confinement_and_losses, the gated gas-dynamic + Pastukhov axial/radial chain);
+    the outer bisection on T_e drives the energy residual to zero. The residual is
+    monotone decreasing in T_e, so bisection on [0.5, 4*T_i] is well-posed.
+
+    Validated against MARS (Logan 1985): at the reactor design point
+    (n_e = 3.3e20, T_i = 28 keV, the model's own plug phi = 74.7, p_alpha = 520 MW)
+    T_e lands warm at about 0.81-0.87 T_i (about 22-24 keV), reproducing the MARS
+    central cell. See docs/superpowers/specs/2026-06-29-mirror-electron-power-
+    balance-design.md.
     """
     n_i = n_i_frac * n_e
     volume = jnp.pi * a**2 * L
 
     def residual(T_e):
-        a_e = f_alpha_heat * alpha_electron_fraction(T_e, E_alpha_keV, e_crit_over_te)
-        p_ie = compute_K_ie(n_e, n_i, T_i, T_e, Z_i, A, volume)
-        p_brem = compute_p_brem_rel(n_e, T_e, Z_eff, volume)
+        # Model's own ion confinement (T_e-independent: tau_p is built from T_i).
         cl = _confinement_and_losses(
             T_e,
             n_e=n_e,
@@ -1689,8 +1794,13 @@ def solve_T_e(
             B_min=B_min,
             phi=phi,
         )
-        gamma_e = T_e / (T_e + n_i_frac * T_i)
-        return a_e * p_alpha + p_ie - p_brem - gamma_e * cl["p_end"]
+        # Ambipolar well depth: electron loss rate pinned to the ion confinement.
+        g_amb = solve_g_amb_ambipolar(T_e, n_e, R_m, cl["tau_p"])
+        p_eend = compute_p_e_endloss(T_e, g_amb, n_e, R_m, volume)
+        a_e = f_alpha_heat * alpha_electron_fraction(T_e, E_alpha_keV, e_crit_over_te)
+        p_ie = compute_K_ie(n_e, n_i, T_i, T_e, Z_i, A, volume)
+        p_brem = compute_p_brem_rel(n_e, T_e, Z_eff, volume)
+        return a_e * p_alpha + p_ie - p_brem - p_eend
 
     # Backend-agnostic bounded bisection via the shim fori_loop (already imported
     # in mirror.py). residual is monotone decreasing -> r > 0 means root above mid.
@@ -1702,5 +1812,5 @@ def solve_T_e(
         hi = jnp.where(above, hi, mid)
         return (lo, hi)
 
-    lo, hi = fori_loop(0, 60, body, (0.1, 2.0 * T_i))
+    lo, hi = fori_loop(0, 60, body, (0.5, 4.0 * T_i))
     return 0.5 * (lo + hi)

@@ -23,8 +23,10 @@ from costingfe.layers.mirror import (
     _density_from_wall_cap,
     alpha_electron_fraction,
     compute_ambipolar_potential,
+    compute_p_e_endloss,
     compute_tau_axial,
     compute_tau_classical,
+    compute_tau_ee,
     compute_tau_gas_dynamic,
     compute_tau_ii,
     compute_tau_pastukhov,
@@ -34,6 +36,7 @@ from costingfe.layers.mirror import (
     mirror_aux_heating,
     mirror_size_from_power,
     net_electric_at_L,
+    solve_g_amb_ambipolar,
     solve_T_e,
 )
 from costingfe.layers.physics import OperatingPointInfeasible
@@ -2351,51 +2354,70 @@ def test_confinement_helper_loss_split_partitions_total():
     assert abs(out["p_end"] + out["p_radial"] - out["W_th_MW"] / out["tau_E"]) < 1e-6
 
 
-def test_solve_T_e_DT_lands_cool():
-    # D-T at a reference operating point must land near T_i (order 10 to 20 keV),
-    # NOT the old 125 keV. p_alpha order 200 MW.
+def test_compute_tau_ee_nrl_value_and_ion_ratio():
+    # NRL electron collision time at reactor density / warm electrons.
+    # tau_ee = 1.088e-4 * T_e^1.5 / (n20 * lnLambda); n20=3.3, lnL=17, T_e=24.4.
+    tau_ee = float(compute_tau_ee(3.3e20, 24.4))
+    assert 2.0e-4 < tau_ee < 2.7e-4
+    # Ratio to the ion collision time is the float64-folded 60.8*sqrt(A): electrons
+    # collide far faster than ions at the same n, T.
+    tau_ii = float(compute_tau_ii(3.3e20, 24.4, 2.5))
+    assert abs(tau_ii / tau_ee - 60.8 * math.sqrt(2.5)) / (tau_ii / tau_ee) < 0.01
+
+
+def test_compute_p_e_endloss_positive_and_grows_with_shallower_well():
+    # Electron Pastukhov end-loss [MW] is positive, and a SHALLOWER ambipolar well
+    # (smaller g_amb -> weaker exp(g_amb) confinement) leaks MORE power.
+    vol = math.pi * 0.49**2 * 130.0
+    p_deep = float(compute_p_e_endloss(24.0, 7.0, 3.3e20, 10.0, vol))
+    p_shallow = float(compute_p_e_endloss(24.0, 5.0, 3.3e20, 10.0, vol))
+    assert p_deep > 0.0
+    assert p_shallow > p_deep
+
+
+def test_solve_g_amb_ambipolar_matches_ion_confinement():
+    # The ambipolar well depth makes the electron Pastukhov time equal the ion
+    # confinement fed in. At the MARS point (tau_i_ion ~ 3 s) g_amb lands at ~6-7.
+    tau_i_ion = 2.99
+    g = float(solve_g_amb_ambipolar(24.4, 3.3e20, 10.0, tau_i_ion))
+    assert 6.0 <= g <= 7.0
+    # By construction tau_e_electron(g_amb) == tau_i_ion.
+    tau_ee = float(compute_tau_ee(3.3e20, 24.4))
+    tau_e = float(compute_tau_pastukhov(tau_ee, 10.0, g * 24.4, 24.4))
+    assert abs(tau_e - tau_i_ion) / tau_i_ion < 1e-3
+
+
+def test_solve_g_amb_ambipolar_logarithmic_not_knifeedge():
+    # g_amb depends only LOGARITHMICALLY on the ion confinement (g*exp(g) = C),
+    # so a factor-30 change in tau_i_ion moves g_amb by only about ln(30) ~ 3.4,
+    # not orders of magnitude. The old exp(g_amb) knife-edge is gone.
+    g_lo = float(solve_g_amb_ambipolar(24.4, 3.3e20, 10.0, 1.0))
+    g_hi = float(solve_g_amb_ambipolar(24.4, 3.3e20, 10.0, 30.0))
+    assert g_hi > g_lo
+    assert (g_hi - g_lo) < 4.0
+
+
+def test_solve_T_e_MARS_lands_warm():
+    # ACCEPTANCE GATE. At the MARS reactor design point (Logan 1985) the coupled
+    # ambipolar electron balance must land T_e WARM, near 0.87 T_i ~ 24.4 keV, with
+    # the model's OWN plug potential phi=74.7 and the published p_alpha=520 MW.
     T_e = float(
         solve_T_e(
-            n_e=5e19,
-            T_i=15.0,
-            p_alpha=200.0,
-            Z_eff=1.5,
+            n_e=3.3e20,
+            T_i=28.0,
+            p_alpha=520.0,
+            Z_eff=1.2,
             Z_i=1.0,
             A=2.5,
             n_i_frac=1.0,
             R_m=10.0,
-            L=50.0,
-            a=0.5,
-            B_min=3.0,
+            L=130.0,
+            a=0.49,
+            B_min=4.7,
             phi=74.7,
             f_alpha_heat=0.8,
             e_crit_over_te=33.0,
             E_alpha_keV=3500.0,
         )
     )
-    assert 5.0 < T_e < 40.0  # cool, not hot
-
-
-def test_solve_T_e_residual_zero_at_solution():
-    # Re-evaluating the balance at the returned T_e gives a near-zero residual.
-    # (Implement a small local residual mirroring solve_T_e for the assertion.)
-    T_e = float(
-        solve_T_e(
-            n_e=5e19,
-            T_i=15.0,
-            p_alpha=200.0,
-            Z_eff=1.5,
-            Z_i=1.0,
-            A=2.5,
-            n_i_frac=1.0,
-            R_m=10.0,
-            L=50.0,
-            a=0.5,
-            B_min=3.0,
-            phi=74.7,
-            f_alpha_heat=0.8,
-            e_crit_over_te=33.0,
-            E_alpha_keV=3500.0,
-        )
-    )
-    assert 5.0 < T_e < 40.0
+    assert 20.0 <= T_e <= 28.0  # warm central cell, matching MARS (24 keV, 0.86 T_i)
