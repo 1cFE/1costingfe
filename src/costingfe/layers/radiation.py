@@ -297,3 +297,19 @@ def compute_p_rad(
 
     p_line = compute_p_line(n_e, T_e, impurities, volume)
     return radiation_peaking_factor * (p_brem + p_line) + p_sync
+
+
+def compute_p_brem_rel(n_e, T_e, Z_eff, volume):
+    """Relativistic bremsstrahlung incl. electron-electron term [MW].
+
+    Putvinski/Heitler form (Ochs et al. 2022 arXiv:2210.08076 Eq. 16), in kernel
+    units: n_e [m^-3], T_e [keV], volume [m^3]. Uniformly valid from D-T (about
+    10 keV) to p-B11 (about 300 keV). Use this on the electron power-balance RHS;
+    it excludes synchrotron and line radiation by construction.
+    """
+    n_e_20 = n_e * 1e-20
+    x = T_e / 511.0  # T_e / E_rest
+    bracket = Z_eff * (1.0 + 1.78 * x**1.34) + 2.12 * x * (
+        1.0 + 1.1 * x - 1.25 * x**2.5
+    )
+    return 0.12113 * n_e_20**2 * jnp.sqrt(x) * bracket * volume  # -> MW
