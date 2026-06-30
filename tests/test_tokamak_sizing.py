@@ -329,9 +329,12 @@ def test_backward_compat_sizing_off_unchanged():
     # re-pinned: CAS10 land changed to sqrt(plant-total power) scaling
     # (was 158.53623962402344), then gross-electric reference unified to 1100 MWe
     # (was 158.54959106445312).
-    REF = 158.2802276611328
-    if REF is not None:
-        assert r.costs.lcoe == pytest.approx(REF, rel=1e-9 if HAS_JAX else 1e-6)
+    _REF_JAX = 158.2802276611328
+    _REF_NUMPY = 158.2802400728728
+    if _REF_JAX is not None:
+        assert r.costs.lcoe == pytest.approx(
+            _REF_JAX if HAS_JAX else _REF_NUMPY, rel=1e-9
+        )
 
 
 def test_arc_validation_reproduces_size():
