@@ -39,7 +39,6 @@ _KEV_TO_J = _EV * 1e3  # 1 keV -> Joules
 _M_P = 1.67262192369e-27  # Proton mass [kg]
 _MU_0 = 1.25663706127e-06  # Vacuum permeability [T*m/A]
 
-_LN_LAMBDA = 17.0  # Coulomb logarithm, fusion-relevant plasmas
 _M_P_OVER_M_E = 1836.15267  # Proton-to-electron mass ratio
 _M_E_G = 9.1093837015e-28  # electron mass [g]
 _AMU_G = 1.66053906660e-24  # atomic mass unit [g]
@@ -65,17 +64,20 @@ _TAU_EE_PREFACTOR_20 = 3.44e5 * (1.0e3) ** 1.5 / 1e14  # 1.088e-4
 
 # Ion-electron energy equilibration prefactor [s^-1 per (n_i_20 * Z^2 * sqrt(A) /
 # (m_e_g * T_i_keV + m_i_g * T_e_keV)^1.5)].  Absorbs: the 1.8e-19 NRL constant,
-# sqrt(m_e_g * m_amu_g), lnL, the n unit conversion (n_i_20 -> cm^-3: ×1e14),
-# and the T unit factor (T_keV -> T_eV: (1e3)^1.5 factored out of denominator).
+# sqrt(m_e_g * m_amu_g), the n unit conversion (n_i_20 -> cm^-3: ×1e14), and the
+# T unit factor (T_keV -> T_eV: (1e3)^1.5 factored out of denominator). The
+# Coulomb logarithm is NO LONGER folded in here: compute_K_ie multiplies by the
+# channel-specific lnLambda_ei(n_e, T_e) per call so the proper n,T dependence is
+# retained (a constant lnL would let the n^2 in K_ie cancel the electron
+# end-loss, spuriously decoupling the solved T_e from density).
 # Pre-folded in float64 so JAX float32 only sees O(1) intermediates; avoids the
 # product m_e_g * m_i_g ~ 1e-51 which underflows float32 (~1.18e-38 minimum).
 _K_IE_NU_PREFACTOR = (
     1.8e-19
     * math.sqrt(_M_E_G * _AMU_G)  # g -- computed in Python float64
-    * _LN_LAMBDA
     * 1e14  # n_i_20 [1e20 m^-3] -> n_i_cm3 [cm^-3]
     / 1000.0**1.5  # (T_keV -> T_eV)^1.5 factored out of denominator
-)  # ~3.76e-34; representable in float32
+)  # ~2.21e-35; representable in float32
 
 # Thermal ion speed prefactor [m/s per sqrt(keV/amu)].
 # v_thi = sqrt(2 * T_keV * KEV_TO_J / (A * m_p)) = _V_THI_PREFACTOR * sqrt(T_keV / A)
@@ -158,15 +160,77 @@ class MirrorPlasmaState:
 # ---------------------------------------------------------------------------
 
 
+# ---------------------------------------------------------------------------
+# Coulomb logarithms (NRL Plasma Formulary, Huba). T in keV, n in m^-3 at the
+# call boundary; converted internally to the formulary units (T in eV, n in
+# cm^-3). High-temperature fusion-regime forms (valid for T_e > 10 eV, always
+# true here). Each is clamped to a floor of 1.0 so the log cannot go negative or
+# absurd in pathological corners. Channel-specific (ee/ei/ii) on purpose: with a
+# single constant lnLambda the n^2 in the ion-electron equilibration cancels the
+# electron end-loss exactly, spuriously decoupling the solved T_e from density;
+# the proper lnLambda(n,T) and the distinct ee/ei/ii forms break that
+# cancellation and restore the weak (logarithmic) density dependence.
+# ---------------------------------------------------------------------------
+def lnLambda_ei(n_e, T_e):
+    """Electron-ion Coulomb logarithm. n_e [m^-3], T_e [keV].
+
+    NRL (Huba), T_e > 10 eV regime, hydrogenic Z = 1:
+        lnLambda_ei = 24 - ln(sqrt(n_e_cm3) / T_e_eV).
+    Clamped to a floor of 1.0.
+    """
+    n_e_cm3 = n_e * 1e-6
+    T_e_eV = T_e * 1e3
+    lnL = 24.0 - jnp.log(jnp.sqrt(n_e_cm3) / T_e_eV)
+    return jnp.maximum(lnL, 1.0)
+
+
+def lnLambda_ee(n_e, T_e):
+    """Electron-electron Coulomb logarithm. n_e [m^-3], T_e [keV].
+
+    NRL (Huba):
+        lnLambda_ee = 23.5 - ln(sqrt(n_e_cm3) * T_e_eV**-1.25)
+                      - sqrt(1e-5 + (ln(T_e_eV) - 2)**2 / 16).
+    Clamped to a floor of 1.0.
+    """
+    n_e_cm3 = n_e * 1e-6
+    T_e_eV = T_e * 1e3
+    lnL = (
+        23.5
+        - jnp.log(jnp.sqrt(n_e_cm3) * T_e_eV ** (-1.25))
+        - jnp.sqrt(1e-5 + (jnp.log(T_e_eV) - 2.0) ** 2 / 16.0)
+    )
+    return jnp.maximum(lnL, 1.0)
+
+
+def lnLambda_ii(n_i, T_i, A):
+    """Ion-ion Coulomb logarithm, single hydrogenic species (Z = 1).
+
+    n_i [m^-3], T_i [keV]; A (ion mass number) is part of the signature for the
+    general mutual-ion form but drops out under the Z = 1, single-species
+    specialization (mass cancels), so it carries no explicit dependence here.
+    NRL (Huba) mutual form 23 - ln[Z^3 sqrt(2 n_i) / T_i^1.5] at Z = 1:
+        lnLambda_ii = 23 - ln(sqrt(2 n_i_cm3) / T_i_eV**1.5).
+    Clamped to a floor of 1.0.
+    """
+    del A  # no explicit A dependence at Z = 1 single-species; kept for signature
+    n_i_cm3 = n_i * 1e-6
+    T_i_eV = T_i * 1e3
+    lnL = 23.0 - jnp.log(jnp.sqrt(2.0 * n_i_cm3) / T_i_eV**1.5)
+    return jnp.maximum(lnL, 1.0)
+
+
 def compute_tau_ii(n_i, T_i, A):
-    """Ion-ion collision time [s]. tau_ii ~ T^1.5 sqrt(A) / n.
+    """Ion-ion collision time [s]. tau_ii ~ T^1.5 sqrt(A) / (n lnLambda_ii).
 
     n_i in m^-3, T_i in [keV], A is ion mass number.
     NRL formulary (Huba), Z = 1. Internally n is rescaled to 1e20 m^-3
-    units so all intermediates stay near unity in float32.
+    units so all intermediates stay near unity in float32. The Coulomb log is
+    the channel-specific lnLambda_ii(n_i, T_i, A), not a folded-in constant.
     """
     n20 = n_i * 1e-20
-    return _TAU_II_PREFACTOR_20 * T_i**1.5 * jnp.sqrt(A) / (n20 * _LN_LAMBDA)
+    return (
+        _TAU_II_PREFACTOR_20 * T_i**1.5 * jnp.sqrt(A) / (n20 * lnLambda_ii(n_i, T_i, A))
+    )
 
 
 def compute_K_ie(n_e, n_i, T_i, T_e, Z_i, A, volume):
@@ -182,8 +246,11 @@ def compute_K_ie(n_e, n_i, T_i, T_e, Z_i, A, volume):
     """
     n_i_20 = n_i * 1e-20  # rescale to 1e20 m^-3 (value near unity)
     # Energy exchange rate [s^-1]: T in keV, masses in grams (see _K_IE_NU_PREFACTOR).
+    # The Coulomb log is the channel-specific lnLambda_ei(n_e, T_e), pulled out of
+    # the prefactor so the proper n,T dependence is retained per call.
     nu_eps = (
         _K_IE_NU_PREFACTOR
+        * lnLambda_ei(n_e, T_e)
         * jnp.sqrt(A)
         * Z_i**2
         * n_i_20
@@ -1666,10 +1733,11 @@ def compute_tau_ee(n_e, T_e):
     1e20 m^-3 units (see _TAU_EE_PREFACTOR_20) so all intermediates stay near
     unity in float32. Electrons collide about 60-96x faster than ions
     (tau_ii / tau_ee = 60.8 * sqrt(A)); this is the genuine electron formula,
-    not compute_tau_ii evaluated with a spoofed mass number.
+    not compute_tau_ii evaluated with a spoofed mass number. The Coulomb log is
+    the channel-specific lnLambda_ee(n_e, T_e), not a folded-in constant.
     """
     n20 = n_e * 1e-20
-    return _TAU_EE_PREFACTOR_20 * T_e**1.5 / (n20 * _LN_LAMBDA)
+    return _TAU_EE_PREFACTOR_20 * T_e**1.5 / (n20 * lnLambda_ee(n_e, T_e))
 
 
 def compute_p_e_endloss(T_e, g_amb, n_e, R_m, volume):
