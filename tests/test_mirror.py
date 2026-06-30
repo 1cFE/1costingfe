@@ -2291,3 +2291,26 @@ class TestFluenceLifetime:
             )
         )
         assert cap <= 40.0
+
+
+# ---------------------------------------------------------------------------
+# compute_K_ie tests
+# ---------------------------------------------------------------------------
+
+
+def test_K_ie_reference_point():
+    # n_e=n_i=1e20 m^-3, T_i=15, T_e=10 keV, Z=1, A=2.5 (D-T), V=1 m^3, lnL=17.
+    # nu_eps about 2.22 s^-1; power density about 0.267 MW/m^3.
+    from costingfe.layers.mirror import compute_K_ie
+
+    p = float(compute_K_ie(1e20, 1e20, 15.0, 10.0, 1.0, 2.5, 1.0))
+    assert abs(p - 0.267) < 0.02
+
+
+def test_K_ie_sign_and_zero():
+    from costingfe.layers.mirror import compute_K_ie
+
+    # T_e > T_i -> electrons give energy to ions -> negative.
+    assert float(compute_K_ie(1e20, 1e20, 10.0, 20.0, 1.0, 2.5, 1.0)) < 0.0
+    # T_e == T_i -> zero.
+    assert abs(float(compute_K_ie(1e20, 1e20, 12.0, 12.0, 1.0, 2.5, 1.0))) < 1e-9
