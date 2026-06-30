@@ -386,8 +386,9 @@ git commit -m "Extract _confinement_and_losses helper from mirror_0d_forward (no
 - Consumes: `compute_p_brem_rel`, `compute_K_ie`, `alpha_electron_fraction`,
   `_confinement_and_losses`.
 - Produces: `solve_T_e(*, n_e, T_i, p_alpha, Z_eff, Z_i, A, n_i_frac, R_m, L, a,
-  B_min, phi, f_alpha_heat, e_crit_over_te, E_alpha_keV, collisionality_min)
-  -> float` (keV).
+  B_min, phi, f_alpha_heat, e_crit_over_te, E_alpha_keV) -> float` (keV).
+  NOTE: the Task 4 `_confinement_and_losses` helper does NOT take
+  `collisionality_min`, so solve_T_e neither takes nor passes it.
 
 Solves `alpha_e(T_e)*p_alpha + K_ie(T_i-T_e) = P_brem(T_e) + gamma_e*p_end(T_e)`,
 with `alpha_e = f_alpha_heat * alpha_electron_fraction(T_e)`,
@@ -408,7 +409,6 @@ def test_solve_T_e_DT_lands_cool():
         n_e=5e19, T_i=15.0, p_alpha=200.0, Z_eff=1.5, Z_i=1.0, A=2.5,
         n_i_frac=1.0, R_m=10.0, L=50.0, a=0.5, B_min=3.0, phi=74.7,
         f_alpha_heat=0.8, e_crit_over_te=33.0, E_alpha_keV=3500.0,
-        collisionality_min=0.1,
     ))
     assert 5.0 < T_e < 40.0  # cool, not hot
 
@@ -419,7 +419,6 @@ def test_solve_T_e_residual_zero_at_solution():
         n_e=5e19, T_i=15.0, p_alpha=200.0, Z_eff=1.5, Z_i=1.0, A=2.5,
         n_i_frac=1.0, R_m=10.0, L=50.0, a=0.5, B_min=3.0, phi=74.7,
         f_alpha_heat=0.8, e_crit_over_te=33.0, E_alpha_keV=3500.0,
-        collisionality_min=0.1,
     ))
     assert 5.0 < T_e < 40.0
 ```
@@ -434,7 +433,7 @@ Expected: FAIL with ImportError.
 ```python
 # src/costingfe/layers/mirror.py
 def solve_T_e(*, n_e, T_i, p_alpha, Z_eff, Z_i, A, n_i_frac, R_m, L, a, B_min,
-              phi, f_alpha_heat, e_crit_over_te, E_alpha_keV, collisionality_min):
+              phi, f_alpha_heat, e_crit_over_te, E_alpha_keV):
     """Solve the central-cell electron power balance for T_e [keV].
 
     alpha_e(T_e)*p_alpha + K_ie(T_i-T_e) = P_brem(T_e) + gamma_e*p_end(T_e)
@@ -450,7 +449,7 @@ def solve_T_e(*, n_e, T_i, p_alpha, Z_eff, Z_i, A, n_i_frac, R_m, L, a, B_min,
         p_brem = compute_p_brem_rel(n_e, T_e, Z_eff, volume)
         cl = _confinement_and_losses(
             T_e, n_e=n_e, T_i=T_i, n_i_frac=n_i_frac, M_ion=A, R_m=R_m,
-            L=L, a=a, B_min=B_min, phi=phi, collisionality_min=collisionality_min,
+            L=L, a=a, B_min=B_min, phi=phi,
         )
         gamma_e = T_e / (T_e + n_i_frac * T_i)
         return a_e * p_alpha + p_ie - p_brem - gamma_e * cl["p_end"]
@@ -538,7 +537,6 @@ insert:
             n_e=n_e, T_i=T_i, p_alpha=p_alpha, Z_eff=Z_eff, Z_i=1.0, A=M_ion,
             n_i_frac=n_i_frac, R_m=R_m, L=L, a=a, B_min=B_min, phi=phi,
             f_alpha_heat=0.8, e_crit_over_te=33.0, E_alpha_keV=3500.0,
-            collisionality_min=collisionality_min,
         )
 ```
 
