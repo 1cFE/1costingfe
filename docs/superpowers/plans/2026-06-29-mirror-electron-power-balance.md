@@ -53,14 +53,13 @@ non-relativistic Born constant 5.35e-3 in `compute_p_rad`.
 
 ```python
 # tests/test_radiation.py
-import math
 from costingfe.layers.radiation import compute_p_brem_rel
 
 def test_p_brem_rel_reference_point():
     # n_e=1e20 m^-3, T_e=10 keV, Z_eff=1, V=1 m^3.
     # x=10/511=0.01957; sqrt(x)=0.1399; bracket=1.0515; 0.12113*0.1399*1.0515=0.01782 MW
     p = float(compute_p_brem_rel(1e20, 10.0, 1.0, 1.0))
-    assert p == math.isclose(p, 0.01782, rel_tol=2e-2) or abs(p - 0.01782) < 4e-4
+    assert abs(p - 0.01782) < 4e-4
 
 def test_p_brem_rel_matches_nonrel_at_low_T():
     # At 10 keV the relativistic+ee form is within ~6% of the non-rel Born value
