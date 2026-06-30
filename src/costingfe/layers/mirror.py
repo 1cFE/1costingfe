@@ -43,6 +43,15 @@ _M_P_OVER_M_E = 1836.15267  # Proton-to-electron mass ratio
 _M_E_G = 9.1093837015e-28  # electron mass [g]
 _AMU_G = 1.66053906660e-24  # atomic mass unit [g]
 
+# D-T fast-alpha slowing-down constants for the central-cell electron balance
+# (alpha_electron_fraction / solve_T_e). E_alpha = 3.5 MeV alpha birth energy;
+# the critical-energy ratio E_crit/T_e ~ 33 for D-T alphas (Stix 1972). These
+# pin the alpha -> electron heat split when solve_te is on. Fuel-generalization
+# (D-He3 14.7 MeV proton, p-B11 alphas) is the deferred multi-species follow-on;
+# the solve_te wiring here is the D-T path only.
+_E_CRIT_OVER_TE_DT = 33.0
+_E_ALPHA_KEV_DT = 3500.0
+
 # Ion-ion collision time prefactor [s] for T in keV, n in 1e20 m^-3 units.
 # Derived from NRL formula: tau_ii = 2.09e13 * A^0.5 * T_eV^1.5 / (n * lnL)
 # (T_eV = T_keV * 1e3) -> multiply by (1e3)^1.5 to accept T in keV; the 1e-20
@@ -592,6 +601,8 @@ def mirror_0d_forward(
     collisionality_min: float,
     T_e_plug: float,
     f_rad_fus: float | None = None,
+    f_alpha_heat: float = 0.80,
+    solve_te: bool = False,
 ):
     """Forward 0D mirror model: machine params -> MirrorPlasmaState.
 
@@ -612,6 +623,15 @@ def mirror_0d_forward(
     confining potential e*phi = T_e_plug*ln(n_p/n_c). Decoupled from the
     central-cell T_e (which sets central-cell bremsstrahlung and is coolable for
     advanced fuels), per the hot-electron-plug / cool-central-cell tandem split.
+    f_alpha_heat: loss-cone alpha retention fraction (Santarius & Callen 1983,
+    YAML default 0.80); only used when solve_te is on (it feeds the alpha ->
+    electron heat term of the central-cell electron balance).
+    solve_te: when True, the central-cell T_e is SOLVED from the ambipolar
+    electron power balance (solve_T_e) instead of taken as the passed-in pin; the
+    solved T_e then feeds radiation, beta, W_th, the confinement chain, and the
+    returned state. Default False preserves the pinned-T_e behaviour. D-T only
+    (the e_crit_over_te / E_alpha_keV constants are the D-T values); fuel
+    generalization is the deferred multi-species follow-on.
     Returns MirrorPlasmaState.
     """
     # 1. Geometry
@@ -653,7 +673,48 @@ def mirror_0d_forward(
         pb11_f_p_n=pb11_f_p_n,
     )
 
-    # 5. Radiation: per-fuel resolution matching the tokamak path.
+    # 5. Tandem plug confining potential (BOUNDED, FIXED by the plug hardware).
+    # The cost model commits to a tandem (n_plug_coils = 4, Hammir class), so the
+    # central-cell ions are confined by the end-plug electrostatic potential
+    # e*phi = T_e_plug*ln(n_p/n_c) (Fowler & Logan 1977; Frank et al. 2024 eq. 18),
+    # set by the FIXED plug-to-central density ratio and the HOT-ELECTRON PLUG
+    # temperature T_e_plug. The plug is decoupled from the central cell: T_e_plug
+    # is hot (ECH-heated) to build the potential, while the central-cell T_e (used
+    # for radiation, beta, and W_th below) is coolable so advanced fuels limit
+    # bremsstrahlung. Because e*phi does not scale with T_i, the Pastukhov
+    # enhancement exp(e*phi/T_i) WEAKENS as T_i rises (at fixed T_e_plug): heating
+    # the central cell costs confinement rather than buying it, so the optimum
+    # settles at a cooler driven point instead of igniting. The unbounded
+    # simple-mirror Boltzmann value is kept only as a diagnostic. Computed before
+    # radiation/confinement so it can feed the optional electron-balance solve.
+    phi = compute_plug_potential(T_e_plug, plug_density_ratio)
+
+    # 6. Optional central-cell electron-balance solve (opt-in, D-T path).
+    # When solve_te is on, replace the passed-in T_e with the value that closes
+    # the ambipolar electron power balance (solve_T_e); the solved T_e then drives
+    # radiation, beta, W_th, the confinement chain, and the returned state. Uses
+    # the model's own phi and p_alpha. e_crit_over_te / E_alpha_keV are the D-T
+    # alpha slowing-down constants; fuel generalization is the deferred follow-on.
+    if solve_te:
+        T_e = solve_T_e(
+            n_e=n_e,
+            T_i=T_i,
+            p_alpha=p_alpha,
+            Z_eff=Z_eff,
+            Z_i=1.0,
+            A=M_ion,
+            n_i_frac=n_i_frac,
+            R_m=R_m,
+            L=L,
+            a=a,
+            B_min=B_min,
+            phi=phi,
+            f_alpha_heat=f_alpha_heat,
+            e_crit_over_te=_E_CRIT_OVER_TE_DT,
+            E_alpha_keV=_E_ALPHA_KEV_DT,
+        )
+
+    # 7. Radiation: per-fuel resolution matching the tokamak path.
     # DT/DD: full compute_p_rad (f_rad_fus=None -> None path).
     # DHE3/PB11: f_rad_fus proxy when provided; caller passes cc.f_rad_fus(fuel).
     # Synchrotron geometry: R_eff = L / (2*pi) maps the cylinder to an
@@ -674,21 +735,6 @@ def mirror_0d_forward(
             R_w=R_w,
         )
     p_rad = jnp.minimum(p_rad, p_alpha)
-
-    # 6. Tandem plug confining potential (BOUNDED, FIXED by the plug hardware).
-    # The cost model commits to a tandem (n_plug_coils = 4, Hammir class), so the
-    # central-cell ions are confined by the end-plug electrostatic potential
-    # e*phi = T_e_plug*ln(n_p/n_c) (Fowler & Logan 1977; Frank et al. 2024 eq. 18),
-    # set by the FIXED plug-to-central density ratio and the HOT-ELECTRON PLUG
-    # temperature T_e_plug. The plug is decoupled from the central cell: T_e_plug
-    # is hot (ECH-heated) to build the potential, while the central-cell T_e (used
-    # for radiation, beta, and W_th below) is coolable so advanced fuels limit
-    # bremsstrahlung. Because e*phi does not scale with T_i, the Pastukhov
-    # enhancement exp(e*phi/T_i) WEAKENS as T_i rises (at fixed T_e_plug): heating
-    # the central cell costs confinement rather than buying it, so the optimum
-    # settles at a cooler driven point instead of igniting. The unbounded
-    # simple-mirror Boltzmann value is kept only as a diagnostic.
-    phi = compute_plug_potential(T_e_plug, plug_density_ratio)
 
     # 8-11. Confinement times and the axial/radial loss split (extracted helper).
     cl = _confinement_and_losses(

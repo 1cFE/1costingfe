@@ -2575,3 +2575,38 @@ def test_solve_T_e_MARS_lands_warm():
         )
     )
     assert 20.0 <= T_e <= 28.0  # warm central cell, matching MARS (24 keV, 0.86 T_i)
+
+
+def test_forward_solve_te_overrides_pin():
+    # solve_te=True solves the central-cell electron balance (solve_T_e) and
+    # OVERRIDES the passed-in T_e. At a reactor operating point (n_e=3.3e20,
+    # T_i=28, plug phi=74.7 from T_e_plug=125 and plug_density_ratio=1.818) an
+    # absurd pinned T_e=125 must be replaced by a WARM solved value in [20,28] keV
+    # (MARS central cell), and that solved value must land in state.T_e.
+    ps = _forward(
+        n_e=3.3e20,
+        T_i=28.0,
+        T_e=125.0,
+        L=130.0,
+        a=0.49,
+        B_min=4.7,
+        R_m=10.0,
+        solve_te=True,
+    )
+    T_e = float(ps.T_e)
+    assert 20.0 <= T_e <= 28.0
+    assert T_e != pytest.approx(125.0)
+
+
+def test_forward_solve_te_false_keeps_pin():
+    # Default solve_te=False leaves the passed T_e untouched: state.T_e == input.
+    ps = _forward(
+        n_e=3.3e20,
+        T_i=28.0,
+        T_e=125.0,
+        L=130.0,
+        a=0.49,
+        B_min=4.7,
+        R_m=10.0,
+    )
+    assert float(ps.T_e) == pytest.approx(125.0)
