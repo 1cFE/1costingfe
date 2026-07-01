@@ -16,7 +16,7 @@ UNCHANGED tokamak forward model at each machine's published operating point, and
 states the factor by which the model reproduces the published fusion gain Q and
 recirculating power fraction. The matching tests live in
 `tests/test_tokamak.py::TestTokamakAnchors`. This is the tokamak sibling of the
-mirror GDT/WHAM anchors in `mirror_confinement.md`; it validates the reference,
+mirror GDT/WHAM anchors in `mirror.md`; it validates the reference,
 it does not change any tokamak physics or cost code.
 
 A `$` here is a plain dollar sign; there are no costs in this document.

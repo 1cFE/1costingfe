@@ -1395,7 +1395,7 @@ class TestWallConstraint:
         # time, so the length returns near the pre-cap value: L = 87.479175126 m
         # (was 140.424590008 m under the over-reducing additive cap; Task 9 value
         # was 86.139396520 m). See
-        # docs/account_justification/mirror_confinement_regimes.md.
+        # docs/physics/mirror.md.
         params = dict(_SIZING_PARAMS, q_wall_max=50.0)
         L, _, _ = _size(params)
         assert L == pytest.approx(87.479175126, rel=1e-4)
@@ -1602,7 +1602,7 @@ class TestSurfaceConstraint:
 class TestRegimeBridge:
     """Collisionality-gated bridge between gas-dynamic and Pastukhov confinement.
 
-    See docs/account_justification/mirror_confinement_regimes.md (Rognlien and
+    See docs/physics/mirror.md (Rognlien and
     Cutler 1980): gas-dynamic governs when collisional, Pastukhov when
     collisionless, transition at collisionality = 1/R_m.
     """
@@ -1625,7 +1625,7 @@ class TestRegimeBridge:
         # Re-pinned (Task 10): the bare Pastukhov time over-credits here (~57 s);
         # the n*tau ceiling (~10 s at n=1e20) now bounds tau_axial, so it sits at
         # the density-set ceiling rather than 0.5*tau_p. See
-        # docs/account_justification/mirror_confinement_regimes.md.
+        # docs/physics/mirror.md.
         from costingfe.layers.mirror import _N_TAU_CEILING
 
         assert tau_axial <= _N_TAU_CEILING / n * (1.0 + 1e-6)
@@ -1775,7 +1775,7 @@ class TestEnergyBalanceClosure:
         # Pastukhov enhancement exp(e*phi/T_i) WEAKENS as T_i rises (e*phi is fixed
         # by the plug, not bought by heating), so the central cell no longer rides
         # to ignition and the point is genuinely DRIVEN (P_aux ~ 230 MW, well off the
-        # floor). See docs/account_justification/mirror_confinement_regimes.md.
+        # floor). See docs/physics/mirror.md.
         m = CostModel(ConfinementConcept.MIRROR, Fuel.DT)
         r = m.forward(
             net_electric_mw=400.0,
@@ -1817,7 +1817,7 @@ class TestAlphaHeating:
     genuinely DRIVEN tandem operating point. The lost fraction
     (1 - f_alpha_heat) * p_alpha exits the loss cone as directed exhaust and is
     accounted in the axial end-loss / DEC channel (energy bookkeeping closes).
-    See docs/account_justification/mirror_confinement_regimes.md.
+    See docs/physics/mirror.md.
     """
 
     def test_aux_heating_uses_alpha_fraction(self):
@@ -1918,7 +1918,7 @@ class TestTandemConfinement:
     the unbounded simple-mirror Boltzmann value. Calibrated to e*phi/T_i = 1.66
     at the Hammir nc/np = 0.55 design point so the central cell reproduces the
     Q > 5 design point and is not spuriously ignited. See
-    docs/account_justification/mirror_confinement_regimes.md (Frank et al. 2024,
+    docs/physics/mirror.md (Frank et al. 2024,
     arXiv 2411.06644).
     """
 
@@ -2047,7 +2047,7 @@ class TestPlugDecoupling:
     the plug temperature T_e_plug is separated from the central-cell T_e. The
     plug's sustainment power P_plug (ECH/NBI, calibrated to Hammir's about 30 MW)
     is charged into the mirror recirculating power. See
-    docs/account_justification/mirror_confinement_regimes.md.
+    docs/physics/mirror.md.
     """
 
     def test_plug_potential_uses_plug_temperature(self):
@@ -2191,7 +2191,7 @@ class TestStabilityDiagnostics:
     collisionless); a tandem legitimately runs there and plugged, so it is
     informational. The DCLC parameter is the number of ion gyroradii across the
     plasma (Post loss-cone microstability criterion). See
-    docs/account_justification/mirror_confinement_regimes.md.
+    docs/physics/mirror.md.
     """
 
     def test_collisionality_validity_flag_fires_when_collisionless(self):
@@ -2256,7 +2256,7 @@ class TestAnchors:
     """Pin the confinement kernels to published GDT and WHAM literature.
 
     Provenance and the full derivation of every number below live in
-    docs/account_justification/mirror_confinement.md. Each anchor carries its
+    docs/physics/mirror.md. Each anchor carries its
     primary-source citation inline. The 2x tolerance is documented there: the
     model is a single thermal Maxwellian, while the published formulas are
     built on beam-driven distributions, so a factor-of-2 band is the
@@ -2280,7 +2280,7 @@ class TestAnchors:
 
         The model kernel uses full length L and ion thermal speed v_thi, so it
         is intrinsically sqrt(2) larger than eq. 3.5 (see the doc); ratio 1.25.
-        See docs/account_justification/mirror_confinement.md.
+        See docs/physics/mirror.md.
         """
         gdt_R_m = 35.0  # Bagryansky et al. 2015
         gdt_L = 7.0  # m, central cell mirror-to-mirror, Bagryansky et al. 2015
@@ -2299,7 +2299,7 @@ class TestAnchors:
         assert 0.5 < ratio < 2.0, (
             f"GDT gas-dynamic anchor: model {tau_model * 1e3:.2f} ms vs "
             f"published {tau_published * 1e3:.2f} ms, ratio {ratio:.2f} "
-            "outside 2x; see docs/account_justification/mirror_confinement.md"
+            "outside 2x; see docs/physics/mirror.md"
         )
 
     def test_wham_pastukhov_anchor(self):
@@ -2316,7 +2316,7 @@ class TestAnchors:
 
         Model uses a single thermal Maxwellian Pastukhov kernel at the midplane
         thermal point (T_i=10 keV, T_e=1 keV); ratio 135/88 = 1.53, within 2x.
-        See docs/account_justification/mirror_confinement.md.
+        See docs/physics/mirror.md.
         """
         wham_R_m = 17.0 / 0.86  # vacuum mirror ratio, Endrizzi 2023 sec. 2.1
         wham_n = 3.0e19  # m^-3, beta=0.2 equilibrium density, Endrizzi 2023
@@ -2337,7 +2337,7 @@ class TestAnchors:
         assert 0.5 < ratio < 2.0, (
             f"WHAM Pastukhov anchor: model {tau_model * 1e3:.1f} ms vs "
             f"published {tau_published * 1e3:.1f} ms, ratio {ratio:.2f} "
-            "outside 2x; see docs/account_justification/mirror_confinement.md"
+            "outside 2x; see docs/physics/mirror.md"
         )
 
 

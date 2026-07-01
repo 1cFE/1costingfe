@@ -57,7 +57,7 @@ _BASE = dict(
         # the non-0D radiation term, inflating the MIRROR-DT benchmark with a spurious
         # high-T_e synchrotron term. Corrected here: 218.36 -> 190.52. Mirror-only;
         # tokamak/stellarator/dipole/polywell pins unchanged. See
-        # docs/account_justification/mirror_confinement_regimes.md.
+        # docs/physics/mirror.md.
         (C.MIRROR, Fuel.DT, 190.52),
         (C.STELLARATOR, Fuel.DT, 330.54),
         # DIPOLE re-benchmarked after the radial-build inversion + spherical

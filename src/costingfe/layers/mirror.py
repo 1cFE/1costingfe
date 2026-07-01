@@ -106,7 +106,7 @@ _RHO_I_PREFACTOR = math.sqrt(2.0 * _M_P * _KEV_TO_J) / _EV  # 4.5694e-3
 # gas-dynamic rate falls well below the Pastukhov rate at the collisionless
 # anchors, which matters because tau_GD can be up to 1e4 shorter than
 # tau_Pastukhov so even a small residual gate leaks meaningfully. See
-# docs/account_justification/mirror_confinement_regimes.md.
+# docs/physics/mirror.md.
 _REGIME_GATE_WIDTH_DECADES = 0.13
 _LN10 = math.log(10.0)  # natural log of 10, for log10 in JAX
 
@@ -132,7 +132,7 @@ _LN10 = math.log(10.0)  # natural log of 10, for log10 in JAX
 # ~20 s and tames the ~90 s runaway. The soft-min base is the O(1) ratio
 # (tau/tau_ceil), float32-safe: ratio**8 underflows harmlessly to 0 for tiny tau
 # and is ~1e12 at most for the thinnest runaway. See
-# docs/account_justification/mirror_confinement_regimes.md.
+# docs/physics/mirror.md.
 _N_TAU_CEILING = 1.0e21
 # Sharpness exponent for the soft-min n*tau cap. Larger -> closer to a hard min;
 # 8 keeps below-ceiling values within a few percent of uncapped while saturating
@@ -177,13 +177,13 @@ class MirrorPlasmaState:
     # core assumption holds); 0.0 when deeply collisionless, where the formula
     # over-credits confinement. Informational: a tandem legitimately runs
     # collisionless and plugged, so this flags where the assumption is stretched,
-    # not a hard error. See docs/account_justification/mirror_confinement_regimes.md.
+    # not a hard error. See docs/physics/mirror.md.
     pastukhov_valid: float
     # DCLC microstability diagnostic: number of ion gyroradii across the plasma
     # radius, a / rho_i (Post 1987 loss-cone criterion). The drift-cyclotron-loss-
     # cone mode grows more readily as this grows; a warm-plasma stream stabilises
     # DCLC when its fraction exceeds about rho_i/a (~ 1/dclc_parameter). Diagnostic
-    # only in Task 3 (not a constraint). See mirror_confinement_regimes.md.
+    # only (not a constraint). See docs/physics/mirror.md.
     dclc_parameter: float
     dhe3_dd_frac_eff: float = 0.0  # Effective D-D side-channel fraction (D-He3 only)
     # Audit-mode sustainment-consistency diagnostic: stated p_input divided by
@@ -311,7 +311,7 @@ def compute_ambipolar_potential(T_e, A):
     NOT used in the tandem confinement chain: the cost model commits to a
     tandem (n_plug_coils = 4, Hammir class), so the operative confining potential
     is the bounded tandem value from compute_plug_potential. See
-    docs/account_justification/mirror_confinement_regimes.md.
+    docs/physics/mirror.md.
     """
     return T_e * jnp.log(jnp.sqrt(A * _M_P_OVER_M_E / (2.0 * jnp.pi)))
 
@@ -350,7 +350,7 @@ def compute_plug_potential(T_e_plug, plug_density_ratio):
     Q ~ 5.2.
 
     T_e_plug in [keV], plug_density_ratio = n_p/n_c dimensionless (> 1). Pure JAX,
-    differentiable. See docs/account_justification/mirror_confinement_regimes.md.
+    differentiable. See docs/physics/mirror.md.
     """
     return T_e_plug * jnp.log(plug_density_ratio)
 
@@ -430,7 +430,7 @@ def compute_tau_axial(tau_ii, R_m, L, T_i, A, phi_keV, n_i):
     at thin density (n ~ 5e19) the ceiling is ~20 s and tames the ~90 s runaway.
     float32-safe: the soft-min base is the O(1) ratio (tau/tau_ceil).
 
-    See docs/account_justification/mirror_confinement_regimes.md.
+    See docs/physics/mirror.md.
 
     tau_ii [s], R_m [-], L [m], T_i [keV], A ion mass number, phi_keV = e*phi
     [keV], n_i [m^-3] (collisionality is computed from L, v_thi(T_i, A), and
@@ -491,7 +491,7 @@ def compute_dclc_parameter(a, T_i, A, B_min):
     Diagnostic only (Task 3), not a constraint.
 
     a [m], T_i [keV], A ion mass number, B_min [T]. Pure JAX, differentiable.
-    See docs/account_justification/mirror_confinement_regimes.md.
+    See docs/physics/mirror.md.
     """
     rho_i = _RHO_I_PREFACTOR * jnp.sqrt(A * T_i) / B_min
     return a / rho_i
@@ -562,7 +562,7 @@ def mirror_aux_heating(state, p_aux_floor, f_alpha_heat):
     alpha fraction is conserved in the axial end-loss / DEC channel and the
     existing recirculating (P_aux/eta_pin) and DEC (f_dec*eta_de*p_transport)
     terms net correctly. Pure JAX, differentiable. See
-    docs/account_justification/mirror_confinement_regimes.md.
+    docs/physics/mirror.md.
     """
     return jnp.maximum(
         p_aux_floor,
@@ -980,7 +980,7 @@ def mirror_0d_inverse(
     # function's recirculating sum is p_coils + ... + p_input_eff/eta_pin, so this
     # adds P_plug at unit recirculating cost without touching tokamak behavior).
     # Calibrated to Hammir's about 30 MW plug drive. See
-    # docs/account_justification/mirror_confinement_regimes.md.
+    # docs/physics/mirror.md.
     p_coils_eff = p_coils + p_plug
 
     # Step 1: Geometry (fixed inputs; L,a,B_min are not solved here).
@@ -1556,7 +1556,7 @@ def _net_at_L_T(L, T_i, params, fuel, *, _surf_cap_cache=None, return_full=False
     # axial loss, leaving P_radial to the wall. Energy is conserved: the lost
     # alpha power appears in p_transport and is split DEC-recovered / wall exactly
     # like the end loss. See
-    # docs/account_justification/mirror_confinement_regimes.md.
+    # docs/physics/mirror.md.
     p_ash_mir = float(ps.p_alpha)
     p_rad_mir = float(ps.p_rad)
     p_input_eff_mir = max(p_aux, p_rad_mir - p_ash_mir)
@@ -1583,7 +1583,7 @@ def _net_at_L_T(L, T_i, params, fuel, *, _surf_cap_cache=None, return_full=False
         # the ECH/NBI holding the hot-electron plug, calibrated to Hammir's about
         # 30 MW). It is a recirculating load, NOT central-cell heating, so it is
         # added to the p_coils bucket rather than p_input. See
-        # docs/account_justification/mirror_confinement_regimes.md.
+        # docs/physics/mirror.md.
         p_coils=params["p_coils"] + params["p_plug"],
         p_cool=params["p_cool"],
         p_pump=params["p_pump"],

@@ -38,7 +38,7 @@ p_aux_floor: 2.0  # MW; control/startup floor on auxiliary sustainment power
 # competing penalty that keeps the optimizer honest (a hotter/deeper plug costs
 # more). Charged on the mirror side via the p_coils recirculating bucket; the
 # shared tokamak power balance is unchanged. See
-# docs/account_justification/mirror_confinement_regimes.md.
+# docs/physics/mirror.md.
 p_plug: 30.0  # MW; hot-electron plug sustainment power (Hammir plug NBI/ECH anchor)
 
 # Alpha loss-cone heating fraction [-]. Fraction of the fusion-alpha (charged
@@ -51,7 +51,7 @@ p_plug: 30.0  # MW; hot-electron plug sustainment power (Hammir plug NBI/ECH anc
 # power deposits. The lost fraction (1 - f_alpha_heat) exits the loss cone as
 # directed exhaust and is routed to the axial end-loss / DEC channel. Default
 # 0.80, mid of the 0.75-0.85 sourced band. See
-# docs/account_justification/mirror_confinement_regimes.md.
+# docs/physics/mirror.md.
 f_alpha_heat: 0.80
 
 # Tandem plug-to-central density ratio n_p/n_c [-]. The CAS22 coil account costs
@@ -66,7 +66,7 @@ f_alpha_heat: 0.80
 # Calibrated to the Realta Hammir Q>5 design point: published n_c/n_p = 0.55, so
 # n_p/n_c = 1/0.55 = 1.818; at T_e = 125 keV this gives e*phi = 125*ln(1.818) =
 # 74.7 keV, reproducing the published central-cell tau_c ~ 5 s and Q ~ 5.2 (not
-# ignition). See docs/account_justification/mirror_confinement_regimes.md.
+# ignition). See docs/physics/mirror.md.
 plug_density_ratio: 1.818
 
 # --- Stability / validity diagnostics (Task 3; informational, not constraints) ---
@@ -78,7 +78,7 @@ plug_density_ratio: 1.818
 # the diagnostic flags it. A TANDEM legitimately runs collisionless and plugged,
 # so this is informational, not a hard error. Set to 1/R_m at the YAML R_m=10
 # (collisionality_crit = 0.1); the bridge already centers the regime here. See
-# docs/account_justification/mirror_confinement_regimes.md.
+# docs/physics/mirror.md.
 collisionality_min: 0.1  # L/mfp validity floor for the bare Pastukhov-Maxwellian core
 # DCLC reference: the drift-cyclotron-loss-cone mode is loss-cone driven and grows
 # more readily as the plasma spans more ion gyroradii. The Post criterion is that a
@@ -161,7 +161,7 @@ n_e: 5.0e19  # Electron density [m^-3]
 # PLUG hot-electron temperature (carried only by T_e_plug below), not the bulk
 # central cell. Keeping central T_e cool is also what lets advanced fuels limit
 # bremsstrahlung while the plug stays hot. See
-# docs/account_justification/mirror_confinement_regimes.md.
+# docs/physics/mirror.md.
 T_e: 10.0  # Central-cell electron temperature [keV] (radiation; near-Maxwellian central cell, Hammir/WHAM)
 # Plug hot-electron temperature [keV]. Sets the Fowler-Logan confining potential
 # e*phi = T_e_plug * ln(n_p/n_c) (see plug_density_ratio). The plug confines
@@ -172,7 +172,7 @@ T_e: 10.0  # Central-cell electron temperature [keV] (radiation; near-Maxwellian
 # plug (e.g. 20 keV) e*phi = 12 keV is far too shallow to plug a 20-80 keV central
 # cell. The Realta Hammir Q>5 design point runs its plug hot-electron population at
 # T_e = 125 keV (Frank et al. 2024 sec. 3.5); default 125 keV, anchored to Hammir.
-# See docs/account_justification/mirror_confinement_regimes.md.
+# See docs/physics/mirror.md.
 T_e_plug: 125.0  # Plug hot-electron temperature [keV] (Fowler-Logan potential; Hammir anchor)
 Z_eff: 1.2  # Effective charge
 plasma_volume: 200.0  # Plasma volume [m^3]
