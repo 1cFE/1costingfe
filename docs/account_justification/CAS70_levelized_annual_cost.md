@@ -108,4 +108,3 @@ The economic result is equivalent — the IDC just lives in a different account.
 
 - Brealey, Myers & Allen, "Principles of Corporate Finance" — growing annuity PV
 - EMWG, "Cost Estimating Guidelines for Generation IV Nuclear Energy Systems"
-- Critical review issue #6 (`docs/plans/critical_review_2026-02-19.md`)

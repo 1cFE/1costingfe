@@ -3,7 +3,7 @@
 Confinement, end losses, and plasma state for axisymmetric magnetic
 mirrors, following the tokamak 0D pattern. Backend-agnostic; runtime math is
 float32-safe, constants pre-folded in float64.
-Physics per docs/superpowers/specs/2026-06-11-mirror-0d-sizing-design.md:
+Physics per docs/physics/mirror.md:
 classical (Bing & Roberts 1961), Pastukhov electrostatic plugging
 (Pastukhov 1974, Cohen et al. 1978), gas-dynamic (Mirnov & Ryutov 1979).
 """
@@ -1954,8 +1954,7 @@ def solve_T_e(
     Validated against MARS (Logan 1985): at the reactor design point
     (n_e = 3.3e20, T_i = 28 keV, the model's own plug phi = 74.7, p_alpha = 520 MW)
     T_e lands warm at about 0.81-0.87 T_i (about 22-24 keV), reproducing the MARS
-    central cell. See docs/superpowers/specs/2026-06-29-mirror-electron-power-
-    balance-design.md.
+    central cell. See docs/physics/mirror.md.
     """
     n_i = n_i_frac * n_e
     volume = jnp.pi * a**2 * L

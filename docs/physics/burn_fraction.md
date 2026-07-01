@@ -3,9 +3,6 @@
 Per-concept single-pass burn fraction `burn_fraction` values, with sourcing
 and provenance notes.
 
-See also: `docs/plans/2026-05-21-burn-fraction-by-concept-design.md` for the
-broader design rationale.
-
 ## Method
 
 `burn_fraction` is the fraction of injected fuel atoms that undergo fusion

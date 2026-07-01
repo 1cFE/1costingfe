@@ -95,7 +95,7 @@ def test_every_concept_yaml_declares_burn_fraction_and_fuel_recovery(yaml_path):
     Background: these two physics knobs used to live in costing_constants.yaml
     as global defaults but are concept-specific (burn_fraction) or declared
     per-concept by policy (fuel_recovery). See
-    docs/plans/2026-05-21-burn-fraction-by-concept-design.md.
+    docs/physics/burn_fraction.md.
     """
     data = yaml.safe_load(yaml_path.read_text())
     for key in ("burn_fraction", "fuel_recovery"):

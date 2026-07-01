@@ -1,8 +1,7 @@
 """Backend resolver: jax if available (or forced), else numpy.
 
 Selecting numpy drops the jax/jaxlib dependency entirely for the forward
-cost model and finite-difference sensitivities. See
-docs/superpowers/specs/2026-06-29-numpy-backend-design.md.
+cost model and finite-difference sensitivities.
 """
 
 import os

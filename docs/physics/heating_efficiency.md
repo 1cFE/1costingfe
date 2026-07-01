@@ -4,8 +4,7 @@ Decomposition of the heating wall-plug efficiency `eta_pin` into a per-method
 source efficiency and a per-concept coupling efficiency, with sourcing and
 provenance for each value.
 
-See also: `docs/plans/2026-06-01-method-dependent-eta-pin.md` for the design
-rationale, and the Steady-State Power Balance subsection of the paper
+See also the Steady-State Power Balance subsection of the paper
 (`docs/papers/1costingfe_paper/1costingfe_paper.tex`) for the equation in context.
 
 ## Method
