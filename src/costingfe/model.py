@@ -204,6 +204,68 @@ class CostModel:
         )
         return num / den
 
+    def _pulsed_forward(self, params, p_fus, e_driver_mj, f_rep):
+        """Dispatch the pulsed forward for an explicit (p_fus, shot, rate).
+
+        Pure forward-call: builds the forward args from params (mn, eta_th,
+        eta_pin, f_rad, f_sub, p_pump, p_trit, p_house, p_cryo, p_target,
+        p_coils, fuel_frac_kw) and returns the PowerTable. p_fus, e_driver_mj,
+        and f_rep come from the ARGS, never recomputed from params (e.g. from
+        yield_per_shot_mj) — the caller supplies p_fus, whether that's an
+        inverse-solved value (normal path) or yield_per_shot_mj * f_rep
+        (rep-rate sizing path). Dispatches pulsed_dec_forward when
+        self.pulsed_conversion is INDUCTIVE_DEC, else pulsed_thermal_forward.
+        """
+        fuel_frac_kw = dict(
+            dd_f_T=params["dd_f_T"],
+            dd_f_He3=params["dd_f_He3"],
+            dhe3_dd_frac=params["dhe3_dd_frac"],
+            dhe3_f_T=params["dhe3_f_T"],
+            dhe3_f_He3=self._dhe3_f_He3_eff(params),
+            pb11_f_alpha_n=params["pb11_f_alpha_n"],
+            pb11_f_p_n=params["pb11_f_p_n"],
+        )
+        common_kw = dict(
+            fuel=self.fuel,
+            e_driver_mj=e_driver_mj,
+            f_rep=f_rep,
+            mn=params["mn"],
+            eta_th=params["eta_th"],
+            eta_pin=params["eta_pin"],
+            f_rad=params.get("f_rad", self.cc.f_rad(self.fuel)),
+            f_sub=params["f_sub"],
+            p_pump=params["p_pump"],
+            p_trit=params["p_trit"],
+            p_house=params["p_house"],
+            p_cryo=params["p_cryo"],
+            p_target=params.get("p_target", 0.0),
+            p_coils=params.get("p_coils", 0.0),
+            **fuel_frac_kw,
+        )
+        # Hybrid-thermal parameters: only threaded for pure-thermal path.
+        # INDUCTIVE_DEC has its own driver-side DEC and shouldn't receive
+        # ash-side f_dec/eta_de.
+        thermal_kw = dict(
+            f_dec=params.get("f_dec", 0.0),
+            eta_de=params.get("eta_de", 0.6),
+        )
+
+        if self.pulsed_conversion == PulsedConversion.INDUCTIVE_DEC:
+            dec_kw = dict(
+                eta_dec=params["eta_dec"],
+                f_pdv=params.get("f_pdv", self.cc.f_pdv),
+            )
+            return pulsed_dec_forward(
+                p_fus=p_fus,
+                **common_kw,
+                **dec_kw,
+            )
+        return pulsed_thermal_forward(
+            p_fus=p_fus,
+            **common_kw,
+            **thermal_kw,
+        )
+
     def _power_balance(self, params, n_mod):
         """Dispatch power balance based on confinement family."""
         # Derive eta_pin from per-method source x per-concept coupling, so all
@@ -361,13 +423,6 @@ class CostModel:
                     **common_kw,
                     **dec_kw,
                 )
-                # Use solved e_driver_mj for forward pass
-                common_kw["e_driver_mj"] = e_driver_solved
-                pt = pulsed_dec_forward(
-                    p_fus=p_fus,
-                    **common_kw,
-                    **dec_kw,
-                )
             else:
                 q_eng = params.get("q_eng", 5.0)
                 p_fus, e_driver_solved = pulsed_thermal_inverse(
@@ -376,12 +431,7 @@ class CostModel:
                     **common_kw,
                     **thermal_kw,
                 )
-                common_kw["e_driver_mj"] = e_driver_solved
-                pt = pulsed_thermal_forward(
-                    p_fus=p_fus,
-                    **common_kw,
-                    **thermal_kw,
-                )
+            pt = self._pulsed_forward(params, p_fus, e_driver_solved, params["f_rep"])
 
         else:
             raise ValueError(f"Unknown confinement family: {self.family}")
