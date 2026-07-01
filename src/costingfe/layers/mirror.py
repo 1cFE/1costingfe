@@ -488,7 +488,7 @@ def compute_dclc_parameter(a, T_i, A, B_min):
     "The magnetic mirror approach to fusion"). A warm-plasma stream filling the
     loss cone stabilises DCLC when its fraction exceeds about rho_i/a, i.e.
     roughly 1/(a/rho_i); both GDT and WHAM rely on warm-plasma DCLC stabilisation.
-    Diagnostic only (Task 3), not a constraint.
+    Diagnostic only, not a constraint.
 
     a [m], T_i [keV], A ion mass number, B_min [T]. Pure JAX, differentiable.
     See docs/physics/mirror.md.
@@ -785,7 +785,7 @@ def mirror_0d_forward(
     # plates and never touch the lateral first wall.
     q_surface = (p_rad + p_radial) / fw_area
 
-    # 15b. Stability / validity diagnostics (Task 3; informational, not constraints).
+    # 15b. Stability / validity diagnostics (informational, not constraints).
     # Pastukhov-Maxwellian validity flag: 1.0 when collisional enough for the bare
     # Pastukhov-Maxwellian core assumption (collisionality >= collisionality_min),
     # 0.0 when deeply collisionless (confinement over-credited). A tandem

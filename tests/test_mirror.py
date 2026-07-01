@@ -75,23 +75,23 @@ _MIX = dict(dhe3_fuel_ratio=1.0, pb11_fuel_ratio=0.15)
 _PLUG_DENSITY_RATIO = 1.818
 
 # Pastukhov-Maxwellian validity floor on collisionality (matches YAML default
-# collisionality_min = 1/R_m at R_m=10). Diagnostic-only threshold (Task 3).
+# collisionality_min = 1/R_m at R_m=10). Diagnostic-only threshold.
 _COLLISIONALITY_MIN = 0.1
 
 # Alpha loss-cone heating fraction: fraction of fusion-alpha power that deposits
 # in the central cell before scattering into the loss cone (Santarius & Callen
-# 1983). Matches the YAML default. Task 2c.
+# 1983). Matches the YAML default.
 _F_ALPHA_HEAT = 0.80
 
 # Plug hot-electron temperature [keV] (Fowler-Logan potential; Hammir anchor).
 # Decoupled from the central-cell T_e: the plug builds the confining potential
 # e*phi = T_e_plug * ln(n_p/n_c) with hot electrons while the central cell sets
-# radiation at its own (coolable) T_e. Matches the YAML default. Task 2e.
+# radiation at its own (coolable) T_e. Matches the YAML default.
 _TE_PLUG = 125.0
 
 # Plug sustainment power [MW] charged into the mirror recirculating budget (the
 # ECH/NBI holding the hot-electron plug, calibrated to Hammir's about 30 MW).
-# Matches the YAML default. Task 2e.
+# Matches the YAML default.
 _P_PLUG = 30.0
 
 
@@ -682,7 +682,7 @@ class TestModelIntegration:
 
 
 # ---------------------------------------------------------------------------
-# Mirror coil length-scaling tests (Task 5)
+# Mirror coil length-scaling tests
 # ---------------------------------------------------------------------------
 
 
@@ -846,7 +846,7 @@ class TestMirrorCoilLengthScaling:
 
 
 # ---------------------------------------------------------------------------
-# Mirror length sizing tests (Task 6)
+# Mirror length sizing tests
 # ---------------------------------------------------------------------------
 
 # Shared sizing params: WHAM/Realta-class mirror geometry inputs (fixed).
@@ -936,7 +936,7 @@ def _sz_params(
 class TestMirrorSizing:
     def test_sized_L_grows_with_net_power(self):
         """A higher net power target requires a longer chamber."""
-        # High target lowered 400 -> 300 MW (Task 10): the n*tau ceiling caps the
+        # High target lowered 400 -> 300 MW: the n*tau ceiling caps the
         # Pastukhov over-credit and so lowers confinement, dropping the max net
         # power at L_max=200 m to ~314 MW. The monotonic L(net) relation is
         # unchanged; 200/300 MW keep both feasible (L ~ 140/193 m).
@@ -1234,7 +1234,7 @@ class TestMirrorSizing:
 
 
 # ---------------------------------------------------------------------------
-# Wall-load constraint tests (Task 3)
+# Wall-load constraint tests
 # ---------------------------------------------------------------------------
 
 # Shared sizing params for wall-constraint tests: a=1.5, B=3.0 machine,
@@ -1382,18 +1382,18 @@ class TestWallConstraint:
         # e*phi = T_e*ln(n_p/n_c) with T_e=125 raises pressure, so at fixed beta
         # the density is lower and a longer chamber is needed to meet the target.
         # re-pinned 2026-06-15: explicit plug power (P_plug = 30 MW charged into
-        # recirculating, Task 2e) raises the recirculating cost, so more fusion
+        # recirculating) raises the recirculating cost, so more fusion
         # power and a longer chamber are needed.
-        # re-pinned (Task 9): channel-specific lnLambda_ii (~20-23 at fusion T,
+        # re-pinned: channel-specific lnLambda_ii (~20-23 at fusion T,
         # vs the retired constant 17) correctly lowers ion confinement, so a
         # longer chamber is needed to reach the target: L = 86.139396520 m here
         # (was 77.842279425 m under the constant Coulomb log).
-        # re-pinned (Task 10, soft-min cap): the n*tau ceiling is now a smooth-min
+        # re-pinned (soft-min cap): the n*tau ceiling is now a smooth-min
         # that leaves below-ceiling confinement essentially untouched (the earlier
         # additive cap over-reduced tau even below the ceiling, forcing a 140 m
         # chamber). At reactor density the soft-min barely trims the ~2.4 s axial
         # time, so the length returns near the pre-cap value: L = 87.479175126 m
-        # (was 140.424590008 m under the over-reducing additive cap; Task 9 value
+        # (was 140.424590008 m under the over-reducing additive cap; the earlier value
         # was 86.139396520 m). See
         # docs/physics/mirror.md.
         params = dict(_SIZING_PARAMS, q_wall_max=50.0)
@@ -1449,7 +1449,7 @@ class TestWallConstraint:
 
 
 # ---------------------------------------------------------------------------
-# Surface heat-flux constraint tests (Task 4)
+# Surface heat-flux constraint tests
 # ---------------------------------------------------------------------------
 
 # p-B11 sizing params: aneutronic, f_rad_fus=0.83 (83% of fusion power radiated).
@@ -1622,7 +1622,7 @@ class TestRegimeBridge:
         # Bridge picks the collisionless (Pastukhov) side, NOT the much shorter
         # gas-dynamic time: tau_axial is orders of magnitude above tau_gd.
         assert tau_axial > 100.0 * tau_gd
-        # Re-pinned (Task 10): the bare Pastukhov time over-credits here (~57 s);
+        # Re-pinned: the bare Pastukhov time over-credits here (~57 s);
         # the n*tau ceiling (~10 s at n=1e20) now bounds tau_axial, so it sits at
         # the density-set ceiling rather than 0.5*tau_p. See
         # docs/physics/mirror.md.
@@ -1756,7 +1756,7 @@ class TestEnergyBalanceClosure:
         p_transport = float(pt.p_ash) + float(pt.p_input) - float(pt.p_rad)
         # The shared transport channel carries the real axial/radial loss PLUS
         # the loss-cone alpha exhaust (1 - f_alpha_heat) * p_alpha routed here as
-        # directed exhaust (alpha loss-cone heating, Task 2c).
+        # directed exhaust (alpha loss-cone heating).
         lost_alpha = (1.0 - _F_ALPHA_HEAT) * float(ps.p_alpha)
         p_transport_expected = float(ps.p_end) + float(ps.p_radial) + lost_alpha
         assert p_transport == pytest.approx(p_transport_expected, rel=0.05)
@@ -1827,7 +1827,7 @@ class TestAlphaHeating:
         # (T_e_plug=20) so the point is genuinely driven (aux above the floor),
         # which is required for the f_alpha_heat < 1 vs = 1 comparison to bite;
         # at the hot default plug (T_e_plug=125) confinement is deep and aux
-        # floors at both fractions (plug decoupled from central cell, Task 2e).
+        # floors at both fractions (plug decoupled from central cell).
         ps = _forward(T_i=30.0, T_e_plug=20.0)
         f_alpha = 0.80
         p_aux = float(mirror_aux_heating(ps, p_aux_floor=2.0, f_alpha_heat=f_alpha))
@@ -2037,7 +2037,7 @@ class TestTandemConfinement:
 
 
 class TestPlugDecoupling:
-    """Decouple the hot-electron plug from the coolable central cell (Task 2e).
+    """Decouple the hot-electron plug from the coolable central cell.
 
     Real advanced-fuel tandems run a HOT-ELECTRON plug (set by plug ECH,
     independent of the central fuel) that builds the Fowler-Logan confining
@@ -2071,7 +2071,7 @@ class TestPlugDecoupling:
 
     @pytest.mark.xfail(
         reason=(
-            "Task 9 (channel-specific lnLambda) reverses this marginal result. "
+            "Channel-specific lnLambda reverses this marginal result. "
             "The hot/cool comparison optimizes T_i independently per case: the "
             "cool central optimum runs to the bracket edge T_i=100 keV, where "
             "the proper lnLambda_ii (~22.8, vs the retired constant 17) "
@@ -2186,7 +2186,7 @@ class TestPlugDecoupling:
 class TestStabilityDiagnostics:
     """Collisionality-validity flag and DCLC microstability diagnostic.
 
-    Both are DIAGNOSTICS (Task 3), not constraints. The validity flag reports
+    Both are DIAGNOSTICS, not constraints. The validity flag reports
     where the bare Pastukhov-Maxwellian assumption is stretched (deeply
     collisionless); a tandem legitimately runs there and plugged, so it is
     informational. The DCLC parameter is the number of ion gyroradii across the
@@ -2243,7 +2243,7 @@ class TestStabilityDiagnostics:
 
     def test_state_field_count(self):
         # Pin the MirrorPlasmaState field set so a stray add/remove is caught.
-        # Task 3 adds pastukhov_valid and dclc_parameter (26 fields total).
+        # pastukhov_valid + dclc_parameter bring the total to 26 fields.
         import dataclasses
 
         names = {f.name for f in dataclasses.fields(MirrorPlasmaState)}
@@ -2342,7 +2342,7 @@ class TestAnchors:
 
 
 # ---------------------------------------------------------------------------
-# Fluence-based CAS72 core lifetime (Task 6, decision d1)
+# Fluence-based CAS72 core lifetime
 # ---------------------------------------------------------------------------
 
 

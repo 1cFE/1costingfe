@@ -316,7 +316,7 @@ binding wall constraint.
   61(3) (2013) 735-758; 50-200 dpa structural-damage requirement context for
   fusion DEMO.
 
-## CAS72 basis-change impact (Task 6)
+## CAS72 basis-change impact
 
 Replacing the fixed per-fuel core lifetime with the fluence basis
 (`Phi_max / q_n`, clamped to plant life) moves the CAS72 scheduled-replacement
