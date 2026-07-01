@@ -149,7 +149,7 @@ core_lifetime_pb11: 50.0  # 50+ FPY, ~0.1 dpa/yr
 # First-wall/blanket neutron fluence limits (MW yr/m^2). Steady-state MFE core
 # lifetime = Phi_max / q_n, clamped to plant life. DT anchored to ARIES FS
 # 200 dpa = 18 MW yr/m^2; ladder 1:2:6:10 follows spectrum hardness + old FPY.
-# Source: docs/account_justification/wall_limits_and_fluence.md
+# Source: docs/physics/wall_limits_and_fluence.md
 fluence_limit_dt: 18.0     # ARIES FS 200 dpa = 18 MW yr/m^2
 fluence_limit_dd: 36.0     # 2x DT (softer 2.45 MeV spectrum)
 fluence_limit_dhe3: 108.0  # 6x DT (small D-D side-channel neutrons)

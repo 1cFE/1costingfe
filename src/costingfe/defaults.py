@@ -287,7 +287,7 @@ class CostingConstants:
     # core lifetime = Phi_max / q_n, clamped to plant life. DT anchored to the
     # ARIES FS 200 dpa limit (18 MW yr/m^2); the ladder (1:2:6:10) follows the
     # 14 MeV >> 2.45 MeV spectrum-hardness argument and the old FPY ladder.
-    # Source: docs/account_justification/wall_limits_and_fluence.md
+    # Source: docs/physics/wall_limits_and_fluence.md
     fluence_limit_dt: float = 18.0  # ARIES FS 200 dpa = 18 MW yr/m^2
     fluence_limit_dd: float = 36.0  # 2x DT (softer 2.45 MeV spectrum)
     fluence_limit_dhe3: float = 108.0  # 6x DT (small D-D side-channel neutrons)

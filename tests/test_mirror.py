@@ -2349,7 +2349,7 @@ class TestAnchors:
 class TestFluenceLifetime:
     """Steady-state MFE core lifetime is Phi_max / q_n, clamped to plant life.
 
-    See docs/account_justification/wall_limits_and_fluence.md.
+    See docs/physics/wall_limits_and_fluence.md.
     """
 
     def test_fluence_lifetime_continuity_at_reference(self):

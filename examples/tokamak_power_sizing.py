@@ -105,7 +105,7 @@ except SizingInfeasible as e:
 # Pushing density raises fusion power per unit machine but raises the
 # stored energy, and with it the IPB98 heating requirement (~W^(1/0.31)),
 # so Q_eng degrades sharply toward high f_GW; the disruption penalty
-# (grounded values, docs/account_justification/disruption_severity.md)
+# (grounded values, docs/physics/disruption_severity.md)
 # is second-order against that. The optimum currently sits at the
 # f_GW_min bound; whether that low-density preference is physical or a
 # missing-physics artifact (no current-drive or L-H-threshold density

@@ -566,7 +566,7 @@ class TestDisruptionRate:
         """Safe operating point (far from limits) has negligible rate.
 
         With the literature-grounded base (1.0/FPY at the limits, see
-        docs/account_justification/disruption_severity.md) the safe-point
+        docs/physics/disruption_severity.md) the safe-point
         rate is ~0.04/FPY: a ~0.03% availability hit, still negligible.
         """
         rate = float(compute_disruption_rate(f_GW=0.70, beta_N=2.0, q95=4.0))
@@ -666,7 +666,7 @@ class TestDisruptionPenalty:
 # (aux_heating_from_confinement) as its template, so the tokamak reference is
 # validated against published designs here. This is the tokamak sibling of the
 # mirror GDT/WHAM anchors. Machine params and published targets are traceable to
-# docs/account_justification/tokamak_validation.md. READ-ONLY: no tokamak physics
+# docs/physics/tokamak_validation.md. READ-ONLY: no tokamak physics
 # or cost code is changed by these tests.
 #
 # Each anchor runs the UNCHANGED forward model at the machine's published

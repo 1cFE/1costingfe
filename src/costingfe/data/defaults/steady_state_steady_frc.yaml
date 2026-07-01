@@ -14,7 +14,7 @@
 # MHD/tilt-unstable above a size limit, so a plant scales by replicating fixed
 # modules (TAE: ~50 MWe units to 350-500 MWe) rather than growing one device;
 # size_from_power solves n_mod = ceil(target / module_net_mwe). See
-# docs/account_justification/concept_power_scaling.md.
+# docs/physics/concept_power_scaling.md.
 module_net_mwe: 50.0     # 50 MWe per module (TAE-class utility unit)
 
 p_input: 26.0       # Plasma-coupled heating power [MW]. TAE/C-2W-grounded:

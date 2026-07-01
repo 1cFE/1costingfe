@@ -7,7 +7,7 @@ q_eng: 3.0               # Engineering gain target (P_et / P_recirc)
 # Module-replication sizing: per-module design net electric power. LPP Fusion
 # states larger plants are "formed by simply stacking" 5 MW units; size_from_power
 # solves n_mod = ceil(target / module_net_mwe). See
-# docs/account_justification/concept_power_scaling.md.
+# docs/physics/concept_power_scaling.md.
 module_net_mwe: 5.0      # 5 MWe per unit (LPP Fusion, 200 Hz)
 
 # Pulsed parameters

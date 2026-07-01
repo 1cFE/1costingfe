@@ -66,7 +66,7 @@ seeded_impurities: {}  # Deliberate impurities, e.g. {Ar: 0.002}
 R_w: 0.6               # Wall reflectivity for synchrotron (metallic walls 0.6-0.8)
 
 # Disruption model (active when use_0d_model=true)
-# Literature-grounded bases; see docs/account_justification/disruption_severity.md
+# Literature-grounded bases; see docs/physics/disruption_severity.md
 disruption_rate_base: 1.0   # Baseline disruptions/FPY far from limits (JET/ITER surveys; range 0.3-5)
 disruption_steepness: 12.0  # Exponential steepness (DIII-D q95 / JET density-limit slopes; range 8-20)
 disruption_damage: 0.01     # Fraction of component life per disruption (mitigated population; range 0.002-0.05)
