@@ -171,6 +171,6 @@ ax.set_ylim(0, max(dt_full) * 1.12)
 ax.grid(axis="y", alpha=0.3)
 
 fig.tight_layout()
-fig.savefig("docs/blog/lower_bound_floor_chart.png", dpi=150)
-print("Saved to docs/blog/lower_bound_floor_chart.png")
+fig.savefig("docs/blog/1 Floor/lower_bound_floor_chart.png", dpi=150)
+print("Saved to docs/blog/1 Floor/lower_bound_floor_chart.png")
 plt.show()

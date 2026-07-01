@@ -7,6 +7,10 @@ __pycache__/
 dist/
 build/
 
+# Implementation/design plans are executed scaffolding, not deliverables.
+# Durable rationale lives in docs/account_justification/ and the papers.
+docs/superpowers/
+
 # LaTeX build artifacts
 *.aux
 *.bbl
