@@ -906,3 +906,25 @@ def test_sensitivity_and_batch_numpy_mode():
     base = float(params[key])
     out = model.batch_lcoe({key: [base, base * 1.01]}, params)
     assert len(out) == 2 and all(isinstance(v, float) for v in out)
+
+
+def test_mirror_sizing_still_gated():
+    m = CostModel(ConfinementConcept.MIRROR, Fuel.DT)
+    with pytest.raises(NotImplementedError, match="are not available in this release"):
+        m.forward(
+            net_electric_mw=400, availability=0.87, lifetime_yr=40, size_from_power=True
+        )
+
+
+def test_tokamak_sizing_no_longer_gated():
+    # Tokamak size_from_power must reach the solver (no NotImplementedError).
+    # It may still raise SizingInfeasible or succeed, but NOT the release gate.
+    m = CostModel(ConfinementConcept.TOKAMAK, Fuel.DT)
+    try:
+        m.forward(
+            net_electric_mw=500, availability=0.87, lifetime_yr=40, size_from_power=True
+        )
+    except NotImplementedError:
+        pytest.fail("tokamak size_from_power must not hit the release gate")
+    except Exception:
+        pass  # SizingInfeasible / other solver outcomes are acceptable here

@@ -1049,17 +1049,17 @@ class CostModel:
                 },
             )
 
-        # Power-to-geometry sizing and LCOE optimization are gated off for the
-        # released build (the solver code stays on disk but is unreachable here).
-        # Guarding on the effective param value catches every concept and every
-        # input route (YAML default or user override); the keys remain whitelisted
-        # so this clear message fires instead of an "unknown parameter" error.
-        if not SIZING_FEATURES_ENABLED and (
+        # Mirror power-to-geometry sizing is not release-ready (radius-from-power
+        # logic is a follow-on; off-design thin points still land T_e hot). Every
+        # other concept is protected by the dispatch's own else-raise, so only the
+        # mirror needs a gate here. Keep the "are not available in this release"
+        # substring so the conftest skip-shim still skips mirror-sizing tests.
+        if self.concept == ConfinementConcept.MIRROR and (
             params.get("size_from_power", False) or params.get("optimize_lcoe", False)
         ):
             raise NotImplementedError(
-                "Power-to-geometry sizing (size_from_power) and LCOE "
-                "optimization (optimize_lcoe) are not available in this release."
+                "Mirror power-to-geometry sizing and LCOE optimization are not "
+                "available in this release."
             )
 
         # The bundled 0D physics models are gated off for the released build
