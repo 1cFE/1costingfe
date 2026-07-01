@@ -11,7 +11,6 @@ import pytest
 
 from costingfe import CostModel
 from costingfe.defaults import load_engineering_defaults
-from costingfe.layers.physics import SizingInfeasible
 from costingfe.types import ConfinementConcept, Fuel
 
 
@@ -52,10 +51,13 @@ def test_pulsed_forward_helper_scales_pfus_with_frep():
 #   PULSED_FRC (DHE3)    67.1 MW  @ max_f_rep=1.0
 #   THETA_PINCH (DHE3)   19.9 MW  @ max_f_rep=1.0
 #   LASER_IFE (DT)      791.2 MW  @ max_f_rep=10.0
-#   MAG_TARGET (DT)   -1911.5 MW  @ max_f_rep=1.0 (driver-dominated:
-#     e_driver_mj=755 MJ/shot recirculates at eta_pin=0.30 every shot,
-#     swamping the 780 MJ/shot yield at any f_rep > 0 -- SizingInfeasible at
-#     ANY target).
+#   MAG_TARGET (DT)      149.9 MW @ max_f_rep=1.0 (Task 6: driver_recovery_frac
+#     recovers most of the 755 MJ/shot piston-compression energy rather than
+#     charging it as a single-pass electrical load -- see
+#     pulsed_mag_target.yaml's driver_recovery_frac and
+#     docs/physics/concept_power_scaling.md "Rep-rate shot design points"
+#     for the GF SOFE 2023 Sankey anchor. Before Task 6 (recovery=0) this
+#     was -1911.5 MW, SizingInfeasible at ANY target.
 
 _CONCEPT_FUEL = {
     ConfinementConcept.PLASMA_JET: Fuel.DT,
@@ -106,14 +108,26 @@ def test_reprate_pinned_n_mod_rejected():
         )
 
 
-def test_reprate_driver_dominated_concept_is_infeasible():
-    # MAG_TARGET's default shot design point is driver-dominated (recirc from
-    # e_driver_mj swamps the thermal yield at eta_pin=0.30): unreachable at
-    # ANY positive target, since bumping n_mod cannot fix a negative unit
-    # ceiling. This exercises the SizingInfeasible short-circuit in
-    # _n_mod_for_target before bisection is ever attempted.
-    with pytest.raises(SizingInfeasible):
-        _size(ConfinementConcept.MAG_TARGET, 20.0)
+def test_reprate_mag_target_recovers_and_sizes():
+    # Task 6: driver_recovery_frac (pulsed_mag_target.yaml, anchored to the GF
+    # SOFE 2023 Sankey's ~150 MWe net point) recovers most of the 755 MJ/shot
+    # piston-compression energy, flipping the single-chamber unit ceiling from
+    # -1911.5 MW (SizingInfeasible at any target, pre-Task-6) to about
+    # +149.9 MW. A target below that ceiling sizes to a single chamber and
+    # round-trips to the target, exactly like the other rep-rate concepts.
+    r = _size(ConfinementConcept.MAG_TARGET, 100.0)
+    assert r.solved_n_mod == 1
+    assert r.power_table.p_net == pytest.approx(100.0, rel=0.02)
+    assert r.power_table.f_rep <= 1.0 + 1e-9  # MAG_TARGET max_f_rep = 1.0
+
+
+def test_reprate_mag_target_large_target_bumps_chambers():
+    # 500 MW exceeds one MAG_TARGET chamber's ~149.9 MW ceiling:
+    # ceil(500 / 149.9) = 4 chambers, each solved to <= its ceiling.
+    r = _size(ConfinementConcept.MAG_TARGET, 500.0)
+    assert r.solved_n_mod > 1
+    assert r.power_table.f_rep <= 1.0 + 1e-9
+    assert r.power_table.p_net * r.solved_n_mod == pytest.approx(500.0, rel=0.02)
 
 
 @pytest.mark.parametrize(

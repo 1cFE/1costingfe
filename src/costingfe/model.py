@@ -245,6 +245,7 @@ class CostModel:
             p_cryo=params["p_cryo"],
             p_target=params.get("p_target", 0.0),
             p_coils=params.get("p_coils", 0.0),
+            driver_recovery_frac=params["driver_recovery_frac"],
             **fuel_frac_kw,
         )
         # Hybrid-thermal parameters: only threaded for pure-thermal path.

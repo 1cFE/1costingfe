@@ -35,6 +35,7 @@ f_rep: 1.0               # Repetition rate [Hz]
 pulsed_conversion: inductive_dec
 f_rad: 0.05              # Radiation fraction (D-He3, short burn)
 eta_pin: 0.95            # Solid-state pulsed power wall-plug efficiency
+driver_recovery_frac: 0.0  # Electrical driver, no mechanical recovery (see MAG_TARGET's anchored value)
 eta_dec: 0.85            # Inductive DEC efficiency (coil-to-cap)
 f_pdv: 0.80              # PdV work fraction
 

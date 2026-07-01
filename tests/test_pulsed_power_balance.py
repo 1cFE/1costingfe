@@ -24,6 +24,7 @@ THERMAL_PARAMS = dict(
     p_cryo=0.5,
     p_target=1.0,
     p_coils=0.0,
+    driver_recovery_frac=0.0,
 )
 
 
@@ -61,7 +62,7 @@ def test_thermal_inverse_roundtrip():
     inv_params = {
         k: v
         for k, v in THERMAL_PARAMS.items()
-        if k not in ("p_fus", "fuel", "e_driver_mj")
+        if k not in ("p_fus", "fuel", "e_driver_mj", "driver_recovery_frac")
     }
     p_fus_recovered, e_driver_recovered = pulsed_thermal_inverse(
         p_net_target=pt.p_net, fuel=Fuel.DT, q_eng=pt.q_eng, **inv_params
@@ -104,7 +105,9 @@ def test_hybrid_inverse_roundtrip():
     params = dict(THERMAL_PARAMS, p_fus=1500.0, e_driver_mj=80.0)
     pt = pulsed_thermal_forward(**params, f_dec=0.4, eta_de=0.7)
     inv_params = {
-        k: v for k, v in params.items() if k not in ("p_fus", "fuel", "e_driver_mj")
+        k: v
+        for k, v in params.items()
+        if k not in ("p_fus", "fuel", "e_driver_mj", "driver_recovery_frac")
     }
     p_fus_recovered, e_driver_recovered = pulsed_thermal_inverse(
         p_net_target=pt.p_net,
@@ -149,6 +152,7 @@ DEC_PARAMS = dict(
     p_cryo=0.0,
     p_target=0.0,
     p_coils=0.5,
+    driver_recovery_frac=0.0,
 )
 
 
@@ -200,6 +204,7 @@ def test_dec_forward_with_thermal_bop():
         p_cryo=0.0,
         p_target=0.0,
         p_coils=0.5,
+        driver_recovery_frac=0.0,
     )
     pt = pulsed_dec_forward(**params_dt)
     assert pt.p_dee > 0
@@ -212,7 +217,9 @@ def test_dec_inverse_roundtrip():
     pt = pulsed_dec_forward(**DEC_PARAMS)
     # Inverse takes q_eng instead of e_driver_mj, returns (p_fus, e_driver_mj)
     inv_params = {
-        k: v for k, v in DEC_PARAMS.items() if k not in ("p_fus", "fuel", "e_driver_mj")
+        k: v
+        for k, v in DEC_PARAMS.items()
+        if k not in ("p_fus", "fuel", "e_driver_mj", "driver_recovery_frac")
     }
     p_fus_recovered, e_driver_recovered = pulsed_dec_inverse(
         p_net_target=pt.p_net, fuel=Fuel.DHE3, q_eng=pt.q_eng, **inv_params

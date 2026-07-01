@@ -146,6 +146,7 @@ class CostingInput(BaseModel):
     f_rad: float | None = None
     eta_dec: float | None = None
     f_pdv: float | None = None
+    driver_recovery_frac: float | None = None
 
     # Plasma parameters (MFE radiation calculation)
     n_e: float | None = None
@@ -205,6 +206,7 @@ class CostingInput(BaseModel):
         "eta_pin",
         "p_target",
         "target_unit_cost",
+        "driver_recovery_frac",
     ]
 
     @model_validator(mode="after")
@@ -456,6 +458,7 @@ class CostingInput(BaseModel):
             self.f_rep,
             self.eta_pin,
             self.p_target,
+            self.driver_recovery_frac,
         ]
         if any(v is None for v in pulsed_params):
             return
@@ -488,6 +491,7 @@ class CostingInput(BaseModel):
         common_kw["e_driver_mj"] = e_driver_solved
         pt = pulsed_thermal_forward(
             p_fus=p_fus,
+            driver_recovery_frac=self.driver_recovery_frac,
             **common_kw,
         )
         self._check_power_table(pt, p_fus)

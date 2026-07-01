@@ -129,6 +129,35 @@ is pinned to 35 (an illustrative gain G=10 placeholder on the 3.5 MJ bank)
 and `max_f_rep` to 1 (illustrative; no cadence documented), purely so the
 concept has finite, non-zero modeling inputs.
 
+**MAG_TARGET driver_recovery_frac derivation (anchored calibration).**
+`e_driver_mj = 755` MJ/shot is gas-piston/liner compression KINETIC energy,
+not a single-pass electrical driver load: General Fusion's own design
+mechanically recovers most of it (liner rebound / working-fluid recovery)
+each cycle rather than re-generating it from the grid. The shared pulsed
+forward's driver recirculation term, `p_driver / eta_pin`, assumes a
+single-pass electrical driver and so overcharges MAG_TARGET's recirculating
+power by treating 755 MJ/shot as if it were all wall-plug electricity at
+`eta_pin=0.30` (about 2517 MW of recirc at `f_rep=1`, versus 780 MW of
+fusion power) -- driver-dominated and net-negative at any rep rate. The
+model's `driver_recovery_frac` parameter (a required forward argument, set
+explicitly to 0.0, a no-op, in every other pulsed concept's YAML) scales
+that term to `p_driver * (1 - driver_recovery_frac) / eta_pin`.
+`pulsed_mag_target.yaml`'s `driver_recovery_frac = 0.8191` is pinned to the
+value for which the model's `pulsed_thermal_forward`, at this concept's own
+shot design point (`f_rep=1`, `e_driver_mj=755`, `yield_per_shot_mj=780`)
+and RANKINE `eta_th=0.40`, reproduces the GF SOFE 2023 Sankey's net electric
+of about 150 MWe (single-chamber net at `f_rep=1` from bisection against
+the model: 149.9 MW). As a rough consistency check against the Sankey's own
+figures (gross about 363 MW = 907 MW thermal x 0.40, net 150 MW implies
+driver electrical recirc about 213 MW versus the un-recovered
+755/0.30 about 2517 MW, i.e. recovery about 0.91): the two paths agree to
+within the precision of reading values off the published diagram, since the
+model's thermal pool (neutron + ash + driver + pump) differs from the
+diagram's lumped 907 MW node. This is a calibration anchor to GF's single
+disclosed plant number, not an independently measured recovery efficiency;
+if GF discloses a mechanical-recovery efficiency directly, this value should
+be revisited against it.
+
 ### Rep-rate shot design point sources
 
 - **PULSED_FRC (Helion):**

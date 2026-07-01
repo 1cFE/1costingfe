@@ -33,6 +33,7 @@ f_rep: 1.0               # Repetition rate [Hz]
 pulsed_conversion: inductive_dec
 f_rad: 0.05
 eta_pin: 0.93            # Pulsed power wall-plug efficiency
+driver_recovery_frac: 0.0  # Electrical driver, no mechanical recovery (see MAG_TARGET's anchored value)
 eta_dec: 0.70            # Conservative DEC efficiency (Oliphant 1973 baseline)
 f_pdv: 0.78              # PdV fraction (moderate expansion ratio ~10)
 

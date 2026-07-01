@@ -591,6 +591,7 @@ def pulsed_thermal_forward(
     p_house: float,
     p_cryo: float,
     p_target: float,
+    driver_recovery_frac: float,
     p_coils: float = 0.0,
     f_dec: float = 0.0,
     eta_de: float = 0.6,
@@ -610,6 +611,15 @@ def pulsed_thermal_forward(
     thermalises) and eta_de (DEC efficiency).  Mirrors the steady-state
     hybrid formula: fraction f_dec of non-radiated ash is collected at
     eta_de, remaining ash and all radiation thermalise into the blanket.
+
+    driver_recovery_frac is REQUIRED (no code-level default; every concept's
+    YAML sets it explicitly, 0.0 for every non-mag-target pulsed concept).
+    It scales down the driver's electrical recirculation charge
+    (p_driver / eta_pin) to account for mechanically recovered driver energy
+    (e.g. gas-piston/liner rebound in magnetized target fusion), where the
+    driver's per-pulse energy is not a single-pass electrical load. At 0.0
+    it reproduces the un-recovered charge exactly, i.e. every
+    non-mag-target concept is unaffected.
 
     CRITICAL: All conditionals on float parameters use jnp.where because
     these parameters may be JAX tracers during sensitivity analysis.
@@ -664,7 +674,7 @@ def pulsed_thermal_forward(
     # Step 10: Recirculating and engineering Q
     p_aux = p_trit + p_house
     recirculating = (
-        p_driver / eta_pin
+        p_driver * (1.0 - driver_recovery_frac) / eta_pin
         + jnp.where(eta_th > 0, p_pump, 0.0)
         + p_sub
         + p_aux
@@ -814,6 +824,7 @@ def pulsed_dec_forward(
     p_house: float,
     p_cryo: float,
     p_target: float,
+    driver_recovery_frac: float,
     p_coils: float = 0.0,
     dd_f_T: float = DD_F_T_DEFAULT,
     dd_f_He3: float = DD_F_HE3_DEFAULT,
@@ -832,6 +843,12 @@ def pulsed_dec_forward(
     CRITICAL: The recirculating power for the driver is only the charging
     losses p_driver * (1/eta_pin - 1), NOT the full p_driver/eta_pin, because
     the cap bank energy goes out and comes back each cycle.
+
+    driver_recovery_frac is REQUIRED (no code-level default; every concept's
+    YAML sets it explicitly, 0.0 for every mag-target-only-so-far concept).
+    It further scales down that charging-loss recirculation for concepts
+    with additional mechanical recovery beyond the inductive loop itself.
+    At 0.0 it is a no-op.
 
     All conditionals on float parameters use jnp.where for JAX traceability.
     """
@@ -890,7 +907,7 @@ def pulsed_dec_forward(
     p_pump_recirc = jnp.where(eta_th > 0, p_pump, 0.0)
     p_aux = p_trit + p_house
     recirculating = (
-        p_driver * (1.0 / eta_pin - 1.0)
+        p_driver * (1.0 / eta_pin - 1.0) * (1.0 - driver_recovery_frac)
         + p_pump_recirc
         + p_sub
         + p_aux

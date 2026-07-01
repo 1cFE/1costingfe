@@ -12,6 +12,18 @@ e_driver_mj: 755.0        # MJ/shot — compression (piston/liner) kinetic energ
 yield_per_shot_mj: 780.0  # MJ/shot — fusion yield
 max_f_rep: 1.0            # Hz — commercial design ceiling
 
+# driver_recovery_frac (ANCHORED calibration, like the PULSED_FRC yield
+# anchor): e_driver_mj above is gas-piston/liner KINETIC energy, not a
+# single-pass electrical driver load, so most of it is mechanically
+# recovered (liner rebound / working-fluid recovery) rather than
+# re-generated from the grid each shot. Pinned to the value for which the
+# model's pulsed_thermal_forward, at this concept's own shot design point
+# (f_rep=1, e_driver_mj=755, yield_per_shot_mj=780) and RANKINE eta_th=0.40,
+# reproduces the GF SOFE 2023 Sankey's net electric of about 150 MWe. See
+# docs/physics/concept_power_scaling.md "Rep-rate shot design points" for
+# the derivation and citation.
+driver_recovery_frac: 0.8191
+
 f_rep: 1.0               # Repetition rate [Hz]
 pulsed_conversion: thermal
 f_rad: 0.10
