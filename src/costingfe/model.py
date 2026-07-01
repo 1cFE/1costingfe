@@ -71,6 +71,7 @@ from costingfe.types import (
     CONCEPT_DEFAULT_CONVERSION,
     CONCEPT_TO_FAMILY,
     N_MOD_SIZED_CONCEPTS,
+    REP_RATE_SIZED_CONCEPTS,
     BlanketFill,
     BlanketForm,
     CoilMaterial,
@@ -123,6 +124,10 @@ def _n_mod_for_target(target, unit_max):
             f"{target:.1f} MW is unreachable at any multiplicity."
         )
     return max(1, math.ceil(target / unit_max))
+
+
+_F_REP_MIN = 1e-3  # Hz — lower bisection bound (net < 0 here; fixed loads dominate)
+_F_REP_BISECT_ITERS = 60
 
 
 class CostModel:
@@ -942,6 +947,54 @@ class CostModel:
         self._last_n_mod = n_solved
         return self._power_balance(params, n_solved)
 
+    def _size_reprate(self, params, n_mod):
+        """Solve f_rep from the power target at a fixed per-shot design.
+
+        Holds e_driver_mj and yield_per_shot_mj fixed (the cited shot design
+        point); net(f_rep) is monotone increasing in f_rep (driver recirc and
+        thermal yield both scale with p_fus = yield_per_shot_mj * f_rep, and
+        the fixed loads shrink in relative share as f_rep grows), so bisect.
+        If one chamber at max_f_rep cannot reach the target (unit_max <= 0,
+        a driver-dominated shot), _n_mod_for_target raises SizingInfeasible —
+        bumping n_mod cannot rescue a negative unit ceiling. Otherwise bump
+        the chamber count (n_mod) and solve each chamber to target/n_mod.
+        n_mod is a physical chamber count solved from the max_f_rep ceiling,
+        not a continuous design variable; pinning it (caller n_mod != 1) is
+        rejected, mirroring _size_tokamak and _size_modular.
+        """
+        if n_mod != 1:
+            raise ValueError(
+                "n_mod cannot be pinned in size_from_power mode for rep-rate "
+                "concepts; it is solved from the max_f_rep ceiling. Remove n_mod "
+                "or set size_from_power=False."
+            )
+        target = params["net_electric_mw"]
+        e_driver_mj = params["e_driver_mj"]
+        max_f_rep = params["max_f_rep"]
+
+        def net_at(f_rep):
+            p_fus = params["yield_per_shot_mj"] * f_rep
+            return float(self._pulsed_forward(params, p_fus, e_driver_mj, f_rep).p_net)
+
+        unit_max = net_at(max_f_rep)
+        n_solved = _n_mod_for_target(target, unit_max)
+        per_unit = target / n_solved
+
+        lo, hi = _F_REP_MIN, max_f_rep
+        for _ in range(_F_REP_BISECT_ITERS):
+            mid = 0.5 * (lo + hi)
+            if net_at(mid) < per_unit:
+                lo = mid
+            else:
+                hi = mid
+        f_rep_solved = 0.5 * (lo + hi)
+
+        self._last_n_mod = n_solved
+        solved = dict(params)
+        solved["f_rep"] = f_rep_solved
+        p_fus_solved = params["yield_per_shot_mj"] * f_rep_solved
+        return self._pulsed_forward(solved, p_fus_solved, e_driver_mj, f_rep_solved)
+
     def _optimize_gss(self, lcoe_of_param, param_lo, param_hi):
         """Golden-section minimize LCOE over a scalar parameter in [param_lo, param_hi].
 
@@ -1353,11 +1406,27 @@ class CostModel:
                 # downstream cost aggregation.
                 n_mod = self._last_n_mod
                 solved_n_mod = n_mod
+            elif self.concept in REP_RATE_SIZED_CONCEPTS:
+                if params.get("optimize_lcoe", False):
+                    raise ValueError(
+                        "optimize_lcoe is not applicable to rep-rate-sized "
+                        "concepts; there is no continuous design variable to "
+                        "optimize (f_rep is solved from the power target and "
+                        "e_driver_mj is a fixed cited shot design point)."
+                    )
+                pt = self._size_reprate(params, n_mod)
+                # The solved chamber count becomes the effective n_mod for all
+                # downstream cost aggregation (mirrors the tokamak/_size_modular
+                # branches above).
+                n_mod = self._last_n_mod
+                solved_n_mod = n_mod
             else:
                 supported = (
                     "TOKAMAK, MIRROR (geometry); "
                     + ", ".join(sorted(c.value for c in N_MOD_SIZED_CONCEPTS))
-                    + " (module count)"
+                    + " (module count); "
+                    + ", ".join(sorted(c.value for c in REP_RATE_SIZED_CONCEPTS))
+                    + " (rep-rate)"
                 )
                 raise ValueError(
                     f"size_from_power is implemented for {supported}; "

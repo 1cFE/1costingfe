@@ -158,11 +158,12 @@ class TestNModSizing:
         "concept,fuel",
         [
             (ConfinementConcept.POLYWELL, Fuel.PB11),
-            (ConfinementConcept.PULSED_FRC, Fuel.DHE3),
         ],
     )
     def test_unsupported_concept_still_raises(self, concept, fuel):
-        # Polywell (volume) and a rep-rate concept are not module-sized.
+        # Polywell (volume, no geometry solver) is still unsupported. PULSED_FRC
+        # moved to REP_RATE_SIZED_CONCEPTS (rep-rate power sizing, model.py
+        # _size_reprate) and is no longer in this unsupported set.
         m = CostModel(concept=concept, fuel=fuel)
         with pytest.raises(ValueError, match="size_from_power"):
             m.forward(
