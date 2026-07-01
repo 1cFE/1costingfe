@@ -64,6 +64,7 @@ from costingfe.layers.tokamak import (
     resistive_recirc_power,
     tokamak_0d_forward,
     tokamak_0d_inverse,
+    tokamak_max_net_electric,
     tokamak_size_from_power,
 )
 from costingfe.types import (
@@ -109,6 +110,19 @@ def _core_lifetime_fpy(cc, fuel, q_n, lifetime_yr, availability):
         0.5,
         lifetime_yr * availability,
     )
+
+
+def _n_mod_for_target(target, unit_max):
+    """Integer plant multiplicity to cover `target` with units of at most
+    `unit_max` net power each. Shared by the volume (tokamak R0_max) and rep-rate
+    (max_f_rep) sizing axes. Raises SizingInfeasible if a single unit is net <= 0.
+    """
+    if unit_max <= 0.0:
+        raise SizingInfeasible(
+            f"a single unit delivers {unit_max:.1f} MW net (<= 0); target "
+            f"{target:.1f} MW is unreachable at any multiplicity."
+        )
+    return max(1, math.ceil(target / unit_max))
 
 
 class CostModel:
@@ -699,8 +713,20 @@ class CostModel:
         solve_params["recirc_power_factor"] = props.recirc_power_factor
         # The sizing solver reads dhe3_f_He3 raw (it is derived, not in YAML).
         solve_params["dhe3_f_He3"] = self._dhe3_f_He3_eff(params)
-        # Size one module to the per-module net power.
-        solve_params["net_electric_mw"] = params["net_electric_mw"] / n_mod
+        # n_mod is solved from the R0_max unit ceiling, not pinned: a target
+        # beyond one device's R0_max capacity is met by adding identical units
+        # rather than raising SizingInfeasible.
+        if n_mod != 1:
+            raise ValueError(
+                "n_mod cannot be pinned in size_from_power mode for TOKAMAK; it is "
+                "solved from the R0_max unit ceiling. Remove n_mod or set "
+                "size_from_power=False."
+            )
+        target = params["net_electric_mw"]
+        unit_max = tokamak_max_net_electric(solve_params, self.fuel)
+        n_mod = _n_mod_for_target(target, unit_max)
+        solve_params["net_electric_mw"] = target / n_mod
+        self._last_n_mod = n_mod
 
         result = tokamak_size_from_power(solve_params, self.fuel)
 
@@ -1191,6 +1217,10 @@ class CostModel:
                     )
                 self._sizing_fgw = params["f_GW"]
                 pt = self._size_tokamak(params, n_mod)
+                # The solved unit count becomes the effective n_mod for all
+                # downstream cost aggregation (mirrors _size_modular below).
+                n_mod = self._last_n_mod
+                solved_n_mod = n_mod
             elif self.concept == ConfinementConcept.MIRROR:
                 if "chamber_length" in overrides:
                     raise ValueError(

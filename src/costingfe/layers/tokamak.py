@@ -1019,6 +1019,15 @@ def net_electric_at_R0(R0, params, fuel, return_state=False):
     return pn
 
 
+def tokamak_max_net_electric(params, fuel):
+    """Net electric [MW] a single tokamak delivers at R0_max (the unit ceiling).
+
+    Used by the size-from-power n_mod fallback: if the plant target exceeds this,
+    one device cannot reach it and the plant needs multiple identical units.
+    """
+    return net_electric_at_R0(params["R0_max"], params, fuel)
+
+
 # ---------------------------------------------------------------------------
 # Outer R0 bisection solver
 # ---------------------------------------------------------------------------

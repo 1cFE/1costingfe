@@ -6,6 +6,7 @@ from costingfe.layers.tokamak import (
     SizingInfeasible,
     b0_from_radial_build,
     net_electric_at_R0,
+    tokamak_max_net_electric,
     tokamak_size_from_power,
 )
 from costingfe.model import CostModel
@@ -141,6 +142,18 @@ def test_size_scales_with_power():
     # bigger machine run hotter and more reactive. Power therefore scales steeper
     # than R0^3, so R0 grows sub-cubically with power (strong economy of scale).
     assert 1.1 < (r2.R0 / r1.R0) < 2.0
+
+
+def test_tokamak_max_net_electric_matches_R0_max_point():
+    # tokamak_max_net_electric is the unit ceiling: net power at R0_max, same
+    # number net_electric_at_R0 would give at that point.
+    from costingfe.types import Fuel
+
+    p = _base_sizing_params()
+    p.update(R0_min=1.0, R0_max=12.0)
+    assert tokamak_max_net_electric(p, Fuel.DT) == net_electric_at_R0(
+        p["R0_max"], p, Fuel.DT
+    )
 
 
 def test_infeasible_raises():

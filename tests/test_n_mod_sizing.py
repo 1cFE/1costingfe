@@ -140,7 +140,10 @@ class TestNModSizing:
         assert float(r.power_table.p_net) * r.solved_n_mod >= target - 1e-6
 
     def test_volume_concept_still_sizes_by_geometry(self):
-        # Tokamak size_from_power must still solve R0 (not the n_mod path).
+        # Tokamak size_from_power must still solve R0. n_mod is also solved
+        # (from the R0_max unit ceiling, same helper module-replication
+        # concepts use), but a target well within one unit's capacity solves
+        # to a single unit.
         m = CostModel(concept=ConfinementConcept.TOKAMAK, fuel=Fuel.DT)
         r = m.forward(
             net_electric_mw=400.0,
@@ -148,7 +151,7 @@ class TestNModSizing:
             lifetime_yr=30.0,
             size_from_power=True,
         )
-        assert r.solved_n_mod is None  # geometry-sized, not module-sized
+        assert r.solved_n_mod == 1  # fits one unit, geometry-sized
         assert m._last_R0 > 0
 
     @pytest.mark.parametrize(

@@ -3,6 +3,8 @@ import os
 import pytest
 
 from costingfe import ConfinementConcept, CostModel, Fuel
+from costingfe.layers.physics import SizingInfeasible
+from costingfe.model import _n_mod_for_target
 
 
 def test_forward_rejects_unknown_kwarg():
@@ -928,3 +930,42 @@ def test_tokamak_sizing_no_longer_gated():
         pytest.fail("tokamak size_from_power must not hit the release gate")
     except Exception:
         pass  # SizingInfeasible / other solver outcomes are acceptable here
+
+
+def test_n_mod_for_target_basic():
+    assert _n_mod_for_target(100.0, 250.0) == 1  # fits one unit
+    assert _n_mod_for_target(500.0, 250.0) == 2  # ceil(500/250)
+    assert _n_mod_for_target(501.0, 250.0) == 3  # ceil(501/250)
+
+
+def test_n_mod_for_target_infeasible_unit():
+    with pytest.raises(SizingInfeasible):
+        _n_mod_for_target(100.0, 0.0)  # a unit that delivers no net power
+
+
+@pytest.mark.slow
+def test_tokamak_big_target_bumps_n_mod_instead_of_raising():
+    # A target above one unit's R0_max capacity (about 6326 MW for the DT
+    # default at R0_max=12 m, see test_tokamak_sizing.py) returns
+    # solved_n_mod > 1, not SizingInfeasible.
+    m = CostModel(ConfinementConcept.TOKAMAK, Fuel.DT)
+    r = m.forward(
+        net_electric_mw=8000,
+        availability=0.87,
+        lifetime_yr=40,
+        size_from_power=True,
+    )
+    assert r.solved_n_mod is not None and r.solved_n_mod > 1
+
+
+@pytest.mark.slow
+def test_tokamak_pinned_n_mod_rejected_in_sizing_mode():
+    m = CostModel(ConfinementConcept.TOKAMAK, Fuel.DT)
+    with pytest.raises(ValueError, match="n_mod cannot be pinned"):
+        m.forward(
+            net_electric_mw=500,
+            availability=0.87,
+            lifetime_yr=40,
+            size_from_power=True,
+            n_mod=2,
+        )
