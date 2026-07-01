@@ -1,6 +1,17 @@
 # Default engineering parameters for MIF magnetized target fusion
 q_eng: 3.0               # Engineering gain target (P_et / P_recirc)
 
+# Rep-rate shot design point (SOURCED): General Fusion 150 MWe commercial
+# concept, Sankey energy-balance diagram in Krotez, Segas, Khalzov,
+# Suponitsky, "Conceptual Design of a Magnetized Target Fusion Power Plant,"
+# IEEE SOFE 2023 paper E-267. e_driver_mj = compression-system kinetic-energy
+# arrow into the liquid-lithium liner; yield_per_shot_mj = "Fusion / 780 MJ"
+# node; max_f_rep = the diagram's stated 1 Hz -> 150 MWe design point. See
+# docs/physics/concept_power_scaling.md "Rep-rate shot design points".
+e_driver_mj: 755.0        # MJ/shot — compression (piston/liner) kinetic energy
+yield_per_shot_mj: 780.0  # MJ/shot — fusion yield
+max_f_rep: 1.0            # Hz — commercial design ceiling
+
 f_rep: 1.0               # Repetition rate [Hz]
 pulsed_conversion: thermal
 f_rad: 0.10

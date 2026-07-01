@@ -1,6 +1,18 @@
 # Default engineering parameters for MIF plasma jet driven fusion
 q_eng: 3.0               # Engineering gain target (P_et / P_recirc)
 
+# Rep-rate shot design point (SOURCED): Langendorf & Hsu, "Semi-analytic
+# model of plasma-jet-driven magneto-inertial fusion," Phys. Plasmas 24,
+# 032704 (2017), arXiv:1612.07368, "case2" design point (Sec. III.C):
+# E_tot = 31.3 MJ, gain = 23.5, f_rep = 1 Hz. yield_per_shot_mj = 31.3 x 23.5
+# = 735.6 MJ (rounded 736), corroborated by Thio & Witherspoon 2018
+# ("~500 MJ per pulse"). No reactor-scale machine has been built; these are
+# peer-reviewed design-point/simulation values. See docs/physics/
+# concept_power_scaling.md "Rep-rate shot design points".
+e_driver_mj: 31.3         # MJ/shot — liner + target-formation input energy
+yield_per_shot_mj: 736.0  # MJ/shot — fusion yield (= 31.3 x gain 23.5)
+max_f_rep: 1.0            # Hz — design baseline (1-2 Hz cited as feasible upper bound)
+
 f_rep: 1.0               # Repetition rate [Hz]
 pulsed_conversion: thermal
 f_rad: 0.10

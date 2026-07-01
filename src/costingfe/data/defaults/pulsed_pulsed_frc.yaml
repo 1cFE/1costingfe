@@ -4,6 +4,32 @@ q_eng: 3.0               # Engineering gain target (P_et / P_recirc)
 # Copper pulsed coils, no superconductors, no cryogenics.
 # In-situ plasmoid formation (no manufactured targets).
 
+# Rep-rate shot design point:
+# e_driver_mj SOURCED: Helion "Polaris" (7th prototype) capacitor-bank
+# energy, stated "50+ MJ" on Helion's Polaris page, corroborated by the
+# Helion blog and Scientific American.
+# max_f_rep SOURCED, corrected 10 Hz -> 1 Hz: IEEE Spectrum, "Welcome to
+# Fusion City, USA" -- Helion's commercial reactor "is intended to pulse
+# about once per second and generate 50 MW." Trenta (6th prototype) ran
+# about 1 pulse/10 min; no verifiable source supports a 10 Hz target.
+# yield_per_shot_mj is ILLUSTRATIVE, NOT a sourced/disclosed value: Helion
+# has published no fusion-yield figure for Polaris or the commercial plant
+# (checked Helion, Wikipedia, Scientific American, TechCrunch, IEEE
+# Spectrum, and a 2026 Helion arXiv instrument paper -- none give a joule
+# figure; VENTI's 2018 D-D neutron yield of about 0.1 J/pulse is ~8 orders
+# below the driver and unrepresentative of the D-He3 commercial design).
+# Pinned to 101.4 MJ/shot: the value of p_fus (at f_rep=1, so
+# yield_per_shot_mj = p_fus in MJ) for which this YAML's own
+# pulsed_dec_forward (inductive_dec) DEC params (eta_pin, eta_dec, f_pdv,
+# f_rad, p_coils, etc., eta_th=0 default for INDUCTIVE_DEC) reproduce
+# p_net = 50 MW at e_driver_mj=50, f_rep=1 -- i.e. model-consistent with
+# Helion's one public plant number, about 50 MWe at about 1 Hz (IEEE
+# Spectrum). This is a modeling placeholder anchor, not a physical yield.
+# See docs/physics/concept_power_scaling.md "Rep-rate shot design points".
+e_driver_mj: 50.0          # MJ/shot — Polaris capacitor-bank energy (SOURCED)
+yield_per_shot_mj: 101.4   # MJ/shot — ILLUSTRATIVE anchor (see derivation above), NOT disclosed by Helion
+max_f_rep: 1.0             # Hz — Helion commercial-plant target (SOURCED)
+
 # Pulsed parameters
 f_rep: 1.0               # Repetition rate [Hz]
 pulsed_conversion: inductive_dec

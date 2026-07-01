@@ -4,6 +4,30 @@ q_eng: 3.0               # Engineering gain target (P_et / P_recirc)
 # Open-ended geometry, copper coils, no manufactured targets.
 # Classic DEC candidate (Oliphant, Ribe & Coultas 1973).
 
+# Rep-rate shot design point: THETA_PINCH is a dormant concept with no
+# modern developer; all numbers below are 1958-65 Los Alamos Scylla-series
+# experiments, illustrative only, NOT a modern design point.
+# e_driver_mj SOURCED: Quinn, Little, Ribe, Sawyer, "Stability, Heating and
+# End Loss of a 3.5-Megajoule Theta Pinch (Scylla IV)," LASL LA-DC-7039 /
+# CONF-650935-2 (1965) -- capacitor-bank energy is in the report title
+# itself.
+# yield_per_shot_mj and max_f_rep are ARBITRARY / ILLUSTRATIVE, NOT real or
+# sourced values. Scylla IV never achieved meaningful fusion gain: only
+# diagnostic-level neutron counts are documented ("billions of D-D fusion
+# reactions per pulse" at about 80 million K), which converts to about
+# 1e-10 MJ/shot (gain about 1e-10) -- negligible, and that conversion is
+# unpublished back-of-envelope arithmetic, not a primary-source joule
+# figure. No primary source gives a Scylla shot cadence; MJ-class 1960s
+# banks with HV recharge, crowbar reset, gas refill, and manual diagnostics
+# were effectively single-shot / order-minutes between shots. Pinned here
+# to yield_per_shot_mj = 35 (an illustrative gain G=10 on the 3.5 MJ bank)
+# and max_f_rep = 1 (illustrative placeholder; no cadence documented) so
+# the concept has non-zero, finite modeling inputs. See docs/physics/
+# concept_power_scaling.md "Rep-rate shot design points".
+e_driver_mj: 3.5           # MJ/shot — Scylla IV capacitor-bank energy (SOURCED, historical)
+yield_per_shot_mj: 35.0    # MJ/shot — ARBITRARY/ILLUSTRATIVE (gain G=10 placeholder; Scylla achieved negligible real yield)
+max_f_rep: 1.0             # Hz — ARBITRARY/ILLUSTRATIVE (no cadence documented for Scylla)
+
 # Pulsed parameters
 f_rep: 1.0               # Repetition rate [Hz]
 pulsed_conversion: inductive_dec

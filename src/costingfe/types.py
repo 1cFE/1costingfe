@@ -83,6 +83,22 @@ N_MOD_SIZED_CONCEPTS = frozenset(
     }
 )
 
+# Concepts whose plant power scales by rep-rate x per-shot fusion yield (single
+# device, repeated pulses), not by growing a device (tokamak/mirror) or by
+# module replication (N_MOD_SIZED_CONCEPTS). Each concept YAML carries a
+# sourced or explicitly-flagged-illustrative shot design point
+# (e_driver_mj, yield_per_shot_mj, max_f_rep); see the "Rep-rate shot design
+# points" table and citations in docs/physics/concept_power_scaling.md.
+REP_RATE_SIZED_CONCEPTS = frozenset(
+    {
+        ConfinementConcept.PULSED_FRC,
+        ConfinementConcept.MAG_TARGET,
+        ConfinementConcept.PLASMA_JET,
+        ConfinementConcept.THETA_PINCH,
+        ConfinementConcept.LASER_IFE,
+    }
+)
+
 CONCEPT_DEFAULT_CONVERSION = {
     ConfinementConcept.LASER_IFE: PulsedConversion.THERMAL,
     ConfinementConcept.ZPINCH: PulsedConversion.THERMAL,

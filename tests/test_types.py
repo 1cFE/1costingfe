@@ -1,6 +1,7 @@
 from costingfe.types import (
     CONCEPT_DEFAULT_CONVERSION,
     CONCEPT_TO_FAMILY,
+    REP_RATE_SIZED_CONCEPTS,
     ConfinementConcept,
     ConfinementFamily,
     Fuel,
@@ -70,3 +71,19 @@ def test_laser_driver_type_values():
     assert LaserDriverType("dpssl") == LaserDriverType.DPSSL
     assert LaserDriverType("krf") == LaserDriverType.KRF
     assert LaserDriverType("nd_glass") == LaserDriverType.NDGLASS
+
+
+def test_rep_rate_sized_concepts_membership():
+    assert REP_RATE_SIZED_CONCEPTS == {
+        ConfinementConcept.PULSED_FRC,
+        ConfinementConcept.MAG_TARGET,
+        ConfinementConcept.PLASMA_JET,
+        ConfinementConcept.THETA_PINCH,
+        ConfinementConcept.LASER_IFE,
+    }
+
+
+def test_rep_rate_sized_concepts_disjoint_from_n_mod_sized():
+    from costingfe.types import N_MOD_SIZED_CONCEPTS
+
+    assert REP_RATE_SIZED_CONCEPTS.isdisjoint(N_MOD_SIZED_CONCEPTS)

@@ -2,6 +2,20 @@
 q_eng: 4.0               # Engineering gain target (P_et / P_recirc)
 # Source: pyFECONs CATF IFE configuration
 
+# Rep-rate shot design point (SOURCED): Ditmire, Roth, et al., "Focused
+# Energy, A New Approach Towards Inertial Fusion Energy," J. Fusion Energy
+# 42:27 (2023) — commercial power-plant design point (direct-drive proton
+# fast ignition, about 1 GWe class). "roughly a laser energy of 2.5 MJ per
+# pulse operating at 10 Hz"; yield_per_shot_mj = 2.5 x design target gain
+# G=100 = 250 MJ (cross-checked against the paper's power-cycle block
+# diagram, about 2523 MW fusion / 10 Hz = about 252 MJ/shot). max_f_rep
+# corrected from an unsupported 16 Hz to the paper's stated 10 Hz (Marvel
+# Fusion also cites 10 Hz for their DPSSL class). See docs/physics/
+# concept_power_scaling.md "Rep-rate shot design points".
+e_driver_mj: 2.5          # MJ/shot — laser driver energy
+yield_per_shot_mj: 250.0  # MJ/shot — fusion yield (= 2.5 x design-target gain G100)
+max_f_rep: 10.0           # Hz — commercial design ceiling
+
 f_rep: 10.0              # Repetition rate [Hz]
 pulsed_conversion: thermal
 laser_driver_type: dpssl   # dpssl | krf | nd_glass (selects C220104 $/MJ + CAS72 replacement)
