@@ -10,10 +10,29 @@ one-time capital costs for the material that fills the blanket structure,
 neutron multiplier inventory, and other special reactor materials.
 
 **Key boundary:**
-- CAS220101 covers the blanket *structure* (steel, fabrication).
-- CAS27 covers the *material that fills it* (PbLi, Li, Be, FLiBe).
+- CAS220101 covers the blanket *structure* (steel, W armor, fabrication).
+- CAS27 covers the *material that fills it* (PbLi, Li, Be, FLiBe, ceramic).
 - CAS80 covers *fuel* (deuterium, tritium breeding feedstock as Li-6, etc.).
 - Annual replenishment of consumed materials is an operating cost (CAS70).
+
+For this split to avoid double-counting, the CAS220101 unit costs must be
+**structure only**. The D-T unit cost was re-anchored from 0.60 to 0.35 M$/m³
+for exactly this reason: the 0.60 value had folded the PbLi fill mass into the
+structure account, so every breeding blanket (PbLi, Li, FLiBe, Be-ceramic) paid
+for the fill twice — once in CAS220101 and again here. See
+`CAS22_reactor_components.md`.
+
+The Li₂O breeding blanket carries its own CAS220101 base
+(`blanket_unit_cost_li2o`) so its structure cost is decoupled from the fuel key
+(a solid-breeder shell on a non-D-T-keyed machine such as the levitated dipole
+would otherwise be priced off the aneutronic fuel unit cost). That base is set
+to the same structure-only 0.35 M$/m³ as D-T, with the `solid_breeder`
+structure_factor adding the pebble-canister premium on top — the identical
+basis used for `be_ceramic` and `ceramic_only` — and the Li₂O fill itself is
+priced here in CAS27. For the levitated dipole the volume-based CAS220101 is
+only a first-cut template; faithful capital costing of its large thin shell is
+mass-based (Simpson et al. Table 5) and belongs in per-instance
+`cost_overrides`.
 
 ## Costing Model — volume-based, keyed on blanket fill
 
@@ -34,7 +53,8 @@ This replaced the earlier `special_materials_base(fuel) × fill_factor ×
 (P_net/1000)` model. Power-scaling was a proxy that mis-fit compact / high-
 power-density designs (e.g. ARC's FLiBe immersion blanket) and under-counted
 large-blanket designs (e.g. the levitated dipole's thin-but-huge Li₂O shell,
-whose fill was costed at ~$0.6M against a ~$360M blanket structure). Scaling by
+whose fill was costed at ~$0.6M against a several-hundred-M$ blanket structure).
+Scaling by
 the modelled `blanket_vol` instead is consistent with how the blanket
 *structure* (C220101) and the other reactor-component accounts are already costed.
 

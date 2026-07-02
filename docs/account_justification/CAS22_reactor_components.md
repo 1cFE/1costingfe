@@ -38,24 +38,39 @@ higher-grade materials per unit volume).
 
 ### Unit costs (M$/m³)
 
+These unit costs are **structure only**: RAFM steel structure, tungsten
+first-wall armor, and fabrication. The breeder and neutron-multiplier
+material inventory (PbLi, Li, FLiBe, Be, ceramic) is priced once, separately,
+in CAS27 as a volume-based mass build-up. It must not be baked into these unit
+costs, or breeding blankets would be charged for the fill twice.
+
 | Fuel | Unit cost | Rationale |
 |------|----------:|-----------|
-| DT | 0.60 | Full breeding blanket (RAFM steel structure + PbLi/Li breeder + Be neutron multiplier + FW W armor). TBR > 1.05 required. Complex assembly: HIPed joints, cooling channels, tritium barrier coatings. |
-| DD | 0.30 | Energy-capture blanket (no breeding). RAFM steel + coolant channels. Simpler than DT (no breeder, no multiplier). |
+| DT | 0.35 | Breeding-blanket structure (RAFM steel structure + FW W armor + fabrication). TBR > 1.05 required, but the breeder/multiplier fill it holds is costed in CAS27. Complex assembly: HIPed joints, cooling channels, tritium barrier coatings. |
+| DD | 0.30 | Energy-capture blanket (no breeding). RAFM steel + coolant channels. Slightly below DT (no W-armor/tritium-barrier premium; no breeder, no multiplier — and no CAS27 fill). |
 | DHe3 | 0.08 | Minimal blanket. ~5% neutron fraction → thin shielding layer. Simple steel structure. |
 | pB11 | 0.05 | X-ray shielding only. Thin metallic liner, conventional materials. |
 
 ### Validation
 
-For a DT tokamak blanket of ~650 m³ at 2535 MW thermal:
-- Material mass: ~3,000–5,000 tonnes (RAFM steel + breeder + multiplier)
-- Raw material cost: RAFM steel ~$30–50/kg, fabricated nuclear-grade
-  components ~$100–200/kg (3–5× manufacturing/QA markup)
-- At $150/kg average × 3,500 tonnes = $525M. Our $389M is conservative,
-  reflecting NOAK learning-curve reduction.
+For a DT tokamak blanket of ~640 m³ (first wall + blanket + reflector) at
+2535 MW thermal, structure only:
+- Structural steel: ~1,150–1,600 t RAFM (FW panels + blanket channel walls and
+  back plate + reflector block, ~10–20% of blanket volume plus a mostly-steel
+  reflector); take ~1,300 t.
+- W first-wall armor: ~4 mm over the ~430 m² first wall ≈ 33 t.
+- Fabricated nuclear-grade cost: RAFM ~$30–50/kg raw → ~$120–150/kg fabricated
+  (3–5× manufacturing/QA markup); W tiles ~$300–600/kg fabricated.
+- ~1,300 t × ~$130/kg + 33 t × $400/kg ≈ $170–230M → 0.26–0.35 M$/m³.
+  We take 0.35, the top of the steel build-up and consistent with the DD
+  structure cost (0.30) plus a modest DT W-armor/tritium-barrier premium.
 
-ITER comparison: 440 blanket/shield modules, ~2,000 tonnes total.
-ITER blanket is FOAK with bespoke international procurement; NOAK
+The old 0.60 anchored a ~3,500 t "structure + breeder + multiplier" mass at
+9.4 t/m³ (the PbLi *fill* density), i.e. it folded the PbLi inventory into the
+structure account — which CAS27 then charged again. 0.35 removes that fill mass.
+
+ITER comparison: 440 blanket/shield modules, ~2,000 tonnes total (blanket +
+shield combined). ITER is FOAK with bespoke international procurement; NOAK
 serial production would be substantially cheaper per unit.
 
 ### TODO: wall_material cost multiplier

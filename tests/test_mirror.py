@@ -553,7 +553,10 @@ class TestInverse:
 # value (10 keV), from the prior 125 keV plug hot-electron value that had been read
 # onto the bulk cell. This removes the spurious high-T_e synchrotron term, so the
 # default-path LCOE moved 100.4065 -> 98.9895 (Q_eng 3.5 -> 4.6, recirc 28% -> 22%).
-_MIRROR_DT_PINNED_LCOE = 98.98950958251953
+# re-pinned: D-T blanket unit cost re-anchored to structure-only (0.60 -> 0.35),
+# with the breeder/multiplier fill now priced once in CAS27; LCOE moved
+# 98.9895 -> 94.1932.
+_MIRROR_DT_PINNED_LCOE = 94.19320678710938
 
 
 class TestModelIntegration:

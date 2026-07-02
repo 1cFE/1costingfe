@@ -329,8 +329,10 @@ def test_backward_compat_sizing_off_unchanged():
     # re-pinned: CAS10 land changed to sqrt(plant-total power) scaling
     # (was 158.53623962402344), then gross-electric reference unified to 1100 MWe
     # (was 158.54959106445312).
-    _REF_JAX = 158.2802276611328
-    _REF_NUMPY = 158.2802400728728
+    # re-pinned: D-T blanket unit cost re-anchored to structure-only (0.60 -> 0.35),
+    # with the breeder/multiplier fill now priced once in CAS27 (was 158.2802276611328).
+    _REF_JAX = 147.99440002441406
+    _REF_NUMPY = 147.99442154844817
     if _REF_JAX is not None:
         assert r.costs.lcoe == pytest.approx(
             _REF_JAX if HAS_JAX else _REF_NUMPY, rel=1e-9

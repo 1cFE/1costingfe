@@ -49,7 +49,11 @@ _BASE = dict(
         # that machine at this 200 MWe point raises LCOE (was 208.41 at R0 3.0).
         # re-pinned: gross-electric reference unified to 1100 MWe (ref_gross_power_mwe;
         # CAS21 was 1150, C220107/C220110 were 1000), small downshift across concepts.
-        (C.TOKAMAK, Fuel.DT, 295.32),
+        # re-pinned: D-T blanket unit cost re-anchored to structure-only (0.60 ->
+        # 0.35); the breeder/multiplier fill it had baked in is now priced once, in
+        # CAS27. Downshift is D-T-only (TOKAMAK 295.32, MIRROR 190.52, STELLARATOR
+        # 330.54); DIPOLE (Li2O base) and POLYWELL (aneutronic) pins unchanged.
+        (C.TOKAMAK, Fuel.DT, 280.61),
         # re-pinned: mirror central-cell T_i and T_e corrected to the near-Maxwellian
         # Hammir/WHAM value (10 keV). A 2026-06-15 change had raised central T_e to
         # 125 keV (the tandem PLUG hot-electron value that sets the Fowler-Logan
@@ -58,8 +62,8 @@ _BASE = dict(
         # high-T_e synchrotron term. Corrected here: 218.36 -> 190.52. Mirror-only;
         # tokamak/stellarator/dipole/polywell pins unchanged. See
         # docs/physics/mirror.md.
-        (C.MIRROR, Fuel.DT, 190.52),
-        (C.STELLARATOR, Fuel.DT, 330.54),
+        (C.MIRROR, Fuel.DT, 185.26),
+        (C.STELLARATOR, Fuel.DT, 323.15),
         # DIPOLE re-benchmarked after the radial-build inversion + spherical
         # geometry dispatch + Li2O blanket fill + C220108 divertor zeroing +
         # external stationary lift coil restructured as
@@ -67,7 +71,13 @@ _BASE = dict(
         # alignment). +7.4% here is the volumetric CAS27: the dipole's large
         # thin Li2O blanket (C220101 ~$360M) was previously costed at ~$0.6M of
         # fill; it is now ~$235M, consistent with the blanket structure.
-        (C.DIPOLE, Fuel.DHE3, 279.07),
+        # re-fueled to D-T to match the Simpson 2026 config this concept loads
+        # (Li2O tritium-breeding blanket, mn=1.053, tritium plant); the prior
+        # D-He3 label costed aneutronic fuel on D-T breeding hardware (a $93M/yr
+        # He3 fuel bill against a breeding blanket). Combined with the Li2O
+        # structure re-anchor to structure-only (0.20 -> 0.35, fill in CAS27,
+        # C220101 ~$368M -> ~$644M), the D-T LCOE is 289.25 (was 279.07 D-He3).
+        (C.DIPOLE, Fuel.DT, 289.25),
         # POLYWELL re-benchmarked after two right-sizings for this electrostatic,
         # copper-magnet concept: (1) C220108 divertor zeroed (charged particles
         # exhaust to the direct converter, no W-monoblock cassette), then (2) the

@@ -1761,11 +1761,14 @@ $V_{\text{blk}}$ (the first-wall, blanket, and reflector volume from the
 geometry model) at a fuel-keyed unit cost $c_{\text{blk}}(f)$, with a
 power scaling and a blanket-form structural complexity factor
 $s(\mathrm{form}) \in \{1.0, 1.3, 1.2, 0.0\}$ for liquid-metal,
-molten-salt, solid-breeder, and no-blanket architectures. The D-T unit
-cost is anchored to a RAFM-steel materials mass build-up at the reference
-machine (about 3500~t of fabricated nuclear-grade structure, breeder, and
-multiplier, cross-checked against the 440-module ITER blanket/shield) and
-priced at mature, Nth-of-a-kind unit costs:
+molten-salt, solid-breeder, and no-blanket architectures. The unit cost
+is \emph{structure only} (RAFM steel, tungsten first-wall armor, and
+fabrication); the breeder and neutron-multiplier fill it holds is priced
+separately under CAS27 (\cref{sec:cas27}). The D-T unit cost is anchored to a
+structure-only mass build-up at the reference machine (about 1300~t of
+fabricated nuclear-grade steel plus tungsten armor over the roughly
+640~m$^3$ blanket, cross-checked against the 440-module ITER
+blanket/shield) and priced at mature, Nth-of-a-kind unit costs:
 \begin{equation}
 \label{eq:cas2201}
 C_{22.01.01} = c_{\text{blk}}(f) \cdot s(\mathrm{form}) \cdot V_{\text{blk}} \cdot \left( \frac{P_{\text{th}}}{P_{\text{th,ref}}} \right)^{0.6}
@@ -1780,15 +1783,18 @@ with separate breeder and multiplier zones), all relative to the
 PbLi-style flow-channel baseline. The fill material chemistry is costed
 separately under CAS27 (\cref{sec:cas27}).
 
-The fuel-keyed unit cost $c_{\text{blk}}(f)$ is $0.60$, $0.30$, $0.08$,
-and $0.05$~M\$/m$^3$ for D-T, D-D, D-${}^3$He, and p-${}^{11}$B,
-declining from a full PbLi breeding blanket (D-T: about 9.4~t/m$^3$, with a
-flow loop, MHD ducts, and online tritium extraction) to a thin X-ray-capture
-wall with no breeding (p-${}^{11}$B). A solid Li$_2$O ceramic breeder (used
-by the levitated dipole) has none of these, runs at about 2~t/m$^3$,
-and is roughly 3--5$\times$ cheaper per unit volume, so concepts with a
-Li$_2$O fill substitute a dedicated unit cost
-$c_{\text{Li}_2\text{O}} = 0.2$~M\$/m$^3$ in place of $c_{\text{blk}}(f)$.
+The fuel-keyed unit cost $c_{\text{blk}}(f)$ is $0.35$, $0.30$, $0.08$,
+and $0.05$~M\$/m$^3$ for D-T, D-D, D-${}^3$He, and p-${}^{11}$B, declining
+from a full D-T breeding-blanket structure (steel structure, tungsten armor,
+tritium-barrier coatings, and the fabrication of a flow loop and MHD ducts) to
+a thin X-ray-capture wall with no breeding (p-${}^{11}$B). The D-T and D-D
+values sit close together because both price the same steel structure; their
+gap is the D-T W-armor and tritium-barrier premium, not the breeder or
+multiplier, which are in CAS27. A solid Li$_2$O ceramic breeder (used by the
+levitated dipole) substitutes a dedicated structure base
+$c_{\text{Li}_2\text{O}} = 0.35$~M\$/m$^3$ in place of $c_{\text{blk}}(f)$, so
+its breeding-blanket structure is priced on the same steel-and-armor basis as
+D-T rather than off the fuel key.
 
 \subsubsection*{Multi-Unit Labor Factor for $n_{\rm mod}>1$}
 \label{sec:multi-unit-labor}
@@ -3292,16 +3298,16 @@ The published fabricated-component cost is \$5{,}560M (FY2014~USD,
 \citep{sorbom2015arc} p.~25), or \$7{,}562M escalated to 2025~USD.
 Run at FOAK, with ARC's REBCO coils priced at the current market
 (200~\$/kA-m, not the framework's aggressive default of 50~\$/kA-m),
-\texttt{1costingfe} predicts a \$5{,}392M capital cost (19{,}969~\$/kWe)
-and a 245.2~\$/MWh LCOE, a $-29$\,\% delta.
+\texttt{1costingfe} predicts a \$5{,}296M capital cost (19{,}617~\$/kWe)
+and a 239.5~\$/MWh LCOE, a $-30$\,\% delta.
 
 The residual gap is the structural steel. Sorbom applies a single
 \$1.06M/tonne fabricated multiplier averaged across four heritage
 burning-plasma designs (FIRE, BPX, PCAST5, ARIES-RS), dominated by a
 4{,}350-tonne SS316LN structural support priced at \$4.6\,B (FY2014~USD,
 \$6.3\,B escalated) --- a single line that by itself exceeds
-\texttt{1costingfe}'s entire \$5.4\,B estimate, even with the coils at the
-current REBCO price (\$1.58B, 29\,\% of capital). \texttt{1costingfe}
+\texttt{1costingfe}'s entire \$5.3\,B estimate, even with the coils at the
+current REBCO price (\$1.58B, 30\,\% of capital). \texttt{1costingfe}
 instead builds CAS21 and CAS22 bottom-up from current procurement data, so
 the divergence is that heritage steel multiplier rather than the reactor
 equipment. The two estimates price the same steel on different bases. That multiplier
@@ -3361,10 +3367,10 @@ sums CAS10--50 (everything before interest during construction), and the
 ``Total'' row adds CAS60 (IDC).
 
 % FOAK run (noak=False) to match the ARIES FOAK basis.
-% Direct: published 1521.1 M$ (1992) * 2.295 = 3491; 1cfe sum CAS21+22+23+24+25+26+27 = 3507
-% Overnight $/kWe: published 2441 (1992) * 2.295 = 5602; 1cfe (CAS10-50)/kWe = 5257
-% Total: published 2844 M$ (1992) * 2.295 = 6527; 1cfe total_capital = 6267
-% LCOE: published 47.53 mill/kWh (1992) * 2.295 = 109.1 $/MWh; 1cfe = 83.6
+% Direct: published 1521.1 M$ (1992) * 2.295 = 3491; 1cfe sum CAS21+22+23+24+25+26+27 = 3358
+% Overnight $/kWe: published 2441 (1992) * 2.295 = 5602; 1cfe (CAS10-50)/kWe = 5052
+% Total: published 2844 M$ (1992) * 2.295 = 6527; 1cfe total_capital = 6023
+% LCOE: published 47.53 mill/kWh (1992) * 2.295 = 109.1 $/MWh; 1cfe = 79.6
 \begin{table}[h]
 \centering
 \caption{ARIES-AT cross-walk against published top-level rollups.
@@ -3375,18 +3381,19 @@ escalated from 1992~USD to 2025~USD by a factor of 2.295.}
 \toprule
 Account & Published (2025~USD) & \texttt{1costingfe} & $\Delta$ (\%) \\
 \midrule
-Direct cost (Account 90), M\$       & 3{,}491 & 3{,}507 &  $+0.5$ \\
-Overnight specific cost, \$/kWe     & 5{,}602 & 5{,}257 &  $-6.2$ \\
-Total cost (Account 99), M\$        & 6{,}527 & 6{,}267 &  $-4.0$ \\
-LCOE, \$/MWh                        &   109.1 &    83.6 & $-23.4$ \\
+Direct cost (Account 90), M\$       & 3{,}491 & 3{,}358 &  $-3.8$ \\
+Overnight specific cost, \$/kWe     & 5{,}602 & 5{,}052 &  $-9.8$ \\
+Total cost (Account 99), M\$        & 6{,}527 & 6{,}023 &  $-7.7$ \\
+LCOE, \$/MWh                        &   109.1 &    79.6 & $-27.0$ \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 Run at FOAK to match the ARIES program's convention, \texttt{1costingfe}
-reproduces the published capital closely: direct cost within 1\,\%
-($+0.5$\,\%), overnight specific cost within 6\,\% ($-6.2$\,\%), and total
-cost within 4\,\% ($-4.0$\,\%). The residual LCOE divergence ($-23$\,\%)
+reproduces the published capital within roughly 10\,\% on the low side:
+direct cost within 4\,\% ($-3.8$\,\%), overnight specific cost within
+10\,\% ($-9.8$\,\%), and total cost within 8\,\% ($-7.7$\,\%). The residual
+LCOE divergence ($-27$\,\%)
 is not a capital-cost difference but reflects the differing financial and
 O\&M assumptions of the 2002 ARIES systems study (fixed-charge rate,
 lifetime, staffing) versus the framework defaults. Unlike ARC, ARIES-AT

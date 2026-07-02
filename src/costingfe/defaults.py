@@ -52,15 +52,15 @@ class CostingConstants:
     # ($389M); ITER 440-module / 2000 t cross-check. DD/DHe3/pB11 scale down
     # by blanket complexity (no breeder / minimal / X-ray liner only).
     # See docs/account_justification/CAS22_reactor_components.md
-    blanket_unit_cost_dt: float = 0.60  # Full breeding blanket (TBR>1.05)
+    blanket_unit_cost_dt: float = 0.35  # Breeding-blanket structure (fill in CAS27)
     blanket_unit_cost_dd: float = 0.30  # Energy capture, no breeding
     blanket_unit_cost_dhe3: float = 0.08  # Minimal X-ray + ~5% neutron
     blanket_unit_cost_pb11: float = 0.05  # Minimal X-ray only
-    # Li2O solid ceramic breeder (DT) — chemistry-specific override applied
-    # in C220101 when blanket_fill == LI2O. Derived from ~2 t/m^3 packed
-    # density x ~$100k/t fusion-grade Li2O pricing; no flow loop, no MHD
-    # ducts, no online tritium extraction (cheaper per m^3 than PbLi).
-    blanket_unit_cost_li2o: float = 0.2
+    # Li2O solid-breeder structure base, applied in C220101 when
+    # blanket_fill == LI2O (decouples breeding-blanket structure from the fuel
+    # key). STRUCTURE ONLY, same steel+W basis as DT; the solid_breeder
+    # structure_factor adds the pebble-canister premium. Fill is priced in CAS27.
+    blanket_unit_cost_li2o: float = 0.35
 
     # 220102: Shield — volume-based unit cost (M$/m³)
     # Reference: ~350 m³ steel + borated water -> $261M DT
