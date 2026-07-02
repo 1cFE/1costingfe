@@ -126,7 +126,7 @@ def _n_mod_for_target(target, unit_max):
     return max(1, math.ceil(target / unit_max))
 
 
-_F_REP_MIN = 1e-3  # Hz — lower bisection bound (net < 0 here; fixed loads dominate)
+_F_REP_MIN = 1e-3  # Hz, lower bisection bound (net < 0 here; fixed loads dominate)
 _F_REP_BISECT_ITERS = 60
 
 
@@ -216,7 +216,7 @@ class CostModel:
         eta_pin, f_rad, f_sub, p_pump, p_trit, p_house, p_cryo, p_target,
         p_coils, fuel_frac_kw) and returns the PowerTable. p_fus, e_driver_mj,
         and f_rep come from the ARGS, never recomputed from params (e.g. from
-        yield_per_shot_mj) — the caller supplies p_fus, whether that's an
+        yield_per_shot_mj); the caller supplies p_fus, whether that's an
         inverse-solved value (normal path) or yield_per_shot_mj * f_rep
         (rep-rate sizing path). Dispatches pulsed_dec_forward when
         self.pulsed_conversion is INDUCTIVE_DEC, else pulsed_thermal_forward.
@@ -393,9 +393,8 @@ class CostModel:
             # output here (pt.f_rep), and the YAML f_rep field is no longer the
             # operating rate, so forward() re-syncs params["f_rep"] = pt.f_rep
             # and the downstream cost inputs price the solved operating point.
-            # This
-            # matches the size_from_power path (_size_reprate), so a net target
-            # yields the same shot in both modes.
+            # This matches the size_from_power path (_size_reprate), so a net
+            # target yields the same shot in both modes.
             unit_max = self._pulsed_net_at(params, params["max_f_rep"])
             if p_net_per_mod > unit_max:
                 raise SizingInfeasible(

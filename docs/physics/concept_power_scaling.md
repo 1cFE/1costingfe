@@ -138,7 +138,7 @@ forward's driver recirculation term, `p_driver / eta_pin`, assumes a
 single-pass electrical driver and so overcharges MAG_TARGET's recirculating
 power by treating 755 MJ/shot as if it were all wall-plug electricity at
 `eta_pin=0.30` (about 2517 MW of recirc at `f_rep=1`, versus 780 MW of
-fusion power) -- driver-dominated and net-negative at any rep rate. The
+fusion power), driver-dominated and net-negative at any rep rate. The
 model's `driver_recovery_frac` parameter (a required forward argument, set
 explicitly to 0.0, a no-op, in every other pulsed concept's YAML) scales
 that term to `p_driver * (1 - driver_recovery_frac) / eta_pin`.
