@@ -11,6 +11,7 @@ import pytest
 
 from costingfe import CostModel
 from costingfe.defaults import load_engineering_defaults
+from costingfe.layers.physics import SizingInfeasible
 from costingfe.types import ConfinementConcept, Fuel
 
 
@@ -157,3 +158,54 @@ def test_reprate_laser_ife_large_target_bumps_chambers():
     assert r.solved_n_mod > 1
     assert r.power_table.f_rep <= 10.0 + 1e-9
     assert r.power_table.p_net * r.solved_n_mod == pytest.approx(2000.0, rel=0.02)
+
+
+# --- Task 7: cited shot authoritative on the NORMAL (non-sizing) path ---
+#
+# For a rep-rate concept the normal forward path now HOLDS the cited shot
+# (e_driver_mj, yield_per_shot_mj) fixed and SOLVES f_rep to hit the per-module
+# net target, instead of growing e_driver at the YAML f_rep ("grow the shot").
+# So the same machine has ONE shot definition in both modes, and f_rep becomes
+# a solved output (pt.f_rep), not the YAML field.
+
+
+def test_reprate_normal_path_holds_cited_shot():
+    # Below one chamber's ceiling, the non-sizing forward reaches the target on
+    # the cited e_driver_mj (not an inverse-grown one) and a solved f_rep.
+    m = CostModel(ConfinementConcept.PLASMA_JET, Fuel.DT)
+    cited = m._eng_defaults["e_driver_mj"]
+    r = m.forward(net_electric_mw=20.0, availability=0.87, lifetime_yr=40)
+    assert float(r.power_table.e_driver_mj) == pytest.approx(cited, rel=1e-9)
+    assert float(r.power_table.p_net) == pytest.approx(20.0, rel=0.02)
+    assert float(r.power_table.f_rep) <= 1.0 + 1e-9  # PLASMA_JET max_f_rep = 1.0
+
+
+def test_reprate_two_modes_agree_on_shot():
+    # Below one chamber's ceiling the normal path (n_mod=1) and the
+    # size_from_power path (which also solves n_mod=1) reach the SAME target
+    # with the SAME cited shot, the SAME solved f_rep, and the SAME LCOE.
+    target = 20.0
+    m = CostModel(ConfinementConcept.PLASMA_JET, Fuel.DT)
+    normal = m.forward(net_electric_mw=target, availability=0.87, lifetime_yr=40)
+    sized = m.forward(
+        net_electric_mw=target,
+        availability=0.87,
+        lifetime_yr=40,
+        size_from_power=True,
+    )
+    assert sized.solved_n_mod == 1
+    assert float(normal.power_table.e_driver_mj) == pytest.approx(
+        float(sized.power_table.e_driver_mj), rel=1e-9
+    )
+    assert float(normal.power_table.f_rep) == pytest.approx(
+        float(sized.power_table.f_rep), rel=1e-6
+    )
+    assert float(normal.costs.lcoe) == pytest.approx(float(sized.costs.lcoe), rel=1e-6)
+
+
+def test_reprate_normal_path_infeasible_above_ceiling():
+    # Above one chamber's ceiling with the default n_mod=1, the normal path
+    # cannot reach the target and points the user to size_from_power.
+    m = CostModel(ConfinementConcept.MAG_TARGET, Fuel.DT)
+    with pytest.raises(SizingInfeasible, match="size_from_power"):
+        m.forward(net_electric_mw=1000.0, availability=0.87, lifetime_yr=40)

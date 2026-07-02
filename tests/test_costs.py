@@ -879,7 +879,15 @@ def _laser_c220104(driver_type):
         fuel=Fuel.DT,
         laser_driver_type=driver_type,
     )
-    result = model.forward(net_electric_mw=1000.0, availability=0.85, lifetime_yr=30)
+    # Rep-rate concept: a 1 GWe plant exceeds one chamber's cited-shot ceiling,
+    # so it sizes to multiple chambers (same count for every driver type, so the
+    # C220104 driver-type ratios are unaffected).
+    result = model.forward(
+        net_electric_mw=1000.0,
+        availability=0.85,
+        lifetime_yr=30,
+        size_from_power=True,
+    )
     return float(result.cas22_detail["C220104"])
 
 

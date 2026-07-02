@@ -382,6 +382,35 @@ class CostModel:
                 **sync_kw,
             )
 
+        elif self.family == ConfinementFamily.PULSED and (
+            self.concept in REP_RATE_SIZED_CONCEPTS
+        ):
+            # Rep-rate concepts: the cited shot (e_driver_mj, yield_per_shot_mj)
+            # is the AUTHORITATIVE design point in BOTH modes. On the normal
+            # (non-sizing) path we hold that shot fixed and solve f_rep to hit
+            # the per-module net target, instead of growing e_driver at the
+            # YAML f_rep. Consequence: for these concepts f_rep is a SOLVED
+            # output here (pt.f_rep), and the YAML f_rep field is no longer the
+            # operating rate, so forward() re-syncs params["f_rep"] = pt.f_rep
+            # and the downstream cost inputs price the solved operating point.
+            # This
+            # matches the size_from_power path (_size_reprate), so a net target
+            # yields the same shot in both modes.
+            unit_max = self._pulsed_net_at(params, params["max_f_rep"])
+            if p_net_per_mod > unit_max:
+                raise SizingInfeasible(
+                    f"{self.concept.value}: per-module net target "
+                    f"{p_net_per_mod:.1f} MW exceeds one chamber's ceiling "
+                    f"{unit_max:.1f} MW at max_f_rep={params['max_f_rep']} Hz. "
+                    "Pass size_from_power=True to solve the chamber count "
+                    "(n_mod) automatically, or raise n_mod."
+                )
+            f_rep_solved = self._solve_f_rep(params, p_net_per_mod)
+            p_fus = params["yield_per_shot_mj"] * f_rep_solved
+            pt = self._pulsed_forward(
+                params, p_fus, params["e_driver_mj"], f_rep_solved
+            )
+
         elif self.family == ConfinementFamily.PULSED:
             fuel_frac_kw = dict(
                 dd_f_T=params["dd_f_T"],
@@ -948,20 +977,52 @@ class CostModel:
         self._last_n_mod = n_solved
         return self._power_balance(params, n_solved)
 
+    def _pulsed_net_at(self, params, f_rep):
+        """Net electric [MW] of ONE rep-rate chamber at f_rep, holding the cited
+        shot (e_driver_mj, yield_per_shot_mj) fixed.
+
+        p_fus = yield_per_shot_mj * f_rep, so net(f_rep) is monotone increasing:
+        driver recirc and thermal yield both scale with f_rep while the fixed
+        loads shrink in relative share as f_rep grows. Concrete (host-side)
+        float, used by both the sizing solver and the normal-path fixed-shot
+        solve.
+        """
+        p_fus = params["yield_per_shot_mj"] * f_rep
+        return float(
+            self._pulsed_forward(params, p_fus, params["e_driver_mj"], f_rep).p_net
+        )
+
+    def _solve_f_rep(self, params, per_unit_target):
+        """Bisect f_rep in [_F_REP_MIN, max_f_rep] so ONE chamber's net electric
+        equals per_unit_target, holding the cited shot fixed.
+
+        net(f_rep) is monotone increasing (see _pulsed_net_at), so bisect. The
+        caller MUST guarantee per_unit_target <= _pulsed_net_at(params, max_f_rep)
+        (the single-chamber unit ceiling); otherwise the result pins at max_f_rep
+        and silently undershoots. Shared by _size_reprate (per-unit target after
+        the n_mod split) and the normal-path PULSED branch (per-module target).
+        """
+        lo, hi = _F_REP_MIN, params["max_f_rep"]
+        for _ in range(_F_REP_BISECT_ITERS):
+            mid = 0.5 * (lo + hi)
+            if self._pulsed_net_at(params, mid) < per_unit_target:
+                lo = mid
+            else:
+                hi = mid
+        return 0.5 * (lo + hi)
+
     def _size_reprate(self, params, n_mod):
         """Solve f_rep from the power target at a fixed per-shot design.
 
         Holds e_driver_mj and yield_per_shot_mj fixed (the cited shot design
-        point); net(f_rep) is monotone increasing in f_rep (driver recirc and
-        thermal yield both scale with p_fus = yield_per_shot_mj * f_rep, and
-        the fixed loads shrink in relative share as f_rep grows), so bisect.
-        If one chamber at max_f_rep cannot reach the target (unit_max <= 0,
-        a driver-dominated shot), _n_mod_for_target raises SizingInfeasible —
-        bumping n_mod cannot rescue a negative unit ceiling. Otherwise bump
-        the chamber count (n_mod) and solve each chamber to target/n_mod.
-        n_mod is a physical chamber count solved from the max_f_rep ceiling,
-        not a continuous design variable; pinning it (caller n_mod != 1) is
-        rejected, mirroring _size_tokamak and _size_modular.
+        point) and solves f_rep via _solve_f_rep. If one chamber at max_f_rep
+        cannot reach the target (unit_max <= 0, a driver-dominated shot),
+        _n_mod_for_target raises SizingInfeasible (bumping n_mod cannot rescue
+        a negative unit ceiling). Otherwise bump the chamber count (n_mod) and
+        solve each chamber to target/n_mod. n_mod is a physical chamber count
+        solved from the max_f_rep ceiling, not a continuous design variable;
+        pinning it (caller n_mod != 1) is rejected, mirroring _size_tokamak and
+        _size_modular.
         """
         if n_mod != 1:
             raise ValueError(
@@ -971,24 +1032,11 @@ class CostModel:
             )
         target = params["net_electric_mw"]
         e_driver_mj = params["e_driver_mj"]
-        max_f_rep = params["max_f_rep"]
 
-        def net_at(f_rep):
-            p_fus = params["yield_per_shot_mj"] * f_rep
-            return float(self._pulsed_forward(params, p_fus, e_driver_mj, f_rep).p_net)
-
-        unit_max = net_at(max_f_rep)
+        unit_max = self._pulsed_net_at(params, params["max_f_rep"])
         n_solved = _n_mod_for_target(target, unit_max)
         per_unit = target / n_solved
-
-        lo, hi = _F_REP_MIN, max_f_rep
-        for _ in range(_F_REP_BISECT_ITERS):
-            mid = 0.5 * (lo + hi)
-            if net_at(mid) < per_unit:
-                lo = mid
-            else:
-                hi = mid
-        f_rep_solved = 0.5 * (lo + hi)
+        f_rep_solved = self._solve_f_rep(params, per_unit)
 
         self._last_n_mod = n_solved
         solved = dict(params)
@@ -1435,6 +1483,15 @@ class CostModel:
                 )
         else:
             pt = self._power_balance(params, n_mod)
+
+        # Rep-rate concepts solve f_rep from the power target (both the sizing
+        # and normal paths), so the true operating rate is pt.f_rep, not the
+        # YAML f_rep. Sync it into params so the downstream pulsed cost inputs
+        # (C220104 p_driver = e_driver * f_rep, CAS80 targets/year, the
+        # target-factory sizing) price the solved operating point. For every
+        # other pulsed path pt.f_rep == params["f_rep"], so this is a no-op.
+        if self.family == ConfinementFamily.PULSED:
+            params = {**params, "f_rep": pt.f_rep}
 
         # Layer 3: Geometry (radial build -> component volumes)
         from dataclasses import fields as dc_fields
@@ -2230,16 +2287,19 @@ class CostModel:
         parameters (unit costs, fractions, base costs).
 
         Uses jax.grad for exact autodiff gradients, EXCEPT on the 0D /
-        power-sizing paths, which solve the operating point with a bisection
-        (tokamak_0d_inverse / mirror_0d_inverse). jax.grad cannot see through
-        that root-find -- every parameter enters the loop through the
-        non-differentiable comparison -- so it disagrees with the concrete
+        power-sizing paths and the rep-rate concepts, which all solve the
+        operating point with a bisection (tokamak_0d_inverse /
+        mirror_0d_inverse, or the _solve_f_rep fixed-shot solve for rep-rate
+        concepts, which now runs on the normal path too). jax.grad cannot see
+        through that root-find: every parameter enters the loop through the
+        non-differentiable comparison, so it disagrees with the concrete
         forward(). Those paths fall back to finite differences on forward().
         """
         if (
             not HAS_JAX
             or params.get("use_0d_model", False)
             or params.get("size_from_power", False)
+            or self.concept in REP_RATE_SIZED_CONCEPTS
         ):
             return self._sensitivity_fd(params, cost_overrides)
 

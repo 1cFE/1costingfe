@@ -509,8 +509,10 @@ class TestBackwardCompat:
 
     def test_ife_unaffected(self):
         """IFE should not be affected by 0D model."""
+        # Rep-rate concept: 1 GWe exceeds one chamber's cited-shot ceiling, so
+        # size to multiple chambers (size_from_power).
         m = CostModel(ConfinementConcept.LASER_IFE, Fuel.DT)
-        r = m.forward(1000, 0.85, 30)
+        r = m.forward(1000, 0.85, 30, size_from_power=True)
         assert r.plasma_state is None
         assert r.costs.lcoe > 0
 

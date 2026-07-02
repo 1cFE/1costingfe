@@ -146,8 +146,17 @@ def test_sensitivity_returns_categorized():
 
 def test_forward_ife_laser():
     """IFE laser fusion should produce a valid LCOE."""
+    # Rep-rate concept: a 1 GWe plant exceeds one chamber's cited-shot ceiling,
+    # so it sizes to multiple chambers via size_from_power (the cited shot is
+    # now authoritative; the normal path solves f_rep and raises above one
+    # chamber's ceiling).
     model = CostModel(concept=ConfinementConcept.LASER_IFE, fuel=Fuel.DT)
-    result = model.forward(net_electric_mw=1000.0, availability=0.85, lifetime_yr=30)
+    result = model.forward(
+        net_electric_mw=1000.0,
+        availability=0.85,
+        lifetime_yr=30,
+        size_from_power=True,
+    )
     assert result.costs.lcoe > 0
     assert result.power_table.p_net > 0
     assert result.power_table.p_coils == 0.0  # No magnets in IFE
@@ -156,8 +165,15 @@ def test_forward_ife_laser():
 
 def test_forward_mif_mag_target():
     """MIF magnetized target fusion should produce a valid LCOE."""
+    # Rep-rate concept: 1 GWe exceeds one chamber's ceiling, so size to multiple
+    # chambers (see test_forward_ife_laser).
     model = CostModel(concept=ConfinementConcept.MAG_TARGET, fuel=Fuel.DT)
-    result = model.forward(net_electric_mw=1000.0, availability=0.85, lifetime_yr=30)
+    result = model.forward(
+        net_electric_mw=1000.0,
+        availability=0.85,
+        lifetime_yr=30,
+        size_from_power=True,
+    )
     assert result.costs.lcoe > 0
     assert result.power_table.p_net > 0
     # The generic MTF concept (General Fusion / Helion-class) forms the
@@ -170,8 +186,15 @@ def test_forward_mif_mag_target():
 
 def test_sensitivity_ife():
     """IFE sensitivity should include driver-specific parameters."""
+    # Rep-rate concept at 1 GWe sizes to multiple chambers; sensitivity uses the
+    # finite-difference path (the f_rep solve is not jax-differentiable).
     model = CostModel(concept=ConfinementConcept.LASER_IFE, fuel=Fuel.DT)
-    result = model.forward(net_electric_mw=1000.0, availability=0.85, lifetime_yr=30)
+    result = model.forward(
+        net_electric_mw=1000.0,
+        availability=0.85,
+        lifetime_yr=30,
+        size_from_power=True,
+    )
     sens = model.sensitivity(result.params)
     assert "eta_pin" in sens["engineering"]  # Pulsed driver efficiency
     assert "p_input" not in sens["engineering"]  # MFE-specific param
@@ -203,7 +226,12 @@ def test_sensitivity_ife_includes_target_unit_cost():
     """Per-shot target cost (CAS80) is a dominant IFE/MIF LCOE driver and must be
     a sensitivity slider for pulsed concepts that consume targets."""
     model = CostModel(concept=ConfinementConcept.LASER_IFE, fuel=Fuel.DT)
-    result = model.forward(net_electric_mw=1000.0, availability=0.85, lifetime_yr=30)
+    result = model.forward(
+        net_electric_mw=1000.0,
+        availability=0.85,
+        lifetime_yr=30,
+        size_from_power=True,  # rep-rate 1 GWe sizes to multiple chambers
+    )
     sens = model.sensitivity(result.params)
     assert "target_unit_cost" in sens["engineering"]
     assert sens["engineering"]["target_unit_cost"] != 0
@@ -626,12 +654,14 @@ def test_laser_driver_type_defaults_to_dpssl_from_yaml():
 def test_laser_driver_type_override_changes_capital_and_om():
     from costingfe.types import LaserDriverType
 
+    # Rep-rate concept at 1 GWe sizes to multiple chambers (same n_mod for both
+    # driver types, so the C220104 ratio comparison is unaffected).
     dpssl = CostModel(
         ConfinementConcept.LASER_IFE, Fuel.DT, laser_driver_type=LaserDriverType.DPSSL
-    ).forward(1000.0, 0.85, 30)
+    ).forward(1000.0, 0.85, 30, size_from_power=True)
     krf = CostModel(
         ConfinementConcept.LASER_IFE, Fuel.DT, laser_driver_type=LaserDriverType.KRF
-    ).forward(1000.0, 0.85, 30)
+    ).forward(1000.0, 0.85, 30, size_from_power=True)
     assert krf.cas22_detail["C220104"] < dpssl.cas22_detail["C220104"]  # 40 < 205 $/MJ
     assert krf.costs.lcoe != dpssl.costs.lcoe
 
@@ -798,6 +828,10 @@ def test_scale_overrides_cas22_zero_account_scales_linearly():
     value is $0 at every power; the analyst's override is the cost basis and,
     being reactor-island hardware, should grow with the plant.
     """
+    # PULSED_FRC is a rep-rate concept: a 1 GWe target exceeds one chamber's
+    # cited-shot ceiling, so the target-side forward sizes to multiple chambers
+    # (size_from_power). The library-zero C220104 override still scales linearly
+    # with plant net power regardless of chamber count.
     model = CostModel(concept=ConfinementConcept.PULSED_FRC, fuel=Fuel.DHE3)
     scaled = model._scale_overrides(
         {"C220104": 25.0},
@@ -805,6 +839,7 @@ def test_scale_overrides_cas22_zero_account_scales_linearly():
         target_mw=1000.0,
         availability=0.85,
         lifetime_yr=30,
+        size_from_power=True,
     )
     # 25 * (1000 / 50) = 500, not the frozen 25.
     assert scaled["C220104"] == pytest.approx(500.0, rel=1e-6)
@@ -816,11 +851,18 @@ def test_scale_overrides_cas22_nonzero_account_uses_library_ratio():
 
     Guards against the #37 fix bleeding into the working path.
     """
+    # PULSED_FRC is a rep-rate concept: its per-module reactor-island hardware
+    # (C220107) is fixed by the cited shot, so a 1 GWe plant scales that account
+    # by the solved chamber count (size_from_power), not by per-module power.
+    # The override must follow the library's own tgt/ref ratio, which is that
+    # chamber count, not the naive linear power ratio.
     model = CostModel(concept=ConfinementConcept.PULSED_FRC, fuel=Fuel.DHE3)
     ref = model.forward(
         net_electric_mw=50.0, n_mod=1, availability=0.85, lifetime_yr=30
     )
-    tgt = model.forward(net_electric_mw=1000.0, availability=0.85, lifetime_yr=30)
+    tgt = model.forward(
+        net_electric_mw=1000.0, availability=0.85, lifetime_yr=30, size_from_power=True
+    )
     lib_ratio = float(tgt.cas22_detail["C220107"]) / float(ref.cas22_detail["C220107"])
     scaled = model._scale_overrides(
         {"C220107": 100.0},
@@ -828,10 +870,12 @@ def test_scale_overrides_cas22_nonzero_account_uses_library_ratio():
         target_mw=1000.0,
         availability=0.85,
         lifetime_yr=30,
+        size_from_power=True,
     )
     assert scaled["C220107"] == pytest.approx(100.0 * lib_ratio, rel=1e-6)
-    # The library ratio must differ from the naive linear ratio, proving the
-    # nonzero path still uses the per-account law (FRC C220107 ~22x vs 20x).
+    # The library ratio must differ from the naive linear power ratio, proving
+    # the nonzero path still uses the per-account law (here the solved chamber
+    # count, about 15x, not the 20x linear ratio).
     assert lib_ratio != pytest.approx(1000.0 / 50.0, rel=1e-3)
 
 
@@ -852,6 +896,7 @@ def test_scale_overrides_toplevel_zero_account_stays_frozen():
         target_mw=1000.0,
         availability=0.85,
         lifetime_yr=30,
+        size_from_power=True,  # rep-rate 1 GWe target sizes to multiple chambers
     )
     assert scaled["CAS23"] == 10.0  # frozen, not scaled
 

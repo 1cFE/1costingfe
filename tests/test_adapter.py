@@ -24,12 +24,15 @@ def test_adapter_tokamak_dt():
 
 def test_adapter_ife_pb11():
     """Adapter should work for IFE pB11."""
+    # Rep-rate concept: a 1 GWe plant exceeds one chamber's cited-shot ceiling,
+    # so it sizes to multiple chambers (size_from_power via overrides).
     inp = FusionTeaInput(
         concept="laser_ife",
         fuel="pb11",
         net_electric_mw=1000.0,
         availability=0.85,
         lifetime_yr=30,
+        overrides={"size_from_power": True},
     )
     out = run_costing(inp)
     assert out.lcoe > 0
@@ -247,12 +250,14 @@ def test_adapter_override_reference_mw_identity_at_target():
 def test_adapter_resolves_laser_driver_type():
     from costingfe.adapter import FusionTeaInput, run_costing
 
+    # Rep-rate concept: a 1 GWe plant sizes to multiple chambers (size_from_power).
     base = dict(
         concept="laser_ife",
         fuel="dt",
         net_electric_mw=1000.0,
         availability=0.85,
         lifetime_yr=30,
+        overrides={"size_from_power": True},
     )
     dpssl = run_costing(FusionTeaInput(**base, laser_driver_type="dpssl"))
     krf = run_costing(FusionTeaInput(**base, laser_driver_type="krf"))

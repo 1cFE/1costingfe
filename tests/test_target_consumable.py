@@ -13,7 +13,7 @@ import pytest
 from costingfe import CostModel, Fuel
 from costingfe.defaults import load_costing_constants
 from costingfe.layers.costs import cas80_fuel
-from costingfe.types import ConfinementConcept
+from costingfe.types import REP_RATE_SIZED_CONCEPTS, ConfinementConcept
 
 CC = load_costing_constants()
 
@@ -55,7 +55,11 @@ def test_in_situ_concepts_have_no_factory(concept, fuel):
     issues: correctness lives in the model, not in a per-concept C220108=0
     cost override.
     """
-    r = CostModel(concept=concept, fuel=fuel).forward(**_FWD)
+    # Rep-rate concepts hold a fixed cited shot, so a 500 MW plant exceeds one
+    # chamber's ceiling and must size to multiple chambers; the other in-situ
+    # concepts keep the normal (inverse) path. Either way there is no factory.
+    extra = {"size_from_power": True} if concept in REP_RATE_SIZED_CONCEPTS else {}
+    r = CostModel(concept=concept, fuel=fuel).forward(**_FWD, **extra)
     assert float(r.cas22_detail["C220108"]) == 0.0
 
 
@@ -117,7 +121,12 @@ def test_forward_override_sets_factory_and_consumable():
     default is in-situ (both 0) but which fabricates a target and sets both in
     its config; here we simulate that via forward() overrides.
     """
-    base = dict(net_electric_mw=200.0, availability=0.40, lifetime_yr=30)
+    # MAG_TARGET is a rep-rate concept: 200 MW exceeds one chamber's cited-shot
+    # ceiling, so size to multiple chambers (the factory-gating logic is
+    # independent of chamber count).
+    base = dict(
+        net_electric_mw=200.0, availability=0.40, lifetime_yr=30, size_from_power=True
+    )
     m = CostModel(concept=ConfinementConcept.MAG_TARGET, fuel=Fuel.DD)
     off = m.forward(**base)
     on = m.forward(target_unit_cost=5.0, target_factory_capex_fixed=150.0, **base)
