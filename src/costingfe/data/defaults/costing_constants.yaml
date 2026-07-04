@@ -223,6 +223,8 @@ cas27_fill_materials:
   be_ceramic:   {density: 1850, vol_frac: 0.25, price: 700.0}  # HCPB Be multiplier (dominant cost); Li-ceramic breeder folded in
   ceramic_only: {density: 2400, vol_frac: 0.25, price: 150.0}  # Li4SiO4/Li2TiO3 breeder pebbles, no Be
   li2o:         {density: 2013, vol_frac: 0.25, price: 150.0}  # Li2O ceramic
+  # low-Z energy-capture moderator (no breeder)
+  water:        {density: 1000, vol_frac: 0.50, price: 0.01}   # light water: excellent moderator, ~$10/t treated -> negligible inventory (D-D)
   none:         {density: 0,    vol_frac: 0.0,  price: 0.0}    # aneutronic / no breeder
 
 # CAS23-26 — BOP equipment (M$/MW gross electric, 2025 USD)

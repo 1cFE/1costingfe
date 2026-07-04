@@ -46,8 +46,12 @@ where `blanket_vol` is the model's first-wall + blanket + reflector volume,
 and `vol_frac` is the fraction of that region occupied by the costed material
 (liquid fill fraction for liquids; breeder/multiplier-zone × pebble-packing
 ≈ 0.25 for solid pebble beds). Fuel-appropriateness is captured by which fill a
-concept selects: aneutronic / non-breeding concepts use `blanket_fill = none`
-→ CAS27 = 0.
+concept selects. The fill is also normalized by fuel, so a concept's D-T-flavored
+YAML default is not carried onto a fuel that cannot use it (explicit overrides
+win): aneutronic fuels (D-He³, p-B¹¹) force `blanket_fill = none` → CAS27 = 0;
+D-D forces `water` (it breeds its own tritium via D+D→T+p, so it needs no lithium
+breeder, but is neutronic and so keeps a low-Z moderating energy-capture blanket)
+→ CAS27 ≈ 0; only D-T carries a breeder inventory.
 
 This replaced the earlier `special_materials_base(fuel) × fill_factor ×
 (P_net/1000)` model. Power-scaling was a proxy that mis-fit compact / high-
@@ -66,6 +70,7 @@ the modelled `blanket_vol` instead is consistent with how the blanket
 | `be_ceramic` | 1850 | 0.25 | 700 | HCPB Be multiplier (dominant cost); Li-ceramic breeder folded in |
 | `ceramic_only` | 2400 | 0.25 | 150 | Li₄SiO₄/Li₂TiO₃ breeder pebbles |
 | `li2o` | 2013 | 0.25 | 150 | Li₂O ceramic |
+| `water` | 1000 | 0.50 | 0.01 | light-water moderator/coolant, no breeder (D-D); ~$10/t treated → negligible |
 | `none` | — | — | — | aneutronic / no breeder → 0 |
 
 At a ~650 m³ 1 GWe blanket this lands PbLi ≈ $15M (unchanged baseline), FLiBe

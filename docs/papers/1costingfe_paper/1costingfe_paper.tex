@@ -1760,8 +1760,8 @@ Sub-account CAS22.01.01 (first wall + blanket) prices the blanket volume
 $V_{\text{blk}}$ (the first-wall, blanket, and reflector volume from the
 geometry model) at a fuel-keyed unit cost $c_{\text{blk}}(f)$, with a
 power scaling and a blanket-form structural complexity factor
-$s(\mathrm{form}) \in \{1.0, 1.3, 1.2, 0.0\}$ for liquid-metal,
-molten-salt, solid-breeder, and no-blanket architectures. The unit cost
+$s(\mathrm{form}) \in \{1.0, 1.3, 1.2, 1.0, 0.0\}$ for liquid-metal,
+molten-salt, solid-breeder, water-cooled, and no-blanket architectures. The unit cost
 is \emph{structure only} (RAFM steel, tungsten first-wall armor, and
 fabrication); the breeder and neutron-multiplier fill it holds is priced
 separately under CAS27 (\cref{sec:cas27}). The D-T unit cost is anchored to a
@@ -2543,9 +2543,13 @@ The blanket configuration is specified as an orthogonal pair: a
 $s(\mathrm{form})$ in CAS22.01.01) and a \texttt{BlanketFill} (bulk
 material, driving the inventory here). Compatibility between form and
 fill is enforced at validation time. Fuel-appropriateness enters
-through the chosen fill: aneutronic / non-breeding concepts use
-\texttt{none} and recover zero. \Cref{tab:cas27_fills} lists the
-per-fill inputs.
+through the chosen fill, which is normalized by fuel so a concept's
+D-T-flavored default is not carried onto a fuel that cannot use it:
+aneutronic fuels (D-He$^3$, p-$^{11}$B) use \texttt{none} and recover
+zero, while D-D uses \texttt{water} --- it breeds its own tritium
+(D+D$\rightarrow$T+p) so it needs no lithium breeder, but is neutronic
+and so keeps a low-$Z$ moderating energy-capture blanket whose inventory
+cost is negligible. \Cref{tab:cas27_fills} lists the per-fill inputs.
 
 \begin{table}[h]
 \centering
@@ -2561,6 +2565,7 @@ Fill & $\rho$ (kg/m$^3$) & $\nu$ & $c$ (\$/kg) & Basis \\
 \texttt{be\_ceramic}   & 1850 & 0.25 & 700 & HCPB Be multiplier; Li-ceramic folded in \\
 \texttt{ceramic\_only} & 2400 & 0.25 & 150 & Li-ceramic breeder pebbles \\
 \texttt{li2o}          & 2013 & 0.25 & 150 & Li$_2$O ceramic \\
+\texttt{water}         & 1000 & 0.50 & 0.01 & Light-water moderator, no breeder (D-D) \\
 \texttt{none}          & --   & --   & --  & Aneutronic, no breeder \\
 \bottomrule
 \end{tabular}
