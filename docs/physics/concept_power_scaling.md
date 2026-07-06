@@ -13,7 +13,10 @@ A concept reaches a plant target along one of four axes:
   sizes these by solving geometry from the power target (`size_from_power`).
 - **n_mod**: replicate a fixed module. The model sizes these by solving an
   integer module count `n_mod = ceil(target / module_net_mwe)` (this work).
-- **Rep-rate**: fire a single pulsed chamber faster (shots per second).
+- **Rep-rate**: fire a single pulsed chamber faster (shots per second). The
+  model sizes these by holding a cited per-shot design point fixed and solving
+  `f_rep` from the power target, capped at `max_f_rep` with an integer
+  chamber-count fallback (this work).
 - **Target yield**: increase the energy released per shot.
 
 n_mod is also available to every concept as a plain plant multiplicity (build N
@@ -33,12 +36,12 @@ about the concept's NATURAL single-plant scaling lever.
 | **Dense plasma focus** | **n_mod** | **Yes (this work)** | LPP Fusion: plants larger than 5 MW are "formed by simply stacking" 5 MW units |
 | **Staged Z-pinch** | **n_mod** | **Yes (this work)** | Zap Energy sheared-flow pinch: "future power plants will have multiple modules" of 50 MW (DOE-approved design). See naming note below |
 | **Steady FRC** | **n_mod** | **Yes (this work)** | TAE markets the FRC as "modular, perfect for mass production," 50 MWe to 350-500 MWe by replication. Physical basis: an FRC is MHD/tilt-unstable above a size limit, so it cannot scale by single-device volume growth |
-| Pulsed FRC | Rep-rate | Not yet (future) | Helion: a single about 50 MWe machine driven to about 1 Hz |
-| Magnetized target | Rep-rate | Not yet (future) | General Fusion: fixed-size sphere at 1 Hz (commercial plant is about two units) |
-| Plasma jet (PJMIF) | Rep-rate | Not yet (future) | HyperJet/LANL: inexpensive plasma guns at about 1 Hz |
-| Theta pinch | Rep-rate | Not yet (future) | No current developer, but a fully-worked D-T reactor design point exists: the LANL Reference Theta-Pinch Reactor (RTPR), 0.1 Hz, 1800 MWe |
+| Pulsed FRC | Rep-rate | Yes (this work) | Helion: a single about 50 MWe machine driven to about 1 Hz |
+| Magnetized target | Rep-rate | Yes (this work) | General Fusion: fixed-size sphere at 1 Hz (commercial plant is about two units) |
+| Plasma jet (PJMIF) | Rep-rate | Yes (this work) | HyperJet/LANL: inexpensive plasma guns at about 1 Hz |
+| Theta pinch | Rep-rate | Yes (this work) | No current developer, but a fully-worked D-T reactor design point exists: the LANL Reference Theta-Pinch Reactor (RTPR), 0.1 Hz, 1800 MWe |
 | Z-pinch (IFE) | Target yield | Not yet (future) | Wire-array / driver-target z-pinch; yield per shot (distinct from Zap, see below) |
-| Laser IFE | Mixed | Not yet (future) | Xcimer scales target yield (about 1 GJ/shot, sub-1 Hz); Focused Energy and Marvel scale rep-rate (10 Hz) |
+| Laser IFE | Mixed | Yes (rep-rate, this work) | Xcimer scales target yield (about 1 GJ/shot, sub-1 Hz); Focused Energy and Marvel scale rep-rate (10 Hz) |
 | MagLIF | Target yield | Not yet (future) | Sandia: higher driver current for higher yield per shot |
 | Heavy-ion IFE | Rep-rate + shared driver | Not yet (future) | Canonical HIBALL/HIDIF: one driver at about 10 Hz feeding several chambers |
 

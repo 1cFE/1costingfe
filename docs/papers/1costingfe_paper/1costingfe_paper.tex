@@ -1488,6 +1488,46 @@ consumption ($\sim$2~GJ/pulse) by nearly two orders of magnitude. That large
 reactive store dominates the concept's pulsed-power capital, the quantified
 expression of the long-standing economic difficulty of theta-pinch reactors.
 
+\subsection{Sizing from a Power Target}
+\label{sec:sizing}
+The forward call evaluates a plant at a fixed operating point. To compare
+concepts at a common scale, the framework also runs the other way: given a
+target net electric power, it solves for the plant configuration that delivers
+it (\texttt{size\_from\_power}). A concept reaches its target along one of three
+implemented axes, each with its own solved variable.
+
+\begin{itemize}
+\item \textbf{Volume.} The tokamak's net electric is monotone in the major
+  radius $R_0$, so the model solves $R_0$ from the target by bisection, up to a
+  concept ceiling $R_{0,\max}$.
+\item \textbf{Module replication.} Concepts that scale by replicating a fixed
+  module --- the orbitron, dense plasma focus, sheared-flow Z-pinch, and steady
+  FRC --- solve an integer module count
+  $n_{\text{mod}} = \lceil P_{\text{net}}^{\text{tgt}} / P_{\text{mod}} \rceil$,
+  where $P_{\text{mod}}$ is the per-module design power.
+\item \textbf{Rep-rate.} Pulsed concepts hold a cited per-shot design point
+  (delivered energy, fusion yield, and a maximum rate $f_{\text{rep}}^{\max}$)
+  fixed and solve the repetition rate $f_{\text{rep}}$ from the target, since
+  $P_{\text{net}}(f_{\text{rep}})$ is monotone increasing: the fusion and
+  recirculating powers both scale with the rate while the fixed loads shrink in
+  relative share.
+\end{itemize}
+
+The three axes share a single overflow rule. Each has a per-unit ceiling --- the
+most a single device can deliver: $P_{\text{net}}(R_{0,\max})$ for volume,
+$P_{\text{mod}}$ for a module, and $P_{\text{net}}(f_{\text{rep}}^{\max})$ for a
+rep-rated chamber. When the target exceeds one unit's ceiling, the model builds
+the integer number of identical units required,
+$n = \lceil P_{\text{net}}^{\text{tgt}} / P_{\text{unit}} \rceil$, and solves
+each unit to $P_{\text{net}}^{\text{tgt}} / n$. A fractional device cannot be
+built, so the realized plant power overshoots the request by less than one unit;
+$n$ is a physical integer returned on the result rather than supplied by the
+user. This makes the rep-rate ceiling economically meaningful: a chamber that
+cannot reach the target even at $f_{\text{rep}}^{\max}$ adds chambers rather than
+demanding an unphysically fast pulse. Sizing is enabled for the tokamak, the
+four module-replication concepts, and the five rep-rate concepts; the remaining
+concepts carry the sizing law but are not yet switched on.
+
 
 %% ------------------------------------------------------------
 \section{Cost Account Structure}
