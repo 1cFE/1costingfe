@@ -36,7 +36,7 @@ about the concept's NATURAL single-plant scaling lever.
 | Pulsed FRC | Rep-rate | Not yet (future) | Helion: a single about 50 MWe machine driven to about 1 Hz |
 | Magnetized target | Rep-rate | Not yet (future) | General Fusion: fixed-size sphere at 1 Hz (commercial plant is about two units) |
 | Plasma jet (PJMIF) | Rep-rate | Not yet (future) | HyperJet/LANL: inexpensive plasma guns at about 1 Hz |
-| Theta pinch | Rep-rate | Not yet (future) | Historical (Scylla); dormant |
+| Theta pinch | Rep-rate | Not yet (future) | No current developer, but a fully-worked D-T reactor design point exists: the LANL Reference Theta-Pinch Reactor (RTPR), 0.1 Hz, 1800 MWe |
 | Z-pinch (IFE) | Target yield | Not yet (future) | Wire-array / driver-target z-pinch; yield per shot (distinct from Zap, see below) |
 | Laser IFE | Mixed | Not yet (future) | Xcimer scales target yield (about 1 GJ/shot, sub-1 Hz); Focused Energy and Marvel scale rep-rate (10 Hz) |
 | MagLIF | Target yield | Not yet (future) | Sandia: higher driver current for higher yield per shot |
@@ -82,81 +82,144 @@ for the concept's geometry and plasma descriptors; if those are revised, revisit
 
 `REP_RATE_SIZED_CONCEPTS` (PULSED_FRC, MAG_TARGET, PLASMA_JET, THETA_PINCH,
 LASER_IFE) each carry a per-shot design point in their concept-default YAML:
-`e_driver_mj` (driver energy per shot), `yield_per_shot_mj` (fusion energy
-released per shot), and `max_f_rep` (maximum rep rate, Hz). No solver
-consumes these yet; a future rep-rate sizing solver (a separate workline)
-would use them to solve shots-per-second or yield-per-shot from a power
-target, the same way `module_net_mwe` sizes `N_MOD_SIZED_CONCEPTS` today.
+`e_driver_mj` (driver energy delivered per shot), `yield_per_shot_mj` (fusion
+energy released per shot), and `max_f_rep` (maximum rep rate, Hz). The
+`size_from_power` solver holds this cited shot fixed and solves `f_rep` from
+the power target, bumping the chamber count `n_mod` when the target exceeds one
+chamber's net-electric ceiling at `max_f_rep`.
 
-Compiled 2026-07-01. All plant-scale yield/driver figures for these
-pre-commercial concepts are design-target/simulation values, not
-experimentally achieved, except THETA_PINCH's historical driver energy.
-Two values are explicitly ILLUSTRATIVE placeholders, not sourced/disclosed
-figures, and are flagged as such below and in their YAML comments.
+All five design points are anchored to reactor-class sources (a reactor design
+study or a developer's commercial-plant target), not breakeven experiments: a
+Q about 1 science device cannot represent a NOAK reactor. Two concepts,
+MAG_TARGET and THETA_PINCH, use the `recovered_compression` forward, whose
+driver energy is largely recovered each cycle rather than consumed; for them
+the delivered `e_driver_mj` decouples from the cap-bank store `e_store_mj`
+(sizing C220107) and the net grid draw `e_recirc_mj` (sizing recirculation).
+See "The recovered-compression path" below.
 
-| Concept | e_driver_mj | yield_per_shot_mj | max_f_rep (Hz) | Source |
+| Concept | e_driver_mj (delivered) | yield_per_shot_mj | max_f_rep (Hz) | Source |
 |---|---|---|---|---|
-| MAG_TARGET | 755 | 780 | 1 | SOURCED (Krotez et al., SOFE 2023 E-267, Sankey diagram) |
-| PLASMA_JET | 31.3 | 736 | 1 | SOURCED (Langendorf & Hsu 2017 "case2"; yield = 31.3 x gain 23.5) |
-| LASER_IFE | 2.5 | 250 | 10 | SOURCED (Ditmire, Roth, et al. 2023; yield = 2.5 x design-target gain G100), corrected from an unsupported 16 Hz |
-| PULSED_FRC | 50 | 101.4 | 1 | driver + rate SOURCED (Helion Polaris, IEEE Spectrum); yield ILLUSTRATIVE (see below); rate corrected from an unsupported 10 Hz |
-| THETA_PINCH | 3.5 | 35 | 1 | driver SOURCED (Scylla IV, historical); yield + rate ILLUSTRATIVE (see below) |
+| MAG_TARGET | 755 | 780 | 1 | SOURCED, reactor: GF "Design Point - 150 MWe" Sankey (Krotez et al., SOFE 2023 E-267). recovered_compression: e_store=173, e_recirc=195 |
+| PLASMA_JET | 31.3 | 736 | 1 | SOURCED, reactor design study (Langendorf & Hsu 2017 "case2"; yield = 31.3 x gain 23.5) |
+| LASER_IFE | 2.5 | 250 | 10 | SOURCED, reactor plant (Ditmire, Roth, et al. 2023; yield = 2.5 x design-target gain G100), corrected from an unsupported 16 Hz |
+| PULSED_FRC | 50 | 101.4 | 1 | driver SOURCED (Helion Polaris); yield reactor-target-anchored to Helion's sourced 50 MWe/1 Hz plant (derived, see below); rate third-party 1 Hz (range 1-10 Hz) |
+| THETA_PINCH | 1190 | 28800 | 0.1 | SOURCED, reactor: LANL RTPR (LA-5121-MS 1972). recovered_compression: e_store=110250, e_recirc=2076 |
 
-**PULSED_FRC yield derivation (illustrative, not disclosed by Helion).**
-Helion has published no fusion-yield figure for Polaris or the commercial
-plant. The only public plant number is Helion's stated target of about
-50 MWe net electric at about 1 Hz (IEEE Spectrum). `yield_per_shot_mj` is
-pinned to 101.4 MJ: the value of fusion power `p_fus` (at `f_rep=1`, so
-`yield_per_shot_mj = p_fus` in MJ) for which the model's `pulsed_dec_forward`
-(the concept's `pulsed_conversion: inductive_dec` path) reproduces
-`p_net = 50` MW at `e_driver_mj=50`, `f_rep=1`, using
-`pulsed_pulsed_frc.yaml`'s own DEC parameters (`eta_pin=0.95`,
-`eta_dec=0.85`, `f_pdv=0.80`, `f_rad=0.05`, `p_coils=0.5`) and `eta_th=0`,
-the default for INDUCTIVE_DEC concepts (no thermal bottoming cycle). This
-is a modeling placeholder that makes the concept model-consistent with
-Helion's one disclosed plant number; it is not a physical fusion yield and
-should not be cited as one.
+**PULSED_FRC yield (reactor-target-anchored to Helion's sourced 50 MWe).**
+Helion has published no per-shot fusion yield for Polaris or the commercial
+plant. The one sourced plant number is Helion's commercial target of at least
+50 MWe net (Helion/Microsoft PPA, 2023). `yield_per_shot_mj` is pinned to
+101.4 MJ: the value of `p_fus` (at `f_rep=1`, so `yield_per_shot_mj = p_fus`
+in MJ) for which the model's `pulsed_dec_forward` (the concept's
+`inductive_dec` path) reproduces `p_net = 50` MW at `e_driver_mj=50`,
+`f_rep=1`, using `pulsed_pulsed_frc.yaml`'s own DEC parameters (`eta_pin=0.95`,
+`eta_dec=0.85`, `f_pdv=0.80`, `f_rad=0.05`, `p_coils=0.5`) and `eta_th=0`.
+This is the same "anchored to a sourced plant number" character as
+MAG_TARGET's recovery, not a disclosed physical yield; do not cite it as one.
+Helion's `eta_pin=0.95` is itself the reactive (RLC-ringdown) energy-recovery
+efficiency Helion has demonstrated even without plasma, so the DEC path already
+charges only the about 5% driver loss and PULSED_FRC needs no explicit
+store/consume split (see "The recovered-compression path"). `max_f_rep = 1` Hz
+is third-party (Polaris/NRC filing, IEEE Spectrum), not a Helion spec; the
+roadmap points from 1 Hz toward about 10 Hz, so the honest range is 1-10 Hz.
 
-**THETA_PINCH yield + rate derivation (arbitrary/illustrative).** THETA_PINCH
-is a dormant concept (no modern developer); all numbers are 1958-65 Los
-Alamos Scylla-series experiments. `e_driver_mj = 3.5` is the sourced
-Scylla IV capacitor-bank energy. Scylla IV never achieved meaningful fusion
-gain: only diagnostic-level neutron counts are documented ("billions of
-D-D fusion reactions per pulse"), which back-of-envelope converts to about
-1e-10 MJ/shot (gain about 1e-10), negligible and not a published joule
-figure. No primary source gives a Scylla shot cadence. `yield_per_shot_mj`
-is pinned to 35 (an illustrative gain G=10 placeholder on the 3.5 MJ bank)
-and `max_f_rep` to 1 (illustrative; no cadence documented), purely so the
-concept has finite, non-zero modeling inputs.
+**THETA_PINCH design point (SOURCED, LANL RTPR reactor study).** THETA_PINCH
+has no modern developer, but a fully-worked D-T reactor design point exists:
+the Los Alamos Reference Theta-Pinch Reactor (RTPR), LA-5121-MS (1972). This
+replaces the earlier Scylla-experiment placeholder (a Q about 1e-10 science
+device, not a reactor). RTPR is a 350 m toroidal high-beta theta pinch (a
+straight theta pinch closed into a ring to eliminate axial end losses -- NOT a
+tokamak: there is no ohmic-driven plasma current). LA-5121-MS Table IV states
+energies per metre; totalled x 350 m:
 
-**MAG_TARGET driver_recovery_frac derivation (anchored calibration).**
-`e_driver_mj = 755` MJ/shot is gas-piston/liner compression KINETIC energy,
-not a single-pass electrical driver load: General Fusion's own design
-mechanically recovers most of it (liner rebound / working-fluid recovery)
-each cycle rather than re-generating it from the grid. The shared pulsed
-forward's driver recirculation term, `p_driver / eta_pin`, assumes a
-single-pass electrical driver and so overcharges MAG_TARGET's recirculating
-power by treating 755 MJ/shot as if it were all wall-plug electricity at
-`eta_pin=0.30` (about 2517 MW of recirc at `f_rep=1`, versus 780 MW of
-fusion power), driver-dominated and net-negative at any rep rate. The
-model's `driver_recovery_frac` parameter (a required forward argument, set
-explicitly to 0.0, a no-op, in every other pulsed concept's YAML) scales
-that term to `p_driver * (1 - driver_recovery_frac) / eta_pin`.
-`pulsed_mag_target.yaml`'s `driver_recovery_frac = 0.8191` is pinned to the
-value for which the model's `pulsed_thermal_forward`, at this concept's own
-shot design point (`f_rep=1`, `e_driver_mj=755`, `yield_per_shot_mj=780`)
-and RANKINE `eta_th=0.40`, reproduces the GF SOFE 2023 Sankey's net electric
-of about 150 MWe (single-chamber net at `f_rep=1` from bisection against
-the model: 149.9 MW). As a rough consistency check against the Sankey's own
-figures (gross about 363 MW = 907 MW thermal x 0.40, net 150 MW implies
-driver electrical recirc about 213 MW versus the un-recovered
-755/0.30 about 2517 MW, i.e. recovery about 0.91): the two paths agree to
-within the precision of reading values off the published diagram, since the
-model's thermal pool (neutron + ash + driver + pump) differs from the
-diagram's lumped 907 MW node. This is a calibration anchor to GF's single
-disclosed plant number, not an independently measured recovery efficiency;
-if GF discloses a mechanical-recovery efficiency directly, this value should
-be revisited against it.
+- `e_driver_mj = 1190` (delivered to the plasma, (W_p)i = 3.41 MJ/m); sets
+  gain `q_sci = yield/e_driver` about 24 (RTPR quotes plasma Q_p = 24.7).
+- `yield_per_shot_mj = 28800` (bare D-T fusion, 82.3 MJ/m).
+- `max_f_rep = 0.1` Hz (100 ms burn / 10 s cycle).
+- `e_store_mj = 110250` (gross switched compression-field energy W_BO =
+  315 MJ/m) and `e_recirc_mj = 2076` (net consumed drive Wi = 5.93 MJ/m); see
+  "The recovered-compression path".
+
+RTPR reference point: 1800 MWe net, 3600 MWth, plant gain Q about 17.5. In the
+model, at the catalog-standard RANKINE `eta_th = 0.40` (RTPR's own 58%
+potassium-topping figure is an optimistic 1970s claim not adopted here) with a
+Li breeding blanket (`mn = 1.1`), one chamber nets about 1025 MW.
+
+The 110 GJ `e_store_mj` makes C220107 (the pulsed-power store) dominate
+THETA_PINCH's capital -- on the order of tens of billions of dollars per
+chamber -- which is the correct, faithful signal that a reactive-store theta
+pinch is uneconomic. Two caveats keep it an UPPER BOUND, not a point estimate:
+C220107 prices the store at the CAPACITOR `c_cap_allin_per_joule` coefficient,
+whereas RTPR used a cheaper inductive / homopolar-generator (METS) store; and
+no economy-of-scale discount is applied to a GJ-class store. The magnitude is
+directionally right (ETS-dominated), but the exact figure should be read as a
+ceiling pending an inductive-store cost basis.
+
+**MAG_TARGET recovered-compression design point (SOURCED, GF E-267 reactor
+Sankey).** The design point is General Fusion's "Design Point - 150 MWe"
+Sankey (Krotez et al., SOFE 2023 E-267) -- the REACTOR diagram, distinct from
+the LM26 breakeven-experiment Sankey shown at the same conference. Verified
+directly from the poster: `yield_per_shot_mj = 780` is the "Fusion 780 MJ"
+node (not the 886 MJ "Converted Yield" arrow, which adds directly-converted
+liner-vaporization energy); `e_driver_mj = 755` is the liner kinetic-energy
+arrow; `max_f_rep = 1` Hz -> 150 MWe. Fusion gain 780/755 about 1.03 is the
+genuine reactor point: liquid-liner MTF closes not through high gain but
+through 85% mechanical recovery of the liner KE plus 40% thermal conversion.
+
+`driver_recovery_frac = 0.85` is SOURCED from the poster's explicit constant
+"Kinetic Energy Dissipation 1 - eta_mech = 15%". On the `recovered_compression`
+path this fraction sets only the thermal deposition: (1 - 0.85) x 755 MJ
+dissipates into the blanket heat pool. The electrical grid draw is the
+separate `e_recirc_mj = 195` (pulsed power about 173 + gas compressor about 22,
+per E-267), and the C220107 cap-bank capital scales with `e_store_mj = 173`
+(the plasma-injector pulsed-power store), not the full liner KE. With these
+sourced values one chamber nets about 161 MW at 1 Hz -- close to GF's headline
+150 MWe; the residual is the model's blanket-multiplication accounting (`mn`
+on the neutron fraction) versus the diagram's lumped high-grade-heat node, not
+a calibration. A single-pass electrical driver at `eta_pin=0.30` would instead
+charge the full 755 MJ as recirculation (about 2517 MW at `f_rep=1`) and land
+net-negative -- the reason MAG_TARGET needs the recovered-compression path.
+
+### The recovered-compression path
+
+Most pulsed drivers are single-pass: a laser or plasma gun deposits its pulse
+energy in the target once, it is gone, and the plant redraws it from the grid
+next shot. For them the stored, consumed, and delivered per-pulse energies are
+all roughly proportional, so one value (`e_driver_mj`, with the store derived
+as `e_driver/eta_pin` and the recirc as `e_driver*(1-recovery)/eta_pin`)
+suffices -- this is `pulsed_thermal_forward`.
+
+Two concepts break that proportionality because their driver energy is largely
+RECOVERED each cycle rather than consumed:
+
+- **THETA_PINCH (reactive recovery).** The compression field is held in an
+  inductive ETS that swings the full field energy into the coils and rings
+  about 98% of it back out each cycle (an LC ringdown). The plant must STORE
+  and switch about 110 GJ (real cap-bank/ETS hardware, sizing C220107) but only
+  CONSUMES the about 2 GJ of resistive loss -- store and consumption differ by
+  about 90x. That large ETS is the historical reason theta-pinch reactors are
+  uneconomic; the split lets the cost model show it instead of hiding it.
+- **MAG_TARGET (mechanical recovery).** The gas piston / liquid liner rebounds
+  elastically, so 85% of the liner KE returns to the next stroke and only 15%
+  dissipates as heat. Delivered (755 MJ), grid redraw (about 195 MJ), and
+  dissipated heat (about 113 MJ) are three different energies.
+
+`pulsed_recovered_compression_forward` handles both. It shares the
+thermal-to-electric core (`_pulsed_thermal_core`) with `pulsed_thermal_forward`
+-- the ash/neutron split and the p_th -> p_et -> q_eng -> p_net conversion are
+identical -- and differs only in three driver-specific quantities taken from
+explicit YAML inputs: `e_driver_mj` (delivered -> gain), `e_store_mj` (peak
+store -> C220107), and `e_recirc_mj` (net grid draw -> recirculation), with
+`driver_recovery_frac` setting the dissipated (thermalising) fraction of the
+delivered energy. For a single-pass concept these collapse to the derived
+defaults, so the eight thermal concepts are unaffected.
+
+The same reactive recovery appears in Helion's D-He3 pulsed FRC, but there the
+fusion output is charged particles recovered inductively (`inductive_dec`), so
+the recovery is already captured by the high `eta_pin=0.95` in
+`pulsed_dec_forward` and PULSED_FRC needs no explicit split. THETA_PINCH is the
+hybrid case -- reactive-recovery drive but D-T neutron (thermal) output -- which
+is why it, and not Helion, needs the recovered-compression forward.
 
 ### Rep-rate shot design point sources
 
@@ -166,17 +229,18 @@ be revisited against it.
   - Scientific American, "Helion Energy is building a fusion power plant...": https://www.scientificamerican.com/article/helion-energy-is-building-a-fusion-power-plant-can-its-technology-deliver/
   - IEEE Spectrum, "Welcome to Fusion City, USA" (commercial reactor about 1 pulse/s, 50 MW): https://spectrum.ieee.org/fusion
   - Wikipedia, "Helion Energy" (Trenta about 1 pulse/10 min; Polaris about 1 Hz): https://en.wikipedia.org/wiki/Helion_Energy
-- **MAG_TARGET (General Fusion):**
-  - Krotez, Segas, Khalzov, Suponitsky, "Conceptual Design of a Magnetized Target Fusion Power Plant," IEEE SOFE 2023 paper E-267: https://generalfusion.com/wp-content/uploads/2023/07/SOFE2023_E267_daymon-krotez_v2.pdf
+- **MAG_TARGET (General Fusion, "Design Point - 150 MWe" reactor Sankey):**
+  - Krotez, Segas, Khalzov, Suponitsky, "Conceptual Design of a Magnetized Target Fusion Power Plant," IEEE SOFE 2023 paper E-267: https://generalfusion.com/wp-content/uploads/2023/07/SOFE2023_E267_daymon-krotez_v2.pdf (the reactor design point, distinct from the LM26 breakeven-experiment Sankey shown at the same conference; e_driver=755, yield=780, 1 Hz -> 150 MWe, eta_mech=0.85, eta_th=0.40)
   - General Fusion public pages: https://generalfusion.com/
 - **PLASMA_JET (HyperJet/LANL PJMIF):**
   - Langendorf & Hsu, Phys. Plasmas 24, 032704 (2017), arXiv:1612.07368: https://arxiv.org/pdf/1612.07368
   - Thio & Witherspoon, "Plasma-Jet-Driven Magneto-Inertial Fusion, A progress report," Open Access Government (2018): https://www.openaccessgovernment.org/plasma-jet-driven-magneto-inertial-fusion-2/63480/
   - Thio et al., "Plasma-Jet-Driven Magneto-Inertial Fusion," Fusion Sci. Technol. 75(7) (2019), DOI: 10.1080/15361055.2019.1598736
-- **THETA_PINCH (Scylla):**
-  - Quinn, Little, Ribe, Sawyer, "Stability, Heating and End Loss of a 3.5-Megajoule Theta Pinch (Scylla IV)," LASL LA-DC-7039 / CONF-650935-2 (1965): https://www.osti.gov/biblio/4624642
-  - Wikipedia, "Theta pinch" (Scylla history, neutron counts, temperatures): https://en.wikipedia.org/wiki/Theta_pinch
-  - Scylla IV-P (2 MJ, context): https://www.osti.gov/biblio/4127003
+- **THETA_PINCH (LANL RTPR reactor study):**
+  - Burnett, Ellis, Oliphant, Ribe, "A Reference Theta Pinch Reactor (RTPR): A Study of a Pulsed High-Beta Fusion Reactor Based on the Theta Pinch," LASL LA-5121-MS (1972), DOI 10.2172/4603908: https://www.osti.gov/biblio/4603908
+  - Krakowski, Ribe, Coultas, Hatch, "An Engineering Design Study of a Reference Theta-Pinch Reactor (RTPR)," LA-5336/ANL-8019 (1974): https://www.osti.gov/biblio/4292057
+  - Krakowski, Miller, Hagenson, "Operating Point Considerations for the RTPR," LA-UR-76-2166 / CONF-760935-24 (1976): https://www.osti.gov/biblio/7341997
+  - Historical experiment (NOT the reactor source): Quinn, Little, Ribe, Sawyer, "Stability, Heating and End Loss of a 3.5-Megajoule Theta Pinch (Scylla IV)," LASL (1965): https://www.osti.gov/biblio/4624642
 - **LASER_IFE (Focused Energy / Marvel Fusion):**
   - Ditmire, Roth, et al., "Focused Energy, A New Approach Towards Inertial Fusion Energy," J. Fusion Energy 42:27 (2023): https://doi.org/10.1007/s10894-023-00363-x
   - Marvel Fusion path to IFE (10 Hz DPSSL), Innovation News Network: https://www.innovationnewsnetwork.com/marvel-fusions-path-to-laser-based-inertial-fusion-energy/65989/
