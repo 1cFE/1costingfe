@@ -27,14 +27,14 @@ TARGET_CONCEPTS = [
     ConfinementConcept.ZPINCH,
 ]
 # Pulsed concepts that form the target/liner in-situ -> no factory, no
-# consumable. Paired with a fuel each concept actually supports: the aneutronic
-# devices (PULSED_FRC is Helion-class D-He3; theta-pinch and dense-plasma-focus
-# run aneutronic) have no breeding blanket and reject DT.
+# consumable. Paired with a fuel each concept actually supports: PULSED_FRC is
+# Helion-class D-He3 and dense-plasma-focus runs aneutronic (no breeding
+# blanket, reject DT); theta-pinch is D-T (RTPR reactor, Li breeding blanket).
 IN_SITU_CONCEPTS = [
     (ConfinementConcept.PLASMA_JET, Fuel.DT),
     (ConfinementConcept.MAG_TARGET, Fuel.DT),
     (ConfinementConcept.PULSED_FRC, Fuel.DHE3),
-    (ConfinementConcept.THETA_PINCH, Fuel.DHE3),
+    (ConfinementConcept.THETA_PINCH, Fuel.DT),
     (ConfinementConcept.DENSE_PLASMA_FOCUS, Fuel.DHE3),
     (ConfinementConcept.STAGED_ZPINCH, Fuel.DT),
 ]

@@ -1,31 +1,39 @@
 # Default engineering parameters for MIF magnetized target fusion
 q_eng: 3.0               # Engineering gain target (P_et / P_recirc)
 
-# Rep-rate shot design point (SOURCED): General Fusion 150 MWe commercial
-# concept, Sankey energy-balance diagram in Krotez, Segas, Khalzov,
-# Suponitsky, "Conceptual Design of a Magnetized Target Fusion Power Plant,"
-# IEEE SOFE 2023 paper E-267. e_driver_mj = compression-system kinetic-energy
-# arrow into the liquid-lithium liner; yield_per_shot_mj = "Fusion / 780 MJ"
-# node; max_f_rep = the diagram's stated 1 Hz -> 150 MWe design point. See
-# docs/physics/concept_power_scaling.md "Rep-rate shot design points".
-e_driver_mj: 755.0        # MJ/shot — compression (piston/liner) kinetic energy
-yield_per_shot_mj: 780.0  # MJ/shot — fusion yield
+# Rep-rate shot design point (SOURCED, reactor-class): General Fusion's
+# "Design Point - 150 MWe" reactor Sankey (NOT the LM26 breakeven experiment)
+# in Krotez, Segas, Khalzov, Suponitsky, "Conceptual Design of a Magnetized
+# Target Fusion Power Plant," IEEE SOFE 2023 paper E-267. e_driver_mj = the
+# 755 MJ kinetic-energy arrow into the liquid-lithium liner; yield_per_shot_mj
+# = the "Fusion 780 MJ" node (NOT the 886 MJ "Converted Yield" arrow, which
+# adds directly-converted liner-vaporization energy); max_f_rep = the poster's
+# stated 1 Hz -> 150 MWe. Fusion gain 780/755 ~ 1.03 is the real reactor
+# point: liquid-liner MTF closes through 85% mechanical recovery + 40% thermal,
+# not high gain. See docs/physics/concept_power_scaling.md "Rep-rate shot
+# design points".
+e_driver_mj: 755.0        # MJ/shot — liner KE delivered (-> gain q_sci + C220104 piston capital)
+yield_per_shot_mj: 780.0  # MJ/shot — fusion yield ("Fusion 780 MJ" node)
 max_f_rep: 1.0            # Hz — commercial design ceiling
+# Recovered-compression split (SOURCED from the same E-267 Sankey): the liner
+# KE is mostly recovered mechanically, so the electrical grid draw and the
+# cap-bank store are separate, smaller energies than e_driver_mj.
+e_store_mj: 173.0        # MJ/shot — plasma-injector pulsed-power store (-> C220107); E-267 "Pulsed Power Supply" node
+e_recirc_mj: 195.0       # MJ/shot — net electrical resupply (pulsed power ~173 + gas compressor ~22 per E-267)
 
-# driver_recovery_frac (ANCHORED calibration, like the PULSED_FRC yield
-# anchor): e_driver_mj above is gas-piston/liner KINETIC energy, not a
-# single-pass electrical driver load, so most of it is mechanically
-# recovered (liner rebound / working-fluid recovery) rather than
-# re-generated from the grid each shot. Pinned to the value for which the
-# model's pulsed_thermal_forward, at this concept's own shot design point
-# (f_rep=1, e_driver_mj=755, yield_per_shot_mj=780) and RANKINE eta_th=0.40,
-# reproduces the GF SOFE 2023 Sankey's net electric of about 150 MWe. See
-# docs/physics/concept_power_scaling.md "Rep-rate shot design points" for
-# the derivation and citation.
-driver_recovery_frac: 0.8191
+# driver_recovery_frac (SOURCED): fraction of the liner KE (e_driver_mj)
+# mechanically recovered each shot (liner rebound / working-fluid recovery)
+# rather than dissipated as heat. The E-267 poster states it directly as a
+# constant: "Kinetic Energy Dissipation 1 - eta_mech = 15%", i.e. 85% recovery.
+# On the recovered_compression path this sets the thermal deposition only:
+# (1 - 0.85) x 755 MJ dissipates into the blanket heat pool. The grid draw is
+# the separate e_recirc_mj above, NOT e_driver/eta_pin (the single-pass
+# formula that over-charged this mechanical driver). See
+# docs/physics/concept_power_scaling.md "Rep-rate shot design points".
+driver_recovery_frac: 0.85
 
 f_rep: 1.0               # Repetition rate [Hz]
-pulsed_conversion: thermal
+pulsed_conversion: recovered_compression
 f_rad: 0.10
 mn: 1.1              # Neutron energy multiplier
 eta_pin: 0.30        # Pulsed power wall-plug efficiency

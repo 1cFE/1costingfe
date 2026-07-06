@@ -61,7 +61,11 @@ def test_concept_default_conversion():
     )
     assert (
         CONCEPT_DEFAULT_CONVERSION[ConfinementConcept.MAG_TARGET]
-        == PulsedConversion.THERMAL
+        == PulsedConversion.RECOVERED_COMPRESSION
+    )
+    assert (
+        CONCEPT_DEFAULT_CONVERSION[ConfinementConcept.THETA_PINCH]
+        == PulsedConversion.RECOVERED_COMPRESSION
     )
 
 

@@ -1,65 +1,79 @@
 # Default engineering parameters for Theta Pinch
 q_eng: 3.0               # Engineering gain target (P_et / P_recirc)
-# Linear pulsed magnetic compression with inductive energy recovery.
-# Open-ended geometry, copper coils, no manufactured targets.
-# Classic DEC candidate (Oliphant, Ribe & Coultas 1973).
+# Toroidal high-beta theta pinch: pulsed axial-field magnetic compression of a
+# DT plasma, bent into a closed torus to eliminate axial end losses. NOT a
+# tokamak -- there is no ohmic-driven toroidal plasma current; confinement is
+# pulsed high-beta compression by external theta-current coils. Copper
+# compression coils, inductive energy-transfer-and-storage (ETS), DT breeding
+# blanket, thermal (Rankine) conversion.
 
-# Rep-rate shot design point: THETA_PINCH is a dormant concept with no
-# modern developer; all numbers below are 1958-65 Los Alamos Scylla-series
-# experiments, illustrative only, NOT a modern design point.
-# e_driver_mj SOURCED: Quinn, Little, Ribe, Sawyer, "Stability, Heating and
-# End Loss of a 3.5-Megajoule Theta Pinch (Scylla IV)," LASL LA-DC-7039 /
-# CONF-650935-2 (1965) -- capacitor-bank energy is in the report title
-# itself.
-# yield_per_shot_mj and max_f_rep are ARBITRARY / ILLUSTRATIVE, NOT real or
-# sourced values. Scylla IV never achieved meaningful fusion gain: only
-# diagnostic-level neutron counts are documented ("billions of D-D fusion
-# reactions per pulse" at about 80 million K), which converts to about
-# 1e-10 MJ/shot (gain about 1e-10) -- negligible, and that conversion is
-# unpublished back-of-envelope arithmetic, not a primary-source joule
-# figure. No primary source gives a Scylla shot cadence; MJ-class 1960s
-# banks with HV recharge, crowbar reset, gas refill, and manual diagnostics
-# were effectively single-shot / order-minutes between shots. Pinned here
-# to yield_per_shot_mj = 35 (an illustrative gain G=10 on the 3.5 MJ bank)
-# and max_f_rep = 1 (illustrative placeholder; no cadence documented) so
-# the concept has non-zero, finite modeling inputs. See docs/physics/
-# concept_power_scaling.md "Rep-rate shot design points".
-e_driver_mj: 3.5           # MJ/shot — Scylla IV capacitor-bank energy (SOURCED, historical)
-yield_per_shot_mj: 35.0    # MJ/shot — ARBITRARY/ILLUSTRATIVE (gain G=10 placeholder; Scylla achieved negligible real yield)
-max_f_rep: 1.0             # Hz — ARBITRARY/ILLUSTRATIVE (no cadence documented for Scylla)
+# Rep-rate shot design point (SOURCED, reactor-class): the Los Alamos
+# Reference Theta-Pinch Reactor (RTPR), Burnett, Ellis, Oliphant, Ribe,
+# "A Reference Theta Pinch Reactor (RTPR)," LASL LA-5121-MS (1972); engineering
+# study Krakowski, Ribe, Coultas, Hatch, LA-5336/ANL-8019 (1974). RTPR is a
+# 350 m toroidal machine; LA-5121-MS Table IV states energies per metre,
+# totalled here x 350 m. The compression field is a REACTIVE store (an LC
+# ringdown), so the three per-pulse driver energies decouple:
+#   - e_driver_mj = energy DELIVERED to the plasma (W_p)i = 3.41 MJ/m x 350
+#     ~ 1190 MJ/pulse; sets fusion gain q_sci = yield/e_driver ~ 24.
+#   - e_store_mj = GROSS switched compression-field energy W_BO = 315 MJ/m
+#     x 350 ~ 110250 MJ/pulse -> C220107 ETS/cap-bank capital. ~98% is
+#     reactively recovered each cycle (the theta-pinch cost-killer: huge store,
+#     tiny net consumption).
+#   - e_recirc_mj = net consumed drive Wi = 5.93 MJ/m x 350 ~ 2076 MJ/pulse
+#     -> recirculating grid draw.
+#   - yield_per_shot_mj = bare DT fusion 82.3 MJ/m x 350 ~ 28800 MJ/pulse
+#     (blanket energy multiplication is handled by mn, not double-counted here).
+#   - max_f_rep = 0.1 Hz (100 ms burn / 10 s cycle, Table IV).
+# RTPR reference point: 1800 MWe net, 3600 MWth, plant gain Q ~ 17.5. See
+# docs/physics/concept_power_scaling.md "Rep-rate shot design points".
+e_driver_mj: 1190.0        # MJ/shot — energy delivered to plasma (W_p)i (SOURCED, RTPR LA-5121-MS)
+yield_per_shot_mj: 28800.0 # MJ/shot — bare DT fusion yield (SOURCED, RTPR LA-5121-MS)
+max_f_rep: 0.1             # Hz — 100 ms burn / 10 s cycle (SOURCED, RTPR LA-5121-MS)
+e_store_mj: 110250.0       # MJ/shot — GROSS switched field energy W_BO (-> C220107 ETS store)
+e_recirc_mj: 2076.0        # MJ/shot — net consumed drive Wi (~98% reactively recovered)
 
 # Pulsed parameters
-f_rep: 1.0               # Repetition rate [Hz]
-pulsed_conversion: inductive_dec
-f_rad: 0.05
-eta_pin: 0.93            # Pulsed power wall-plug efficiency
-driver_recovery_frac: 0.0  # Electrical driver, no mechanical recovery (see MAG_TARGET's anchored value)
-eta_dec: 0.70            # Conservative DEC efficiency (Oliphant 1973 baseline)
-f_pdv: 0.78              # PdV fraction (moderate expansion ratio ~10)
+f_rep: 0.1               # Repetition rate [Hz]
+pulsed_conversion: recovered_compression
+f_rad: 0.05              # Radiation fraction
+mn: 1.1                  # Neutron energy multiplier (DT Li breeding blanket)
+eta_pin: 0.93            # ETS wall-plug efficiency (default-fallback only; e_store/e_recirc are explicit)
+# driver_recovery_frac = 0.0: all energy DELIVERED to the plasma (e_driver_mj)
+# thermalises. The reactive field recovery is represented by the e_store_mj /
+# e_recirc_mj split above (gross store vs net consumption), NOT by this
+# fraction, which on the recovered_compression path governs only how much of
+# the delivered energy dissipates as heat. See concept_power_scaling.md.
+driver_recovery_frac: 0.0
 
-mn: 1.0              # No breeding blanket
-f_sub: 0.03
-p_pump: 0.0          # No thermal cycle pumping
-p_trit: 0.5          # Tritium monitoring [MW]
-p_house: 2.0         # Housekeeping [MW]
-p_cryo: 0.0          # Copper coils
-p_target: 0.0        # No manufactured targets
+f_sub: 0.03          # Subsystem power fraction
+p_pump: 1.0          # Coolant pumping power [MW] (thermal cycle)
+p_trit: 10.0         # Tritium processing power [MW] (DT breeding)
+p_house: 4.0         # Housekeeping power [MW]
+p_cryo: 0.0          # Copper coils (no cryogenics)
+p_target: 0.0        # No manufactured targets (in-situ gas-fill compression)
 target_unit_cost: 0.0    # $/shot — in-situ magnetic compression of gas-fill plasma, no fabricated target. See CAS80_target_consumables.md
-p_coils: 0.5         # Compression coils average power [MW]
+p_coils: 0.5         # Compression-coil average power [MW]
 
-# Coil parameters — copper pulsed coils. b_center = peak field at the loop
-# center during compression (NOT field on the conductor surface).
+# Coil parameters — copper theta-compression coils. b_center = peak axial
+# field at the loop center during compression (NOT field on the conductor
+# surface).
 coil_material: copper
-b_center: 8.0        # Field at coil center during peak compression [T]
-r_bore: 0.4          # Effective winding bore [m]
+b_center: 11.0       # Peak compression field [T] (RTPR reference, LA-5336)
+r_bore: 0.5          # Effective winding bore [m]
 
-# Radial build geometry [m] (cylindrical)
+# Radial build geometry [m]. Simplified representation: RTPR is a 350 m torus,
+# but for costing it is treated as an unrolled long solenoid of compression
+# coils (R0=0). Compression-coil cost scales with total coil length / stored
+# energy whether the solenoid is straight or closed into a ring, and this
+# avoids falsely routing a theta pinch through tokamak (TF/PF/CS) magnet
+# costing. See docs/physics/concept_power_scaling.md.
 R0: 0.0
-plasma_t: 0.3        # Plasma radius [m]
-blanket_t: 0.05      # Thin first wall
-ht_shield_t: 0.05    # Minimal shielding
-structure_t: 0.10
-vessel_t: 0.10
+plasma_t: 0.5        # Plasma / first-wall radius [m] (RTPR)
+blanket_t: 0.60      # DT breeding blanket (liquid Li)
+ht_shield_t: 0.20    # High-temperature shield
+structure_t: 0.15    # Primary structure
+vessel_t: 0.10       # Vacuum vessel
 
 construction_time_yr: 4.0
 
@@ -73,6 +87,6 @@ dhe3_f_T: 0.5
 pb11_f_alpha_n: 0.0
 pb11_f_p_n: 0.0
 
-# Blanket configuration (aneutronic-oriented concept: no breeding blanket)
-blanket_form: none
-blanket_fill: none
+# Blanket configuration (DT breeding, liquid-lithium, per RTPR)
+blanket_form: liquid_metal
+blanket_fill: li

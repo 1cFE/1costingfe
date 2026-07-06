@@ -42,30 +42,29 @@ def test_pulsed_forward_helper_scales_pfus_with_frep():
 
 # --- Task 5: _size_reprate f_rep-from-power solver + dispatch wiring ---
 #
-# Unit ceilings (net @ max_f_rep, held e_driver_mj fixed, default RANKINE
-# eta_th) measured directly against _pulsed_forward before this solver
-# existed. Fuel matches each concept's real developer-fuel pairing (Realta
-# PLASMA_JET/MAG_TARGET = D-T; Helion PULSED_FRC and THETA_PINCH's D-He3
-# baseline = D-He3; LASER_IFE = D-T), per docs/account_justification and
-# tests/test_model.py's existing fuel choices for these concepts:
-#   PLASMA_JET (DT)     180.7 MW  @ max_f_rep=1.0
-#   PULSED_FRC (DHE3)    67.1 MW  @ max_f_rep=1.0
-#   THETA_PINCH (DHE3)   19.9 MW  @ max_f_rep=1.0
-#   LASER_IFE (DT)      791.2 MW  @ max_f_rep=10.0
-#   MAG_TARGET (DT)      149.9 MW @ max_f_rep=1.0 (Task 6: driver_recovery_frac
-#     recovers most of the 755 MJ/shot piston-compression energy rather than
-#     charging it as a single-pass electrical load -- see
-#     pulsed_mag_target.yaml's driver_recovery_frac and
-#     docs/physics/concept_power_scaling.md "Rep-rate shot design points"
-#     for the GF SOFE 2023 Sankey anchor. Before Task 6 (recovery=0) this
-#     was -1911.5 MW, SizingInfeasible at ANY target.
+# Unit ceilings (net @ max_f_rep, held cited shot fixed) measured against
+# _pulsed_forward. Fuel matches each concept's reactor-class source pairing
+# (PLASMA_JET / MAG_TARGET / THETA_PINCH = D-T; PULSED_FRC = D-He3; LASER_IFE
+# = D-T), per docs/account_justification and concept_power_scaling.md:
+#   PLASMA_JET (DT)      180.7 MW  @ max_f_rep=1.0
+#   PULSED_FRC (DHE3)     50.5 MW  @ max_f_rep=1.0
+#   THETA_PINCH (DT)    1025.6 MW  @ max_f_rep=0.1  (RTPR reactor point)
+#   LASER_IFE (DT)       790.5 MW  @ max_f_rep=10.0
+#   MAG_TARGET (DT)      161.2 MW  @ max_f_rep=1.0
+# MAG_TARGET and THETA_PINCH use the recovered_compression forward: the driver
+# energy is largely recovered (mechanical liner rebound / reactive ETS ring-
+# down), so the cap-bank store and grid draw are separate, smaller energies
+# than the delivered e_driver_mj (see pulsed_*.yaml e_store_mj / e_recirc_mj
+# and concept_power_scaling.md). MAG_TARGET nets ~161 MW at the GF E-267
+# sourced 0.85 recovery; a single-pass driver at eta_pin=0.30 would instead be
+# net-negative, SizingInfeasible at any target.
 
 _CONCEPT_FUEL = {
     ConfinementConcept.PLASMA_JET: Fuel.DT,
     ConfinementConcept.MAG_TARGET: Fuel.DT,
     ConfinementConcept.LASER_IFE: Fuel.DT,
     ConfinementConcept.PULSED_FRC: Fuel.DHE3,
-    ConfinementConcept.THETA_PINCH: Fuel.DHE3,
+    ConfinementConcept.THETA_PINCH: Fuel.DT,
 }
 
 
@@ -110,12 +109,12 @@ def test_reprate_pinned_n_mod_rejected():
 
 
 def test_reprate_mag_target_recovers_and_sizes():
-    # Task 6: driver_recovery_frac (pulsed_mag_target.yaml, anchored to the GF
-    # SOFE 2023 Sankey's ~150 MWe net point) recovers most of the 755 MJ/shot
-    # piston-compression energy, flipping the single-chamber unit ceiling from
-    # -1911.5 MW (SizingInfeasible at any target, pre-Task-6) to about
-    # +149.9 MW. A target below that ceiling sizes to a single chamber and
-    # round-trips to the target, exactly like the other rep-rate concepts.
+    # recovered_compression forward: the 755 MJ/shot liner KE is 85% recovered
+    # mechanically (GF E-267 Sankey), and the electrical grid draw is the small
+    # explicit e_recirc_mj, not the full driver at eta_pin=0.30. The single-
+    # chamber unit ceiling is about +161 MW (a single-pass driver would be net-
+    # negative and SizingInfeasible). A target below the ceiling sizes to a
+    # single chamber and round-trips, like the other rep-rate concepts.
     r = _size(ConfinementConcept.MAG_TARGET, 100.0)
     assert r.solved_n_mod == 1
     assert r.power_table.p_net == pytest.approx(100.0, rel=0.02)
@@ -123,8 +122,8 @@ def test_reprate_mag_target_recovers_and_sizes():
 
 
 def test_reprate_mag_target_large_target_bumps_chambers():
-    # 500 MW exceeds one MAG_TARGET chamber's ~149.9 MW ceiling:
-    # ceil(500 / 149.9) = 4 chambers, each solved to <= its ceiling.
+    # 500 MW exceeds one MAG_TARGET chamber's ~161 MW ceiling:
+    # ceil(500 / 161.2) = 4 chambers, each solved to <= its ceiling.
     r = _size(ConfinementConcept.MAG_TARGET, 500.0)
     assert r.solved_n_mod > 1
     assert r.power_table.f_rep <= 1.0 + 1e-9
@@ -135,7 +134,7 @@ def test_reprate_mag_target_large_target_bumps_chambers():
     "concept,target",
     [
         (ConfinementConcept.PULSED_FRC, 20.0),
-        (ConfinementConcept.THETA_PINCH, 8.0),
+        (ConfinementConcept.THETA_PINCH, 400.0),
         (ConfinementConcept.LASER_IFE, 400.0),
     ],
 )

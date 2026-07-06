@@ -1,12 +1,12 @@
 """Per-shot design-point fields for REP_RATE_SIZED_CONCEPTS.
 
-Forward-path YAML data only (Task 3 of rep-rate power sizing): each of the
-five rep-rate-sized concepts carries e_driver_mj, yield_per_shot_mj, and
-max_f_rep in its concept-default YAML. Three are sourced from published
-design points; two (PULSED_FRC yield, THETA_PINCH yield + max_f_rep) are
-explicitly-flagged illustrative placeholders. See docs/physics/
-concept_power_scaling.md ("Rep-rate shot design points") for citations and
-derivations. No solver consumes these fields yet (Tasks 4-5).
+Forward-path YAML data only: each of the five rep-rate-sized concepts carries
+e_driver_mj, yield_per_shot_mj, and max_f_rep in its concept-default YAML, all
+anchored to reactor-class design points: MAG_TARGET and THETA_PINCH to the
+recovered-compression path (GF E-267 Sankey; LANL RTPR), PLASMA_JET and
+LASER_IFE to reactor design studies, PULSED_FRC to Helion's sourced 50 MWe
+plant target. See docs/physics/concept_power_scaling.md ("Rep-rate shot design
+points") for citations and derivations.
 """
 
 import pytest
@@ -25,7 +25,7 @@ _EXPECTED = [
     (ConfinementConcept.PLASMA_JET, 31.3, 736.0, 1.0),
     (ConfinementConcept.LASER_IFE, 2.5, 250.0, 10.0),
     (ConfinementConcept.PULSED_FRC, 50.0, 101.4, 1.0),
-    (ConfinementConcept.THETA_PINCH, 3.5, 35.0, 1.0),
+    (ConfinementConcept.THETA_PINCH, 1190.0, 28800.0, 0.1),
 ]
 
 
