@@ -48,6 +48,7 @@ from costingfe.layers.physics import (
     mfe_inverse_power_balance,
     pulsed_dec_forward,
     pulsed_dec_inverse,
+    pulsed_recovered_compression_forward,
     pulsed_thermal_forward,
     pulsed_thermal_inverse,
 )
@@ -218,8 +219,10 @@ class CostModel:
         and f_rep come from the ARGS, never recomputed from params (e.g. from
         yield_per_shot_mj); the caller supplies p_fus, whether that's an
         inverse-solved value (normal path) or yield_per_shot_mj * f_rep
-        (rep-rate sizing path). Dispatches pulsed_dec_forward when
-        self.pulsed_conversion is INDUCTIVE_DEC, else pulsed_thermal_forward.
+        (rep-rate sizing path). Dispatches on self.pulsed_conversion:
+        pulsed_dec_forward for INDUCTIVE_DEC, pulsed_recovered_compression_forward
+        for RECOVERED_COMPRESSION (decoupled e_store_mj / e_recirc_mj, defaulting
+        to the single-pass formulas), else pulsed_thermal_forward.
         """
         fuel_frac_kw = dict(
             dd_f_T=params["dd_f_T"],
@@ -265,6 +268,24 @@ class CostModel:
                 p_fus=p_fus,
                 **common_kw,
                 **dec_kw,
+            )
+        if self.pulsed_conversion == PulsedConversion.RECOVERED_COMPRESSION:
+            # Recovered-compression drive: the three per-pulse driver energies
+            # decouple. e_store_mj (C220107 store) and e_recirc_mj (net grid
+            # draw) are explicit YAML inputs; both default to the single-pass
+            # formulas so an unspecified concept reduces to the thermal path.
+            # eta_pin is not a forward arg here (store and recirc are explicit).
+            eta_pin = params["eta_pin"]
+            recovery = params["driver_recovery_frac"]
+            recovered_kw = {k: v for k, v in common_kw.items() if k != "eta_pin"}
+            return pulsed_recovered_compression_forward(
+                p_fus=p_fus,
+                e_store_mj=params.get("e_store_mj", e_driver_mj / eta_pin),
+                e_recirc_mj=params.get(
+                    "e_recirc_mj", e_driver_mj * (1.0 - recovery) / eta_pin
+                ),
+                **recovered_kw,
+                **thermal_kw,
             )
         return pulsed_thermal_forward(
             p_fus=p_fus,

@@ -576,6 +576,165 @@ def _charged_particle_fraction(
 # ---------------------------------------------------------------------------
 
 
+def _pulsed_thermal_core(
+    *,
+    p_fus: float,
+    fuel: Fuel,
+    e_driver_mj: float,
+    f_rep: float,
+    mn: float,
+    eta_th: float,
+    f_rad: float,
+    f_sub: float,
+    p_pump: float,
+    p_trit: float,
+    p_house: float,
+    p_cryo: float,
+    p_target: float,
+    p_coils: float,
+    f_dec: float,
+    eta_de: float,
+    dd_f_T: float,
+    dd_f_He3: float,
+    dhe3_dd_frac: float,
+    dhe3_f_T: float,
+    dhe3_f_He3: float,
+    pb11_f_alpha_n: float,
+    pb11_f_p_n: float,
+    p_driver_thermalized: float,
+    driver_recirc: float,
+    e_stored_mj: float,
+) -> PowerTable:
+    """Shared thermal-to-electric conversion core for the pulsed thermal and
+    recovered-compression forwards.
+
+    The invariant both forwards share: given a heat pool and a recirculating
+    load, convert to net electric (p_th -> p_the -> p_et -> q_eng -> p_net) and
+    assemble the PowerTable. The three quantities that DIFFER between the two
+    driver archetypes are passed in, not computed here:
+
+      - p_driver_thermalized: driver energy that deposits as recoverable heat.
+        Thermal (single-pass): full p_driver. Recovered-compression: only the
+        dissipated fraction p_driver * (1 - driver_recovery_frac).
+      - driver_recirc: the driver's electrical recirculation load.
+        Thermal: p_driver * (1 - recovery) / eta_pin. Recovered-compression:
+        the net grid draw e_recirc_mj * f_rep.
+      - e_stored_mj: peak pulsed-store energy sizing C220107.
+        Thermal: e_driver_mj / eta_pin. Recovered-compression: e_store_mj.
+
+    A change to the conversion law (BOP terms, q_eng definition) belongs here
+    and propagates to both forwards. Driver-specific physics stays in each
+    forward. CRITICAL: conditionals on float params use jnp.where (JAX tracers).
+    """
+    p_driver = e_driver_mj * f_rep
+
+    # Step 1: Ash/neutron split
+    p_ash, p_neutron = ash_neutron_split(
+        p_fus,
+        fuel,
+        dd_f_T,
+        dd_f_He3,
+        dhe3_dd_frac,
+        dhe3_f_T,
+        dhe3_f_He3,
+        pb11_f_alpha_n,
+        pb11_f_p_n,
+    )
+
+    # Step 2: Radiation and charged-particle split
+    p_rad = f_rad * p_ash
+    p_charged_net = p_ash - p_rad
+
+    # Step 3: Direct charged-particle capture (hybrid mode; f_dec=0 means pure thermal)
+    p_direct = f_dec * p_charged_net
+    p_dee = eta_de * p_direct
+    p_dec_waste = (1.0 - eta_de) * p_direct  # lost; not added to thermal
+
+    # Step 4: Thermal power — (1-f_dec) of non-radiated ash + all radiation +
+    # thermalised driver + pump. Pump only when thermal conversion is active.
+    p_thermal_ash = (1.0 - f_dec) * p_charged_net + p_rad
+    pump_term = jnp.where(eta_th > 0, p_pump, 0.0)
+    p_th = mn * p_neutron + p_thermal_ash + p_driver_thermalized + pump_term
+
+    # Step 5: Thermal electric and gross
+    p_the = eta_th * p_th
+    p_et = p_the + p_dee
+
+    # Step 6: Wall load from charged particles
+    p_wall = p_charged_net
+
+    # Step 7: Lost power
+    p_loss = p_th - p_the
+
+    # Step 8: Subsystem power
+    p_sub = f_sub * p_et
+
+    # Step 9: Scientific Q
+    q_sci = p_fus / p_driver
+
+    # Step 10: Recirculating and engineering Q
+    p_aux = p_trit + p_house
+    recirculating = (
+        driver_recirc
+        + jnp.where(eta_th > 0, p_pump, 0.0)
+        + p_sub
+        + p_aux
+        + p_cryo
+        + p_target
+        + p_coils
+    )
+    q_eng = p_et / recirculating
+
+    # Step 11: Net electric
+    rec_frac = 1.0 / q_eng
+    p_net = (1.0 - rec_frac) * p_et
+
+    # Per-pulse net electrical grid draw for the driver (reporting)
+    e_recirc_mj = driver_recirc / f_rep
+
+    f_ch = _charged_particle_fraction(
+        fuel,
+        dd_f_T,
+        dd_f_He3,
+        dhe3_dd_frac,
+        dhe3_f_T,
+        dhe3_f_He3,
+        pb11_f_alpha_n,
+        pb11_f_p_n,
+    )
+
+    return PowerTable(
+        p_fus=p_fus,
+        p_ash=p_ash,
+        p_neutron=p_neutron,
+        p_rad=p_rad,
+        p_wall=p_wall,
+        p_dee=p_dee,
+        p_dec_waste=p_dec_waste,
+        p_th=p_th,
+        p_the=p_the,
+        p_et=p_et,
+        p_loss=p_loss,
+        p_net=p_net,
+        p_input=0.0,
+        p_pump=p_pump,
+        p_sub=p_sub,
+        p_aux=p_aux,
+        p_coils=p_coils,
+        p_cool=0.0,
+        p_cryo=p_cryo,
+        p_target=p_target,
+        q_sci=q_sci,
+        q_eng=q_eng,
+        rec_frac=rec_frac,
+        e_driver_mj=e_driver_mj,
+        e_stored_mj=e_stored_mj,
+        e_recirc_mj=e_recirc_mj,
+        f_rep=f_rep,
+        f_ch=f_ch,
+    )
+
+
 def pulsed_thermal_forward(
     p_fus: float,
     fuel: Fuel,
@@ -624,111 +783,127 @@ def pulsed_thermal_forward(
     CRITICAL: All conditionals on float parameters use jnp.where because
     these parameters may be JAX tracers during sensitivity analysis.
     """
-    # Average driver power
+    # Single-pass driver: full per-pulse energy thermalises and is charged as
+    # a single-pass electrical load (scaled by driver_recovery_frac, 0.0 for
+    # every single-pass concept); cap-bank store is e_driver/eta_pin.
+    # Single-pass driver: full per-pulse energy thermalises and is charged as
+    # a single-pass electrical load (scaled by driver_recovery_frac, 0.0 for
+    # every single-pass concept); cap-bank store is e_driver/eta_pin.
     p_driver = e_driver_mj * f_rep
-
-    # Step 1: Ash/neutron split
-    p_ash, p_neutron = ash_neutron_split(
-        p_fus,
-        fuel,
-        dd_f_T,
-        dd_f_He3,
-        dhe3_dd_frac,
-        dhe3_f_T,
-        dhe3_f_He3,
-        pb11_f_alpha_n,
-        pb11_f_p_n,
-    )
-
-    # Step 2: Radiation and charged-particle split
-    p_rad = f_rad * p_ash
-    p_charged_net = p_ash - p_rad
-
-    # Step 3: Direct charged-particle capture (hybrid mode; f_dec=0 means pure thermal)
-    p_direct = f_dec * p_charged_net
-    p_dee = eta_de * p_direct
-    p_dec_waste = (1.0 - eta_de) * p_direct  # lost; not added to thermal
-
-    # Step 4: Thermal power — (1-f_dec) of non-radiated ash + all radiation +
-    # driver + pump thermalise. Pump only when thermal conversion is active.
-    p_thermal_ash = (1.0 - f_dec) * p_charged_net + p_rad
-    pump_term = jnp.where(eta_th > 0, p_pump, 0.0)
-    p_th = mn * p_neutron + p_thermal_ash + p_driver + pump_term
-
-    # Step 5: Thermal electric and gross
-    p_the = eta_th * p_th
-    p_et = p_the + p_dee
-
-    # Step 6: Wall load from charged particles
-    p_wall = p_charged_net
-
-    # Step 7: Lost power
-    p_loss = p_th - p_the
-
-    # Step 8: Subsystem power
-    p_sub = f_sub * p_et
-
-    # Step 9: Scientific Q
-    q_sci = p_fus / p_driver
-
-    # Step 10: Recirculating and engineering Q
-    p_aux = p_trit + p_house
-    recirculating = (
-        p_driver * (1.0 - driver_recovery_frac) / eta_pin
-        + jnp.where(eta_th > 0, p_pump, 0.0)
-        + p_sub
-        + p_aux
-        + p_cryo
-        + p_target
-        + p_coils
-    )
-    q_eng = p_et / recirculating
-
-    # Step 11: Net electric
-    rec_frac = 1.0 / q_eng
-    p_net = (1.0 - rec_frac) * p_et
-
-    # Pulsed-specific fields
-    e_stored_mj = e_driver_mj / eta_pin
-    f_ch = _charged_particle_fraction(
-        fuel,
-        dd_f_T,
-        dd_f_He3,
-        dhe3_dd_frac,
-        dhe3_f_T,
-        dhe3_f_He3,
-        pb11_f_alpha_n,
-        pb11_f_p_n,
-    )
-
-    return PowerTable(
+    return _pulsed_thermal_core(
         p_fus=p_fus,
-        p_ash=p_ash,
-        p_neutron=p_neutron,
-        p_rad=p_rad,
-        p_wall=p_wall,
-        p_dee=p_dee,
-        p_dec_waste=p_dec_waste,
-        p_th=p_th,
-        p_the=p_the,
-        p_et=p_et,
-        p_loss=p_loss,
-        p_net=p_net,
-        p_input=0.0,
+        fuel=fuel,
+        e_driver_mj=e_driver_mj,
+        f_rep=f_rep,
+        mn=mn,
+        eta_th=eta_th,
+        f_rad=f_rad,
+        f_sub=f_sub,
         p_pump=p_pump,
-        p_sub=p_sub,
-        p_aux=p_aux,
-        p_coils=p_coils,
-        p_cool=0.0,
+        p_trit=p_trit,
+        p_house=p_house,
         p_cryo=p_cryo,
         p_target=p_target,
-        q_sci=q_sci,
-        q_eng=q_eng,
-        rec_frac=rec_frac,
+        p_coils=p_coils,
+        f_dec=f_dec,
+        eta_de=eta_de,
+        dd_f_T=dd_f_T,
+        dd_f_He3=dd_f_He3,
+        dhe3_dd_frac=dhe3_dd_frac,
+        dhe3_f_T=dhe3_f_T,
+        dhe3_f_He3=dhe3_f_He3,
+        pb11_f_alpha_n=pb11_f_alpha_n,
+        pb11_f_p_n=pb11_f_p_n,
+        p_driver_thermalized=p_driver,
+        driver_recirc=p_driver * (1.0 - driver_recovery_frac) / eta_pin,
+        e_stored_mj=e_driver_mj / eta_pin,
+    )
+
+
+def pulsed_recovered_compression_forward(
+    p_fus: float,
+    fuel: Fuel,
+    e_driver_mj: float,
+    e_store_mj: float,
+    e_recirc_mj: float,
+    f_rep: float,
+    mn: float,
+    eta_th: float,
+    f_rad: float,
+    f_sub: float,
+    p_pump: float,
+    p_trit: float,
+    p_house: float,
+    p_cryo: float,
+    p_target: float,
+    driver_recovery_frac: float,
+    p_coils: float = 0.0,
+    f_dec: float = 0.0,
+    eta_de: float = 0.6,
+    dd_f_T: float = DD_F_T_DEFAULT,
+    dd_f_He3: float = DD_F_HE3_DEFAULT,
+    dhe3_dd_frac: float = 0.131,
+    dhe3_f_T: float = 0.5,
+    dhe3_f_He3: float = 0.1,
+    pb11_f_alpha_n: float = 0.0,
+    pb11_f_p_n: float = 0.0,
+) -> PowerTable:
+    """Pulsed recovered-compression forward: a reactive/mechanically recovered
+    drive with a thermal (neutron-dominated) output.
+
+    For concepts that compress a target with a driver whose energy is largely
+    RECOVERED each cycle rather than consumed, while the fusion output is a
+    D-T neutron thermal load. Two physical recovery mechanisms, identical math:
+
+      - THETA_PINCH: the ETS swings the full compression-field energy into the
+        coils and reactively recovers ~98% (an LC ringdown). e_store_mj is that
+        gross switched field energy (~110 GJ, sizing the C220107 cap bank),
+        e_recirc_mj is the net grid draw (~2 GJ), and driver_recovery_frac=0
+        because all energy delivered to the plasma thermalises.
+      - MAG_TARGET: the gas piston / liquid liner mechanically rebounds, so only
+        (1 - driver_recovery_frac) of the delivered liner KE dissipates as heat.
+        e_store_mj is the plasma-injector store, e_recirc_mj the electrical
+        resupply (pulsed power + gas compressor).
+
+    Unlike pulsed_thermal_forward, this DECOUPLES the three driver energies a
+    single-pass driver collapses onto one value: delivered (e_driver_mj -> gain,
+    C220104), stored (e_store_mj -> C220107 capital), and consumed
+    (e_recirc_mj -> recirculation). It shares the thermal-to-electric core with
+    pulsed_thermal_forward; only the three driver-specific quantities differ.
+
+    CRITICAL: conditionals on float params use jnp.where (JAX tracers).
+    """
+    # Recovered-compression driver: only the dissipated fraction thermalises;
+    # the grid draw is the explicit net consumption e_recirc_mj (not e_driver /
+    # eta_pin); the C220107 store is the explicit peak store e_store_mj.
+    p_driver = e_driver_mj * f_rep
+    return _pulsed_thermal_core(
+        p_fus=p_fus,
+        fuel=fuel,
         e_driver_mj=e_driver_mj,
-        e_stored_mj=e_stored_mj,
         f_rep=f_rep,
-        f_ch=f_ch,
+        mn=mn,
+        eta_th=eta_th,
+        f_rad=f_rad,
+        f_sub=f_sub,
+        p_pump=p_pump,
+        p_trit=p_trit,
+        p_house=p_house,
+        p_cryo=p_cryo,
+        p_target=p_target,
+        p_coils=p_coils,
+        f_dec=f_dec,
+        eta_de=eta_de,
+        dd_f_T=dd_f_T,
+        dd_f_He3=dd_f_He3,
+        dhe3_dd_frac=dhe3_dd_frac,
+        dhe3_f_T=dhe3_f_T,
+        dhe3_f_He3=dhe3_f_He3,
+        pb11_f_alpha_n=pb11_f_alpha_n,
+        pb11_f_p_n=pb11_f_p_n,
+        p_driver_thermalized=p_driver * (1.0 - driver_recovery_frac),
+        driver_recirc=e_recirc_mj * f_rep,
+        e_stored_mj=e_store_mj,
     )
 
 
@@ -923,6 +1098,7 @@ def pulsed_dec_forward(
 
     # Pulsed-specific fields
     e_stored_mj = e_driver_mj / eta_pin
+    e_recirc_mj = e_driver_mj * (1.0 / eta_pin - 1.0) * (1.0 - driver_recovery_frac)
     f_ch = _charged_particle_fraction(
         fuel,
         dd_f_T,
@@ -960,6 +1136,7 @@ def pulsed_dec_forward(
         rec_frac=rec_frac,
         e_driver_mj=e_driver_mj,
         e_stored_mj=e_stored_mj,
+        e_recirc_mj=e_recirc_mj,
         f_rep=f_rep,
         f_ch=f_ch,
     )

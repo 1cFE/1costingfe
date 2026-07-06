@@ -30,6 +30,12 @@ class ConfinementConcept(Enum):
 class PulsedConversion(Enum):
     THERMAL = "thermal"
     INDUCTIVE_DEC = "inductive_dec"
+    # Reactive/mechanically recovered drive + thermal (neutron) output. The
+    # driver's per-pulse energy is largely recovered each cycle, so the stored,
+    # consumed, and delivered energies decouple (e_store_mj / e_recirc_mj /
+    # e_driver_mj). Used by THETA_PINCH (reactive ETS) and MAG_TARGET (mechanical
+    # liner rebound). See pulsed_recovered_compression_forward.
+    RECOVERED_COMPRESSION = "recovered_compression"
 
 
 class LaserDriverType(Enum):
@@ -103,11 +109,11 @@ CONCEPT_DEFAULT_CONVERSION = {
     ConfinementConcept.LASER_IFE: PulsedConversion.THERMAL,
     ConfinementConcept.ZPINCH: PulsedConversion.THERMAL,
     ConfinementConcept.HEAVY_ION: PulsedConversion.THERMAL,
-    ConfinementConcept.MAG_TARGET: PulsedConversion.THERMAL,
+    ConfinementConcept.MAG_TARGET: PulsedConversion.RECOVERED_COMPRESSION,
     ConfinementConcept.PLASMA_JET: PulsedConversion.THERMAL,
     ConfinementConcept.PULSED_FRC: PulsedConversion.INDUCTIVE_DEC,
     ConfinementConcept.MAGLIF: PulsedConversion.THERMAL,
-    ConfinementConcept.THETA_PINCH: PulsedConversion.INDUCTIVE_DEC,
+    ConfinementConcept.THETA_PINCH: PulsedConversion.RECOVERED_COMPRESSION,
     ConfinementConcept.DENSE_PLASMA_FOCUS: PulsedConversion.THERMAL,
     ConfinementConcept.STAGED_ZPINCH: PulsedConversion.THERMAL,
 }
@@ -249,8 +255,9 @@ class PowerTable:
     q_sci: float  # Scientific Q
     q_eng: float  # Engineering Q
     rec_frac: float  # Recirculating power fraction
-    e_driver_mj: float = 0.0  # Per-pulse driver energy [MJ]
-    e_stored_mj: float = 0.0  # Per-pulse cap bank energy [MJ]
+    e_driver_mj: float = 0.0  # Per-pulse driver energy delivered [MJ]
+    e_stored_mj: float = 0.0  # Per-pulse cap bank / store energy [MJ] (-> C220107)
+    e_recirc_mj: float = 0.0  # Per-pulse net electrical grid draw for the driver [MJ]
     f_rep: float = 0.0  # Repetition rate [Hz]
     f_ch: float = 0.0  # Charged-particle fraction
 
