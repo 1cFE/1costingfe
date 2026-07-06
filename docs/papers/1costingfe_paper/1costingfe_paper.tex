@@ -1371,9 +1371,9 @@ DEC conversion pathways without requiring concept-dependent
 parameterization.
 
 \subsubsection{Pulsed Thermal Conversion}
-For laser IFE, Z-pinch, mag-target, and other pulsed concepts in which the
-energy leaving the plasma is absorbed as heat and converted through a
-thermal cycle (rather than recovered electromagnetically, as in the
+For laser IFE, Z-pinch, plasma jet, and other single-pass pulsed concepts in
+which the energy leaving the plasma is absorbed as heat and converted through
+a thermal cycle (rather than recovered electromagnetically, as in the
 inductive case below), the model supports an optional partial direct
 charged-particle capture path that mirrors the steady-state hybrid balance
 of \cref{eq:p-thermal}. A fraction
@@ -1402,8 +1402,8 @@ thermal-mode driver charge is not recovered.
 
 \subsubsection{Pulsed Inductive DEC Conversion}
 For pulsed concepts in which the plasma's expansion energy is recovered
-electromagnetically rather than as heat (the pulsed FRC, e.g.\ Helion, and
-the theta pinch), the framework includes a dedicated inductive
+electromagnetically rather than as heat (the pulsed FRC, e.g.\ Helion),
+the framework includes a dedicated inductive
 direct-energy-conversion model.
 The driver energy circulates in an electromagnetic loop (capacitor bank
 $\to$ compression coils $\to$ plasma $\to$ coils $\to$ capacitor bank). The
@@ -1448,6 +1448,45 @@ E_{\text{stored}} = \frac{P_{\text{net}}}{f_{\text{rep}} \bigl(
 where $\eta_{\text{eff}}$ combines the DEC and thermal conversion
 efficiencies. This ensures that higher DEC efficiency correctly reduces
 the required capacitor bank size rather than inflating it.
+
+\subsubsection{Pulsed Recovered-Compression Conversion}
+A third class of pulsed concept compresses a magnetized target with a driver
+whose energy is largely \emph{recovered} each cycle rather than consumed,
+while the fusion output remains a neutron-dominated thermal load. For these,
+the single per-pulse driver energy that suffices for a single-pass driver
+splits into three physically distinct quantities: the energy \emph{delivered}
+to the plasma $E_{\text{drv}}$, which sets the scientific gain; the peak
+energy \emph{stored} in the pulsed-power system $E_{\text{store}}$, which sizes
+the capacitor / energy-transfer capital; and the net energy \emph{consumed}
+from the grid per pulse $E_{\text{rec}}$, which sets the recirculating load.
+Only the dissipated fraction $(1-r)$ of the delivered energy thermalises,
+with $r$ the recovery fraction:
+\begin{equation}
+P_{\text{th}} = M_n P_n + (1 - f_{\text{dec}})\,P_{\text{ch,net}}
+  + P_{\text{rad}} + (1-r)\,P_{\text{drv}} + \eta_p\,P_{\text{pump}},
+\end{equation}
+the recirculating driver load is $E_{\text{rec}}\,f_{\text{rep}}$ (rather than
+$P_{\text{drv}}/\eta_{\text{pin}}$), and the pulsed-power capital scales with
+$E_{\text{store}}$. For a single-pass driver the three energies collapse
+($E_{\text{store}} = E_{\text{drv}}/\eta_{\text{pin}}$,
+$E_{\text{rec}} = E_{\text{drv}}(1-r)/\eta_{\text{pin}}$, $r = 0$), recovering
+the pulsed-thermal balance above, so only the two concepts below set the split
+explicitly.
+
+The magnetized target (General Fusion-class) mechanically recovers its liner
+kinetic energy: for the 150~MWe reactor design point of
+\citet{krotez2023mtf}, the poster's stated constant
+$1-\eta_{\text{mech}} = 15\%$ fixes $r = 0.85$, so only that dissipated
+fraction of the 755~MJ/shot liner energy enters the heat pool, while the grid
+draw and capacitor store are set by the plasma-injector and gas-compressor
+systems rather than the full liner energy. The theta pinch instead recovers
+its compression-field energy \emph{reactively}: the energy-transfer-and-storage
+circuit swings the full field energy into the coils and rings roughly 98\% back
+out each cycle, so for the Los Alamos Reference Theta-Pinch Reactor
+\citep{burnett1972rtpr} the stored energy ($\sim$110~GJ/pulse) exceeds the net
+consumption ($\sim$2~GJ/pulse) by nearly two orders of magnitude. That large
+reactive store dominates the concept's pulsed-power capital, the quantified
+expression of the long-standing economic difficulty of theta-pinch reactors.
 
 
 %% ------------------------------------------------------------
