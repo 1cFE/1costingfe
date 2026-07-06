@@ -136,7 +136,9 @@ pb11_f_p_n: 0.0
 
 # Blanket configuration: Li2O solid ceramic, natural lithium (TBR 1.1 via W
 # neutron multiplication; no Li-6 enrichment). Li2O carries its own
-# blanket_unit_cost_li2o in the C220101 branch -- volumetrically cheaper than
-# PbLi: ~$0.2 M$/m^3 derived from 2 t/m^3 x $100k/t fusion-grade Li2O.
+# blanket_unit_cost_li2o in the C220101 branch (structure only, decoupled from
+# the fuel key); the Li2O fill inventory is priced in CAS27. Faithful capital
+# costing of this large thin shell is mass-based (Simpson et al. Table 5) and
+# belongs in per-instance cost_overrides, not this volume-based template.
 blanket_form: solid_breeder
 blanket_fill: li2o

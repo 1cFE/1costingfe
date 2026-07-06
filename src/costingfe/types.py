@@ -153,6 +153,10 @@ class BlanketForm(Enum):
     LIQUID_METAL = "liquid_metal"
     MOLTEN_SALT = "molten_salt"
     SOLID_BREEDER = "solid_breeder"
+    # Water-cooled steel energy-capture blanket: no breeder, no multiplier. For
+    # D-D, which breeds its own tritium but is neutronic and so needs a low-Z
+    # moderator to capture the neutron energy as heat.
+    WATER_COOLED = "water_cooled"
     NONE = "none"
 
     @property
@@ -175,6 +179,9 @@ _BLANKET_STRUCTURE_FACTOR = {
     BlanketForm.LIQUID_METAL: 1.0,
     BlanketForm.MOLTEN_SALT: 1.3,
     BlanketForm.SOLID_BREEDER: 1.2,
+    # Steel flow-channel structure comparable to the liquid-metal baseline, but
+    # water-cooled (no MHD inserts, no online tritium extraction).
+    BlanketForm.WATER_COOLED: 1.0,
     BlanketForm.NONE: 0.0,
 }
 
@@ -186,6 +193,7 @@ class BlanketFill(Enum):
     BE_CERAMIC = "be_ceramic"
     CERAMIC_ONLY = "ceramic_only"
     LI2O = "li2o"
+    WATER = "water"  # Light-water moderator/coolant, no breeder (D-D)
     NONE = "none"
 
     # CAS27 cost is a volume-based mass build-up keyed on this fill via
@@ -202,6 +210,7 @@ _BLANKET_FORM_VALID_FILLS = {
         BlanketFill.CERAMIC_ONLY,
         BlanketFill.LI2O,
     },
+    BlanketForm.WATER_COOLED: {BlanketFill.WATER},
     BlanketForm.NONE: {BlanketFill.NONE},
 }
 
@@ -209,6 +218,7 @@ _BLANKET_FORM_DEFAULT_FILL = {
     BlanketForm.LIQUID_METAL: BlanketFill.PBLI,
     BlanketForm.MOLTEN_SALT: BlanketFill.FLIBE,
     BlanketForm.SOLID_BREEDER: BlanketFill.BE_CERAMIC,
+    BlanketForm.WATER_COOLED: BlanketFill.WATER,
     BlanketForm.NONE: BlanketFill.NONE,
 }
 

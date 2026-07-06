@@ -14,6 +14,7 @@ def test_blanket_form_structure_factors():
     assert BlanketForm.LIQUID_METAL.structure_factor == 1.0
     assert BlanketForm.MOLTEN_SALT.structure_factor == 1.3
     assert BlanketForm.SOLID_BREEDER.structure_factor == 1.2
+    assert BlanketForm.WATER_COOLED.structure_factor == 1.0
     assert BlanketForm.NONE.structure_factor == 0.0
 
 
@@ -29,6 +30,7 @@ def test_blanket_form_valid_fills():
         BlanketFill.CERAMIC_ONLY,
         BlanketFill.LI2O,
     }
+    assert BlanketForm.WATER_COOLED.valid_fills == {BlanketFill.WATER}
     assert BlanketForm.NONE.valid_fills == {BlanketFill.NONE}
 
 
@@ -37,6 +39,7 @@ def test_blanket_form_default_fills():
     assert BlanketForm.LIQUID_METAL.default_fill == BlanketFill.PBLI
     assert BlanketForm.MOLTEN_SALT.default_fill == BlanketFill.FLIBE
     assert BlanketForm.SOLID_BREEDER.default_fill == BlanketFill.BE_CERAMIC
+    assert BlanketForm.WATER_COOLED.default_fill == BlanketFill.WATER
     assert BlanketForm.NONE.default_fill == BlanketFill.NONE
 
 
@@ -67,7 +70,8 @@ def test_dt_tokamak_blanket_structure_scaling(form, fill, exp_structure_factor):
 
 
 @pytest.mark.parametrize(
-    "fill", ["pbli", "li", "flibe", "be_ceramic", "ceramic_only", "li2o", "none"]
+    "fill",
+    ["pbli", "li", "flibe", "be_ceramic", "ceramic_only", "li2o", "water", "none"],
 )
 def test_cas27_volumetric_all_fills(fill):
     """Every fill is costed volumetrically: blanket_vol x vol_frac x density x

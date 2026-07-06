@@ -32,12 +32,23 @@ licensing_time_pb11: 0.0    # no NRC jurisdiction (DI-016)
 # CAS22 — Reactor Plant Equipment
 # Account structure: pyFECONs costing/calculations/cas22/ (Gen-IV EMWG CAS)
 # 220101: First Wall + Blanket — volume-based unit costs (M$/m³)
-# DT 0.60 = NOAK-reduced RAFM-steel blanket mass build-up (~3500 t x $150/kg
-# fab, ITER 440-module cross-check); see CAS22_reactor_components.md
-blanket_unit_cost_dt: 0.60   # Full breeding blanket (TBR>1.05)
+# STRUCTURE ONLY: RAFM steel + W first-wall armor + fabrication. The breeder
+# and neutron-multiplier fill inventory is priced separately in CAS27, so it
+# must not be baked in here (see cas27_fill_materials below).
+# DT 0.35 = structure-only steel+W mass build-up (~1300 t steel x ~$130/kg fab
+# + ~33 t W x $400/kg over the ~640 m^3 reference blanket); brackets the
+# DD structure cost (0.30) with a modest W-armor/tritium-barrier premium.
+# See CAS22_reactor_components.md.
+blanket_unit_cost_dt: 0.35   # Breeding-blanket structure (fill in CAS27)
 blanket_unit_cost_dd: 0.30   # Energy capture, no breeding
 blanket_unit_cost_dhe3: 0.08 # Minimal X-ray + ~5% neutron
 blanket_unit_cost_pb11: 0.05 # Minimal X-ray only
+# Li2O solid-breeder structure base, applied in C220101 when blanket_fill=li2o
+# (decouples the breeding-blanket structure cost from the fuel key, e.g. for the
+# levitated dipole). STRUCTURE ONLY, same steel+W basis as DT (0.35); the
+# solid_breeder structure_factor (1.2) adds the pebble-canister premium on top,
+# matching be_ceramic/ceramic_only. The Li2O fill itself is priced in CAS27.
+blanket_unit_cost_li2o: 0.35
 
 # 220102: Shield — volume-based unit cost (M$/m³)
 shield_unit_cost: 0.74       # DT reference, apply fuel scale factor
@@ -212,6 +223,8 @@ cas27_fill_materials:
   be_ceramic:   {density: 1850, vol_frac: 0.25, price: 700.0}  # HCPB Be multiplier (dominant cost); Li-ceramic breeder folded in
   ceramic_only: {density: 2400, vol_frac: 0.25, price: 150.0}  # Li4SiO4/Li2TiO3 breeder pebbles, no Be
   li2o:         {density: 2013, vol_frac: 0.25, price: 150.0}  # Li2O ceramic
+  # low-Z energy-capture moderator (no breeder)
+  water:        {density: 1000, vol_frac: 0.50, price: 0.01}   # light water: excellent moderator, ~$10/t treated -> negligible inventory (D-D)
   none:         {density: 0,    vol_frac: 0.0,  price: 0.0}    # aneutronic / no breeder
 
 # CAS23-26 — BOP equipment (M$/MW gross electric, 2025 USD)

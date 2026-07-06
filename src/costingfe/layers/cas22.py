@@ -236,11 +236,11 @@ def cas22_reactor_plant_equipment(
         Fuel.DHE3: cc.blanket_unit_cost_dhe3,
         Fuel.PB11: cc.blanket_unit_cost_pb11,
     }
-    # Chemistry override: the fuel-keyed table above is calibrated against PbLi
-    # liquid-metal blankets (density ~9.4 t/m^3, flow loop + MHD ducts + online
-    # tritium extraction). Solid Li2O (~2 t/m^3, no flow loop) is ~3-5x cheaper
-    # per m^3. Branch on blanket_fill so DIPOLE-class machines using Li2O do not
-    # pay the PbLi premium volumetrically.
+    # Structure cost is fill-agnostic (steel + W armor), so the fuel-keyed table
+    # above prices structure only; the breeder/multiplier fill is priced in CAS27.
+    # Li2O gets a dedicated structure base so a breeding blanket on a non-DT-keyed
+    # machine (e.g. the DIPOLE) is not costed off the aneutronic fuel key; the
+    # value equals the DT structure base, with the solid_breeder factor on top.
     if blanket_fill == BlanketFill.LI2O:
         unit = cc.blanket_unit_cost_li2o
     else:

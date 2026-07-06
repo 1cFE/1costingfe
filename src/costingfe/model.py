@@ -1207,6 +1207,29 @@ class CostModel:
         if self.fuel != Fuel.DT and "p_trit" not in overrides:
             params["p_trit"] = 0.0
 
+        # Aneutronic fuels need no breeding blanket or neutron multiplier, so a
+        # concept whose YAML defaults are D-T-flavored (PbLi blanket, mn>1) must
+        # not silently carry that hardware. Normalize the unspecified defaults
+        # (form and fill together, to stay a valid pair); explicit overrides win.
+        if self.fuel in (Fuel.DHE3, Fuel.PB11):
+            if "blanket_form" not in overrides and "blanket_fill" not in overrides:
+                params["blanket_form"] = "none"
+                params["blanket_fill"] = "none"
+            if "mn" not in overrides:
+                params["mn"] = 1.0
+
+        # D-D breeds its own tritium (D+D->T+p) so it needs no lithium breeder,
+        # but it is neutronic: it needs a low-Z moderator to capture the neutron
+        # energy as heat (an empty steel shell would not). Normalize the default
+        # breeding blanket to a water-cooled energy-capture blanket and drop the
+        # Be neutron multiplier (mn->1.0). Explicit overrides win.
+        if self.fuel == Fuel.DD:
+            if "blanket_form" not in overrides and "blanket_fill" not in overrides:
+                params["blanket_form"] = "water_cooled"
+                params["blanket_fill"] = "water"
+            if "mn" not in overrides:
+                params["mn"] = 1.0
+
         # Fuel-dependent f_rad default for pulsed concepts
         if self.family == ConfinementFamily.PULSED and "f_rad" not in overrides:
             params.setdefault("f_rad", self.cc.f_rad(self.fuel))

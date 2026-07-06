@@ -11,7 +11,7 @@ p_ecrh: 0.0
 p_icrf: 0.0
 p_lhcd: 0.0
 
-mn: 1.1              # Neutron multiplier (if D-T with blanket)
+mn: 1.0              # Aneutronic (p-B11): no neutron multiplication
 eta_p: 0.5           # Pumping efficiency
 eta_pin: 0.70        # Electron injector wall-plug efficiency
 eta_de: 0.60         # DEC efficiency (cusp-loss collection)
