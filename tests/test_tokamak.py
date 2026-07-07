@@ -135,6 +135,24 @@ class TestFusionPower:
         assert 100 < p_fus < 3000, f"ITER-like P_fus = {p_fus} MW"
 
 
+class TestBetaN:
+    def test_arc_standard_convention(self):
+        """beta_N follows the standard beta = 2*mu0*p/B^2 convention.
+
+        ARC (Sorbom 2015): n_e=1.3e20, T_e=T_i=13.9 keV, B0=9.2 T,
+        I_p=7.8 MA, a=1.13 m. Flat-profile beta_N is ~2.29 (%.m.T/MA);
+        the paper reports 2.59 with profile peaking. The Troyon gate (3.5)
+        is a standard-convention number, so beta_N must be in the same
+        convention, not half of it.
+        """
+        beta_N = float(
+            compute_beta_N(
+                n_e=1.3e20, T_e=13.9, T_i=13.9, n_i_frac=1.0, B=9.2, I_p_MA=7.8, a=1.13
+            )
+        )
+        assert beta_N == pytest.approx(2.29, abs=0.02), f"beta_N = {beta_N}"
+
+
 # ---------------------------------------------------------------------------
 # 4. IPB98(y,2) confinement time
 # ---------------------------------------------------------------------------
@@ -233,8 +251,8 @@ class TestInverseMode:
         ps_fwd = tokamak_0d_forward(
             R=3.0,
             a=1.1,
-            kappa=3.0,
-            B=5.0,
+            kappa=1.85,
+            B=12.0,
             q95=3.5,
             f_GW=0.85,
             T_e=15.0,
@@ -275,8 +293,8 @@ class TestInverseMode:
             p_net_target=p_net,
             R=3.0,
             a=1.1,
-            kappa=3.0,
-            B=5.0,
+            kappa=1.85,
+            B=12.0,
             q95=3.5,
             f_GW=0.85,
             dhe3_dd_frac=0.07,

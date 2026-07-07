@@ -117,12 +117,12 @@ def compute_fusion_power(n_e, T_i, V_plasma):
 def compute_beta_N(n_e, T_e, T_i, n_i_frac, B, I_p_MA, a):
     """Normalized beta [%·m·T/MA] from electron + fuel-ion pressure.
 
-    beta_t = mu_0 * n_e * (T_e + n_i_frac * T_i) [J] / B^2
-    For DT/DD (n_i = n_e, T_i = T_e) this reduces to the historical
-    2*mu_0*n_e*T/B^2 convention exactly.
+    Toroidal beta is plasma pressure over magnetic pressure B^2/(2*mu_0):
+    beta_t = 2 * mu_0 * p / B^2 with total pressure
+    p = n_e*T_e + n_i*T_i = n_e * (T_e + n_i_frac * T_i).
     """
     p_J = (T_e + n_i_frac * T_i) * KEV_TO_J
-    beta_t = MU_0 * n_e * p_J / B**2
+    beta_t = 2.0 * MU_0 * n_e * p_J / B**2
     return beta_t * 100.0 * a * B / I_p_MA
 
 

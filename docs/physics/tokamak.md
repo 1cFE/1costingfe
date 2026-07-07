@@ -87,12 +87,13 @@ P_fus = (1/4) * n_e^2 * <sigma*v>(T) * E_fus * V
 
 Factor 1/4 assumes 50/50 DT mix (n_D = n_T = n_e/2). E_fus = 17.58 MeV per reaction. Multiplication order avoids float32 overflow.
 
-### Normalized beta -- `compute_beta_N(n_e, T_keV, B, I_p_MA, a)`
+### Normalized beta -- `compute_beta_N(n_e, T_e, T_i, n_i_frac, B, I_p_MA, a)`
 
-Troyon normalization:
+Troyon normalization. Toroidal beta is plasma pressure over magnetic
+pressure `B^2/(2*mu_0)`, with total pressure `p = n_e*T_e + n_i*T_i`:
 
 ```
-beta_t = 2 * mu_0 * n_e * T [J] / B^2
+beta_t = 2 * mu_0 * p [J] / B^2,  p = n_e * (T_e + n_i_frac * T_i)
 beta_N = beta_t [%] * a * B / I_p [MA]
 ```
 
