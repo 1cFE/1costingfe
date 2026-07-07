@@ -63,7 +63,11 @@ _BASE = dict(
         # tokamak/stellarator/dipole/polywell pins unchanged. See
         # docs/physics/mirror.md.
         (C.MIRROR, Fuel.DT, 185.26),
-        (C.STELLARATOR, Fuel.DT, 323.15),
+        # re-pinned: stellarator coil-center field now derived from the design
+        # on-axis field B (like the tokamak) instead of a frozen b_center YAML
+        # default. The default B is 5.0 T, below the old frozen 6.0 T, so the
+        # coil cost and LCOE drop (323.15 -> 290.70). Stellarator-only.
+        (C.STELLARATOR, Fuel.DT, 290.70),
         # DIPOLE re-benchmarked after the radial-build inversion + spherical
         # geometry dispatch + Li2O blanket fill + C220108 divertor zeroing +
         # external stationary lift coil restructured as

@@ -1,5 +1,7 @@
 """Tests for the n_coils override in cas22 / forward()."""
 
+import pytest
+
 from costingfe import ConfinementConcept, CostModel, Fuel
 
 
@@ -130,10 +132,38 @@ def test_dipole_levitated_coil_cryostat_additive():
 def test_n_coils_ignored_for_stellarator():
     """STELLARATOR uses path_factor for G; n_coils kwarg must be a no-op."""
     model = CostModel(concept=ConfinementConcept.STELLARATOR, fuel=Fuel.DT)
-    r_default = model.forward(**_base_kwargs())
-    r_with = model.forward(n_coils=3, **_base_kwargs())
+    # b_center is a loop-device input; a stellarator derives its coil center
+    # field from B, so drop it and set B instead (same as the tokamak).
+    kwargs = {k: v for k, v in _base_kwargs().items() if k != "b_center"}
+    kwargs["B"] = 8.0
+    r_default = model.forward(**kwargs)
+    r_with = model.forward(n_coils=3, **kwargs)
     assert float(r_default.cas22_detail["C220103"]) == float(
         r_with.cas22_detail["C220103"]
     )
     # Sanity: STELLARATOR C220103 should be non-zero so this test is meaningful
     assert float(r_default.cas22_detail["C220103"]) > 0
+
+
+def test_stellarator_coil_cost_tracks_design_field():
+    """STELLARATOR coil cost must scale with the design on-axis field B, like
+    every toroidal device, not sit frozen at the YAML b_center default.
+
+    Concept 20a design point (Infinity Two-class): R0=12.5, a=1.25, B=9 T.
+    The C220103 ampere-meter term is linear in the coil-center field, which for
+    a toroidal device is the on-axis field, so a 9 T machine costs exactly
+    9/6 the coil of a 6 T one.
+    """
+    model = CostModel(concept=ConfinementConcept.STELLARATOR, fuel=Fuel.DT)
+    spec = dict(
+        net_electric_mw=350.0,
+        availability=0.85,
+        lifetime_yr=30,
+        R0=12.5,
+        plasma_t=1.25,
+        elon=1.0,
+    )
+    c_B9 = float(model.forward(B=9.0, **spec).cas22_detail["C220103"])
+    c_B6 = float(model.forward(B=6.0, **spec).cas22_detail["C220103"])
+    # Cost tracks the design field (was frozen at the 6 T YAML default before).
+    assert c_B9 == pytest.approx(c_B6 * 9.0 / 6.0, rel=1e-3)

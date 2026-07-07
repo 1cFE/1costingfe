@@ -24,10 +24,10 @@ p_house: 4.0        # Housekeeping power [MW]
 p_cryo: 0.8         # Cryogenic power [MW]
 
 # Coil parameters. Toroidal coil cost is bilinear in R0 and the coil-bore
-# radius (= vessel_or from the radial build); see cas22.py C220103.
-b_center: 6.0        # On-axis field [T]. NOT peak-on-conductor: HTS REBCO gives
-                     # ~15-20 T peak on the winding, but the ampere-meter cost
-                     # term uses the field at the loop center (axis).
+# radius (= vessel_or from the radial build); see cas22.py C220103. The
+# coil-center field is derived from the on-axis field B (below), the same as
+# for a tokamak, so b_center is not stored here (a second field value would
+# silently shadow B, as it did when frozen at 6 T).
 r_bore: 1.85         # [m] unused for forward coil costing (geometry-driven);
                      # retained for backcasting/compat only.
 coil_material: rebco_hts  # HTS REBCO superconductor (3D non-planar coils)

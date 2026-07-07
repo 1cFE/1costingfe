@@ -1605,13 +1605,19 @@ class CostModel:
         # (= geo.vessel_or, passed below), and r_bore is unused there.
         # b_center = field at the center of the loop (axis), NOT peak-on-conductor.
         r_bore = params.get("r_bore", 0.0)
-        # A tokamak's coil-cost center field IS the plasma field B (same physical
-        # on-axis toroidal field). Derive it here, at the point of consumption,
-        # rather than storing a second b_center: that keeps it from drifting from
-        # B and from becoming a spurious free parameter in sensitivity. Mirrors
-        # and other loop devices keep an explicit b_center (central vs plug field
-        # genuinely differ).
-        if self.concept == ConfinementConcept.TOKAMAK:
+        # A toroidal device's coil-cost center field IS the plasma field B (same
+        # physical on-axis toroidal field): the peak-on-conductor is far higher
+        # (~2.5x on both tokamak and stellarator), but the ampere-turns term is
+        # set by the axis field, and the peak-field grading premium lives in the
+        # calibrated $/kA-m and coil markup. Derive it here, at the point of
+        # consumption, rather than storing a second b_center: that keeps it from
+        # drifting from B and from becoming a spurious free parameter in
+        # sensitivity. Mirrors and other loop devices keep an explicit b_center
+        # (central vs plug field genuinely differ).
+        if self.concept in (
+            ConfinementConcept.TOKAMAK,
+            ConfinementConcept.STELLARATOR,
+        ):
             b_center = params["B"]
         else:
             b_center = params.get("b_center", 0.0)
