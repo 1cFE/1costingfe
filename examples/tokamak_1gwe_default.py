@@ -2,10 +2,10 @@
 
 The steady_state_tokamak.yaml default is the self-consistent machine that
 size_from_power lands on for a 1000 MWe net D-T tokamak with REBCO coils
-(B_max 23 T) at the boundary operating point (Greenwald-fraction density,
-beta-limited temperature). This script is the source of truth for those
-numbers: run it and copy the printed YAML block into the concept default
-(and the numpy explorer's copy of it).
+(B_max 23 T): density pinned at the Greenwald fraction, temperature set by
+the net-power solve, with the Troyon beta cap slack (beta_N ~ 1.8 < 3.5).
+This script is the source of truth for those numbers: run it and copy the
+printed YAML block into the concept default (and the numpy explorer's copy).
 """
 
 from costingfe import ConfinementConcept, CostModel, Fuel
