@@ -1908,7 +1908,7 @@ class CostModel:
             fuel=self.fuel,
             noak=noak,
             p_dee=pt.p_dee,
-            pulsed_conversion=self.pulsed_conversion,
+            family=self.family,
             f_rep=params.get("f_rep", 0.0),
             concept=self.concept,
             laser_driver_type=self.laser_driver_type,

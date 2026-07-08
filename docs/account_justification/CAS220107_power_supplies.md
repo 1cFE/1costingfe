@@ -185,13 +185,24 @@ real sensitivity that the model surfaces as a warning.
 
 ### Scheduled replacement (CAS72)
 
-At f_rep = 1 Hz and 85% availability, the capacitor bank executes
+The capacitor bank is the least lifetime-proven driver component,
+so its scheduled replacement is charged for **every** pulsed-power
+concept with a nonzero C220107, independent of the DEC conversion
+path (thermal, recovered_compression, inductive_dec). The charge
+is gated on the confinement family being pulsed, not on the
+conversion mode: MagLIF, Z-pinch, dense plasma focus, MTF,
+theta-pinch, staged Z-pinch, pulsed FRC, and the pulsed-power
+front ends of laser/heavy-ion drivers all draw on it. (Steady-state
+C220107 — magnet DC supplies — is not a shot-cycled bank and is
+excluded.)
+
+At f_rep = 1 Hz and 85% availability, the bank executes
 approximately 27 million charge-discharge cycles per year.
 Capacitor lifetime is modeled as a NOAK requirement:
 
     cap_shot_lifetime = 1.0e8 shots (default)
 
-At this lifetime, replacement occurs every 3.7 years. The
+At this lifetime, replacement occurs every 3.7 years at 1 Hz. The
 replacement cost is captured in CAS72 as a present-value sum
 of discrete replacements over the plant lifetime, discounted
 at the project interest rate and annualized by the capital
@@ -202,14 +213,45 @@ recovery factor:
     PV = sum over k=1..n_replacements of: C220107 / (1 + r)^(k * t_replace)
     CAS72_cap = PV * CRF
 
-This O&M term is large and is the dominant source of LCOE
-sensitivity for high-rep-rate pulsed plants.
+Because the first bank is capital (already in C220107), only
+replacements beyond it are charged. At low rep rate a 1e8-shot
+bank outlives the plant: at 0.1 Hz (about 2.7e6 shots/yr) the
+interval is roughly 37 years > a 30-year plant, so n_replacements
+= 0 and CAS72_cap = 0. That is a correct zero, not a gap — the
+driver-lifetime cost of a low-rep bank is paid up front in the
+capital \$/J (below), not in replacement. The term becomes the
+dominant LCOE lever only for high-rep-rate plants (roughly >=1 Hz).
+
+**Lifetime basis.** 1e8 shots is a conservative NOAK figure, not
+an optimistic one. The published NOAK target is higher: Pacific
+Fusion's AMPS design (arXiv:2504.10680, sec. 4.1) requires about
+1e9 shots, reached by derating capacitor voltage roughly 3x
+(100 -> 35 kV), which raises shot life from about 1e5 to about 1e9
+at the cost of about 9x lower energy density. Off-the-shelf
+pulse-discharge capacitors already bracket 1e8: General Atomics
+Series DE is rated 3e7-3e9 cycles at 20% reversal, and
+Cornell Dubilier/NWL high-energy units are rated to about 1e10
+cycles at reduced energy density. The lifetime is paced by the
+capacitors, not the switches: with solid-state or magnetic
+switching (IGBT stacks about 5e9 shots, Stehmann & von Bergmann
+SPIE 5777; RHEPP magnetic switches >1e10, Sandia OSTI 6877648) the
+switch life meets or exceeds the capacitor's, so a single lumped
+bank lifetime is used. (Spark-gap switches, at 1e2-1e6 shots,
+would pace the bank instead and require a separate, much shorter
+lifetime — a non-NOAK front end that this model does not assume.)
+
+**What buys the lifetime is energy density, not replacement.**
+Reaching 1e8-1e9 shots presupposes derated, low-energy-density
+caps (roughly 0.1-0.3 J/cc vs >1 J/cc at full rating). At high
+energy density demonstrated life collapses to about 1e3-1e5 shots.
+The derating penalty (about 3-10x more capacitor mass/volume) is
+carried in the capital \$/J basis (c_cap_allin_per_joule), which is
+itself an aggressive NOAK viability target swept 0.5-5.0.
 
 **Lifetime uncertainty:** +-1 order of magnitude (1e7 to 1e9).
-At 1e7 shots (12 days between replacements), the concept is
-not viable as a power plant. At 1e9 shots (37 years), cap
-replacement is a minor O&M cost. The 1e8 default is a
-commercial viability requirement, like the \$/J target.
+At 1e7 shots (12 days between replacements at 1 Hz), the concept
+is not viable as a power plant. At 1e9 shots — the AMPS target —
+cap replacement is a minor O&M cost even at multi-Hz operation.
 
 ---
 
@@ -264,6 +306,19 @@ replacement logic are new to 1costingfe.
 - "IMGs, Capacitors, and the Supply Chain Gap Facing Pulsed
   Power Fusion," The Fusion Report, March 2025. — Cap \$/J
   costs, 5–10x reduction requirement, lifetime targets.
+- Pacific Fusion, "The AMPS design," arXiv:2504.10680 (2025),
+  sec. 4.1. — NOAK cap lifetime target about 1e9 shots via
+  roughly 3x voltage derating (about 1e5 -> 1e9 shots at about
+  9x lower energy density). Names capacitors and spark-gap
+  switches as the lifetime-limiting components.
+- General Atomics, "Series DE Energy Discharge Capacitors,"
+  datasheet. — Design life 3e7–3e9 cycles at 20% reversal.
+- Stehmann, T. & von Bergmann, H., "Solid-state switching of
+  high-power CO2 TEA lasers," Proc. SPIE 5777 (2005). — IGBT
+  pulser 5e9 shots demonstrated, 1e10 projected.
+- Sandia National Laboratories, RHEPP repetitive high-energy
+  pulsed power, OSTI 6877648. — Magnetic (saturable-reactor)
+  switching >1e10 shots, no electrode erosion.
 - NREL, "Utility-Scale Solar Photovoltaics — 2024 Cost
   Benchmark." — Grid-tie inverter \$/kW benchmarks.
 - Helion Energy, helionenergy.com — Polaris 50 MJ cap bank

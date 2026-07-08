@@ -24,7 +24,13 @@ from costingfe.layers.economics import (
     levelized_replacement_cost,
 )
 from costingfe.model import CostModel
-from costingfe.types import CoilMaterial, ConfinementConcept, Fuel, LaserDriverType
+from costingfe.types import (
+    CoilMaterial,
+    ConfinementConcept,
+    ConfinementFamily,
+    Fuel,
+    LaserDriverType,
+)
 
 CC = load_costing_constants()
 
@@ -808,6 +814,107 @@ def test_cas72_plasma_jet_has_electrode_replacement():
     )
     _, _, cas72_non = cas70_om(CC, concept=ConfinementConcept.LASER_IFE, **_ELEC_KWARGS)
     assert cas72_gun > cas72_non
+
+
+# ---------------------------------------------------------------------------
+# Capacitor-bank replacement O&M (CAS72): every pulsed-power concept stores its
+# driver energy in a cap bank (C220107), the least lifetime-proven driver
+# component. Its scheduled replacement is charged for any PULSED concept with a
+# nonzero C220107, independent of the DEC conversion path. At NOAK cap life
+# (1e8 shots) a low-rep bank can outlive the plant -> a correct zero, its cost
+# living in the capital $/J derating premium, not in replacement.
+# ---------------------------------------------------------------------------
+_CAP_KWARGS = dict(
+    cas22_detail={"C220101": 100.0, "C220104": 0.0, "C220107": 500.0, "C220108": 0.0},
+    replaceable_accounts=CC.replaceable_accounts,
+    n_mod=1,
+    p_net=1000.0,
+    availability=0.85,
+    inflation_rate=0.02,
+    interest_rate=0.07,
+    lifetime_yr=30,
+    core_lifetime=CC.core_lifetime(Fuel.DT),
+    construction_time=6,
+    fuel=Fuel.DT,
+    noak=True,
+    family=ConfinementFamily.PULSED,
+)
+
+
+# Same accounts as _CAP_KWARGS but with an empty cap bank, to isolate the
+# cap-replacement term as the delta between the two runs.
+_CAP_BARE_DETAIL = {"C220101": 100.0, "C220104": 0.0, "C220107": 0.0, "C220108": 0.0}
+
+
+def _cap_kwargs(**over):
+    kw = dict(_CAP_KWARGS)
+    kw.update(over)
+    return kw
+
+
+def test_cas72_cap_replacement_fires_for_pulsed_thermal():
+    """A THERMAL-conversion pulsed concept still carries a cap-bank term."""
+    _, _, cas72_cap = cas70_om(
+        CC, concept=ConfinementConcept.DENSE_PLASMA_FOCUS, f_rep=1.0, **_CAP_KWARGS
+    )
+    _, _, cas72_bare = cas70_om(
+        CC,
+        concept=ConfinementConcept.DENSE_PLASMA_FOCUS,
+        f_rep=1.0,
+        **_cap_kwargs(cas22_detail=_CAP_BARE_DETAIL),
+    )
+    assert cas72_cap > cas72_bare
+
+
+def test_cas72_cap_replacement_magnitude():
+    """Cap O&M = levelized_replacement_cost(C220107 * n_mod, cap life / shots/yr)."""
+    _, _, cas72_cap = cas70_om(
+        CC, concept=ConfinementConcept.DENSE_PLASMA_FOCUS, f_rep=1.0, **_CAP_KWARGS
+    )
+    _, _, cas72_bare = cas70_om(
+        CC,
+        concept=ConfinementConcept.DENSE_PLASMA_FOCUS,
+        f_rep=1.0,
+        **_cap_kwargs(cas22_detail=_CAP_BARE_DETAIL),
+    )
+    n_shots = 1.0 * 8760.0 * 3600.0 * 0.85
+    t_replace = CC.cap_shot_lifetime / n_shots
+    expected = levelized_replacement_cost(500.0 * 1, t_replace, 0.07, 30)
+    assert (cas72_cap - cas72_bare) == pytest.approx(expected)
+
+
+def test_cas72_cap_replacement_zero_when_bank_outlives_plant():
+    """At 0.1 Hz a 1e8-shot bank lasts ~37 yr > 30 yr plant -> correct zero."""
+    _, _, cas72_lowrep = cas70_om(
+        CC, concept=ConfinementConcept.MAGLIF, f_rep=0.1, **_CAP_KWARGS
+    )
+    _, _, cas72_bare = cas70_om(
+        CC,
+        concept=ConfinementConcept.MAGLIF,
+        f_rep=0.1,
+        **_cap_kwargs(cas22_detail=_CAP_BARE_DETAIL),
+    )
+    assert cas72_lowrep == pytest.approx(cas72_bare)
+
+
+def test_cas72_cap_replacement_not_charged_for_steady_state():
+    """Steady-state C220107 (magnet DC supplies) must not trigger the cap term."""
+    _, _, cas72_ss = cas70_om(
+        CC,
+        concept=ConfinementConcept.TOKAMAK,
+        f_rep=1.0,
+        **_cap_kwargs(family=ConfinementFamily.STEADY_STATE),
+    )
+    _, _, cas72_bare = cas70_om(
+        CC,
+        concept=ConfinementConcept.TOKAMAK,
+        f_rep=1.0,
+        **_cap_kwargs(
+            family=ConfinementFamily.STEADY_STATE,
+            cas22_detail=_CAP_BARE_DETAIL,
+        ),
+    )
+    assert cas72_ss == pytest.approx(cas72_bare)
 
 
 def test_cas72_electrode_replacement_magnitude():

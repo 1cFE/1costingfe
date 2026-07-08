@@ -31,9 +31,9 @@ from costingfe.layers.physics import (
 from costingfe.types import (
     BlanketFill,
     ConfinementConcept,
+    ConfinementFamily,
     Fuel,
     LaserDriverType,
-    PulsedConversion,
 )
 
 
@@ -330,7 +330,7 @@ def cas70_om(
     fuel,
     noak,
     p_dee=0.0,
-    pulsed_conversion=None,
+    family=None,
     f_rep=0.0,
     concept=None,
     laser_driver_type=None,
@@ -379,8 +379,17 @@ def cas70_om(
         dec_grid * n_mod, dec_grid_life_cal, interest_rate, lifetime_yr
     )
 
-    # Cap bank scheduled replacement (INDUCTIVE_DEC only).
-    if pulsed_conversion == PulsedConversion.INDUCTIVE_DEC and f_rep > 0:
+    # Cap-bank scheduled replacement (all pulsed-power concepts).
+    # Every pulsed driver stores its shot energy in a capacitor bank costed in
+    # C220107 (caps + switches + charging + buswork) — the least lifetime-proven
+    # driver component. Its replacement schedule is independent of the DEC
+    # conversion path (thermal, recovered_compression, inductive_dec), so the
+    # term is charged for any PULSED concept with a nonzero C220107. At NOAK cap
+    # life (cap_shot_lifetime) a low-rep bank can outlive the plant, giving a
+    # correct zero: that lifetime is bought via voltage derating, whose cost sits
+    # in the capital $/J (c_cap_allin_per_joule), not in replacement.
+    # See docs/account_justification/CAS220107_power_supplies.md (CAS72).
+    if family == ConfinementFamily.PULSED and f_rep > 0:
         n_shots_per_year = f_rep * 8760.0 * 3600.0 * availability
         t_replace_cap = cc.cap_shot_lifetime / n_shots_per_year
         cap_cost = cas22_detail.get("C220107", 0.0) * n_mod
