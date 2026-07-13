@@ -227,12 +227,21 @@ class CostModel:
         p_icrf = params.get("p_icrf", 0.0)
         p_ecrh = params.get("p_ecrh", 0.0)
         p_lhcd = params.get("p_lhcd", 0.0)
+        # forward() injects every eta_source_* constant into params (and
+        # applies user overrides / sensitivity perturbations there), so these
+        # must be read from params, not the frozen constants object, or
+        # overrides and elasticities silently vanish. The cc.* fallback only
+        # protects callers that pass a bare dict without that injection.
+        eta_source_nbi = params.get("eta_source_nbi", cc.eta_source_nbi)
+        eta_source_icrf = params.get("eta_source_icrf", cc.eta_source_icrf)
+        eta_source_ecrh = params.get("eta_source_ecrh", cc.eta_source_ecrh)
+        eta_source_lhcd = params.get("eta_source_lhcd", cc.eta_source_lhcd)
         num = p_nbi + p_icrf + p_ecrh + p_lhcd
         den = (
-            p_nbi / (cc.eta_source_nbi * ec)
-            + p_icrf / (cc.eta_source_icrf * ec)
-            + p_ecrh / (cc.eta_source_ecrh * ec)
-            + p_lhcd / (cc.eta_source_lhcd * ec)
+            p_nbi / (eta_source_nbi * ec)
+            + p_icrf / (eta_source_icrf * ec)
+            + p_ecrh / (eta_source_ecrh * ec)
+            + p_lhcd / (eta_source_lhcd * ec)
         )
         return num / den
 
