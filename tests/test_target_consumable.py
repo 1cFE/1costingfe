@@ -13,7 +13,11 @@ import pytest
 from costingfe import CostModel, Fuel
 from costingfe.defaults import load_costing_constants
 from costingfe.layers.costs import cas80_fuel
-from costingfe.types import REP_RATE_SIZED_CONCEPTS, ConfinementConcept
+from costingfe.types import (
+    REP_RATE_SIZED_CONCEPTS,
+    TARGET_YIELD_CONCEPTS,
+    ConfinementConcept,
+)
 
 CC = load_costing_constants()
 
@@ -43,7 +47,12 @@ IN_SITU_CONCEPTS = [
 @pytest.mark.parametrize("concept", TARGET_CONCEPTS)
 def test_target_concepts_have_factory(concept):
     """Manufactured-target concepts get a nonzero C220108 target factory."""
-    r = CostModel(concept=concept, fuel=Fuel.DT).forward(**_FWD)
+    fwd = dict(_FWD)
+    if concept in TARGET_YIELD_CONCEPTS:
+        # These are sized by growing the shot; one native chamber cannot reach
+        # the 500 MWe target at its fixed shot, so size_from_power is required.
+        fwd["size_from_power"] = True
+    r = CostModel(concept=concept, fuel=Fuel.DT).forward(**fwd)
     assert float(r.cas22_detail["C220108"]) > 0.0
 
 

@@ -152,8 +152,17 @@ def test_reprate_round_trip_below_ceiling(concept, target):
 
 def test_reprate_laser_ife_large_target_bumps_chambers():
     # 2000 MW exceeds LASER_IFE's 791.2 MW single-chamber ceiling:
-    # ceil(2000 / 791.2) = 3 chambers.
-    r = _size(ConfinementConcept.LASER_IFE, 2000.0)
+    # ceil(2000 / 791.2) = 3 chambers. LASER_IFE now defaults to the target-yield
+    # axis (which grows the shot instead), so force the rep-rate axis to exercise
+    # chamber replication.
+    m = CostModel(ConfinementConcept.LASER_IFE, Fuel.DT)
+    r = m.forward(
+        net_electric_mw=2000.0,
+        availability=0.87,
+        lifetime_yr=40,
+        size_from_power=True,
+        sizing_axis="rep_rate",
+    )
     assert r.solved_n_mod > 1
     assert r.power_table.f_rep <= 10.0 + 1e-9
     assert r.power_table.p_net * r.solved_n_mod == pytest.approx(2000.0, rel=0.02)

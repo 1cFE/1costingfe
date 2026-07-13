@@ -172,9 +172,13 @@ def test_maglif_on_axis_hits_target():
     assert pt.p_fus / pt.f_rep == pytest.approx(m._yield_from_e(p, pt.e_driver_mj))
 
 
-def test_maglif_off_axis_stays_on_qeng_path():
+def test_maglif_defaults_to_target_yield_axis():
+    # MagLIF now ships with sizing_axis: target_yield (the calibrated default);
+    # clearing the flag reverts it to the generic q_eng path.
     m = CostModel(ConfinementConcept.MAGLIF, Fuel.DT)
     p = dict(load_engineering_defaults("pulsed_maglif"))
+    assert m._on_target_yield_axis(p) is True
+    p.pop("sizing_axis")
     assert m._on_target_yield_axis(p) is False
 
 

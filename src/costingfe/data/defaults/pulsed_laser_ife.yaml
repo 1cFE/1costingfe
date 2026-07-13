@@ -22,6 +22,7 @@ max_f_rep: 10.0           # Hz — commercial design ceiling
 # drive; rhoR ~ 2.0 g/cm^2) is the HIGHEST of the pulsed-IFE set (high-convergence
 # burn) -> higher gain per driver joule than magnetic drive. No per-concept gain
 # anchor. Indirect-drive concepts (26/30) carry their own lower burn_fraction.
+sizing_axis: target_yield  # DEFAULT axis for laser-IFE: grow the shot (size-dependent gain curve below) at max_f_rep, then replicate chambers
 e_driver_min_mj: 1.5    # MJ — lower driver bound
 e_driver_max_mj: 12.0   # MJ — engineering driver ceiling (company/tech)
 
