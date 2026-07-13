@@ -16,11 +16,22 @@ e_driver_mj: 2.5          # MJ/shot — laser driver energy
 yield_per_shot_mj: 250.0  # MJ/shot — fusion yield (= 2.5 x design-target gain G100)
 max_f_rep: 10.0           # Hz — commercial design ceiling
 
+# Target-yield sizing: COMPANY sets driver energy + engineering ceiling; PHYSICS
+# sets the gain from the burn-up fraction below: yield = burn_fraction * m * e_DT,
+# m = fuel_mass_mg_per_mj * e_driver. Laser burn_fraction 0.25 (reactor direct-
+# drive; rhoR ~ 2.0 g/cm^2) is the HIGHEST of the pulsed-IFE set (high-convergence
+# burn) -> higher gain per driver joule than magnetic drive. No per-concept gain
+# anchor. Indirect-drive concepts (26/30) carry their own lower burn_fraction.
+e_driver_min_mj: 1.5    # MJ — lower driver bound
+e_driver_max_mj: 12.0   # MJ — engineering driver ceiling (company/tech)
+
 f_rep: 10.0              # Repetition rate [Hz]
 pulsed_conversion: thermal
 laser_driver_type: dpssl   # dpssl | krf | nd_glass (selects C220104 $/MJ + CAS72 replacement)
 f_rad: 0.10
-eta_pin: 0.10            # Laser wall-plug efficiency
+# eta_pin (wall-plug efficiency) is NOT set here -- like eta_th it is resolved
+# from laser_driver_type via eta_source_* (DPSSL 0.15 / KrF 0.10 / fiber 0.20 /
+# Nd:glass 0.02). Override eta_pin explicitly only to model an off-nominal driver.
 driver_recovery_frac: 0.0  # Electrical driver, no mechanical recovery (see MAG_TARGET's anchored value)
 mn: 1.1              # Neutron energy multiplier
 f_sub: 0.03          # Subsystem power fraction
@@ -48,6 +59,14 @@ construction_time_yr: 5.0  # Years (no magnets, simpler)
 
 # Fuel burn fraction defaults (physics.py ash_neutron_split)
 burn_fraction: 0.25      # Single-pass burn fraction (inertial; reactor-target value, NIF shots get 2-4%)
+# Size-dependent gain curve (ON by default for laser): phi = rhoR/(rhoR+H_B),
+# rhoR = rhoR_ref * (E_on_target / e_rhoR_ref)^(1/3). Anchor 2.0 g/cm^2 @ 2.5 MJ
+# reproduces burn_fraction 0.25 (gain 94x) at the reference; gain rises ~E^1/3
+# with driver energy and saturates toward the phi=1 ceiling (374x direct DT).
+# Sourced: Hawker 2020 eqs 2.19-2.20; NRL/Obenschain + Xcimer/Thomas 2024. Set
+# rhoR_ref_g_cm2: 0 to revert to a flat burn_fraction. See defaults.py / physics.
+rhoR_ref_g_cm2: 2.0      # g/cm^2 areal density at the reference energy
+e_rhoR_ref_mj: 2.5       # MJ on target — reference energy for the rhoR anchor
 fuel_recovery: 0.99         # Fraction of unburned fuel recovered and recycled (NOAK)
 dd_f_T: 0.969
 dd_f_He3: 0.689

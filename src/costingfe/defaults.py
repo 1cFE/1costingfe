@@ -106,6 +106,15 @@ class CostingConstants:
     eta_source_icrf: float = 0.70  # RF tetrode transmitter (ITER ICRF ~70%)
     eta_source_ecrh: float = 0.50  # gyrotron wall-plug
     eta_source_lhcd: float = 0.50  # klystron wall-plug
+    # Laser-IFE wall-plug efficiency by driver architecture (eta_source, selected
+    # by laser_driver_type; eta_pin = eta_source x eta_couple, eta_couple=1.0 for
+    # lasers since the light->fuel coupling is the drive-mode gain, not here).
+    # Projected NOAK values at a consistent optimism level (same basis as the
+    # aggressive-NOAK driver $/MJ presets); demonstrated values in parentheses.
+    eta_source_dpssl: float = 0.15  # DPSSL (Mercury demo ~0.10; LIFE target ~0.18)
+    eta_source_krf: float = 0.10  # KrF excimer (Electra demo ~0.07; NRL roadmap)
+    eta_source_fiber: float = 0.20  # fiber/blue (fiber ~0.30 x IR->blue conversion)
+    eta_source_ndglass: float = 0.02  # flashlamp Nd:Glass (NIF ~0.005; physics-capped)
     # 220104: Pulsed driver capital, concept-dispatched in cas22.py C220104.
     # Lasers, accelerators, and electromagnetic guns are costed per joule of pulse
     # energy: their capital is set by pulse energy (laser aperture / diode count,
@@ -128,6 +137,14 @@ class CostingConstants:
     # NIF $3.5-4.2B / 1.1-1.9 MJ UV (~$2000/J facility, driver-only ~half).
     # See docs/account_justification/CAS22_reactor_components.md (C220104).
     driver_krf_per_mj: float = 40.0  # M$/MJ KrF excimer driver hardware
+    # Fiber / coherent-combined blue laser (BLF / XCAN). Ported from BLF's own
+    # bracket (concept 31 analysis): fiber central ~$400/J on their CONSERVATIVE
+    # scale (their DPSSL $700-1000/J, excimer $60-80/J). On our aggressive-NOAK
+    # scale (DPSSL 205, KrF 40) that DPSSL-leaning central maps to ~$150/J -- i.e.
+    # ~1.6x above the sqrt(40*205)=$91/J geometric mean, matching BLF's own lean
+    # above their geometric mean. Large real uncertainty (no MJ-scale fiber IFE
+    # driver exists; BLF's $70-850/J range -> ~$17-200/J on our scale).
+    driver_fiber_per_mj: float = 150.0  # M$/MJ fiber/blue driver (BLF-derived)
     driver_ndglass_per_mj: float = 1000.0  # M$/MJ flashlamp Nd:Glass driver
     driver_heavy_ion_per_mj: float = 60.0  # M$/MJ beam energy (heavy-ion accelerator)
     driver_plasma_jet_per_mj: float = 4.0  # M$/MJ EM plasma-gun pulse energy
@@ -201,6 +218,96 @@ class CostingConstants:
 
     # Pulsed inductive DEC — CAS72 cap replacement
     cap_shot_lifetime: float = 1.0e8  # Shots, NOAK baseline. Range: 1e7-1e9
+
+    # IFE/MIF chamber sizing (target-yield axis). R_fw = chamber_radius_ref_m *
+    # sqrt(yield / (chamber_yield_ref_mj * f_wall)). Carried from GEM/HAPL dry
+    # wall (Sviatoslavsky, FST 47, 535 (2005)): 6.5 m at 150 MJ. The wall_
+    # improvement_* factors set the fluence-limit multiplier per WallType.
+    # See layers/geometry.chamber_radius_m and design doc D2.
+    chamber_radius_ref_m: float = 6.5  # m, dry-wall reference radius (GEM/HAPL)
+    chamber_yield_ref_mj: float = 150.0  # MJ, reference per-shot yield
+    wall_improvement_dry: float = 1.0  # GEM dry wall (baseline)
+    wall_improvement_advanced_dry: float = 2.0  # advanced dry-wall materials
+    wall_improvement_thick_liquid: float = 50.0  # HYLIFE/Xcimer liquid wall
+
+    # Time-averaged neutron wall-loading ceiling [MW/m^2] -> minimum first-wall
+    # radius R >= sqrt(P_n / (4*pi*Gamma_max)). The chamber is the LARGER of the
+    # fluence radius (above) and this power-density radius, so a low-yield/high-
+    # rep concept can no longer get a tiny fluence-sized chamber carrying an
+    # unphysical MW/m^2. Concept YAMLs override neutron_wall_load_max_mw_m2 to
+    # match their wall type. Values by wall type: dry solid ~4 (dpa/thermal-shock
+    # limited, HAPL/SOMBRERO class), advanced dry ~8, thick-liquid ~20 (self-
+    # healing FLiBe curtain, HYLIFE-II / LIFE / Z-IFE). Default = dry (conservative).
+    neutron_wall_load_max_mw_m2: float = 4.0  # active limit (default = dry wall)
+    neutron_wall_load_dry: float = 4.0  # reference: dry solid wall
+    neutron_wall_load_advanced_dry: float = 8.0  # reference: advanced dry wall
+    neutron_wall_load_thick_liquid: float = 20.0  # reference: thick-liquid wall
+
+    # Laser-IFE drive-mode coupling (share of delivered driver energy that
+    # assembles the fuel; DriveMode). gain = burn_fraction*loading*coupling*e_DT,
+    # so fuel mass -> yield -> gain scale linearly with coupling. Direct drive is
+    # the reference (=1.0, the value the burn_fraction=0.25 / ~94x gain was
+    # anchored to). Indirect drive couples ~half as much per joule (hohlraum
+    # X-ray conversion + re-absorption losses) -> ~2x lower gain; hybrid sits
+    # between. FIRST-CUT anchors (round, defensible for a NOAK screen; refine
+    # against direct-vs-indirect gain literature). Only LASER_IFE sets drive_mode;
+    # MagLIF/Z-pinch leave it unset -> direct=1.0 -> unchanged (their own
+    # burn_fraction already encodes their lower gain). See DriveMode + physics.
+    drive_coupling_direct: float = 1.0  # reference (direct-drive / fast-ignition)
+    drive_coupling_hybrid: float = 0.75  # combined / Xcimer-class drive
+    drive_coupling_indirect: float = 0.5  # hohlraum X-ray drive (~2x penalty)
+
+    # Size-dependent gain curve (on by default for laser via rhoR_ref_g_cm2 +
+    # e_rhoR_ref_mj in the YAML): burn-up phi = rhoR/(rhoR + H_B), rhoR ~ E^(1/3).
+    # All three constants are literature-grounded:
+    #  - H_B = 6 g/cm^2: DT burn-up parameter. Hawker 2020 eq 2.19; Thomas et al.
+    #    Phys. Plasmas 31, 112708 (2024) use the same phi = rhoR/(rhoR+6) form.
+    #  - exponent 1/3: Hawker 2020 eq 2.20 (Tabak hydro-equivalence, constant
+    #    density/velocity); also a fit to NRL direct-drive gain data (Obenschain/
+    #    Bodner: G 127@1.3 MJ, 155@3.1 MJ) gives rhoR ~ E^0.36 over 1.3-3.1 MJ.
+    #  - rhoR_ref 2.0 g/cm^2 @ 2.5 MJ (-> phi 0.25, gain 94x direct): the middle
+    #    of the direct-drive DT range -- Xcimer HDD (Thomas 2024) rhoR ~1.3-1.6 @
+    #    4 MJ (realistic, ~57x) up to NRL high-gain designs (aspirational, ~140x).
+    # Over rhoR ~2-6 the phi form rises ~rhoR^0.6, matching the Thomas 2024
+    # G ~ rhoR^(2/3) scaling. Driver-type agnostic. See physics_yield_mj.
+    gain_hb_g_cm2: float = 6.0  # DT burn-up parameter H_B [g/cm^2]
+
+    # Two-mode per-shot target cost (target_cost_mode; design doc D4). Size-
+    # scaled with the per-shot ASSEMBLED FUEL MASS m_fuel = yield/(burn_fraction
+    # *e_fuel) -- the same yield the chamber is sized from, NOT a per-concept
+    # driver-energy reference (which went stale). Sizing by fuel mass (not yield
+    # alone) makes a low-burn-up target, which needs more fuel for the same
+    # yield, correctly cost more. Each archetype has a UNIVERSAL reference fuel
+    # mass at which its anchor is calibrated (a costing constant, never dropped):
+    #   capsule ref = 1.1 mg/MJ * 2.5 MJ (direct) = 2.75 mg  -> laser $0.50/shot
+    #   liner   ref = 1.1 mg/MJ * 42 MJ  (direct) = 46.2 mg  -> MagLIF $9/shot
+    # See layers/costs.target_shot_cost.
+    target_fuel_mass_ref_capsule_mg: float = 2.75  # capsule anchor fuel mass
+    target_fuel_mass_ref_liner_mg: float = 46.2  # liner anchor fuel mass
+    # METAL_LINER defaults reproduce MagLIF's $9/shot at the liner ref mass:
+    target_liner_cost_ref: float = 3.0  # $/shot liner material at ref mass (~m_fuel)
+    target_machining_markup: float = 1.3  # machining/forming markup on liner metal
+    target_rtl_cost: float = 5.1  # $/shot RTL remanufacture (recycled, ~flat)
+    # CAPSULE_FAB defaults reproduce laser's $0.50/shot at the capsule ref mass:
+    target_cryo_cost_ref: float = 0.25  # $/shot cryo layering at ref (~m_fuel)
+    target_coat_cost_ref: float = 0.15  # $/shot coating at ref (~m_fuel^2/3, area)
+    target_assembly_cost: float = 0.10  # $/shot fill/assembly/QA (~flat)
+    target_material_floor: float = 0.0  # $/shot capsule material floor at ref (~m_fuel)
+    # Indirect drive wraps the capsule in a high-Z (Au/Pb) hohlraum -- a material
+    # term that scales with shot size (via target_material_floor, ~m_fuel). Auto-
+    # applied when drive_mode == "indirect" (see model target-cost hook), so an
+    # indirect target costs ~2x a bare direct capsule ($0.50 -> $0.70 at the ref
+    # mass, per Rickman/Goodin GA 2003) AND grows with the shot, instead of a
+    # frozen flat override. Direct/hybrid drive leaves the floor at 0.
+    target_hohlraum_material_floor: float = 0.20  # $/shot hohlraum at ref (indirect)
+    target_material_guard_frac: float = 0.8  # flag if material > this frac of cost
+
+    # First-principles pulsed-IFE gain (unified framework): yield = burn_fraction
+    # * m_fuel * e_fuel, m_fuel = fuel_mass_mg_per_mj * e_driver. The per-concept
+    # physics is the (existing, sourced, literature-ordered) burn_fraction in
+    # each YAML; these two are ~universal. See layers/physics.physics_yield_mj.
+    fuel_mass_mg_per_mj: float = 1.1  # DT loaded per delivered MJ (~universal)
+    e_fuel_mj_per_g: float = 3.4e5  # DT Q-value/mass (DD/DHe3/pB11 lower)
 
     # CAS72 formation-electrode replacement (EM-gun concepts: staged_zpinch,
     # plasma_jet). Plasma-facing coaxial-gun electrodes erode under high current

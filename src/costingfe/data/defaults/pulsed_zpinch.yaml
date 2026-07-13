@@ -6,6 +6,20 @@ f_rep: 0.1               # Repetition rate [Hz]
 pulsed_conversion: thermal
 f_rad: 0.10
 eta_pin: 0.15            # Pulsed power wall-plug efficiency
+
+# Target-yield sizing axis (opt-in via `sizing_axis: target_yield`). INERT on the
+# default z-pinch path (q_eng above). PLACEHOLDER reference shot: the IFE wire-
+# array/target z-pinch has no clean published reactor design point, so these are
+# MagLIF-like starting values FLAGGED for sourcing. alpha=0.70 (pulsed-power
+# current scaling, as MagLIF). Add banks -> more current -> more yield (linear
+# C220107 driver cost).
+e_driver_mj: 30.0          # MJ/shot delivered (PLACEHOLDER — needs source)
+yield_per_shot_mj: 2700.0  # MJ/shot fusion yield (gain 90, PLACEHOLDER)
+max_f_rep: 1.0             # Hz (PLACEHOLDER)
+e_driver_min_mj: 15.0
+e_driver_max_mj: 60.0
+wall_improvement_factor: 50.0  # thick-liquid wall assumed (PLACEHOLDER)
+neutron_wall_load_max_mw_m2: 20.0  # thick-liquid neutron wall-load floor (PLACEHOLDER)
 driver_recovery_frac: 0.0  # Electrical driver, no mechanical recovery (see MAG_TARGET's anchored value)
 mn: 1.1              # Neutron energy multiplier
 f_sub: 0.03          # Subsystem power fraction

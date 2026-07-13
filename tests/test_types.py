@@ -74,6 +74,7 @@ def test_laser_driver_type_values():
 
     assert LaserDriverType("dpssl") == LaserDriverType.DPSSL
     assert LaserDriverType("krf") == LaserDriverType.KRF
+    assert LaserDriverType("fiber") == LaserDriverType.FIBER
     assert LaserDriverType("nd_glass") == LaserDriverType.NDGLASS
 
 

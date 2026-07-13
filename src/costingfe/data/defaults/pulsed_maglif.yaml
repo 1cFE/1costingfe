@@ -7,8 +7,23 @@ q_eng: 3.0               # Engineering gain target (P_et / P_recirc)
 f_rep: 0.1               # Repetition rate [Hz] (limited by liner fabrication)
 e_preheat_mj: 0.006      # Per-pulse laser preheat energy [MJ] (Sandia Z-Beamlet 2-6 kJ; Slutz 2010 / Knapp 2019). Set 0 for no-preheat magnetized compression (e.g. Pacific Fusion).
 pulsed_conversion: thermal
+
+# Target-yield sizing axis (opt-in via `sizing_axis: target_yield`). INERT on the
+# default MagLIF path (q_eng above). COMPANY sets the driver (e_driver, rep rate,
+# engineering ceiling); PHYSICS sets the gain from the burn-up fraction below:
+# yield = burn_fraction * m * e_DT, m = fuel_mass_mg_per_mj * e_driver (const in
+# costing_constants). MagLIF burn_fraction 0.15 (Slutz; rhoR ~ 1.1 g/cm^2) is
+# LOW-convergence magnetic drive -> lower gain than laser (0.25) but a cheap
+# driver. No per-concept gain anchor; e_driver is a company driver, not a claim.
+e_driver_mj: 8.3           # MJ/shot delivered to target (DS E_liner, Fig 6)
+yield_per_shot_mj: 380.0   # MJ/shot at the cited shot (rep-rate path only; target-yield derives yield from physics)
+max_f_rep: 0.5             # Hz — liner-fabrication-limited rep rate
+e_driver_min_mj: 4.0
+e_driver_max_mj: 30.0      # engineering ceiling on the driver (company/tech, not a physics cap)
+wall_improvement_factor: 50.0  # thick-liquid FLiBe curtain (Z-IFE)
+neutron_wall_load_max_mw_m2: 20.0  # thick-liquid neutron wall-load floor (HYLIFE/Z-IFE)
 f_rad: 0.10
-eta_pin: 0.15            # Z-pinch pulsed power wall-plug efficiency
+eta_pin: 0.10            # bank->target coupling eta_D = 8.3/80 (Pacific Fusion DS)
 driver_recovery_frac: 0.0  # Electrical driver, no mechanical recovery (see MAG_TARGET's anchored value)
 
 mn: 1.1              # Neutron energy multiplier (breeding blanket)

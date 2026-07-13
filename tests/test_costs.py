@@ -994,6 +994,10 @@ def _laser_c220104(driver_type):
         availability=0.85,
         lifetime_yr=30,
         size_from_power=True,
+        # Pin eta_pin so every driver type sizes to the SAME E_drv, isolating the
+        # $/MJ coefficient ratio (per-type eta_source would otherwise change the
+        # sized driver energy between types).
+        eta_pin=0.10,
     )
     return float(result.cas22_detail["C220104"])
 

@@ -41,18 +41,75 @@ class PulsedConversion(Enum):
 class LaserDriverType(Enum):
     """Laser-IFE driver architecture.
 
-    Selects, for LASER_IFE, both the C220104 capital coefficient ($/MJ) and the
-    CAS72 scheduled-replacement subsystem set. Chosen via the laser_driver_type
-    parameter (concept-YAML default + per-run override), not a separate concept.
+    Selects, for LASER_IFE, the C220104 capital coefficient ($/MJ), the CAS72
+    scheduled-replacement subsystem set, and the wall-plug efficiency
+    (eta_source_* by type). Chosen via the laser_driver_type parameter
+    (concept-YAML default + per-run override), not a separate concept.
 
     DPSSL is the commercial baseline (LIFE / HiPER / Focused Energy / Marvel);
-    KRF carries the NRL Electra / Xcimer heritage; NDGLASS (NIF-class) is
-    flagged commercially marginal — flashlamp shot life is Xe-arc-limited.
+    KRF carries the NRL Electra / Xcimer heritage; FIBER is the coherent-combined
+    fiber / blue-laser architecture (Blue Laser Fusion / XCAN); NDGLASS
+    (NIF-class) is flagged commercially marginal — flashlamp shot life is
+    Xe-arc-limited and its wall-plug efficiency is fundamentally low.
     """
 
     DPSSL = "dpssl"  # diode-pumped solid-state
     KRF = "krf"  # KrF excimer
+    FIBER = "fiber"  # coherent-combined fiber / blue laser (BLF / XCAN)
     NDGLASS = "nd_glass"  # flashlamp-pumped Nd:Glass (NIF-class)
+
+
+class WallType(Enum):
+    """First-wall protection scheme for IFE/MIF chamber sizing.
+
+    Selects the wall_improvement_factor default (tolerable areal fluence
+    relative to the GEM/HAPL dry-wall base) used by
+    ``layers/geometry.chamber_radius_m``. See
+    docs/plans/2026-07-07-target-yield-sizing-design.md (D2).
+    """
+
+    DRY = "dry"  # GEM/HAPL dry solid wall (f_wall ~ 1)
+    ADVANCED_DRY = "advanced_dry"  # advanced-material dry wall (f_wall ~ 1.5-3)
+    THICK_LIQUID = "thick_liquid"  # HYLIFE/Xcimer liquid wall (f_wall ~ 40-60)
+
+
+class DriveMode(Enum):
+    """Laser-IFE drive configuration for the target-yield gain (design doc D-
+    unified). Sets the coupling fraction (share of delivered driver energy that
+    actually assembles/compresses the fuel) used by physics_yield_mj: the fuel
+    mass loaded per driver joule scales with coupling, so gain is
+    burn_fraction * loading * coupling * e_DT. The compressed fuel burns the same
+    (burn_fraction is unchanged) — drive mode changes only how efficiently the
+    driver assembles it.
+
+    DIRECT: laser ablates the capsule directly — highest coupling (reference).
+    HYBRID: combined / novel drive (e.g. Xcimer-class) — intermediate coupling.
+    INDIRECT: laser -> hohlraum -> X-rays -> capsule; most driver energy is lost
+      to X-ray conversion + hohlraum re-absorption, so the least fuel is
+      assembled per joule -> lowest gain (and the hohlraum raises target cost).
+    """
+
+    DIRECT = "direct"
+    HYBRID = "hybrid"
+    INDIRECT = "indirect"
+
+
+class TargetCostMode(Enum):
+    """Per-shot target/consumable cost model (design doc D4). Size-scaled with
+    driver energy so the per-shot cost differs between a small DPSSL capsule and
+    a large Xcimer/MagLIF shot. Calibrated to reproduce the concept's existing
+    NOAK target_unit_cost at its reference driver energy.
+
+    METAL_LINER (MagLIF, Z-pinch): material-dominated — volumetric liner metal
+      (scales ~E) * machining markup + recyclable-transmission-line remanufacture
+      (~flat). Markup ~1.3x; the material leg carries the cost.
+    CAPSULE_FAB (laser, heavy-ion): fabrication-dominated — cryo layering
+      (~E, fuel volume), coating/metrology (~E^2/3, shell area), and per-target
+      assembly (~flat), plus a negligible material floor.
+    """
+
+    METAL_LINER = "metal_liner"
+    CAPSULE_FAB = "capsule_fab"
 
 
 CONCEPT_TO_FAMILY = {
@@ -102,6 +159,20 @@ REP_RATE_SIZED_CONCEPTS = frozenset(
         ConfinementConcept.PLASMA_JET,
         ConfinementConcept.THETA_PINCH,
         ConfinementConcept.LASER_IFE,
+    }
+)
+
+# Concepts that support the opt-in target-yield sizing axis (design doc D3):
+# scale the shot (driver energy -> yield via the gain curve -> chamber via
+# R~sqrt(yield)) to hit the power target with one chamber. LASER_IFE is already
+# rep-rate-sized; MAGLIF and ZPINCH move OFF their q_eng inverse path onto the
+# cited-shot / target-yield path only when a concept sets
+# `sizing_axis: target_yield` (otherwise their behavior is unchanged).
+TARGET_YIELD_CONCEPTS = frozenset(
+    {
+        ConfinementConcept.LASER_IFE,
+        ConfinementConcept.MAGLIF,
+        ConfinementConcept.ZPINCH,
     }
 )
 

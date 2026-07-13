@@ -477,6 +477,7 @@ def cas22_reactor_plant_equipment(
         _LASER_DRIVER_PER_MJ = {
             LaserDriverType.DPSSL: cc.driver_laser_per_mj,
             LaserDriverType.KRF: cc.driver_krf_per_mj,
+            LaserDriverType.FIBER: cc.driver_fiber_per_mj,
             LaserDriverType.NDGLASS: cc.driver_ndglass_per_mj,
         }
         if concept == ConfinementConcept.LASER_IFE and laser_driver_type is not None:
