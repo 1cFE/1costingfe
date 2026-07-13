@@ -74,14 +74,15 @@ def test_dec_cas23_zero_when_no_thermal():
 
 
 def test_thermal_pulsed_cas23_nonzero():
+    # ZPINCH runs thermal conversion and now sizes on the target-yield axis;
+    # a thermal (non-DEC) pulsed plant still carries a nonzero CAS23.
     model = CostModel(concept=ConfinementConcept.ZPINCH, fuel=Fuel.DT)
     result = model.forward(
         net_electric_mw=1000.0,
         availability=0.85,
         lifetime_yr=30,
-        q_eng=20.0,
-        f_rep=0.1,
         eta_pin=0.15,
+        size_from_power=True,
     )
     assert result.costs.cas23 > 0
 

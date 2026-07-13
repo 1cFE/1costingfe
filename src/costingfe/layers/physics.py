@@ -735,6 +735,75 @@ def _pulsed_thermal_core(
     )
 
 
+# ---------------------------------------------------------------------------
+# First-principles pulsed-IFE gain (unified framework): company claims set the
+# driver energy; PHYSICS sets the gain (a per-subtype coupling + a universal
+# robust-burn law). No per-concept gain anchor. See design doc.
+# ---------------------------------------------------------------------------
+def physics_yield_mj(
+    e_driver_mj,
+    burn_fraction: float,
+    fuel_mass_mg_per_mj: float,
+    e_fuel_mj_per_g: float,
+    coupling_frac: float = 1.0,
+    rhoR_ref_g_cm2: float = 0.0,
+    e_rhoR_ref_mj: float = 0.0,
+    hb_g_cm2: float = 6.0,
+):
+    """First-principles per-shot fusion yield [MJ] from the burn-up physics
+    (design doc D-unified). Company claims set only the driver energy; the GAIN
+    comes from physics:
+
+        m_fuel = fuel_mass_mg_per_mj * e_driver * coupling_frac * 1e-3   [g]
+        yield  = burn_fraction * m_fuel * e_fuel_mj_per_g       (Y = phi*m*e_DT)
+
+    - burn_fraction (phi = rhoR/(rhoR+6)): the concept's single-pass burn-up,
+      the EXISTING sourced per-concept parameter. Literature-ordered by drive:
+      laser-direct highest (~0.25), magnetized-liner/Z-pinch lowest (~0.10-0.15)
+      -> rhoR ~ 2.0 / 1.1 / 0.67 g/cm^2 respectively (all physical). This is the
+      per-concept burn physics; it describes how the COMPRESSED fuel burns.
+    - coupling_frac (DriveMode): share of delivered driver energy that actually
+      assembles/compresses the fuel, so the fuel mass loaded per driver joule
+      scales with it. Direct drive = 1.0 (reference); indirect ~0.5 (hohlraum
+      X-ray losses); hybrid between. This is what separates direct/hybrid/
+      indirect laser concepts at equal burn_fraction: same burn, different
+      assembly efficiency -> different gain. MagLIF/Z-pinch leave it at 1.0.
+    - fuel_mass_mg_per_mj: DT loaded per delivered MJ (~1.1 mg/MJ, ~universal
+      across ICF schemes; DS 0.9, Focused Energy 1.2).
+    - e_fuel_mj_per_g: fuel Q-value per mass (DT = 3.4e5 MJ/g; DD/DHe3/pB11 lower).
+
+    So gain (Y/e_driver) = burn_fraction * fuel_mass_mg_per_mj * coupling_frac *
+    e_fuel * 1e-3 (laser-direct ~94, MagLIF ~56, laser-indirect ~47).
+
+    Two burn-up modes:
+    - FIXED (default, rhoR_ref_g_cm2 <= 0): phi = burn_fraction, constant per
+      concept -> yield LINEAR in E, gain flat. Simple, but no size dependence.
+    - SIZE-DEPENDENT GAIN CURVE (opt-in, rhoR_ref_g_cm2 > 0): burn-up rises with
+      driver energy on target via the standard ICF implosion scaling,
+        rhoR(E) = rhoR_ref * (E / e_rhoR_ref)^(1/3)     [areal density ~ E^1/3]
+        phi(E)  = rhoR / (rhoR + hb_g_cm2)              [DT burn-up, H_B ~ 6 g/cm^2]
+      This is DRIVER-TYPE AGNOSTIC (it depends only on the delivered energy and
+      the target/drive physics, not KrF vs DPSSL vs fiber). Anchor rhoR_ref at
+      e_rhoR_ref so phi(e_ref) == the concept's burn_fraction (laser: 2.0 g/cm^2
+      @ 2.5 MJ -> phi 0.25). gain then rises ~E^1/3 and SATURATES toward the
+      phi=1 ceiling (gain_max = loading * coupling * e_fuel = 374x for direct DT
+      -- a hard thermodynamic cap; a claimed gain above it is impossible).
+      Refs: Herrmann/Tabak/Lindl 2001 (gain scaling); Lindl 1995 (H_B burn-up).
+
+    Yield is UNBOUNDED in E (no driver ceiling): the driver is priced as total
+    delivered joules x a $/J constant, so driver count/size is a packaging detail
+    the cost model cannot see. The honest scale penalty comes from the chamber
+    (R ~ sqrt(yield) + neutron floor) and the per-shot target cost.
+    """
+    m_fuel_g = fuel_mass_mg_per_mj * e_driver_mj * coupling_frac * 1.0e-3
+    if rhoR_ref_g_cm2 > 0.0 and e_rhoR_ref_mj > 0.0:
+        rhoR = rhoR_ref_g_cm2 * (e_driver_mj / e_rhoR_ref_mj) ** (1.0 / 3.0)
+        phi = rhoR / (rhoR + hb_g_cm2)
+    else:
+        phi = burn_fraction
+    return phi * m_fuel_g * e_fuel_mj_per_g
+
+
 def pulsed_thermal_forward(
     p_fus: float,
     fuel: Fuel,

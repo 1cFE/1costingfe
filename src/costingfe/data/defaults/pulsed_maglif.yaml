@@ -7,8 +7,26 @@ q_eng: 3.0               # Engineering gain target (P_et / P_recirc)
 f_rep: 0.1               # Repetition rate [Hz] (limited by liner fabrication)
 e_preheat_mj: 0.006      # Per-pulse laser preheat energy [MJ] (Sandia Z-Beamlet 2-6 kJ; Slutz 2010 / Knapp 2019). Set 0 for no-preheat magnetized compression (e.g. Pacific Fusion).
 pulsed_conversion: thermal
+
+# Target-yield sizing axis (DEFAULT for MagLIF via sizing_axis below). COMPANY
+# sets the driver (e_driver, rep rate, engineering ceiling); PHYSICS sets the
+# gain from the burn-up fraction below: yield = burn_fraction * m * e_DT,
+# m = fuel_mass_mg_per_mj * e_driver. Anchored on the Pacific Fusion AMPS Al-DS
+# point (Table 1, arXiv:2504.10680 / Phys. Plasmas 32, 092703): 8.4 MJ delivered
+# to the liner -> 380 MJ at burn-up 10%, ~10 mg DT. fuel_mass_mg_per_mj is set so
+# the physics yield reproduces that sourced shot; it is lower than the laser
+# value because magnetic-liner drive assembles less fuel per delivered joule.
+sizing_axis: target_yield  # grow the shot (up to e_driver_max) at max_f_rep, then replicate chambers
+e_driver_mj: 8.4           # MJ/shot delivered to the liner (AMPS Al-DS, Table 1)
+yield_per_shot_mj: 380.0   # MJ/shot fusion yield (AMPS Al-DS; gain Y/E_delivered ~45)
+fuel_mass_mg_per_mj: 1.33  # DT assembled per delivered MJ, calibrated to reproduce 380 MJ at 8.4 MJ, phi=0.10 (implies ~11 mg DT, cf. AMPS ~10 mg)
+max_f_rep: 0.5             # Hz — liner-fabrication-limited rep rate (not sourced; modeling assumption in the 0.1-1 Hz range)
+e_driver_min_mj: 4.0
+e_driver_max_mj: 30.0      # engineering ceiling on the driver (company/tech, not a physics cap). Slutz/Vesey high-gain ice-burner (>1 GJ, up to ~7 GJ at 60 MA) is the aspirational ceiling.
+wall_improvement_factor: 50.0  # thick-liquid FLiBe curtain (Z-IFE)
+neutron_wall_load_max_mw_m2: 20.0  # thick-liquid neutron wall-load floor (HYLIFE/Z-IFE)
 f_rad: 0.10
-eta_pin: 0.15            # Z-pinch pulsed power wall-plug efficiency
+eta_pin: 0.10            # bank->target coupling eta_D = 8.4/80 (Pacific Fusion AMPS: 80 MJ stored -> 8.4 MJ to load)
 driver_recovery_frac: 0.0  # Electrical driver, no mechanical recovery (see MAG_TARGET's anchored value)
 
 mn: 1.1              # Neutron energy multiplier (breeding blanket)
@@ -36,7 +54,7 @@ vessel_t: 0.10       # Vacuum vessel
 construction_time_yr: 6.0
 
 # Fuel burn fraction defaults
-burn_fraction: 0.15      # Single-pass burn fraction (MagLIF; Slutz 2010 / Knapp 2019 2D LASNEX at full Z-driver)
+burn_fraction: 0.10      # Single-pass burn-up (Pacific Fusion AMPS Al-DS, Table 1; the 380 MJ point burns at 10%, not the 15% of Slutz's higher-current ice-burner)
 fuel_recovery: 0.99         # Fraction of unburned fuel recovered and recycled (NOAK)
 dd_f_T: 0.969
 dd_f_He3: 0.689

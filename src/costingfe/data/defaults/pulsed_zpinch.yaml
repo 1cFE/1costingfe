@@ -6,6 +6,25 @@ f_rep: 0.1               # Repetition rate [Hz]
 pulsed_conversion: thermal
 f_rad: 0.10
 eta_pin: 0.15            # Pulsed power wall-plug efficiency
+
+# Target-yield sizing axis (DEFAULT for z-pinch via sizing_axis below). COMPANY
+# sets the driver; PHYSICS sets the gain: yield = burn_fraction * m * e_DT,
+# m = fuel_mass_mg_per_mj * e_driver. Anchored on the Sandia Z-IFE reactor DEMO
+# point (Olson, "Z-Pinch IFE," FPA 2005; Matzen FPA 2008): ~40 MJ delivered to
+# the pinch -> 3 GJ from a dynamic-hohlraum capsule at gain ~75 (band 50-100),
+# 0.1 Hz per chamber, ~10-12 chambers -> 1 GWe. ASPIRATIONAL: 2D sims demonstrate
+# only 0.4-0.5 GJ single-target at ~60 MA (Slutz/Vesey); 3 GJ needs the 90 MA
+# driver. fuel_mass_mg_per_mj is calibrated so the physics yield reproduces the
+# 3 GJ point. Add banks -> more current -> more yield (linear C220107 driver cost).
+sizing_axis: target_yield  # grow the shot (up to e_driver_max) at max_f_rep, then replicate chambers
+e_driver_mj: 40.0          # MJ/shot delivered to the pinch (Olson FPA05 table, upper end for the 3 GJ point)
+yield_per_shot_mj: 3000.0  # MJ/shot (Sandia Z-IFE 3 GJ DEMO target; aspirational, sims show 0.4-0.5 GJ)
+max_f_rep: 0.1             # Hz per chamber (Olson FPA05 / Matzen FPA08; RTL/liner-fabrication limited)
+fuel_mass_mg_per_mj: 0.735 # DT assembled per delivered MJ, calibrated to reproduce 3 GJ at 40 MJ, phi=0.30 (implies ~29 mg DT)
+e_driver_min_mj: 15.0
+e_driver_max_mj: 60.0
+wall_improvement_factor: 50.0  # thick-liquid wall assumed (PLACEHOLDER)
+neutron_wall_load_max_mw_m2: 20.0  # thick-liquid neutron wall-load floor (PLACEHOLDER)
 driver_recovery_frac: 0.0  # Electrical driver, no mechanical recovery (see MAG_TARGET's anchored value)
 mn: 1.1              # Neutron energy multiplier
 f_sub: 0.03          # Subsystem power fraction
@@ -32,7 +51,7 @@ vessel_t: 0.10       # Vacuum vessel
 construction_time_yr: 4.0  # Years (simple pulsed system)
 
 # Fuel burn fraction defaults (physics.py ash_neutron_split)
-burn_fraction: 0.10      # Single-pass burn fraction (Z-pinch reactor concepts; Rayleigh-Taylor disassembly limit)
+burn_fraction: 0.30      # Single-pass burn-up (Z-IFE dynamic-hohlraum capsule burns like an ICF capsule, ~30%; derived, not directly cited)
 fuel_recovery: 0.99         # Fraction of unburned fuel recovered and recycled (NOAK)
 dd_f_T: 0.969
 dd_f_He3: 0.689

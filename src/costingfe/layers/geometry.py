@@ -91,6 +91,61 @@ def _sphere_shell_volume(r_in: float, r_out: float) -> float:
     return (4.0 / 3.0) * math.pi * (r_out**3 - r_in**3)
 
 
+def chamber_radius_m(
+    yield_per_shot_mj: float,
+    r_ref_m: float,
+    yield_ref_mj: float,
+    wall_improvement_factor: float,
+    p_neutron_mw: float = 0.0,
+    neutron_wall_load_max_mw_m2: float = 0.0,
+) -> float:
+    """First-wall radius [m] for an IFE/MIF chamber = the larger of TWO vessel
+    constraints, ``R_fw = max(R_fluence, R_power)``:
+
+    1. Per-shot survivability (fluence), which PENALIZES high single-shot yield:
+
+           R_fluence = r_ref_m * sqrt(yield_per_shot_mj / (yield_ref_mj * f_wall))
+
+       Carried from GEM's HAPL dry-wall chamber (Sviatoslavsky et al., FST 47,
+       535 (2005)): r_ref_m = 6.5 m at yield_ref_mj = 150 MJ. The fluence limit
+       is a materials-physics property (wall neutron-dpa / thermal-shock
+       tolerance), not a learning-curve quantity, so the FOAK constant is a valid
+       NOAK dry-wall base. ``wall_improvement_factor`` (f_wall >= 1) raises the
+       tolerable areal fluence and shrinks the chamber:
+         - 1.0    : GEM dry wall (default)
+         - ~1.5-3 : advanced dry-wall materials (NOAK material advancement)
+         - ~40-60 : thick-liquid wall (HYLIFE-II / Xcimer) — the flowing liquid
+           absorbs the pulse and moves the structural wall inward, pulling the
+           naive ~22 m dry-wall radius at 1.8 GJ down to a HYLIFE-class ~3 m.
+       The liquid inventory itself is costed separately in CAS27, so f_wall
+       shrinks only the structural chamber (no double benefit).
+
+    2. Time-averaged neutron wall loading (power density), which PENALIZES high
+       total power. A spherical first wall of area 4*pi*R^2 carrying neutron
+       power P_n must keep Gamma_n = P_n / (4*pi*R^2) below a wall-type limit:
+
+           R_power = sqrt(P_n / (4*pi * neutron_wall_load_max_mw_m2))
+
+       Without this floor a LOW-yield/HIGH-rep concept gets a tiny fluence-sized
+       chamber carrying tens of MW/m^2 — a first-wall power density no real wall
+       survives. That is a free pass for exactly the high-rep design corner the
+       fluence term (constraint 1) is supposed to reward, so the two constraints
+       must both bind. Pass p_neutron_mw <= 0 (or limit <= 0) to disable the
+       floor (pure-fluence behaviour, e.g. unit tests / legacy callers).
+
+    See docs/plans/2026-07-07-target-yield-sizing-design.md (D2).
+    """
+    r_fluence = r_ref_m * math.sqrt(
+        yield_per_shot_mj / (yield_ref_mj * wall_improvement_factor)
+    )
+    if p_neutron_mw > 0.0 and neutron_wall_load_max_mw_m2 > 0.0:
+        r_power = math.sqrt(
+            p_neutron_mw / (4.0 * math.pi * neutron_wall_load_max_mw_m2)
+        )
+        return max(r_fluence, r_power)
+    return r_fluence
+
+
 def compute_geometry(rb: RadialBuild, concept: ConfinementConcept) -> Geometry:
     """Compute component volumes and surface areas from radial build.
 

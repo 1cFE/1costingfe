@@ -3,6 +3,7 @@
 import difflib
 import math
 import numbers
+import warnings
 
 from costingfe._backend import HAS_JAX, Tracer, grad, vmap
 from costingfe._backend import xp as jnp
@@ -32,6 +33,7 @@ from costingfe.layers.costs import (
     cas70_om,
     cas80_fuel,
     cas90_financial,
+    target_shot_cost,
 )
 from costingfe.layers.economics import compute_lcoe
 from costingfe.layers.geometry import RadialBuild, compute_geometry
@@ -46,6 +48,7 @@ from costingfe.layers.physics import (
     SizingInfeasible,
     mfe_forward_power_balance,
     mfe_inverse_power_balance,
+    physics_yield_mj,
     pulsed_dec_forward,
     pulsed_dec_inverse,
     pulsed_recovered_compression_forward,
@@ -73,12 +76,14 @@ from costingfe.types import (
     CONCEPT_TO_FAMILY,
     N_MOD_SIZED_CONCEPTS,
     REP_RATE_SIZED_CONCEPTS,
+    TARGET_YIELD_CONCEPTS,
     BlanketFill,
     BlanketForm,
     CoilMaterial,
     ConfinementConcept,
     ConfinementFamily,
     CostResult,
+    DriveMode,
     ForwardResult,
     Fuel,
     LaserDriverType,
@@ -129,6 +134,11 @@ def _n_mod_for_target(target, unit_max):
 
 _F_REP_MIN = 1e-3  # Hz, lower bisection bound (net < 0 here; fixed loads dominate)
 _F_REP_BISECT_ITERS = 60
+# single_chamber sizing (no driver ceiling): geometric upper-bracket expansion on
+# E. Net is monotone and unbounded in E at fixed f for any net-positive concept,
+# so this always brackets; the cap is only a non-viability backstop (2^40 x e is
+# astronomically large -> the concept's q_eng asymptote is <= 1, never net-positive).
+_E_BRACKET_MAX_DOUBLINGS = 40
 
 
 class CostModel:
@@ -172,6 +182,22 @@ class CostModel:
         bf = params["burn_fraction"]
         fr = params["fuel_recovery"]
         return bf / (1.0 - fr * (1.0 - bf))
+
+    _LASER_ETA_SOURCE = {
+        LaserDriverType.DPSSL: "eta_source_dpssl",
+        LaserDriverType.KRF: "eta_source_krf",
+        LaserDriverType.FIBER: "eta_source_fiber",
+        LaserDriverType.NDGLASS: "eta_source_ndglass",
+    }
+
+    def _laser_eta_pin(self, params):
+        """Wall-plug efficiency for a LASER_IFE driver: eta_source(driver type)
+        x eta_couple (default 1.0 -- the light->fuel coupling is the drive-mode
+        gain, not here). Reuses the eta_source x eta_couple framework the MFE
+        heating methods use, with the source picked by laser_driver_type."""
+        attr = self._LASER_ETA_SOURCE[self.laser_driver_type]
+        eta_src = params.get(attr, getattr(self.cc, attr))
+        return eta_src * params.get("eta_couple", 1.0)
 
     def _effective_eta_pin(self, params):
         """Heating wall-plug efficiency eta_pin = eta_source(method) x eta_couple.
@@ -405,8 +431,10 @@ class CostModel:
 
         elif self.family == ConfinementFamily.PULSED and (
             self.concept in REP_RATE_SIZED_CONCEPTS
+            or self._on_target_yield_axis(params)
         ):
-            # Rep-rate concepts: the cited shot (e_driver_mj, yield_per_shot_mj)
+            # Rep-rate concepts (and MAGLIF/ZPINCH switched onto the target-yield
+            # axis) use the cited shot (e_driver_mj, yield_per_shot_mj)
             # is the AUTHORITATIVE design point in BOTH modes. On the normal
             # (non-sizing) path we hold that shot fixed and solve f_rep to hit
             # the per-module net target, instead of growing e_driver at the
@@ -1064,6 +1092,208 @@ class CostModel:
         p_fus_solved = params["yield_per_shot_mj"] * f_rep_solved
         return self._pulsed_forward(solved, p_fus_solved, e_driver_mj, f_rep_solved)
 
+    # -- Target-yield sizing axis (deterministic, one-chamber-first) ----------
+    # See docs/plans/2026-07-07-target-yield-sizing-design.md (D3). Companies
+    # build ONE large chamber and add driver modules (beamlines / cap banks)
+    # onto a single target; driver cost is already linear in energy, so scaling
+    # is a deterministic solve to hit the plant target, priority E -> f -> n_mod.
+    def _on_target_yield_axis(self, params):
+        """True when this concept is running the opt-in target-yield sizing axis
+        (design doc D3): a supported concept with `sizing_axis == target_yield`.
+        Un-flagged concepts (and unsupported concepts) return False, so their
+        power-balance and sizing behavior is unchanged."""
+        return (
+            params.get("sizing_axis") == "target_yield"
+            and self.concept in TARGET_YIELD_CONCEPTS
+        )
+
+    def _coupling_frac(self, params):
+        """Drive-mode coupling fraction (share of driver energy that assembles
+        the fuel). An explicit `coupling_frac` override wins; otherwise map
+        `drive_mode` (direct/hybrid/indirect) to its cc anchor. Unset -> direct
+        (1.0), so MagLIF/Z-pinch and un-flagged laser concepts are unchanged."""
+        explicit = params.get("coupling_frac")
+        if explicit is not None:
+            return float(explicit)
+        mode = params.get("drive_mode", DriveMode.DIRECT.value)
+        return {
+            DriveMode.DIRECT.value: params.get(
+                "drive_coupling_direct", self.cc.drive_coupling_direct
+            ),
+            DriveMode.HYBRID.value: params.get(
+                "drive_coupling_hybrid", self.cc.drive_coupling_hybrid
+            ),
+            DriveMode.INDIRECT.value: params.get(
+                "drive_coupling_indirect", self.cc.drive_coupling_indirect
+            ),
+        }[mode]
+
+    def _yield_from_e(self, params, e_driver_mj):
+        """Per-shot yield [MJ] from FIRST-PRINCIPLES burn physics: Y = phi * m *
+        e_DT, with phi = the concept's sourced burn_fraction, m = fuel loading
+        (mg/MJ) x driver energy x drive-mode coupling, e_DT = fuel Q-value/mass.
+        The company sets the driver energy + drive configuration; the physics
+        (burn-up fraction + fuel + coupling) sets the gain. No per-concept gain
+        anchor, no vendor gain claim."""
+        return float(
+            physics_yield_mj(
+                e_driver_mj,
+                params["burn_fraction"],
+                params.get("fuel_mass_mg_per_mj", 1.1),
+                params.get("e_fuel_mj_per_g", 3.4e5),
+                self._coupling_frac(params),
+                # Opt-in size-dependent gain curve: set rhoR_ref_g_cm2 +
+                # e_rhoR_ref_mj to make burn-up (hence gain) rise with driver
+                # energy; unset -> flat burn_fraction (unchanged).
+                params.get("rhoR_ref_g_cm2", 0.0),
+                params.get("e_rhoR_ref_mj", 0.0),
+                params.get("gain_hb_g_cm2", 6.0),
+            )
+        )
+
+    def _pulsed_net_at_ef(self, params, e_driver_mj, f_rep):
+        """Net electric [MW] of ONE chamber at driver energy E and rate f_rep,
+        with yield derived from the gain curve (yield = gain(E), p_fus =
+        yield * f_rep). Monotone increasing in both E (super-linear yield
+        outpaces linear driver recirc in-band) and f_rep, so both the E- and
+        f-solves below can bisect."""
+        yld = self._yield_from_e(params, e_driver_mj)
+        trial = {**params, "e_driver_mj": e_driver_mj, "yield_per_shot_mj": yld}
+        return float(self._pulsed_forward(trial, yld * f_rep, e_driver_mj, f_rep).p_net)
+
+    @staticmethod
+    def _bisect_monotone(fn, lo, hi, target):
+        """Bisect a monotone-increasing fn for fn(x) == target on [lo, hi].
+        Caller guarantees fn(lo) <= target <= fn(hi)."""
+        for _ in range(_F_REP_BISECT_ITERS):
+            mid = 0.5 * (lo + hi)
+            if fn(mid) < target:
+                lo = mid
+            else:
+                hi = mid
+        return 0.5 * (lo + hi)
+
+    def _size_target_yield(self, params, n_mod):
+        """Deterministic target-yield sizing (design doc D3). One chamber by
+        default; scale driver energy E at the cited rep rate, then bump rep rate
+        to max_f_rep, then replicate chambers only if a single chamber at
+        (e_max, max_f_rep) still cannot reach the target. Returns the PowerTable
+        at the solved (E, f); sets self._last_n_mod."""
+        if n_mod != 1:
+            raise ValueError(
+                "n_mod cannot be pinned in target-yield size_from_power mode; "
+                "chambers are added only if one chamber at (e_max, max_f_rep) "
+                "cannot reach the target. Remove n_mod or set size_from_power=False."
+            )
+        if params.get("sizing_mode") == "single_chamber":
+            return self._size_single_chamber(params)
+        target = params["net_electric_mw"]
+        f_cited = params["f_rep"]
+        e_cited = params["e_driver_mj"]
+        e_max = params["e_driver_max_mj"]
+        f_max = params["max_f_rep"]
+
+        net_e = lambda e, f: self._pulsed_net_at_ef(params, e, f)  # noqa: E731
+
+        if net_e(e_cited, f_cited) >= target:
+            # Small target: one cited chamber already overshoots -> trim rep rate.
+            e_solved = e_cited
+            f_solved = self._bisect_monotone(
+                lambda f: net_e(e_cited, f), _F_REP_MIN, f_cited, target
+            )
+            n_solved = 1
+        elif net_e(e_max, f_cited) >= target:
+            # Step 1: add driver energy at the cited rep rate.
+            e_solved = self._bisect_monotone(
+                lambda e: net_e(e, f_cited), e_cited, e_max, target
+            )
+            f_solved, n_solved = f_cited, 1
+        elif net_e(e_max, f_max) >= target:
+            # Step 2: cap E at e_max, bump rep rate.
+            e_solved = e_max
+            f_solved = self._bisect_monotone(
+                lambda f: net_e(e_max, f), f_cited, f_max, target
+            )
+            n_solved = 1
+        else:
+            # Step 3: one maxed chamber cannot reach target -> replicate.
+            unit_max = net_e(e_max, f_max)
+            n_solved = _n_mod_for_target(target, unit_max)
+            e_solved = e_max
+            f_solved = self._bisect_monotone(
+                lambda f: net_e(e_max, f), _F_REP_MIN, f_max, target / n_solved
+            )
+
+        yld = self._yield_from_e(params, e_solved)
+        self._last_n_mod = n_solved
+        solved = {
+            **params,
+            "e_driver_mj": e_solved,
+            "yield_per_shot_mj": yld,
+            "f_rep": f_solved,
+        }
+        return self._pulsed_forward(solved, yld * f_solved, e_solved, f_solved)
+
+    def _size_single_chamber(self, params):
+        """Single-chamber scale-to-power (sizing_mode='single_chamber'). Hold the
+        cited rep rate; grow driver energy E (stack drivers / a larger target)
+        with NO engineering ceiling until ONE chamber reaches the plant net
+        target, then size that one chamber to the solved yield (R ~ sqrt(yield),
+        subject to the neutron wall-load floor). This is the apples-to-apples
+        normalization: every concept a single scaled chamber at its own stated
+        rep rate, so the comparison isolates the physics/cost, not a module-count
+        or rep-rate assumption.
+
+        There is no `e_driver_max` cap: driver capital is linear in total joules
+        (C220104/C220107 are pure $/J), so the driver count is invisible to the
+        cost model, and the real scale penalty is carried by the chamber and the
+        per-shot target cost. Net electric is monotone and unbounded in E at
+        fixed f for any net-positive concept, so a single bisection on E finds
+        the operating point; n_mod is always 1."""
+        target = params["net_electric_mw"]
+        f = params["f_rep"]
+        e_cited = params["e_driver_mj"]
+        net_at = lambda e: self._pulsed_net_at_ef(params, e, f)  # noqa: E731
+
+        if net_at(e_cited) >= target:
+            # Cited shot already overshoots this target at the stated rep rate.
+            # Trim rep rate rather than shrink below the cited driver, so the
+            # native design point stays the anchor (mirrors _size_target_yield).
+            e_solved = e_cited
+            f_solved = self._bisect_monotone(
+                lambda ff: self._pulsed_net_at_ef(params, e_cited, ff),
+                _F_REP_MIN,
+                f,
+                target,
+            )
+        else:
+            # Grow E at the cited rep rate. Expand the upper bracket geometrically
+            # (no ceiling) until it straddles the target, then bisect.
+            e_hi = e_cited
+            for _ in range(_E_BRACKET_MAX_DOUBLINGS):
+                if net_at(e_hi) >= target:
+                    break
+                e_hi *= 2.0
+            else:
+                raise ValueError(
+                    "single_chamber sizing: concept cannot reach "
+                    f"{target} MW at f_rep={f} Hz even at very large driver "
+                    "energy (q_eng asymptote <= 1, never net-positive). Check "
+                    "eta_pin / eta_th / burn_fraction."
+                )
+            e_solved = self._bisect_monotone(net_at, e_cited, e_hi, target)
+            f_solved = f
+
+        yld = self._yield_from_e(params, e_solved)
+        self._last_n_mod = 1
+        solved = {
+            **params,
+            "e_driver_mj": e_solved,
+            "yield_per_shot_mj": yld,
+            "f_rep": f_solved,
+        }
+        return self._pulsed_forward(solved, yld * f_solved, e_solved, f_solved)
+
     def _optimize_gss(self, lcoe_of_param, param_lo, param_hi):
         """Golden-section minimize LCOE over a scalar parameter in [param_lo, param_hi].
 
@@ -1188,6 +1418,18 @@ class CostModel:
         if not self._cc_user_provided:
             for cc_key in ("turbine_per_mw", "heat_rej_per_mw"):
                 params[cc_key] = cycle_preset[cc_key]
+        # LASER_IFE wall-plug efficiency by driver architecture: eta_pin is no
+        # longer in the concept YAML (like eta_th) -- it is resolved here from
+        # laser_driver_type via eta_source (KrF < DPSSL < fiber; flashlamp far
+        # lower), so cheap-but-inefficient drivers pay for it in recirculating
+        # power. An explicit eta_pin override still wins. Set before any sizing/
+        # power-balance path reads params["eta_pin"].
+        if (
+            self.concept == ConfinementConcept.LASER_IFE
+            and self.laser_driver_type is not None
+            and "eta_pin" not in overrides
+        ):
+            params["eta_pin"] = self._laser_eta_pin(params)
         params.update(
             dict(
                 net_electric_mw=net_electric_mw,
@@ -1498,6 +1740,16 @@ class CostModel:
                 # downstream cost aggregation.
                 n_mod = self._last_n_mod
                 solved_n_mod = n_mod
+            elif self._on_target_yield_axis(params):
+                # Opt-in target-yield axis (design doc D3): scale driver energy
+                # (yield via the gain curve, chamber via R~sqrt(yield)) to hit
+                # the target with one chamber before bumping f_rep / n_mod.
+                # Covers LASER_IFE and MAGLIF/ZPINCH (switched off their q_eng
+                # path by `sizing_axis: target_yield`). Un-flagged concepts fall
+                # through to their default sizing branch below.
+                pt = self._size_target_yield(params, n_mod)
+                n_mod = self._last_n_mod
+                solved_n_mod = n_mod
             elif self.concept in REP_RATE_SIZED_CONCEPTS:
                 if params.get("optimize_lcoe", False):
                     raise ValueError(
@@ -1536,11 +1788,75 @@ class CostModel:
         if self.family == ConfinementFamily.PULSED:
             params = {**params, "f_rep": pt.f_rep}
 
+        # Two-mode size-scaled per-shot target cost (design doc D4): opt-in via
+        # target_cost_mode. The per-shot cost tracks the assembled FUEL MASS,
+        # m_fuel = yield/(burn_fraction*e_fuel) -- the same per-shot yield the
+        # chamber is sized from below -- against a universal per-archetype
+        # reference mass (no per-concept driver-energy knob). Sets
+        # target_unit_cost before cas80 reads it.
+        tcm = params.get("target_cost_mode")
+        if tcm:
+            yield_per_shot_mj = float(pt.p_fus) / float(pt.f_rep)
+            # Indirect drive carries a high-Z hohlraum: a size-scaled material
+            # term (target_material_floor). Auto-applied from drive_mode so an
+            # indirect capsule costs ~2x a bare direct one AND scales with the
+            # shot, unless an explicit floor is already set.
+            tcp = params
+            if (
+                params.get("drive_mode") == DriveMode.INDIRECT.value
+                and float(params.get("target_material_floor", 0.0)) == 0.0
+            ):
+                tcp = {
+                    **params,
+                    "target_material_floor": self.cc.target_hohlraum_material_floor,
+                }
+            tcost, mat_frac = target_shot_cost(
+                tcm,
+                yield_per_shot_mj,
+                tcp["burn_fraction"],
+                tcp.get("e_fuel_mj_per_g", 3.4e5),
+                tcp,
+            )
+            params = {**params, "target_unit_cost": tcost}
+            guard = params.get("target_material_guard_frac", 0.8)
+            if mat_frac > guard:
+                warnings.warn(
+                    f"{self.concept.value}: target material is {mat_frac:.0%} of "
+                    f"the per-shot cost (> guard {guard:.0%}); the target_unit_cost "
+                    "anchor may be inconsistent with the material choice (e.g. a "
+                    "high-Z hohlraum). See design doc D4.",
+                    UserWarning,
+                    stacklevel=2,
+                )
+
         # Layer 3: Geometry (radial build -> component volumes)
         from dataclasses import fields as dc_fields
 
         rb_field_names = {f.name for f in dc_fields(RadialBuild)}
         rb_params = {k: params[k] for k in rb_field_names if k in params}
+        # Target-yield chamber sizing (design doc D2): for opted-in IFE/MIF
+        # concepts the first-wall radius (plasma_t) is DERIVED from the operating
+        # per-shot yield at a wall-type fluence limit, so blanket/shield/vessel/
+        # CAS27 all respond to the shot. The power balance does not depend on
+        # plasma_t, so this is a pure cost-side derivation applied after pt.
+        if params.get("sizing_axis") == "target_yield":
+            from costingfe.layers.geometry import chamber_radius_m
+
+            yield_per_shot_mj = float(pt.p_fus) / float(pt.f_rep)
+            rb_params["plasma_t"] = chamber_radius_m(
+                yield_per_shot_mj,
+                params.get("chamber_radius_ref_m", self.cc.chamber_radius_ref_m),
+                params.get("chamber_yield_ref_mj", self.cc.chamber_yield_ref_mj),
+                params.get("wall_improvement_factor", self.cc.wall_improvement_dry),
+                # Neutron wall-load floor: pt.p_neutron is per-chamber, matching
+                # this single first wall, so a low-yield/high-rep shot can't hide
+                # in a tiny fluence-sized chamber (see chamber_radius_m).
+                p_neutron_mw=float(pt.p_neutron),
+                neutron_wall_load_max_mw_m2=params.get(
+                    "neutron_wall_load_max_mw_m2",
+                    self.cc.neutron_wall_load_max_mw_m2,
+                ),
+            )
         rb = RadialBuild(**rb_params)
         geo = compute_geometry(rb, self.concept)
 
@@ -2234,6 +2550,34 @@ class CostModel:
             "target_factory_capex_fixed",
             "target_factory_capex_per_hz",
             "target_factory_capex_per_gwfus",
+            # Target-yield sizing axis (design doc D1-D3): opt-in flag + the
+            # gain-curve params + the per-concept wall fluence-improvement factor
+            # that chamber sizing reads. Carried here so any rep-rate/pulsed
+            # concept can switch onto the target-yield axis without every YAML
+            # declaring them; un-flagged concepts never read them.
+            "sizing_axis",
+            # sizing_mode: "single_chamber" scales ONE chamber (driver energy,
+            # no ceiling) to the plant target at the cited rep rate; default
+            # (unset) keeps the E->f->n_mod ladder. See _size_single_chamber.
+            "sizing_mode",
+            "e_driver_min_mj",
+            "e_driver_max_mj",  # engineering driver-energy ceiling (company/tech)
+            "wall_improvement_factor",
+            # Laser-IFE drive configuration (direct/hybrid/indirect); maps to a
+            # coupling fraction on the gain (physics_yield_mj). coupling_frac is
+            # an explicit escape hatch that overrides the drive_mode lookup.
+            "drive_mode",
+            "coupling_frac",
+            # Opt-in size-dependent gain curve (rhoR ~ E^1/3, phi = rhoR/(rhoR+H_B)).
+            "rhoR_ref_g_cm2",
+            "e_rhoR_ref_mj",
+            # First-principles gain uses burn_fraction (an engineering YAML key)
+            # + fuel_mass_mg_per_mj / e_fuel_mj_per_g (CostingConstants fields,
+            # already allowed). No per-concept gain anchor to register here.
+            # Two-mode per-shot target cost (design doc D4); opt-in via
+            # target_cost_mode. Calibration params are cc fields (already
+            # allowed) but listed here for the string mode flag.
+            "target_cost_mode",
         }
     )
 

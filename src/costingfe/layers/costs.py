@@ -309,6 +309,14 @@ _LASER_SUBSYSTEMS = {
         ("krf_foil_replace_frac", "krf_foil_shot_lifetime"),
         ("krf_ebeam_replace_frac", "krf_ebeam_shot_lifetime"),
     ),
+    # Fiber/blue: diode-pumped like DPSSL (fiber modules ~plant-life diodes,
+    # tripler crystals, final optics), so it reuses the DPSSL wear set until a
+    # fiber-specific replacement basis is sourced.
+    LaserDriverType.FIBER: (
+        ("dpssl_diode_replace_frac", "dpssl_diode_shot_lifetime"),
+        ("dpssl_crystal_replace_frac", "dpssl_crystal_shot_lifetime"),
+        ("dpssl_optics_replace_frac", "dpssl_optics_shot_lifetime"),
+    ),
     LaserDriverType.NDGLASS: (
         ("ndglass_lamp_replace_frac", "ndglass_lamp_shot_lifetime"),
     ),
@@ -441,6 +449,56 @@ def cas70_om(
             )
 
     return cas71 + cas72, cas71, cas72
+
+
+def target_shot_cost(mode, yield_per_shot_mj, burn_fraction, e_fuel_mj_per_g, params):
+    """Per-shot target/consumable cost [$/shot], size-scaled with the per-shot
+    ASSEMBLED FUEL MASS (design doc D4). Returns (cost_usd, material_frac);
+    material_frac feeds the validity guard.
+
+    The target's cost tracks the DT it must hold and compress, so it scales with
+
+        m_fuel = yield_per_shot / (burn_fraction * e_fuel)      [g]
+
+    -- the SAME per-shot yield the chamber is sized from (R ~ sqrt(yield)), so
+    the target and chamber respond consistently to shot size with NO separate
+    per-concept driver-energy reference (the old e_ref_mj, which went stale when
+    it was dropped from the YAMLs -> ratio froze at 1). Sizing by fuel MASS
+    rather than yield alone makes a low-burn-up target (MagLIF/Z-pinch), which
+    needs more fuel for the same yield, correctly cost more. Calibrated so a
+    reference-mass target reproduces the archetype anchor; the reference is a
+    UNIVERSAL per-archetype costing constant (capsule vs liner), never dropped.
+
+    METAL_LINER (MagLIF/Z-pinch): material-dominated. Liner metal scales
+      ~m_fuel (target grows with the fuel it drives), machined (markup), plus a
+      recyclable-transmission-line remanufacture cost that is ~flat.
+    CAPSULE_FAB (laser/heavy-ion): fabrication-dominated. Cryo layering scales
+      with fuel volume (~m_fuel), coating/metrology with shell area
+      (~m_fuel^2/3), and fill/assembly/QA is ~flat; material is a tiny floor.
+    """
+    from costingfe.types import TargetCostMode
+
+    if isinstance(mode, str):
+        mode = TargetCostMode(mode)
+    m_fuel_mg = 1.0e3 * yield_per_shot_mj / (burn_fraction * e_fuel_mj_per_g)
+
+    if mode == TargetCostMode.METAL_LINER:
+        ratio = m_fuel_mg / params["target_fuel_mass_ref_liner_mg"]
+        liner = params["target_liner_cost_ref"] * ratio  # material, ~m_fuel
+        machined = liner * params["target_machining_markup"]
+        rtl = params["target_rtl_cost"]  # remanufacture, ~flat
+        cost = machined + rtl
+        material_frac = machined / cost
+    else:  # CAPSULE_FAB
+        ratio = m_fuel_mg / params["target_fuel_mass_ref_capsule_mg"]
+        cryo = params["target_cryo_cost_ref"] * ratio  # ~m_fuel (fuel volume)
+        coat = params["target_coat_cost_ref"] * ratio ** (2.0 / 3.0)  # ~m_fuel^2/3
+        assembly = params["target_assembly_cost"]  # ~flat
+        material = params.get("target_material_floor", 0.0) * ratio  # ~m_fuel, tiny
+        cost = cryo + coat + assembly + material
+        material_frac = material / cost if cost > 0 else 0.0
+
+    return cost, material_frac
 
 
 def cas80_fuel(
