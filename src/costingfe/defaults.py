@@ -343,10 +343,12 @@ class CostingConstants:
     f_rad_dhe3: float = 0.05
     f_rad_pb11: float = 0.15  # High Z^2 bremsstrahlung
 
-    # Steady-state radiation fraction (fraction of P_fus radiated as bremsstrahlung)
+    # Steady-state radiation fraction (fraction of P_fus radiated as bremsstrahlung).
     # Used to override compute_p_rad for fuels where bremsstrahlung dominates.
-    # p-B11: 83% with alpha channeling at the optimal hybrid fast/thermal
-    # operating point (P_L/P_F = 17%, Ochs et al. 2022, PhysRevE 106 055215).
+    # p-B11: 83% -- photon fraction at the burn-dominated p-B11 operating point
+    # WITH fully efficient alpha channeling (Ochs et al., Phys. Rev. E 106,
+    # 055215, Sec. IV.B / Fig. 6, P_L/P_F = 17%). Without channeling the same
+    # paper gives about 0.96 -- channeling is doing most of the work here.
     # D-He3: 24% for a 50/50 D/He3 mix at T = 70 keV with relativistic + e-e
     # bremsstrahlung (Bosch-Hale cross sections, Rider 1995 brem corrections).
     # Literature spread: Wesson ~20% at 100 keV, Santarius/Kulcinski ~25%, Rider ~30%.
@@ -592,18 +594,6 @@ class CostingConstants:
             Fuel.DHE3: self.f_rad_dhe3,
             Fuel.PB11: self.f_rad_pb11,
         }.get(fuel, self.f_rad_dt)
-
-    def f_rad_fus(self, fuel):
-        """Radiation fraction of P_fus for steady-state concepts.
-
-        Returns None for fuels where compute_p_rad should be used instead.
-        """
-        from costingfe.types import Fuel
-
-        return {
-            Fuel.PB11: self.f_rad_fus_pb11,
-            Fuel.DHE3: self.f_rad_fus_dhe3,
-        }.get(fuel)
 
     def conductor_cost_per_kam(self, coil_material):
         """Conductor (tape) cost [$/kA-m] for a coil material."""

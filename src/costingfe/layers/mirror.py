@@ -726,7 +726,8 @@ def mirror_0d_forward(
 
     # 7. Radiation: per-fuel resolution matching the tokamak path.
     # DT/DD: full compute_p_rad (f_rad_fus=None -> None path).
-    # DHE3/PB11: f_rad_fus proxy when provided; caller passes cc.f_rad_fus(fuel).
+    # DHE3/PB11: f_rad_fus proxy when provided; caller resolves it from the
+    # per-fuel f_rad_fus_* entry in params (see CostModel._f_rad_fus_default).
     # Synchrotron geometry: R_eff = L / (2*pi) maps the cylinder to an
     # equivalent torus for the Albajar formula; kappa=1.0 for a cylinder.
     if f_rad_fus is not None:

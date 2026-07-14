@@ -328,6 +328,19 @@ class CostModel:
             **thermal_kw,
         )
 
+    def _f_rad_fus_default(self, params):
+        """Per-fuel steady-state radiation-fraction default (p-B11/D-He3).
+
+        forward() injects every CostingConstants float field (including
+        f_rad_fus_pb11/f_rad_fus_dhe3) into params, and applies user
+        overrides / sensitivity perturbations there, so the per-fuel default
+        must be read from params, not the frozen constants object, or
+        overrides and elasticities silently vanish. Returns None for fuels
+        (DT/DD) where compute_p_rad is used instead.
+        """
+        key = {Fuel.PB11: "f_rad_fus_pb11", Fuel.DHE3: "f_rad_fus_dhe3"}.get(self.fuel)
+        return params.get(key) if key is not None else None
+
     def _power_balance(self, params, n_mod):
         """Dispatch power balance based on confinement family."""
         # Derive eta_pin from per-method source x per-concept coupling, so all
@@ -380,7 +393,7 @@ class CostModel:
                 plasma_volume=_to_num(params["plasma_volume"]),
                 B=_to_num(params["B"]),
                 radiation_peaking_factor=_to_num(params["radiation_peaking_factor"]),
-                f_rad_fus=params.get("f_rad_fus", self.cc.f_rad_fus(self.fuel)),
+                f_rad_fus=params.get("f_rad_fus", self._f_rad_fus_default(params)),
             )
 
             fuel_frac_kw = dict(
@@ -1577,8 +1590,8 @@ class CostModel:
         # (fuel-ion contribution + impurity excess over hydrogenic), the
         # dhe3_dd_frac pin (explicit user override -> pinned; otherwise derived
         # at the operating point), non-DT operating-temperature brackets, and
-        # the per-fuel radiation proxy (pb11/dhe3 default to cc.f_rad_fus,
-        # DT/DD to None -> full radiation model).
+        # the per-fuel radiation proxy (pb11/dhe3 default to the per-fuel
+        # f_rad_fus_* entry in params, DT/DD to None -> full radiation model).
         # T brackets are concept-specific: tokamak uses _T_BRACKET_DEFAULTS;
         # the mirror bracket lives inside mirror_0d_inverse (_T_BRACKET_MIRROR).
         _0d_concepts = {ConfinementConcept.TOKAMAK, ConfinementConcept.MIRROR}
@@ -1596,7 +1609,7 @@ class CostModel:
                         params["T_max"] = _T_BRACKET_DEFAULTS[self.fuel][1]
             params["dhe3_dd_frac_pin"] = overrides.get("dhe3_dd_frac")
             if "f_rad_fus" not in params:
-                params["f_rad_fus"] = self.cc.f_rad_fus(self.fuel)
+                params["f_rad_fus"] = self._f_rad_fus_default(params)
 
         # Layer 2: Power balance (dispatched by family), or sizing solve.
         solved_n_mod = None
