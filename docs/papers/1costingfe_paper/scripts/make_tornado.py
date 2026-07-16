@@ -59,7 +59,6 @@ _BASE_KWARGS: dict = dict(
     ht_shield_t=0.20,
     structure_t=0.15,
     vessel_t=0.10,
-    b_center=12.0,
     r_bore=1.85,
     p_input=50.0,
     eta_couple=1.0,  # NBI coupling; eta_pin = 0.60 x 1.0 = 0.60

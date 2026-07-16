@@ -108,7 +108,8 @@ Per-concept defaults: 10 concepts default to `(liquid_metal, pbli)` (tokamak, st
 | **p_coils** | Coil resistive/refrigerator parasitic. | MW (large for copper, small for SC) |
 | **p_cool** | Primary loop cooling power. | MW |
 | **elon** | Elongation kappa. | dimensionless |
-| **b_center** | Field at the coil center (on axis), NOT peak-on-conductor. | T |
+| **b_center** | Field at the coil center (on axis), NOT peak-on-conductor. Stored only by concepts with no plasma-field entry (pulsed family); every stored-`B` concept derives it (`B` for tokamak/stellarator/mirror/steady FRC; `coil_field_ratio * B` for dipole/polywell/orbitron). | T |
+| **coil_field_ratio** | Coil-center to plasma-region field ratio, for concepts whose coil field differs geometrically from the plasma field (dipole, polywell, orbitron). | dimensionless |
 | **r_bore** | Effective winding bore radius (calibration parameter). | m |
 | **coil_material** | Conductor technology. Sets default cost/kAm and cryo expectation. | `rebco_hts` ($50/kAm) · `nb3sn` ($7) · `nbti` ($7) · `copper` ($1) |
 | **n_coils** | Override coil count (else inferred from concept). | int or `None` |

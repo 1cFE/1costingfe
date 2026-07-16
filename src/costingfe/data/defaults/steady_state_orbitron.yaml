@@ -38,10 +38,12 @@ p_trit: 0.0          # No tritium (p-B11)
 p_house: 0.0001      # 0.1 kW housekeeping (controls, sensors) [MW]
 p_cryo: 0.0          # No cryogenics (permanent or normal-conducting magnets)
 
-# Coil parameters — simple magnets. b_center = field at the loop center
-# (NOT peak-on-conductor); see steady_state_tokamak.yaml convention.
+# Coil parameters — simple magnets. The coil-cost center field is DERIVED as
+# b_center = coil_field_ratio * B (model._coil_center_field): field at the
+# loop center (NOT peak-on-conductor); see steady_state_tokamak.yaml.
 coil_material: copper
-b_center: 2.0        # Field at coil center [T]
+coil_field_ratio: 2.0  # b_center / B [-]: 2 T coil-center field over 1 T
+                       # central (orbit-region) field
 r_bore: 0.3          # Effective winding bore [m]
 
 # Radial build geometry [m] (cylindrical, compact)

@@ -132,6 +132,51 @@ def _n_mod_for_target(target, unit_max):
     return max(1, math.ceil(target / unit_max))
 
 
+# Concepts whose coil-cost center field equals the stored plasma/design field B
+# (same physical on-axis field; peak-on-conductor grading lives in the calibrated
+# $/kA-m and coil markup). For the mirror this is the central-cell field; the
+# plug throat field is derived separately as R_m * B in cas22.
+_B_CENTER_IS_B = frozenset(
+    {
+        ConfinementConcept.TOKAMAK,
+        ConfinementConcept.STELLARATOR,
+        ConfinementConcept.MIRROR,
+        ConfinementConcept.STEADY_FRC,
+    }
+)
+# Concepts where the field at the coil genuinely differs from the plasma-region
+# field by the confinement geometry (dipole falloff, cusp geometry, orbit-region
+# field). Their YAMLs store the dimensionless ratio, not a second absolute field.
+_B_CENTER_FROM_RATIO = frozenset(
+    {
+        ConfinementConcept.DIPOLE,
+        ConfinementConcept.POLYWELL,
+        ConfinementConcept.ORBITRON,
+    }
+)
+
+
+def _coil_center_field(concept, params):
+    """Coil-cost center field (T) for cas22, derived at point of consumption.
+
+    Every concept that stores a plasma/design field B derives the coil-pricing
+    field from it, rather than storing a second absolute field that can drift
+    from B and become a spurious free parameter in sensitivity:
+
+      - _B_CENTER_IS_B concepts: b_center IS the design field B.
+      - _B_CENTER_FROM_RATIO concepts: b_center = coil_field_ratio * B, with
+        the per-concept geometric ratio anchored in the YAML.
+      - everything else (pulsed family; magnet-free concepts): an explicit
+        b_center where the YAML declares one, else the 0.0 no-field sentinel.
+        These store no plasma B, so there is no second field to disagree with.
+    """
+    if concept in _B_CENTER_IS_B:
+        return params["B"]
+    if concept in _B_CENTER_FROM_RATIO:
+        return params["coil_field_ratio"] * params["B"]
+    return params.get("b_center", 0.0)
+
+
 _F_REP_MIN = 1e-3  # Hz, lower bisection bound (net < 0 here; fixed loads dominate)
 _F_REP_BISECT_ITERS = 60
 # single_chamber sizing (no driver ceiling): geometric upper-bracket expansion on
@@ -1941,24 +1986,8 @@ class CostModel:
         # pulsed), which use the r^2 coil model. For TOROIDAL devices (tokamak,
         # stellarator) the coil model is bilinear in R0 and the coil-bore radius
         # (= geo.vessel_or, passed below), and r_bore is unused there.
-        # b_center = field at the center of the loop (axis), NOT peak-on-conductor.
         r_bore = params.get("r_bore", 0.0)
-        # A toroidal device's coil-cost center field IS the plasma field B (same
-        # physical on-axis toroidal field): the peak-on-conductor is far higher
-        # (~2.5x on both tokamak and stellarator), but the ampere-turns term is
-        # set by the axis field, and the peak-field grading premium lives in the
-        # calibrated $/kA-m and coil markup. Derive it here, at the point of
-        # consumption, rather than storing a second b_center: that keeps it from
-        # drifting from B and from becoming a spurious free parameter in
-        # sensitivity. Mirrors and other loop devices keep an explicit b_center
-        # (central vs plug field genuinely differ).
-        if self.concept in (
-            ConfinementConcept.TOKAMAK,
-            ConfinementConcept.STELLARATOR,
-        ):
-            b_center = params["B"]
-        else:
-            b_center = params.get("b_center", 0.0)
+        b_center = _coil_center_field(self.concept, params)
         n_coils = params.get("n_coils", None)
         blanket_form = BlanketForm(params["blanket_form"])
         blanket_fill = BlanketFill(params["blanket_fill"])
@@ -2471,8 +2500,12 @@ class CostModel:
                 # Impurity model parameters
                 "T_edge",
                 "tau_ratio",
-                # Magnet costing
+                # Magnet costing. b_center is live only for concepts that
+                # store it (pulsed family); stored-B concepts derive it from
+                # B (and coil_field_ratio where the coil-center field differs
+                # geometrically from the plasma-region field).
                 "b_center",
+                "coil_field_ratio",
                 "r_bore",
                 # NOTE: p_nbi/p_ecrh/p_icrf/p_lhcd are deliberately not sliders.
                 # forward() renormalizes the heating mix to p_input on concrete

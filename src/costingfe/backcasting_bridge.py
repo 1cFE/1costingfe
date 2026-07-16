@@ -15,7 +15,7 @@ Usage:
     # financial: dict matching fusion-backcasting FinancialParams schema
 """
 
-from costingfe.model import CostModel
+from costingfe.model import CostModel, _coil_center_field
 from costingfe.types import (
     CONCEPT_TO_FAMILY,
     BlanketFill,
@@ -106,9 +106,9 @@ def generate_subsystems(
         # Manufactured target iff the concept YAML set a positive per-shot cost
         # (absent/0 for MFE and in-situ-formation concepts -> no target factory).
         manufactured_target=params.get("target_unit_cost", 0.0) > 0.0,
-        # 0.0 = "no field" sentinel for magnet-free concepts; confinement-magnet
-        # concepts supply b_center / r_bore from their YAML (see model.py).
-        b_center=params.get("b_center", 0.0),
+        # 0.0 = "no field" sentinel for magnet-free concepts; stored-B concepts
+        # derive the coil-cost field from B (see model._coil_center_field).
+        b_center=_coil_center_field(concept_enum, params),
         r_bore=params.get("r_bore", 0.0),
         # COPPER is an inert sentinel for magnet-free concepts (material unread);
         # confinement-magnet concepts supply coil_material from their YAML.

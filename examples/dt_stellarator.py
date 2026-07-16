@@ -13,12 +13,13 @@ Architecture:
   - Modular blanket cassettes for remote handling
 
 Key stellarator differences from tokamak (CAS22 coil model):
-  - markup=12x (vs 8x tokamak): non-planar 3D winding of REBCO tape
-    with tight bend-radius management, compound curvatures, and strict
-    field-quality tolerances to preserve quasi-symmetry
+  - markup=5.87x (vs 3.09x tokamak): non-planar 3D winding of REBCO tape,
+    the 1.9x NCSX modular-coil production-overrun penalty on the tokamak
+    markup
   - path_factor=2x: non-planar coil winding path is ~2x longer per
     coil than a comparable planar TF coil at the same major radius
-  - b_center=18T (vs 12T tokamak): HTS REBCO enables higher on-axis field
+  - coil-cost center field derived from the design on-axis field B
+    (5 T YAML default), same convention as every stored-B concept
   - Heating costed as ECRH at $5/MW (vs NBI at $7.06/MW for tokamak)
   - Zero current drive power: p_input is pure auxiliary heating for
     startup and profile control, not sustaining a plasma current

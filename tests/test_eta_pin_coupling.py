@@ -53,7 +53,10 @@ _BASE = dict(
         # 0.35); the breeder/multiplier fill it had baked in is now priced once, in
         # CAS27. Downshift is D-T-only (TOKAMAK 295.32, MIRROR 190.52, STELLARATOR
         # 330.54); DIPOLE (Li2O base) and POLYWELL (aneutronic) pins unchanged.
-        (C.TOKAMAK, Fuel.DT, 280.61),
+        # re-pinned: tokamak coil markup stated at one-significant-figure precision
+        # (3.09 -> 3.0; was 280.61), stellarator follows as 1.9x (5.87 -> 5.7,
+        # was 290.70).
+        (C.TOKAMAK, Fuel.DT, 277.60),
         # re-pinned: mirror central-cell T_i and T_e corrected to the near-Maxwellian
         # Hammir/WHAM value (10 keV). A 2026-06-15 change had raised central T_e to
         # 125 keV (the tandem PLUG hot-electron value that sets the Fowler-Logan
@@ -62,12 +65,17 @@ _BASE = dict(
         # high-T_e synchrotron term. Corrected here: 218.36 -> 190.52. Mirror-only;
         # tokamak/stellarator/dipole/polywell pins unchanged. See
         # docs/physics/mirror.md.
-        (C.MIRROR, Fuel.DT, 185.26),
+        # re-pinned: mirror coil-cost field now derived from the central-cell
+        # field B = 3 T (the stored b_center = 12 T was a SPARC-class costing
+        # leftover) and the two coil classes carry ITER-FDR-sourced markups
+        # (central PF class 1.52, plug CS class 1.81) replacing the back-derived
+        # 1.7266. C220103 falls ~3x and LCOE 185.26 -> 153.36. Mirror-only.
+        (C.MIRROR, Fuel.DT, 153.36),
         # re-pinned: stellarator coil-center field now derived from the design
         # on-axis field B (like the tokamak) instead of a frozen b_center YAML
         # default. The default B is 5.0 T, below the old frozen 6.0 T, so the
         # coil cost and LCOE drop (323.15 -> 290.70). Stellarator-only.
-        (C.STELLARATOR, Fuel.DT, 290.70),
+        (C.STELLARATOR, Fuel.DT, 286.00),
         # DIPOLE re-benchmarked after the radial-build inversion + spherical
         # geometry dispatch + Li2O blanket fill + C220108 divertor zeroing +
         # external stationary lift coil restructured as

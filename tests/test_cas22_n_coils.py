@@ -22,7 +22,7 @@ def _base_kwargs():
         structure_t=0.2,
         vessel_t=0.2,
         p_input=20.0,
-        b_center=8.0,
+        B=8.0,
         r_bore=1.0,
     )
 
@@ -66,12 +66,8 @@ def test_n_coils_override_zero_no_op_in_two_class_mirror():
 def test_n_coils_ignored_for_tokamak():
     """Non-MIRROR concepts use a different G factor; n_coils kwarg is a no-op."""
     model = CostModel(concept=ConfinementConcept.TOKAMAK, fuel=Fuel.DT)
-    # b_center / r_bore are mirror/loop coil inputs; a tokamak derives its coil
-    # center field from B, so drop them here and set B instead.
-    kwargs = {
-        k: v for k, v in _base_kwargs().items() if k not in ("b_center", "r_bore")
-    }
-    kwargs["B"] = 8.0
+    # r_bore is a loop-device coil input the tokamak YAML does not declare.
+    kwargs = {k: v for k, v in _base_kwargs().items() if k != "r_bore"}
     r_default = model.forward(**kwargs)
     r_with = model.forward(n_coils=3, **kwargs)
     assert float(r_default.cas22_detail["C220103"]) == float(
@@ -132,10 +128,7 @@ def test_dipole_levitated_coil_cryostat_additive():
 def test_n_coils_ignored_for_stellarator():
     """STELLARATOR uses path_factor for G; n_coils kwarg must be a no-op."""
     model = CostModel(concept=ConfinementConcept.STELLARATOR, fuel=Fuel.DT)
-    # b_center is a loop-device input; a stellarator derives its coil center
-    # field from B, so drop it and set B instead (same as the tokamak).
-    kwargs = {k: v for k, v in _base_kwargs().items() if k != "b_center"}
-    kwargs["B"] = 8.0
+    kwargs = dict(_base_kwargs())
     r_default = model.forward(**kwargs)
     r_with = model.forward(n_coils=3, **kwargs)
     assert float(r_default.cas22_detail["C220103"]) == float(

@@ -356,27 +356,27 @@ def cas22_reactor_plant_equipment(
             # Class 1 — central-cell solenoids:
             #   n_central = chamber_length / coil_spacing  (continuous
             #   aggregate; no rounding — this is a costing quantity, not a
-            #   physical integer). Field basis: b_center (central-cell field).
-            #   Bore: r_bore_central = vessel_or + coil_standoff (from the
-            #   radial build; large-bore/low-field). G = n_central * 4*pi.
+            #   physical integer). Field basis: b_center, derived from the
+            #   central-cell field B in model._coil_center_field (the solenoid
+            #   is priced at the field it produces on axis). Bore:
+            #   r_bore_central = vessel_or + coil_standoff (from the radial
+            #   build; large-bore/low-field). G = n_central * 4*pi. Markup:
+            #   PF-coil class (large circular planar; ITER FDR magnet cost
+            #   breakdown, coil_markup["mirror"]).
             #
             # Class 2 — end-plug HTS coils:
             #   n_plug_coils at throat field b_plug = R_m * B. Bore:
             #   r_bore_plug = a/sqrt(R_m) + plug_standoff (flux-conservation
             #   throat radius plus structure; small-bore/high-field, no blanket
-            #   at the throat). G_plug = n_plug_coils * 4*pi.
+            #   at the throat). G_plug = n_plug_coils * 4*pi. Markup: CS class
+            #   (high-field compact solenoid; cc.mirror_plug_coil_markup).
             #
             # r_bore (cross-concept schema key) is NOT read by this branch.
-            # The two bores are passed explicitly from model.py. Markup
-            # recalibrated (costing_constants.yaml) so that at YAML defaults
-            # (L=20, coil_spacing=5, n_plug=4, R_m=10, B=3, r_bore_central=3.30,
-            # r_bore_plug=1.5/sqrt(10)+0.30) the total reproduces 513.375 M$
-            # exactly (calibration-neutrality invariant; see account doc).
+            # The two bores are passed explicitly from model.py.
             # -----------------------------------------------------------
-            coil_markup = cc.coil_markup[concept.value]
+            markup_central = cc.coil_markup[concept.value]
+            markup_plug = cc.mirror_plug_coil_markup
             n_central = chamber_length / coil_spacing
-            # b_plug is derived from the physics midplane field B (mirror ratio
-            # throat), independent of b_center (the costing calibration field).
             b_plug = R_m * B
             G_central = n_central * 4 * math.pi
             G_plug = n_plug_coils * 4 * math.pi
@@ -385,12 +385,9 @@ def cas22_reactor_plant_equipment(
             cond_per_kAm = cc.conductor_cost_per_kam(coil_material)
             conductor_central = kAm_central * cond_per_kAm / 1e6
             conductor_plug = kAm_plug * cond_per_kAm / 1e6
-            total_conductor = conductor_central + conductor_plug
-            c220103 = total_conductor * coil_markup
-            # Informational sub-lines for the mirror two-class branch (markup
-            # is shared, so each class's share = conductor_x * markup).
-            _c220103_central = conductor_central * coil_markup
-            _c220103_plug = conductor_plug * coil_markup
+            _c220103_central = conductor_central * markup_central
+            _c220103_plug = conductor_plug * markup_plug
+            c220103 = _c220103_central + _c220103_plug
             _r_bore_central_out = r_bore_central
             _r_bore_plug_out = r_bore_plug
         else:

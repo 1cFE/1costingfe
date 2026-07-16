@@ -33,8 +33,7 @@ result = model.forward(
     vessel_t=0.2,
     # Coil configuration -- THIS IS THE EDIT
     coil_material="copper",  # "rebco_hts" | "nb3sn" | "nbti" | "copper"
-    b_center=7.0,  # Field at coil center [T], resistive copper limit
-    r_bore=1.85,  # Effective winding bore radius [m]
+    B=7.0,  # On-axis field [T], resistive copper limit (coil cost derives from B)
     # Power balance adjusted for resistive coils
     p_input=50.0,
     mn=1.1,

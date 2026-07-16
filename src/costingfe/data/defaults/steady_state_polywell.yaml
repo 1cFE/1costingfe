@@ -24,10 +24,12 @@ p_trit: 10.0         # Tritium processing [MW] (if D-T)
 p_house: 3.0         # Housekeeping power [MW]
 p_cryo: 0.5          # Cryogenic power [MW] (if superconducting cusps)
 
-# Coil parameters — cusp magnets. b_center = field at the loop center
-# (NOT peak-on-conductor); see steady_state_tokamak.yaml convention.
+# Coil parameters — cusp magnets. The coil-cost center field is DERIVED as
+# b_center = coil_field_ratio * B (model._coil_center_field): field at the
+# loop center (NOT peak-on-conductor); see steady_state_tokamak.yaml.
 coil_material: copper
-b_center: 5.0        # Cusp center field [T]
+coil_field_ratio: 1.667  # b_center / B [-]: 5 T cusp-center field over 3 T
+                         # central field (cusp geometry falloff)
 r_bore: 0.8          # Effective winding bore [m]
 
 # Radial build geometry [m] (spherical-ish)

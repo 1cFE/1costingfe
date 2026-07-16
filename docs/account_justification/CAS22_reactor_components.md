@@ -17,7 +17,7 @@ geometry with R0=3.0m, κ=3.0):
 |---------|-------------|----------:|--------|
 | C220101 | First wall + blanket | 389 | Volume × thermal intensity |
 | C220102 | Shield | 261 | Volume × fuel scale × thermal intensity |
-| C220103 | Coils | 516 | Conductor kAm × $/kAm × markup |
+| C220103 | Coils | 500 | Conductor kAm × $/kAm × markup |
 | C220104 | Supplementary heating | 353 | Per-MW linear (NBI + ICRF + ECRH + LHCD) |
 | C220105 | Primary structure | 28 | Volume × power scale |
 | C220106 | Vacuum system | 151 | Volume × power scale |
@@ -147,8 +147,14 @@ r² form.
 where:
 - **G** = geometry factor (tokamak: 4π², stellarator: 4π²×path_factor,
   mirror: see two-class model below, FRC: n_coils×4π)
-- **B** = field at the loop center / on axis (NOT peak-on-conductor; default
-  12 T for the SPARC-class tokamak reference)
+- **B** = field at the loop center / on axis (NOT peak-on-conductor). Every
+  concept that stores a plasma/design field `B` derives the coil-cost field
+  from it at the point of consumption (`model._coil_center_field`): identity
+  for tokamak, stellarator, mirror (central cell), and steady FRC;
+  `coil_field_ratio × B` for dipole, polywell, and orbitron, whose coil-center
+  field differs geometrically from the plasma-region field. Only the pulsed
+  family (no stored plasma B) declares an explicit `b_center`. No concept
+  stores two absolute fields that can drift apart.
 - **R0** = major radius (toroidal devices); **r_coil** = coil-bore radius =
   `vessel_or` from the radial build (the TF/modular coils sit just outside the
   vessel). r_coil replaces the old "effective coil radius" calibration knob.
@@ -180,6 +186,11 @@ WITAMIR-I central-cell solenoids are about 4 m radius for a comparable build.
     n_central = chamber_length / coil_spacing   (continuous; no rounding)
     G_central = n_central × 4π
     kAm_central = G_central × b_center × r_bore_central² / (μ₀ × 1000)
+
+with `b_center = B`, the central-cell on-axis field: the central solenoid is
+priced at the field it actually produces on axis (3 T at YAML defaults),
+consistent with the plug's `R_m × B` throat-field basis. No second absolute
+field is stored anywhere in the concept configuration.
 
 `n_central` is a continuous costing aggregate (not a physical integer count); the
 solenoid ensemble is treated as a distributed winding whose total conductor scales
@@ -215,13 +226,14 @@ HAMMIR Hammer-evolution class). Field at the plug throat: `b_plug = R_m × B`
 where `R_m` is the mirror ratio and `B` is the central-cell field.
 
 The bore ratio (0.77/3.30 about 0.23) means plug kAm is about 5% of central kAm
-per coil at equal field; the high plug field (30 T vs 12 T central) partly offsets
-this, giving a plug conductor fraction of about 12% of the total.
+per coil at equal field; the high plug field (30 T vs 3 T central) partly offsets
+this, giving a plug conductor fraction of about 36% of the total at the YAML
+default machine (L = 20 m; the central share grows linearly with length).
 
-**Total:**
+**Total (per-class markups; see the manufacturing markup table):**
 
-    total_conductor = (kAm_central + kAm_plug) × $/kAm / 1e6
-    C220103 = total_conductor × markup
+    C220103 = kAm_central × $/kAm × markup_central
+            + kAm_plug × $/kAm × markup_plug
 
 ### Coil-bore radius from the radial build
 
@@ -270,9 +282,10 @@ are actively working to reduce.
 
 | Concept | Markup | Rationale |
 |---------|-------:|-----------|
-| Tokamak | 3.09× | TF + CS + PF coil systems. Complex D-shaped winding, insulation, quench protection, structural casing, cryostat integration. Calibrated so the SPARC-class reference (B=12T, R0=3.0m, r_coil=2.95m) coil system = $516M under the bilinear model, matching the prior r_bore² calibration at its reference point. |
-| Stellarator | 5.87× | Non-planar 3D coil geometry. = 1.9× the tokamak markup, the NCSX modular-coil production cost overrun (90%; Neilson et al. 2010, PPPL-4455), the documented penalty for non-planar 3D coil fabrication (winding onto machined 3D forms, ±1.5mm tolerances, metrology). The longer 3D winding path is handled separately by the 2× path factor in G, so this 1.9× is fabrication complexity only. |
-| Mirror | 1.7266× | Two-class bore-resolved model (central solenoids + end-plug HTS). Recalibrated so that at YAML defaults (L=20 m, coil_spacing=5 m, r_bore_central=3.30 m, r_bore_plug=0.774 m, n_plug=4, b_plug=30 T) the total reproduces the doc-validated 513.375 M$. Simple solenoid geometry; lower markup than tokamak reflects more straightforward winding and structural design. |
+| Tokamak | 3.0× | TF + CS + PF coil systems. Complex D-shaped winding, insulation, quench protection, structural casing, cryostat integration. The SPARC-class reference (B=12T, R0=3.0m, r_coil=2.95m) coil system lands at $500M under the bilinear model. The reference target traces to the legacy pre-bilinear calibration point, so it carries no more than one significant figure; the markup is stated at that precision. A re-anchor against a real TF-class cost basis (e.g. the ITER FDR TF ratio of 2.12 below, which excludes cryostat integration and feeders) is flagged as follow-up. |
+| Stellarator | 5.7× | Non-planar 3D coil geometry. = 1.9× the tokamak markup, the NCSX modular-coil production cost overrun (90%; Neilson et al. 2010, PPPL-4455), the documented penalty for non-planar 3D coil fabrication (winding onto machined 3D forms, ±1.5mm tolerances, metrology). The longer 3D winding path is handled separately by the 2× path factor in G, so this 1.9× is fabrication complexity only. |
+| Mirror (central cell) | 1.52× | PF-coil class from the ITER FDR magnet cost breakdown (see "Coil-class markups from the ITER FDR" below): large circular planar coils, the closest engineering analog to a tandem-mirror central-cell solenoid. |
+| Mirror (end plug) | 1.81× | CS class from the same ITER FDR breakdown: high-field compact solenoid, the engineering analog of the HTS end-plug/choke coils. Stored as `mirror_plug_coil_markup`. |
 | Pulsed FRC | 1.5× | Theta-pinch formation coils. Simple, repetitive geometry. |
 | Theta pinch | 1.5× | Compression coils. Simple solenoid geometry. |
 | Orbitron | 1.5× | Electrostatic confinement coils. |
@@ -283,19 +296,59 @@ are actively working to reduce.
 ### Validation
 
 At the SPARC-class tokamak reference (B=12T, R0=3.0m, r_coil=2.95m, REBCO @
-$50/kAm, 3.09× markup, bilinear model): $516M total coil system, matching the
-prior r_bore² calibration's reference point (which used the same B and $/kAm
-with R=1.85m and an 8× markup). This includes conductor, winding, insulation,
+$50/kAm, 3.0× markup, bilinear model): $500M total coil system, consistent to
+one significant figure with the legacy calibration's reference point (which
+used the same B and $/kAm with R=1.85m and an 8× markup). This includes conductor, winding, insulation,
 quench protection, structural casing, cryostat, power leads, instrumentation,
 and testing. CFS SPARC used ~300 km of REBCO tape for a ~2m-class magnet; a full
 tokamak power-plant coil set is ~5–10× larger. Because the model is now linear
 in R0, a larger tokamak (e.g. ARC, R0=3.3m) scales its coil cost up
 proportionally rather than as R0².
 
-**Mirror two-class bore-resolved validation (YAML default machine, L=20 m):**
+**Coil-class markups from the ITER FDR magnet cost breakdown:**
 
-Bores derived from the radial build and flux conservation, then the markup solved
-from the calibration constraint `total_conductor × markup = 513.375 M$`.
+The per-class manufacturing markups (installed coil-class cost over finished
+conductor) are taken from the ITER Final-Design-Report magnet cost estimate,
+the only public source that breaks a full fusion magnet system down by coil
+class AND separates conductor from winding and structure within each class:
+Huguet, M., "The integrated design of the ITER magnets and their auxiliary
+systems," 18th IAEA Fusion Energy Conference (IAEA-CSP-8/C, 2001), Fig. 4
+("Magnet cost breakdown"; total 1,800 kIUA, 1 IUA = 1 US k$ 1989). The
+pie-chart shares:
+
+| item | share |
+|---|---|
+| TF conductor | 27.85% |
+| TF winding | 10.75% |
+| Radial plates | 9.1% |
+| TF case and OIS | 11.4% |
+| CS conductor | 6.95% |
+| CS winding | 4.0% |
+| CS structures | 1.65% |
+| PF conductor | 11.4% |
+| PF winding | 5.9% |
+| Crowns and supports | 6.95% |
+| Busbars and leads | 2.15% |
+
+Per-class installed-cost / conductor ratios:
+
+    TF (D-shaped, radial plates, cases):  (27.85+10.75+9.1+11.4)/27.85 = 2.12
+    CS (high-field compact solenoid):     (6.95+4.0+1.65)/6.95        = 1.81
+    PF (large circular planar coils):     (11.4+5.9)/11.4             = 1.52
+
+The mirror central-cell solenoids take the PF-class ratio (large-bore circular
+planar coils, simple winding) and the end plugs take the CS-class ratio
+(high-field compact solenoid). Caveats carried knowingly: (a) these are
+bottom-up FOAK engineering estimates for Nb3Sn/NbTi conductor, applied here
+over REBCO tape at the $50/kA-m NOAK target, so the ratio, not the absolute
+cost level, is what transfers; (b) the shared items (crowns/supports, busbars
+and leads, about 9% of the system) are not allocated into either class ratio,
+which makes both ratios slightly conservative-low; (c) the TF-class ratio
+(2.12) is below the model's tokamak markup (3.0, which also carries cryostat
+integration and traces to the SPARC-class reference point), a known
+tension flagged for a future tokamak-markup re-anchor.
+
+**Mirror two-class validation (YAML default machine, L=20 m):**
 
 Central-cell bore:
 
@@ -304,8 +357,8 @@ Central-cell bore:
 
     n_central = 20 / 5 = 4
     G_central = 4 × 4π = 50.265
-    kAm_central = 50.265 × 12 × 3.30² / (4π×10⁻⁷ × 1000) = 5,227,200 kAm
-    conductor_central = 5,227,200 × 50 / 1e6 = 261.360 M$
+    kAm_central = 50.265 × 3 × 3.30² / (4π×10⁻⁷ × 1000) = 1,306,800 kAm
+    conductor_central = 1,306,800 × 50 / 1e6 = 65.340 M$
 
 Plug bore (flux conservation):
 
@@ -317,17 +370,14 @@ Plug bore (flux conservation):
     kAm_plug = 50.265 × 30 × 0.77434² / (4π×10⁻⁷ × 1000) = 719,526 kAm
     conductor_plug = 719,526 × 50 / 1e6 = 35.976 M$
 
-Markup:
+Account total:
 
-    total_conductor = 261.360 + 35.976 = 297.336 M$
-    markup = 513.375 / 297.336 = 1.7266...
+    C220103 = 65.340 × 1.52 + 35.976 × 1.81 = 99.317 + 65.117 = 164.434 M$
 
-The markup (1.7265803102296458 at float64 precision, stored in costing_constants.yaml)
-is the calibration constant such that the YAML default machine exactly reproduces
-the doc-validated 513.375 M$. The sensitivity structure has changed: central
-conductor is 88% of the total (up from 29% with the old r_bore=1.85 m for both
-classes), and coil cost now responds to blanket_t and all other radial-build
-thicknesses that set vessel_or.
+Central conductor is 64% of the total at L = 20 m and grows linearly with
+machine length; coil cost responds to blanket_t and every other radial-build
+thickness that sets vessel_or, and to the central-cell field B (elasticity
+formerly mis-attributed to the stored b_center knob).
 
 ### Resistive (copper) coil mass build-up
 

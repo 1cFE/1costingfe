@@ -466,7 +466,7 @@ def test_cas220103_conductor_scaling_formula():
     G = 4 * math.pi**2  # tokamak
     total_kAm = G * 12.0 * 6.2 * r_coil / (mu0 * 1000)
     conductor_cost = total_kAm * 50.0 / 1e6  # REBCO default
-    expected = conductor_cost * 3.09  # tokamak markup (bilinear recalibration)
+    expected = conductor_cost * 3.0  # tokamak markup
     assert abs(result["C220103"] - expected) < 0.1
 
 

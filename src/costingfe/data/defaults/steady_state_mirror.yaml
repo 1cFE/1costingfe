@@ -92,8 +92,10 @@ dclc_a_over_rho_ref: 50.0  # a/rho_i above which warm-plasma DCLC stabilisation 
                            # The live DCLC diagnostic computes the inline dclc_parameter = a/rho_i.
 
 # Coil parameters (see steady_state_tokamak.yaml for the b_center / r_bore
-# convention).
-b_center: 12.0  # Field at coil center [T]
+# convention). The coil-cost center field is DERIVED from the central-cell
+# field B below (model._coil_center_field): the central solenoid is priced at
+# the field it actually produces on axis, and the plug coils at R_m * B. No
+# second absolute field is stored.
 r_bore: 1.85  # Cross-concept schema key (required for compatibility); NOT read by
               # the mirror two-class coil branch, which derives the bores from the
               # radial build (r_bore_central) and flux conservation (r_bore_plug).
@@ -177,7 +179,8 @@ T_e_plug: 125.0  # Plug hot-electron temperature [keV] (Fowler-Logan potential; 
 Z_eff: 1.2  # Effective charge
 plasma_volume: 200.0  # Plasma volume [m^3]
 radiation_peaking_factor: 1.0  # Uniform profile, no emission-measure correction
-B: 3.0  # Central magnetic field [T]
+B: 3.0  # Central magnetic field [T]; also the coil-pricing basis (the central
+        # solenoid is costed at this on-axis field, the plug coils at R_m * B)
 
 # Fuel burn fraction defaults (physics.py ash_neutron_split)
 burn_fraction: 0.05  # Single-pass burn fraction (MFE-class)

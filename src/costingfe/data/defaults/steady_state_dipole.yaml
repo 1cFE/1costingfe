@@ -52,15 +52,19 @@ p_house: 4.0        # Housekeeping power [MW]
 p_cryo: 1.31        # Cryogenic wall-plug power [MW] (neon slush at 24.6 K,
                     # eta_cryo ~1.25%; Reactor A Table 9)
 
-# Coil parameters. b_center / r_bore / coil_material describe the SC magnets;
-# the stationary levitation coils (n_coils, _COIL_DEFAULTS) and the levitated
-# coil both scale off these. b_center is the field at the geometric center of
-# the loop (axis), NOT the peak field on the conductor; for Simpson Reactor A
-# B_max = 23.0 T at the conductor, b_center = 6.26 T -> ratio ~3.67. The
-# kA*m formula NI = 2 * b_center * R / mu_0 is derived for B_center.
+# Coil parameters. r_bore / coil_material describe the SC magnets; the
+# stationary levitation coils (n_coils, _COIL_DEFAULTS) and the levitated
+# coil both scale off these. The coil-cost center field is DERIVED as
+# b_center = coil_field_ratio * B (model._coil_center_field): the field at
+# the geometric center of the loop (axis), NOT the peak on the conductor.
+# For Simpson 2026 Reactor A the pair is b_center = 6.26 T at the loop
+# center over B = 2.0 T characteristic plasma-region field (ratio 3.13);
+# B_max on conductor is 23.0 T (peak-to-center 3.67), carried by the
+# $/kA-m grading, not by this ratio. The kA*m formula
+# NI = 2 * b_center * R / mu_0 is derived for B_center.
 coil_material: rebco_hts  # OpenStar floating coil is HTS REBCO
-b_center: 6.26       # Field at coil center [T] (Simpson 2026 Reactor A: B_max
-                     #   23 T on conductor / 3.67 peak-to-center ~= 6.26 T)
+coil_field_ratio: 3.13  # b_center / B [-] (Simpson 2026 Reactor A: 6.26 T loop-center
+                        #   field over 2.0 T plasma-region field)
 r_bore: 5.3          # Floating-coil winding-bore radius [m] (R_c, Table 7)
 
 # Levitated-coil-specific cost terms (added to C220103, see cas22 DIPOLE branch)

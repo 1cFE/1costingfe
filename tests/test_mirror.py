@@ -556,7 +556,14 @@ class TestInverse:
 # re-pinned: D-T blanket unit cost re-anchored to structure-only (0.60 -> 0.35),
 # with the breeder/multiplier fill now priced once in CAS27; LCOE moved
 # 98.9895 -> 94.1932.
-_MIRROR_DT_PINNED_LCOE = 94.19320678710938
+# re-pinned: coil-cost center field now derived from the central-cell field B
+# (b_center was a stored 12 T SPARC-class calibration leftover; the central
+# solenoid is priced at the 3 T field it actually produces on axis), and the
+# per-class markups re-anchored to the ITER FDR magnet cost breakdown (central
+# = PF class 1.52, plug = CS class 1.81) replacing the back-derived 1.7266
+# legacy-invariant markup; C220103 moved 513.375 -> 164.434 M$ and LCOE
+# 94.1932 -> 83.3035.
+_MIRROR_DT_PINNED_LCOE = 83.303466796875
 
 
 class TestModelIntegration:
@@ -694,11 +701,12 @@ class TestMirrorCoilLengthScaling:
 
     Two-class structure:
       n_central = chamber_length / coil_spacing  (continuous aggregate)
-      n_plug_coils  at throat field b_plug = R_m * B
+        at the central-cell field b_center = B (derived; PF-class markup)
+      n_plug_coils  at throat field b_plug = R_m * B (CS-class markup)
 
-    Markup recalibrated so that at the YAML defaults (L=20, coil_spacing=5,
-    n_plug=4, R_m=10, B=3 -> b_plug=30 T) the cost reproduces the
-    doc-validated 513.375 M$ exactly (calibration-neutrality invariant).
+    Each class carries its own sourced markup from the ITER FDR magnet cost
+    breakdown (central: PF-coil class 1.52; plug: CS class 1.81); see
+    docs/account_justification/CAS22_reactor_components.md.
     """
 
     def _base(self, **overrides):
@@ -708,15 +716,17 @@ class TestMirrorCoilLengthScaling:
         kw.update(overrides)
         return m.forward(**kw)
 
-    def test_calibration_neutrality_pin(self):
-        """At YAML defaults (L=20, coil_spacing=5, n_plug=4) C220103 == 513.375.
+    def test_coil_account_pin(self):
+        """At YAML defaults (L=20, coil_spacing=5, n_plug=4) C220103 == 164.434.
 
-        Calibration-neutrality pin: the two-class markup is solved so that the
-        YAML default machine reproduces the doc-validated 513.375 M$ exactly.
-        Any change to this number means the calibration algebra is wrong: STOP.
+        Regression pin on the sourced two-class account: central conductor
+        65.340 M$ (b_center = B = 3 T, r_bore_central = 3.30 m) x 1.52
+        (PF class) + plug conductor 35.976 M$ (b_plug = 30 T, r_bore_plug =
+        0.774 m) x 1.81 (CS class) = 164.434 M$. Any drift here means a coil
+        formula or markup constant changed; re-derive before re-pinning.
         """
         r = self._base()
-        assert r.cas22_detail["C220103"] == pytest.approx(513.375, rel=1e-6)
+        assert r.cas22_detail["C220103"] == pytest.approx(164.4339, rel=1e-6)
 
     def test_lcoe_pin_unchanged(self):
         """The LCOE pinned value must be preserved exactly after the coil refactor.
@@ -736,7 +746,7 @@ class TestMirrorCoilLengthScaling:
         """
 
         MU0 = 4 * math.pi * 1e-7
-        b_center = 12.0  # from steady_state_mirror.yaml
+        b_center = 3.0  # = B (derived coil-cost basis, central-cell field)
         # Central bore from radial build: vessel_or(3.20) + coil_standoff(0.10)
         r_bore_central = (
             1.5 + 0.10 + 0.05 + 0.80 + 0.20 + 0.20 + 0.15 + 0.10 + 0.10 + 0.10
@@ -836,16 +846,17 @@ class TestMirrorCoilLengthScaling:
         assert hi.cas22_detail["C220103"] > lo.cas22_detail["C220103"]
 
     def test_plug_central_split_pinned(self):
-        """At YAML defaults the conductor split is pinned at the derived ratio.
+        """At YAML defaults the cost split is pinned at the derived ratio.
 
-        central kAm / plug kAm = (b_center * r_bore_central^2) /
-                                  (b_plug * r_bore_plug^2) * n_central / n_plug
-        Exact float64 ratio derived analytically at implementation time.
+        central / plug = (b_center * r_bore_central^2) / (b_plug * r_bore_plug^2)
+                         * (n_central / n_plug) * (markup_central / markup_plug)
+        with b_center = B = 3 T, b_plug = 30 T, and the PF/CS class markups
+        (1.52 / 1.81). Analytically: 1.81621 x 0.83978 = 1.52520.
         """
         m = CostModel(ConfinementConcept.MIRROR, Fuel.DT)
         r = m.forward(net_electric_mw=500.0, availability=0.87, lifetime_yr=40.0)
         split = r.cas22_detail["C220103_central"] / r.cas22_detail["C220103_plug"]
-        assert split == pytest.approx(7.2647827768, rel=1e-6)
+        assert split == pytest.approx(1.5252030139, rel=1e-6)
 
 
 # ---------------------------------------------------------------------------

@@ -424,6 +424,10 @@ class CostingConstants:
     # mass build-up markups (coil_cu_fab_markup, coil_steel_fab_markup) instead.
     coil_markup: dict[str, float] = None  # loaded from YAML
 
+    # 220103 — mirror end-plug coil markup (CS class, ITER FDR magnet cost
+    # breakdown); coil_markup["mirror"] prices the central-cell class only.
+    mirror_plug_coil_markup: float = 1.81
+
     # CAS27 — Special materials: initial blanket-fill inventory.
     # Volume-based mass build-up keyed on blanket_fill (not power-scaled):
     # {fill: {density, vol_frac, price}}. Loaded from YAML.

@@ -40,8 +40,12 @@ def main() -> None:
         ht_shield_t=0.20,  # m
         structure_t=0.15,  # m
         vessel_t=0.10,  # m
-        # Magnets
-        b_center=12.0,  # T, on-axis field at the coil center
+        # Magnets: the coil-cost field is derived from the central-cell field
+        # B (radiation block below): central solenoid priced at B = 3 T, plug
+        # at R_m * B = 30 T with the YAML mirror ratio R_m = 10. (This example
+        # previously handed off b_center = 12 T alongside B = 3 T, the exact
+        # two-field disagreement the derivation now forbids; at this n_e/T_e,
+        # 3 T is beta ~ 0.2, mirror-sensible, while 12 T would be beta 0.013.)
         r_bore=1.85,  # m, effective winding bore radius
         # Power balance (Section 2.2 Table)
         p_input=50.0,  # MW, NBI heating (neutral beams sustain mirror)
