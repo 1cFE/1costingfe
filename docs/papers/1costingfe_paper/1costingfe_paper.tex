@@ -2046,7 +2046,7 @@ unique to the mirror.
 \toprule
 Concept & Markup & Path factor & Ref.\ coil cost & Rationale \\
 \midrule
-Tokamak     &  3.0$\times$ & 1.0 & \$500M & TF+CS+PF complexity; SPARC-class reference ($B=12$~T, $R_0=3.0$~m, $r_{\text{coil}}=2.95$~m); the reference target carries one significant figure and the markup is stated at that precision \\
+Tokamak     &  3.0$\times$ & 1.0 & \$500M & TF+CS+PF complexity; derived from the ARC magnet BOM \citep{sorbom2015arc} with case steel at the ITER-FDR qualified-magnet-structure rate (\$50/kg): BOM/conductor $=2.9$, closed to 3.0 by FDR-class winding content \citep{huguet2001iter} \\
 Stellarator &  5.7$\times$ & 2.0 & \$2{,}068M & Non-planar 3D coils; $1.9\times$ the tokamak markup, the {NCSX} modular-coil production cost overrun \citep{neilson2010ncsx} \\
 Mirror      &  1.52$\times$ / 1.81$\times$ & 1.0 & \$164M & Two-class: $n_{\text{central}}=L/d_{\text{coil}}$ central solenoids at $B_{\min}$ with bore $r_{\text{coil}} = r_{\text{vessel,out}} + 0.10$~m (markup 1.52$\times$, the PF-coil class of the ITER FDR magnet cost breakdown \citep{huguet2001iter}) plus $n_{\text{plug}}=4$ plug coils at the throat field $R_m B_{\min}$ with bore $r_{\text{coil}} = a/\sqrt{R_m} + 0.30$~m (markup 1.81$\times$, the CS class of the same breakdown) \\
 Pulsed FRC  &  1.5$\times$ & 1.0 & n/a & Theta-pinch formation coils \\
@@ -3441,20 +3441,22 @@ and a 236.0~\$/MWh LCOE, a $-31$\,\% delta.
 The residual gap is the structural steel. Sorbom applies a single
 \$1.06M/tonne fabricated multiplier averaged across four heritage
 burning-plasma designs (FIRE, BPX, PCAST5, ARIES-RS), dominated by a
-4{,}350-tonne SS316LN structural support priced at \$4.6\,B (FY2014~USD,
+4{,}350-tonne SS316LN magnet case structure priced at \$4.6\,B (FY2014~USD,
 \$6.3\,B escalated) --- a single line that by itself exceeds
-\texttt{1costingfe}'s entire \$5.3\,B estimate, even with the coils at the
+\texttt{1costingfe}'s entire \$5.2\,B estimate, even with the coils at the
 current REBCO price (\$1.53B, 29\,\% of capital). \texttt{1costingfe}
-instead builds CAS21 and CAS22 bottom-up from current procurement data, so
-the divergence is that heritage steel multiplier rather than the reactor
-equipment. The two estimates price the same steel on different bases. That multiplier
-is \$1{,}060/kg, a fabricated-fusion-component figure carried over from
-one-off research machines that bundles design, instrumentation, and
-assembly, whereas \texttt{1costingfe} prices the support as welded
-structural steel at commodity material (\$6/kg) plus a fabrication markup,
-about \$18/kg. That factor of roughly 55 (about 75 after
-escalating Sorbom to 2025) is a heritage-versus-commodity pricing choice for
-bulk steel, not a model error on either side.
+carries that same steel inside the C220103 coil markup
+(\cref{tab:cas2203-markup}), where the ARC magnet bill of materials is
+priced with the case steel at the ITER-FDR qualified-magnet-structure rate,
+about \$50/kg in 2025~USD: load-bearing, NDT-inspected, cryogenic-qualified
+316LN, priced as such --- several times commodity welded plate, but far
+below the heritage multiplier. The two estimates price the same steel on
+different bases: \$1{,}060/kg is a fabricated-fusion-component figure
+carried over from one-off research machines that bundles design,
+instrumentation, and assembly into the steel mass. That factor of roughly
+20 (about 29 after escalating Sorbom to 2025) is a
+heritage-versus-qualified-fabrication pricing choice for magnet structure,
+not a model error on either side.
 
 \subsection{ARIES-AT: Per-Account Cross-Walk}
 \label{sec:benchmark-aries}

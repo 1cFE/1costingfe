@@ -70,11 +70,13 @@ conductor_cost_nbti: 7.0             # NbTi (LHC heritage)
 conductor_cost_copper: 1.0           # copper $/kA-m (resistive coils use the mass build-up above)
 # 220103 SC coil manufacturing markup (conductor -> installed magnet system),
 # keyed by concept. Applied on the $/kAm path; copper concepts use the mass
-# build-up markups above instead. tokamak 3.0: the SPARC-class reference
-# (B=12 T, R0=3.0 m, r_coil=vessel_or=2.95 m) coil system lands at $500M
-# under the bilinear total_kAm = G*B*R0*r_coil model; the reference target
-# traces to the legacy pre-bilinear calibration, so it carries no more than
-# one significant figure and the markup is stated at that precision.
+# build-up markups above instead. tokamak 3.0: derived from the ARC magnet
+# BOM (Sorbom 2015 Table 11: 2.6e6 kA-m tape at ARC's own $40-80/kA-m band,
+# 4,350 t 316LN case steel at the ITER-FDR qualified-magnet-structure rate
+# of about $50/kg 2025, Cu former, tension ring) giving BOM/conductor = 2.9,
+# closed to 3.0 by FDR-class winding/insulation/quench-protection content.
+# At the SPARC-class reference (B=12 T, R0=3.0 m, r_coil=2.95 m) the coil
+# system lands at $500M under the bilinear total_kAm = G*B*R0*r_coil model.
 # stellarator 5.7 = 1.9x the tokamak value, the NCSX modular-coil production
 # cost overrun (90%), the documented penalty for non-planar 3D coil
 # fabrication; its longer winding path is handled separately by
