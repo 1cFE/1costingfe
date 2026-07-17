@@ -29,12 +29,45 @@ geometry with R0=3.0m, κ=3.0):
 
 ### Costing model
 
-    C220101 = blanket_unit_cost(fuel) × V_blanket × (P_th / 2500)^0.6
+Blanketed machines (blanket_form other than `none`):
+
+    C220101 = blanket_unit_cost(fuel) × structure_factor(form) × V_blanket × (P_th / 2500)^0.6
 
 where `V_blanket` is the combined volume of first wall + blanket +
 reflector (from radial build geometry) and the 0.6 exponent captures
 thermal intensity (higher power → better cooling, thicker walls,
 higher-grade materials per unit volume).
+
+Aneutronic machines (blanket_form `none`, the p-B11/D-He3 fuel
+normalization): there is no blanket structure, but the plasma-facing wall is
+real hardware absorbing the photon/particle surface heat flux, so it is
+priced as surface hardware:
+
+    C220101 = firstwall_area × fw_unit_cost[fw_class]
+
+with two discrete hardware classes, mirroring the fact that qualified wall
+products exist as actively-cooled panels and as divertor-grade high-heat-flux
+components, with nothing in between (`fw_class` is an explicit design input,
+symmetric with `coil_material`):
+
+| fw_class | NOAK unit cost | class limit | anchor |
+|---|---:|---:|---|
+| panel | 0.35 M$/m² | 2 MW/m² steady | ITER first-wall panel procurement: about 600 m² at order EUR 300-400M FOAK (about $0.6M/m²); NOAK 0.35 from panel-count repetition. Normal-heat-flux panel qualification class. |
+| hhf | 2.5 M$/m² | 10 MW/m² steady | ITER divertor procurement: about 150-200 m² of W-monoblock plasma-facing units at order EUR 500-700M FOAK (about $3-3.5M/m²); NOAK 2.5. Qualified at 10 MW/m² steady state (Pitts et al. 2019, Nucl. Mater. Energy 20, 100696). |
+
+A cross-check the two anchors provide: per megawatt of absorbed capability
+the classes land within a factor of about 1.5 of each other ($0.3-0.6M/MW
+panel, about $0.35M/MW divertor), i.e. the $/m² rises sub-linearly with the
+flux class. Pricing area at the class unit cost, with the class chosen
+explicitly, therefore neither rewards nor punishes a high wall-flux design
+beyond what the two procurement points support. `model.forward` audits
+`q_surface_max` against the declared class's qualification limit and warns
+on the concrete path if the cap exceeds it. C220101 is a
+`replaceable_accounts` member, so the wall re-buys on the core-lifetime
+replacement cycle (CAS72) under either branch. The DHe3/pB11 rows of the
+fuel-keyed unit-cost table below apply only when an aneutronic fuel is run
+with an explicit blanket-form override; at the normalized `none` form the
+surface-priced branch above governs.
 
 ### Unit costs (M$/m³)
 

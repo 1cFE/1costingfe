@@ -70,3 +70,9 @@ pb11_f_p_n: 0.0
 # Blanket configuration
 blanket_form: liquid_metal
 blanket_fill: pbli
+
+# Aneutronic first-wall hardware class (read only when blanket_form is none,
+# i.e. p-B11/D-He3 fuel normalization): panel = actively-cooled W/steel wall
+# (<= 2 MW/m^2 steady), hhf = divertor-grade monoblock wall (<= 10 MW/m^2).
+# See costing_constants.yaml fw_unit_cost / fw_class_q_limit.
+fw_class: panel

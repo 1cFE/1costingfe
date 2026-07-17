@@ -110,3 +110,9 @@ T_min: 5.0               # Lower bound for the operating-temperature search [keV
 T_max: 60.0              # Upper bound for the operating-temperature search [keV]
 f_GW_min: 0.30           # Lower bound for the LCOE-optimizer f_GW search
 f_GW_max: 1.00           # Upper bound for the LCOE-optimizer f_GW search
+
+# Aneutronic first-wall hardware class (read only when blanket_form is none,
+# i.e. p-B11/D-He3 fuel normalization): panel = actively-cooled W/steel wall
+# (<= 2 MW/m^2 steady), hhf = divertor-grade monoblock wall (<= 10 MW/m^2).
+# See costing_constants.yaml fw_unit_cost / fw_class_q_limit.
+fw_class: panel

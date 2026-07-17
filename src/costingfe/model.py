@@ -84,6 +84,7 @@ from costingfe.types import (
     ConfinementFamily,
     CostResult,
     DriveMode,
+    FirstWallClass,
     ForwardResult,
     Fuel,
     LaserDriverType,
@@ -1941,6 +1942,8 @@ class CostModel:
         cc_kwargs["replaceable_accounts"] = self.cc.replaceable_accounts
         cc_kwargs["coil_markup"] = self.cc.coil_markup
         cc_kwargs["cas27_fill_materials"] = self.cc.cas27_fill_materials
+        cc_kwargs["fw_unit_cost"] = self.cc.fw_unit_cost
+        cc_kwargs["fw_class_q_limit"] = self.cc.fw_class_q_limit
         cc = CostingConstants(**cc_kwargs)
         co = cost_overrides or {}
         overridden = []
@@ -1991,6 +1994,21 @@ class CostModel:
         n_coils = params.get("n_coils", None)
         blanket_form = BlanketForm(params["blanket_form"])
         blanket_fill = BlanketFill(params["blanket_fill"])
+        # Aneutronic first-wall hardware class (read by cas22 only when
+        # blanket_form is NONE). Audit the declared class against the
+        # machine's wall-flux cap on the concrete path only (q_surface_max is
+        # a tracer under the autodiff sensitivity path).
+        fw_class = FirstWallClass(params["fw_class"])
+        if blanket_form == BlanketForm.NONE:
+            q_cap = params.get("q_surface_max")
+            q_lim = self.cc.fw_class_q_limit[fw_class.value]
+            if isinstance(q_cap, int | float) and q_cap > q_lim * (1.0 + 1e-9):
+                warnings.warn(
+                    f"q_surface_max = {q_cap} MW/m^2 exceeds the "
+                    f"'{fw_class.value}' first-wall class qualification limit "
+                    f"({q_lim} MW/m^2); declare the appropriate fw_class.",
+                    stacklevel=2,
+                )
 
         # Heating mix: use explicit breakdown if provided, else default
         # all p_input to NBI (backward-compatible).
@@ -2076,6 +2094,8 @@ class CostModel:
             coil_material=coil_material,
             blanket_form=blanket_form,
             blanket_fill=blanket_fill,
+            fw_area=geo.firstwall_area,
+            fw_class=fw_class,
             n_coils=n_coils,
             lev_coil_markup=params.get("lev_coil_markup"),
             lev_coil_cryostat_cost=params.get("lev_coil_cryostat_cost"),

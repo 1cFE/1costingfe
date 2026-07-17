@@ -100,6 +100,26 @@ coil_markup:
 # Mirror end-plug coil markup (CS class, ITER FDR Fig. 4: 12.6%/6.95% = 1.81);
 # the coil_markup.mirror entry above prices the central-cell class only.
 mirror_plug_coil_markup: 1.81
+# 220101 aneutronic first wall (blanket_form none): the plasma-facing wall is
+# real surface hardware even with no blanket behind it, priced as
+# firstwall_area x fw_unit_cost[fw_class]. Two discrete hardware classes
+# (concept YAMLs default fw_class: panel; a design that runs a divertor-grade
+# wall flux must buy fw_class: hhf explicitly):
+#   panel: actively-cooled W/steel panel wall. Anchor: ITER first-wall panel
+#     procurement, about 600 m^2 at order EUR 300-400M FOAK (about $0.6M/m^2);
+#     NOAK 0.35 from panel-count repetition. Qualified to about 2 MW/m^2
+#     steady state (ITER normal-heat-flux panel class).
+#   hhf: divertor-grade monoblock/hypervapotron wall. Anchor: ITER divertor
+#     procurement, about 150-200 m^2 of PFUs at order EUR 500-700M FOAK
+#     (about $3-3.5M/m^2); NOAK 2.5. Qualified to 10 MW/m^2 steady state
+#     (Pitts et al. 2019, Nucl. Mater. Energy 20, 100696).
+# See docs/account_justification/CAS22_reactor_components.md.
+fw_unit_cost:
+  panel: 0.35   # M$/m^2 (NOAK)
+  hhf: 2.5      # M$/m^2 (NOAK)
+fw_class_q_limit:
+  panel: 2.0    # MW/m^2 steady-state qualification limit
+  hhf: 10.0     # MW/m^2 steady-state qualification limit
 vessel_unit_cost: 0.72       # M$/m³ vessel shell (volume-based)
 # 220106 pumping: gas-load-driven. S_req = Q_gas / P_op; cost = pump_unit_cost * S_req.
 # See docs/account_justification/CAS220106_vacuum_pumping.md

@@ -187,6 +187,9 @@ def cas22_reactor_plant_equipment(
     lev_coil_cryostat_cost: float | None = None,
     stationary_lift_coil_fraction: float = 0.10,
     blanket_fill: BlanketFill | None = None,
+    # Aneutronic first wall (read only when blanket_form is NONE)
+    fw_area: float = 0.0,  # Plasma-facing first-wall area [m^2]
+    fw_class=None,  # FirstWallClass; hardware class of the surface-priced wall
     # Mirror two-class coil params (MIRROR only; ignored for all other concepts)
     chamber_length: float = 0.0,  # Central-cell length [m]
     coil_spacing: float = 0.0,  # Central-cell solenoid spacing [m]
@@ -248,9 +251,23 @@ def cas22_reactor_plant_equipment(
     # TODO: incorporate wall_material cost multiplier into C220101
     # (W tiles vs flowing Li systems vs SiC composites have very different
     # fabrication costs — requires dedicated research)
-    c220101 = (
-        unit * blanket_form.structure_factor * blanket_vol * (p_th / P_TH_REF) ** 0.6
-    )
+    if blanket_form == BlanketForm.NONE:
+        # Aneutronic machine: no blanket structure, but the plasma-facing wall
+        # is real surface hardware absorbing the photon/particle heat flux.
+        # Priced as area x hardware-class unit cost (fw_class: panel | hhf),
+        # a direct build-up with no power-law scaling. The class is an
+        # explicit design input, symmetric with coil_material; consistency
+        # with q_surface_max is audited in model.forward.
+        c220101 = fw_area * cc.fw_unit_cost[fw_class.value]
+    else:
+        # Blanketed machine: the first wall is part of the blanket structure
+        # assembly and is priced inside the fuel-keyed structure unit cost.
+        c220101 = (
+            unit
+            * blanket_form.structure_factor
+            * blanket_vol
+            * (p_th / P_TH_REF) ** 0.6
+        )
 
     # -----------------------------------------------------------------------
     # 220102: Shield (HT + LT + Bioshield)

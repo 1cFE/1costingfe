@@ -414,23 +414,23 @@ CAS account & Description & M\$ \\
 \midrule
 CAS10        & Pre-construction (land, permits, licensing)  & 14.5 \\
 CAS21        & Buildings \& structures                      & 324.1 \\
-CAS22        & Reactor plant equipment                      & 1479.6 \\
+CAS22        & Reactor plant equipment                      & 1579.9 \\
 CAS23--29    & Other direct (BOP, special materials, contingency) & 242.0 \\
-CAS30        & Capitalized indirect services                & 409.1 \\
+CAS30        & Capitalized indirect services                & 429.2 \\
 CAS40        & Owner's costs                                & 24.3 \\
-CAS50        & Supplementary costs                          & 241.6 \\
+CAS50        & Supplementary costs                          & 245.9 \\
 \midrule
-\multicolumn{2}{l}{Overnight capital (CAS10--50)}            & 2735.2 \\
+\multicolumn{2}{l}{Overnight capital (CAS10--50)}            & 2859.9 \\
 \midrule
-CAS60        & Interest during construction                 & 525.7 \\
-\multicolumn{2}{l}{Total capital (incl.\ IDC)}               & 3261.0 \\
-\multicolumn{2}{l}{Specific cost (\$/kW, incl.\ IDC)}        & 3261 \\
+CAS60        & Interest during construction                 & 549.7 \\
+\multicolumn{2}{l}{Total capital (incl.\ IDC)}               & 3409.6 \\
+\multicolumn{2}{l}{Specific cost (\$/kW, incl.\ IDC)}        & 3410 \\
 \midrule
 CAS70 (M\$/yr) & O\&M and scheduled replacement             & 41.9 \\
 CAS80 (M\$/yr) & Fuel (raw isotopes)                        & 250.5 \\
-CAS90 (M\$/yr) & Annualized financial (CRF, \cref{eq:crf})   & 262.8 \\
+CAS90 (M\$/yr) & Annualized financial (CRF, \cref{eq:crf})   & 274.8 \\
 \midrule
-\multicolumn{2}{l}{\textbf{LCOE (\$/MWh)}}                  & \textbf{74.6} \\
+\multicolumn{2}{l}{\textbf{LCOE (\$/MWh)}}                  & \textbf{76.2} \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -467,10 +467,10 @@ moves LCOE by $+0.10\%$. Recorded by
 
 Parameters with the longest bars (highest elasticity) are the most
 influential in driving LCOE. For the reference scenario the dominant
-parameter is \texttt{fuel\_recovery} (elasticity $-7.68$), in the
+parameter is \texttt{fuel\_recovery} (elasticity $-7.52$), in the
 physics-outputs band; the most consequential cost unit price is
-\texttt{u\_he3}, the ${}^3$He purchase price ($+0.46$); and the most
-consequential financial parameter is \texttt{interest\_rate} ($+0.36$).
+\texttt{u\_he3}, the ${}^3$He purchase price ($+0.45$); and the most
+consequential financial parameter is \texttt{interest\_rate} ($+0.37$).
 \texttt{fuel\_recovery} controls the fraction of unburnt fusion fuel
 recirculated from the exhaust; its default value is 0.99. Operating
 near this limit means the residual loss fraction
@@ -480,7 +480,7 @@ sharply. Combined with the high ${}^3$He price (\texttt{u\_he3}), this
 explains the unusually large elasticity. The financial bucket entries
 are modest for this reference scenario, reflecting the relatively low
 capital intensity of mirror designs: \texttt{interest\_rate} carries an
-elasticity of $+0.36$ and \texttt{inflation\_rate} $+0.18$.
+elasticity of $+0.37$ and \texttt{inflation\_rate} $+0.17$.
 
 \subsection{Other API Surfaces}
 \label{sec:tour-api}
@@ -1889,6 +1889,24 @@ FLiBe-wetted surfaces) and solid-breeder designs (pebble-bed canisters
 with separate breeder and multiplier zones), all relative to the
 PbLi-style flow-channel baseline. The fill material chemistry is costed
 separately under CAS27 (\cref{sec:cas27}).
+
+For aneutronic machines with no blanket at all ($s(\mathrm{none}) = 0$, the
+default fuel normalization for D-${}^3$He and p-${}^{11}$B), the
+plasma-facing wall is priced instead as surface hardware,
+\begin{equation}
+\label{eq:cas2201fw}
+C_{22.01.01} = A_{\text{fw}} \cdot c_{\text{fw}}(\text{class}),
+\end{equation}
+with two discrete hardware classes declared by the design (the
+\texttt{fw\_class} input, symmetric with \texttt{coil\_material}): an
+actively-cooled panel wall ($0.35$~M\$/m$^2$ NOAK, qualified to about
+2~MW/m$^2$ steady state; ITER first-wall-panel procurement anchor) and a
+divertor-grade monoblock wall ($2.5$~M\$/m$^2$ NOAK, qualified to
+10~MW/m$^2$; ITER divertor procurement anchor). The declared class is
+audited against the machine's surface-flux cap. Discrete classes mirror the
+hardware reality: qualified wall products exist as panels and as
+high-heat-flux components, with nothing in between, and within a class the
+cost is area-driven.
 
 The fuel-keyed unit cost $c_{\text{blk}}(f)$ is $0.35$, $0.30$, $0.08$,
 and $0.05$~M\$/m$^3$ for D-T, D-D, D-${}^3$He, and p-${}^{11}$B, declining

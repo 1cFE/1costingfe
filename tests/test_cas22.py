@@ -8,6 +8,7 @@ from costingfe.types import (
     CoilMaterial,
     ConfinementConcept,
     ConfinementFamily,
+    FirstWallClass,
     Fuel,
 )
 
@@ -309,6 +310,8 @@ def _make_electrostatic_cas22(concept):
         r_coil=0.0,
         coil_material=CoilMaterial.COPPER,
         blanket_form=BlanketForm.NONE,
+        fw_area=0.5,
+        fw_class=FirstWallClass.PANEL,
         p_nbi=0.0,
         p_icrf=0.0,
         p_ecrh=0.0,

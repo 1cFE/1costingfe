@@ -428,6 +428,12 @@ class CostingConstants:
     # breakdown); coil_markup["mirror"] prices the central-cell class only.
     mirror_plug_coil_markup: float = 1.81
 
+    # 220101 — aneutronic first wall (blanket_form NONE): surface-priced wall
+    # hardware, keyed by FirstWallClass value. M$/m^2 (NOAK) and the class's
+    # steady-state surface-flux qualification limit [MW/m^2]. Loaded from YAML.
+    fw_unit_cost: dict[str, float] = None  # loaded from YAML
+    fw_class_q_limit: dict[str, float] = None  # loaded from YAML
+
     # CAS27 — Special materials: initial blanket-fill inventory.
     # Volume-based mass build-up keyed on blanket_fill (not power-scaled):
     # {fill: {density, vol_frac, price}}. Loaded from YAML.

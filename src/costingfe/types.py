@@ -207,6 +207,17 @@ class ImpurityMix:
     seeded: dict[str, float]
 
 
+class FirstWallClass(Enum):
+    """Hardware class of the plasma-facing first wall, for aneutronic machines
+    (blanket_form NONE) whose wall is priced as surface hardware rather than
+    inside a blanket structure account. Discrete classes mirror the hardware
+    reality: qualified wall products exist as actively-cooled panels and as
+    divertor-grade high-heat-flux components, with nothing in between."""
+
+    PANEL = "panel"  # actively-cooled W/steel panel wall (ITER FW panel class)
+    HHF = "hhf"  # divertor-grade monoblock/hypervapotron wall (ITER divertor class)
+
+
 class CoilMaterial(Enum):
     REBCO_HTS = "rebco_hts"
     NB3SN = "nb3sn"

@@ -23,6 +23,7 @@ from costingfe.types import (
     CoilMaterial,
     ConfinementConcept,
     ConfinementFamily,
+    FirstWallClass,
     Fuel,
 )
 
@@ -115,6 +116,8 @@ def generate_subsystems(
         coil_material=CoilMaterial(params.get("coil_material", "copper")),
         blanket_form=BlanketForm(params["blanket_form"]),
         blanket_fill=BlanketFill(params["blanket_fill"]),
+        fw_area=geo.firstwall_area,
+        fw_class=FirstWallClass(params["fw_class"]),
         p_nbi=params.get("p_nbi", 0.0),
         p_icrf=params.get("p_icrf", 0.0),
         p_ecrh=params.get("p_ecrh", 0.0),
