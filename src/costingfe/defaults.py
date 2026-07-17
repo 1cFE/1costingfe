@@ -164,13 +164,24 @@ class CostingConstants:
     # 220106: Vacuum System — vessel (volume-based) + gas-load pumping.
     # See docs/account_justification/CAS220106_vacuum_pumping.md
     vessel_unit_cost: float = 0.72  # M$/m³ vessel shell, ref ~210 m³ -> $151M
-    # Gas-load-driven pumping: S_req = Q_gas / P_op, cost = pump_unit_cost * S_req.
+    # Gas-load-driven pumping: S_req = Q_gas / P_op,
+    # cost = pump_unit_cost[pump_basis[concept]] * S_req.
     # Q_gas = NBI neutral-gas load + fueling/exhaust throughput (outgassing negligible).
-    pump_unit_cost: float = 0.015  # M$ per (m³/s) installed speed (= $15/(L/s))
+    # Two technology bases (see costing_constants.yaml): discrete valved/ducted
+    # pumps behind ports vs bare cryopanel arrays lining an exhaust tank on
+    # open-geometry machines (MFTF-B class; MARS/WITAMIR/TASKA/Hoffman anchor).
+    pump_basis: dict[str, str] = None  # loaded from YAML, keyed by concept
+    pump_unit_cost_discrete: float = 0.015  # M$ per (m³/s) (= $15/(L/s))
+    pump_unit_cost_cryopanel: float = 0.0025  # M$ per (m³/s) (= $2.5/(L/s))
     pump_nbi_gas_amplification: float = 1.0  # gas particles pumped per beam particle
     #   (un-trapped beam + neutralizer reflux); calibrated to C-2W ~2000 m³/s.
     pump_gas_temp_k: float = 300.0  # pumped-gas temperature [K] for Q = N*kT
-    pump_ion_per_reaction: float = 2.0  # fuel ions consumed per fusion reaction
+    # Pumped-gas species accounting, per fuel (see costing_constants.yaml for
+    # the derivation): gas-phase particles reaching the pump per unburned
+    # consumed-ion-pair equivalent, and gas-phase ash particles per reaction.
+    # Condensable species (unburned boron) carry zero gas load.
+    pump_gas_mol_per_pair: dict[str, float] = None  # loaded from YAML
+    pump_ash_gas_per_reaction: dict[str, float] = None  # loaded from YAML
     nbi_beam_energy_kev: float = 120.0  # reference reactor NBI energy [keV]; gas
     #   load scales as 1/E_b (higher-energy beams inject fewer particles per MW).
     # Operating (plenum) pressure at the pump throat [Pa]. THE sensitive knob:

@@ -538,18 +538,26 @@ def cas22_reactor_plant_equipment(
     e_b_j = cc.nbi_beam_energy_kev * 1e3 * _QE
     q_nbi = cc.pump_nbi_gas_amplification * (p_nbi * 1e6 / e_b_j) * kt_gas
     # Fueling/exhaust throughput [Pa·m³/s]: fuel feed = reaction_rate / burn_fraction;
-    # the unburned fraction circulates through the pump each pass.
+    # the unburned fraction circulates back through the pump each pass. The
+    # pump sees GAS-PHASE particles: hydrogenic atoms recombine to diatomic
+    # molecules, noble-gas ash pumps as atoms, and condensable species
+    # (unburned boron) plate onto liners and never reach the pump. Both
+    # species factors are fuel-keyed (see costing_constants.yaml).
     e_fus_j = e_fus_mev * 1e6 * _QE
     reaction_rate = p_fus * 1e6 / e_fus_j  # reactions/s
-    q_fuel = (
-        cc.pump_ion_per_reaction
-        * (1.0 - burn_fraction)
-        / burn_fraction
-        * reaction_rate
-        * kt_gas
+    gas_per_reaction = (
+        cc.pump_gas_mol_per_pair[fuel.value] * (1.0 - burn_fraction) / burn_fraction
+        + cc.pump_ash_gas_per_reaction[fuel.value]
     )
+    q_fuel = gas_per_reaction * reaction_rate * kt_gas
     s_req = (q_nbi + q_fuel) / vac_op_pressure_pa  # required pumping speed [m³/s]
-    c220106_pump = cc.pump_unit_cost * s_req
+    # Technology basis: cryopanel arrays on open-geometry machines, discrete
+    # ducted pumps behind ports elsewhere (see costing_constants.yaml).
+    pump_unit = {
+        "discrete": cc.pump_unit_cost_discrete,
+        "cryopanel": cc.pump_unit_cost_cryopanel,
+    }[cc.pump_basis[concept.value]]
+    c220106_pump = pump_unit * s_req
     c220106 = c220106_vessel + c220106_pump
 
     # -----------------------------------------------------------------------

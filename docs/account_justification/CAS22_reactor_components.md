@@ -698,7 +698,7 @@ size.
 ### Pumping (gas-load-based)
 
 Installed pumping speed is set by gas throughput and operating pressure,
-`S_req = (Q_nbi + Q_fuel) / P_op`, costed at `pump_unit_cost` per (m³/s).
+`S_req = (Q_nbi + Q_fuel) / P_op`, costed at `pump_unit_cost[pump_basis]` per (m³/s) (fuel-keyed gas-phase species; see CAS220106_vacuum_pumping.md).
 NBI neutral-gas load scales as `p_nbi/E_b`; fueling/exhaust load scales as
 `(1-burn_fraction)/burn_fraction × p_fus/E_fus`. The per-concept operating
 pressure `vac_op_pressure_pa` is the key driver: high-pressure tokamak

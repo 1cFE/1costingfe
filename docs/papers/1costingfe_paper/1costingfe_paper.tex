@@ -414,23 +414,23 @@ CAS account & Description & M\$ \\
 \midrule
 CAS10        & Pre-construction (land, permits, licensing)  & 14.5 \\
 CAS21        & Buildings \& structures                      & 324.1 \\
-CAS22        & Reactor plant equipment                      & 1579.9 \\
+CAS22        & Reactor plant equipment                      & 1497.2 \\
 CAS23--29    & Other direct (BOP, special materials, contingency) & 242.0 \\
-CAS30        & Capitalized indirect services                & 429.2 \\
+CAS30        & Capitalized indirect services                & 412.7 \\
 CAS40        & Owner's costs                                & 24.3 \\
-CAS50        & Supplementary costs                          & 245.9 \\
+CAS50        & Supplementary costs                          & 242.4 \\
 \midrule
-\multicolumn{2}{l}{Overnight capital (CAS10--50)}            & 2859.9 \\
+\multicolumn{2}{l}{Overnight capital (CAS10--50)}            & 2757.1 \\
 \midrule
-CAS60        & Interest during construction                 & 549.7 \\
-\multicolumn{2}{l}{Total capital (incl.\ IDC)}               & 3409.6 \\
-\multicolumn{2}{l}{Specific cost (\$/kW, incl.\ IDC)}        & 3410 \\
+CAS60        & Interest during construction                 & 530.0 \\
+\multicolumn{2}{l}{Total capital (incl.\ IDC)}               & 3287.1 \\
+\multicolumn{2}{l}{Specific cost (\$/kW, incl.\ IDC)}        & 3287 \\
 \midrule
 CAS70 (M\$/yr) & O\&M and scheduled replacement             & 41.9 \\
 CAS80 (M\$/yr) & Fuel (raw isotopes)                        & 250.5 \\
-CAS90 (M\$/yr) & Annualized financial (CRF, \cref{eq:crf})   & 274.8 \\
+CAS90 (M\$/yr) & Annualized financial (CRF, \cref{eq:crf})   & 264.9 \\
 \midrule
-\multicolumn{2}{l}{\textbf{LCOE (\$/MWh)}}                  & \textbf{76.2} \\
+\multicolumn{2}{l}{\textbf{LCOE (\$/MWh)}}                  & \textbf{74.8} \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -467,9 +467,9 @@ moves LCOE by $+0.10\%$. Recorded by
 
 Parameters with the longest bars (highest elasticity) are the most
 influential in driving LCOE. For the reference scenario the dominant
-parameter is \texttt{fuel\_recovery} (elasticity $-7.52$), in the
+parameter is \texttt{fuel\_recovery} (elasticity $-7.65$), in the
 physics-outputs band; the most consequential cost unit price is
-\texttt{u\_he3}, the ${}^3$He purchase price ($+0.45$); and the most
+\texttt{u\_he3}, the ${}^3$He purchase price ($+0.46$); and the most
 consequential financial parameter is \texttt{interest\_rate} ($+0.37$).
 \texttt{fuel\_recovery} controls the fraction of unburnt fusion fuel
 recirculated from the exhaust; its default value is 0.99. Operating
@@ -2272,38 +2272,57 @@ power-supply (\cref{eq:cas2207-ps}), and remote-handling accounts.
 The \emph{pumping} system is sized by gas throughput, not vessel volume.
 A pump of speed $S$ removes a throughput $Q = S P$, so the installed
 speed required to hold an operating (plenum) pressure $P_{\text{op}}$ is
-$S_{\text{req}} = Q_{\text{gas}}/P_{\text{op}}$, costed at
-$c_{\text{pump}} = 0.015$~M\$ per (m$^3$/s) (commodity cryopump
-procurement, \$15/(L/s)). The gas load has two sources; wall outgassing
-scales with surface area but is negligible for a baked UHV system and is
-omitted:
+$S_{\text{req}} = Q_{\text{gas}}/P_{\text{op}}$. The gas load has two
+sources; wall outgassing scales with surface area but is negligible for
+a baked UHV system and is omitted:
 \begin{align}
   Q_{\text{NBI}} &= g\, \frac{P_{\text{NBI}}}{E_b}\, k_B T, \\
-  Q_{\text{fuel}} &= n_{\text{ion}}\, \frac{1 - f_b}{f_b}\, \frac{P_{\text{fus}}}{E_{\text{fus}}}\, k_B T,
+  Q_{\text{fuel}} &= \left[ \mu(f)\, \frac{1 - f_b}{f_b} + a(f) \right] \frac{P_{\text{fus}}}{E_{\text{fus}}}\, k_B T,
 \end{align}
 with $T = 300$~K, gas amplification $g = 1$ (gas particles pumped per
 beam particle, calibrated to the C-2W machine's roughly 2000~m$^3$/s
 divertor pumping), reference NBI energy $E_b = 120$~keV (the NBI gas
-load scales as $1/E_b$), $n_{\text{ion}} = 2$ ions consumed per
-reaction, and $E_{\text{fus}}$ the fuel-dependent energy per reaction.
-The pumping cost is then
+load scales as $1/E_b$), and $E_{\text{fus}}$ the fuel-dependent energy
+per reaction. The pump removes gas-phase particles, so the species
+factors are fuel-keyed: $\mu(f)$ counts gas particles per unburned
+consumed-ion-pair (hydrogenic atoms recombine to diatomic molecules;
+condensable species drop out --- unburned boron is a refractory solid
+handled as a liner solids loop, not pumping speed), and $a(f)$ counts
+gas-phase ash per reaction (helium does not condense and must be
+pumped). $\mu = \{1.0, 1.0, 1.5, 0.5\}$ and $a = \{1.0, 0.75, 1.5,
+3.0\}$ for D-T, D-D, D-$^3$He, p-$^{11}$B respectively. The pumping
+cost is then
 \begin{equation}
 \label{eq:cas2206-pump}
-C_{\text{pump}} = c_{\text{pump}}\,\frac{Q_{\text{NBI}} + Q_{\text{fuel}}}{P_{\text{op}}}.
+C_{\text{pump}} = c_{\text{pump}}(\text{basis})\,\frac{Q_{\text{NBI}} + Q_{\text{fuel}}}{P_{\text{op}}},
 \end{equation}
+where the unit cost depends on the concept's pump-technology basis:
+\$15/(L/s) for discrete valved/ducted pumps behind ports (closed
+toroidal machines and enclosed pulsed chambers; ITER's tritium-rated
+FOAK torus cryopumps bracket this from above at roughly \$50/(L/s)),
+versus \$2.5/(L/s) for bare cryopanel arrays lining the exhaust tanks of
+open-geometry machines (mirror, FRC, dipole, cusp devices, and
+Helion-class pulsed FRC, whose patents route the exhaust along open
+field lines to remote divertor chambers). The cryopanel figure is the
+center of four independently costed mirror/DEC designs escalated to
+2025 USD (Hoffman UCID-17560; WITAMIR-I UWFDM-400; MARS UCRL-53480;
+TASKA KfK-3311), and the technology is demonstrated at scale: MFTF-B
+built about 1{,}100~m$^2$ of cryopanels, still the largest such system
+ever constructed.
 
 The operating pressure $P_{\text{op}}$ is the dominant, concept-specific
 driver, set per concept: a few~Pa for tokamak and stellarator divertor
 plenums (high-recycling regions designed to pump at high pressure),
 versus $0.02$--$0.05$~Pa for open-field-line linear devices (mirror,
 FRC) that must hold a low neutral pressure to limit charge-exchange
-losses. The same throughput therefore costs an FRC roughly $60\times$
-more to pump than a tokamak. The fueling term dominates over the NBI
-term at reactor beam energies; because aneutronic p-B$^{11}$ releases
-about half the energy per reaction of D-T, it runs about twice the
-reaction rate and pumps about twice the fuel throughput at equal fusion
-power. The pumping model applies uniformly to every concept, so these
-differences follow from the inputs rather than per-concept manual adjustment.
+losses. The fueling term dominates over the NBI term at reactor beam
+energies. Aneutronic p-B$^{11}$ runs about twice the reaction rate of
+D-T at equal fusion power (8.7 versus 17.6~MeV per reaction), but its
+condensable boron and molecular hydrogen pumping nearly cancel that
+factor in gas terms (12.5 pumped particles per reaction versus D-T's
+20). The pumping model applies uniformly to every concept, so these
+differences follow from the inputs rather than per-concept manual
+adjustment.
 
 \paragraph{Reporting convention.} Where a single account aggregates
 components with distinct cost bases, the model emits informational

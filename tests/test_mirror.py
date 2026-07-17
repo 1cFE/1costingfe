@@ -563,7 +563,13 @@ class TestInverse:
 # = PF class 1.52, plug = CS class 1.81) replacing the back-derived 1.7266
 # legacy-invariant markup; C220103 moved 513.375 -> 164.434 M$ and LCOE
 # 94.1932 -> 83.3035.
-_MIRROR_DT_PINNED_LCOE = 83.303466796875
+# re-pinned: C220106 pumping moved to fuel-keyed gas-phase species accounting
+# (hydrogenic atoms pump as molecules, ash gas counted per reaction) and the
+# open-geometry cryopanel technology basis (MFTF-B class; Hoffman/WITAMIR/
+# MARS/TASKA cost anchor, $2.5/(L/s)) replacing the flat $15/(L/s)
+# discrete-pump basis: mirror D-T pump line 82.9 -> 6.2 M$, LCOE 83.3035 ->
+# 81.4655.
+_MIRROR_DT_PINNED_LCOE = 81.46546173095703
 
 
 class TestModelIntegration:

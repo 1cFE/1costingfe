@@ -70,7 +70,16 @@ _BASE = dict(
         # leftover) and the two coil classes carry ITER-FDR-sourced markups
         # (central PF class 1.52, plug CS class 1.81) replacing the back-derived
         # 1.7266. C220103 falls ~3x and LCOE 185.26 -> 153.36. Mirror-only.
-        (C.MIRROR, Fuel.DT, 153.36),
+        # re-pinned: C220106 pumping moved to fuel-keyed gas-phase species
+        # accounting (atoms pump as molecules + ash gas) and per-concept
+        # technology basis (cryopanel arrays for open-geometry machines at
+        # $2.5/(L/s), MFTF-B class; discrete pumps behind ports elsewhere).
+        # MIRROR 153.36 -> 150.40 (cryopanel), DIPOLE 289.25 -> 289.20 and
+        # POLYWELL 49.50 -> 49.41 (cryopanel; small absolute pump lines),
+        # TOKAMAK/STELLARATOR unchanged (discrete basis retained, D-T
+        # molecule accounting offsets are inside the 0.05 tolerance at their
+        # pump-line size).
+        (C.MIRROR, Fuel.DT, 150.40),
         # re-pinned: stellarator coil-center field now derived from the design
         # on-axis field B (like the tokamak) instead of a frozen b_center YAML
         # default. The default B is 5.0 T, below the old frozen 6.0 T, so the
@@ -89,7 +98,7 @@ _BASE = dict(
         # He3 fuel bill against a breeding blanket). Combined with the Li2O
         # structure re-anchor to structure-only (0.20 -> 0.35, fill in CAS27,
         # C220101 ~$368M -> ~$644M), the D-T LCOE is 289.25 (was 279.07 D-He3).
-        (C.DIPOLE, Fuel.DT, 289.25),
+        (C.DIPOLE, Fuel.DT, 289.20),
         # POLYWELL re-benchmarked after two right-sizings for this electrostatic,
         # copper-magnet concept: (1) C220108 divertor zeroed (charged particles
         # exhaust to the direct converter, no W-monoblock cassette), then (2) the
@@ -98,7 +107,7 @@ _BASE = dict(
         # re-pinned: CAS10 land now sqrt(plant-total power); at this 200 MWe
         # off-reference point the small-plant land rises (was 49.55), then gross
         # reference unified to 1100 (was 49.63).
-        (C.POLYWELL, Fuel.PB11, 49.50),
+        (C.POLYWELL, Fuel.PB11, 49.41),
     ],
 )
 def test_benchmark_lcoe_preserved(concept, fuel, expected):

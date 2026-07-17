@@ -60,23 +60,96 @@ Higher beam energy injects fewer particles per MW, so this term scales as `1/E_b
 **Fueling/exhaust gas.** Sustaining fusion power `p_fus` requires a reaction
 rate `p_fus/E_fus`; only `burn_fraction` of the fuel fed actually burns, so the
 fuel feed is `reaction_rate/burn_fraction` and the unburned `(1 - burn_fraction)`
-circulates through the pump:
+circulates through the pump. The pump removes GAS-PHASE particles, which is
+where the species accounting enters, keyed by fuel:
+
+- hydrogenic atoms recombine to diatomic molecules before reaching the pump
+  (two atoms per pumped particle);
+- noble-gas ash (He-3, He-4) pumps as atoms, counted per reaction;
+- condensable species never reach the pump: unburned boron is a refractory
+  solid (melting point 2076 C, negligible vapor pressure) that plates onto
+  end-tank/collector liners and is handled as a solids-recovery loop, not
+  installed pumping speed.
 
 ```
-Q_fuel = ions_per_reaction · (1 - burn_fraction)/burn_fraction
+Q_fuel = [ gas_mol_per_pair(fuel) · (1 - burn_fraction)/burn_fraction
+           + ash_gas_per_reaction(fuel) ]
          · (p_fus / E_fus) · kT
 ```
 
-Then `S_req = (Q_nbi + Q_fuel)/P_op` and `C220106_pump = pump_unit_cost · S_req`.
+with `gas_mol_per_pair` = {DT 1.0, DD 1.0, DHe3 1.5, PB11 0.5} and
+`ash_gas_per_reaction` = {DT 1.0, DD 0.75, DHe3 1.5, PB11 3.0} (derivations
+in `costing_constants.yaml`). At burn_fraction 0.05 this gives 20 pumped
+particles per reaction for D-T (19 hydrogenic molecules + 1 He) and 12.5 for
+p-B11 (9.5 H2 + 3 He, no boron gas).
+
+Then `S_req = (Q_nbi + Q_fuel)/P_op` and
+`C220106_pump = pump_unit_cost[pump_basis(concept)] · S_req`.
+
+## Two pump technology bases
+
+The cost per unit installed speed depends on whether the machine has free
+wall area to pump on or must pump through ports; the per-concept assignment
+is `pump_basis` in `costing_constants.yaml`.
+
+**Discrete** ($15/(L/s) NOAK): valved, housed, ducted cryo/turbo/mechanical
+pumps behind ports. Applies to closed toroidal machines (tokamak,
+stellarator) and to pulsed chambers whose walls cannot carry bare panels.
+The ITER torus cryopumps (8 tritium-rated, valved, regenerable units at
+EUR 19M, about 50 m^3/s class each: about $50/(L/s)) bracket this from
+above as the FOAK nuclear-component extreme; commodity cryopump procurement
+brackets it from below.
+
+**Cryopanel** ($2.5/(L/s) NOAK): bare cryopanel arrays lining an exhaust
+tank on open-geometry machines, where speed scales with nearly-free wall
+area (the pump is the tank wall). Demonstrated at scale: MFTF-B built about
+1,100 m^2 of LHe cryopanels (VanSant et al., UCRL-83590; Margolies & Valby,
+UCRL-87735), still the largest cryopanel system ever constructed. Four
+independent costed mirror/DEC designs cluster tightly once escalated to
+2025 dollars:
+
+| study | basis | 2025 $/(L/s) |
+|---|---|---|
+| Hoffman, UCID-17560 (1977) | $6,300/m^2 cryopanel at demonstrated specific speeds | about 0.7 |
+| WITAMIR-I, UWFDM-400 (1980) | cryopumps $20,000/m^2; account 22.01.06 total $26.8M | about 1.5 |
+| MARS, UCRL-53480 (1984, tenth-of-a-kind) | vacuum systems account $6.97M over about 1e7 L/s | about 2 |
+| TASKA, KfK-3311/UWFDM-500 (1982) | vacuum account $16.1M over 1.5e7 L/s | about 3.5 |
+
+$2.5/(L/s) sits above the cluster midpoint to carry the helium-sorption
+share: noble-gas ash does not cryocondense at 4.5 K and needs
+charcoal-sorption panels with scheduled regeneration (WITAMIR carried the
+split explicitly: about 5 L/s/cm^2 for D/T against about 2 for He). A
+bottom-up cross-check: a panel at WITAMIR's escalated $76k/m^2 delivering
+its 5 L/s/cm^2 is $1.5/(L/s) directly.
+
+### Per-concept basis assignment
+
+Open geometry (cryopanel): mirror, steady FRC, dipole, polywell, orbitron,
+and pulsed FRC — the Helion-class machine exhausts along open field lines
+to remote end divertor chambers (Helion patents US20170011811A1 /
+EP3103119B1), the same pump-on-tank-wall geometry as the steady mirror.
+
+Enclosed (discrete): tokamak and stellarator (port-limited), and the
+remaining pulsed family: buffer-gas or liquid-wall IFE chambers at
+Torr-class fill pressures (Sombrero 0.5 Torr Xe, DOE/ER-54100; LIFE about
+1e16 cm^-3 Xe, turbo-pumped, Latkowski et al. 2010), Z-IFE/MagLIF chambers
+at 10-20 Torr with condensable-flibe clearing and rep-rate pumping flagged
+as unresolved R&D (SAND2006-7148), RTPR's radially-flushed toroidal modules
+on mechanical Roots blowers (LA-5336 itemizes 704 pumps at 12.3 MWe, the
+most fully engineered pulsed vacuum design on record), and MTF/DPF
+pre-filled vessels.
 
 ## Constants
 
 | Constant | Value | Basis |
 |---|---|---|
-| `pump_unit_cost` | 0.015 M$/(m³/s) | $15/(L/s), commodity cryopump procurement |
+| `pump_unit_cost_discrete` | 0.015 M$/(m³/s) | $15/(L/s), valved/ducted pumps behind ports (NOAK; ITER FOAK tritium-rated units about $50) |
+| `pump_unit_cost_cryopanel` | 0.0025 M$/(m³/s) | $2.5/(L/s), bare panel arrays on open-geometry exhaust tanks (Hoffman/WITAMIR/MARS/TASKA cluster, MFTF-B-demonstrated technology) |
+| `pump_basis` | per concept | open geometry -> cryopanel; enclosed -> discrete (see above) |
 | `pump_nbi_gas_amplification` (g) | 1.0 | gas particles pumped per beam particle; calibrated to C-2W |
 | `pump_gas_temp_k` | 300 K | pumped-gas temperature for Q = N·kT |
-| `pump_ion_per_reaction` | 2.0 | fuel ions consumed per fusion reaction |
+| `pump_gas_mol_per_pair` | per fuel | gas-phase particles per unburned consumed-ion-pair (DT 1.0, DD 1.0, DHe3 1.5, PB11 0.5) |
+| `pump_ash_gas_per_reaction` | per fuel | gas-phase ash particles per reaction (DT 1.0, DD 0.75, DHe3 1.5, PB11 3.0) |
 | `nbi_beam_energy_kev` | 120 keV | reference reactor NBI energy; gas load scales 1/E_b |
 | `e_fus_mev_{dt,dd,dhe3,pb11}` | 17.6 / 3.65 / 18.3 / 8.7 | energy released per reaction |
 
@@ -98,38 +171,39 @@ energy, the NBI term reproduces a comparable specific pumping speed; the C-2W
 figure also confirms that pumping is a real, large installed capacity for a
 beam-driven device, not a rounding error.
 
-The unit cost `$15/(L/s)` is the commodity cryopump range (CTI/Brooks On-Board
-8F class at about 1,500 L/s for a few tens of $k per unit; ITER torus cryopumps
-at 100 m³/s each are costlier per unit but similar per L/s at scale).
-
 ## Verified per-concept results
 
-Run at 200 MWe net, NOAK (`/tmp` reproduction, all signs internally consistent):
+Run at 200 MWe net, NOAK:
 
-| Concept | P_op | Q_nbi | Q_fuel | S [m³/s] | pump [M$] | vessel [M$] | C220106 [M$] |
-|---|---|---|---|---|---|---|---|
-| Tokamak DT | 3.00 | 10.8 | 41.5 | 17 | 0.3 | 72.3 | 72.5 |
-| Stellarator DT | 3.00 | 0.0 | 37.6 | 13 | 0.2 | 24.9 | 25.1 |
-| Mirror DT | 0.02 | 8.6 | 39.3 | 2,398 | 36.0 | 13.9 | 49.8 |
-| FRC DT | 0.05 | 17.2 | 49.0 | 1,326 | 19.9 | 7.9 | 27.8 |
-| FRC pB11 | 0.05 | 17.2 | 104.2 | 2,429 | 36.4 | 7.8 | 44.2 |
+| Concept | pump [M$] | vessel [M$] | C220106 [M$] |
+|---|---|---|---|
+| Tokamak DT | 0.1 | 118.9 | 119.0 |
+| Stellarator DT | 0.1 | 24.9 | 25.0 |
+| Mirror DT | 3.7 | 13.9 | 17.5 |
+| Mirror pB11 | 4.5 | 13.6 | 18.1 |
+| FRC DT | 1.4 | 7.2 | 8.6 |
+| FRC pB11 | 1.8 | 7.1 | 8.9 |
 
 Behaviors that fall out of the model:
 
 - **High-pressure concepts pump cheaply.** Tokamak and stellarator pumping is
-  $0.2-0.3M; their C220106 stays vessel-dominated and essentially unchanged.
-  A high-recycling divertor designed to run at a few Pa does not incur a large
-  pumping bill, which is the correct physics.
-- **Low-pressure concepts pump expensively.** Mirror and FRC pumping is
-  $20-36M, driven by the open-field-line requirement to hold a low neutral
-  pressure.
-- **Fueling dominates over NBI.** Once beams are at reactor energy, the fueling
-  throughput is the larger term. The NBI gas load that originally motivated this
-  account is the minor contributor.
-- **pB11 pumps more than DT** ($36M vs $20M at the same machine), purely through
-  fueling: pB11 releases about half the energy per reaction (8.7 vs 17.6 MeV),
-  so it runs about twice the reaction rate for the same power and feeds/exhausts
-  about twice the fuel particles.
+  order $0.1M; C220106 stays vessel-dominated. A high-recycling divertor
+  designed to run at a few Pa does not incur a large pumping bill, which is
+  the correct physics.
+- **Low-pressure open machines carry the real pumping load, priced as
+  panels.** Mirror and FRC install thousands of m^3/s to hold their
+  open-field-line neutral pressure, but at cryopanel-array economics the
+  bill is single-digit M$; the installed speeds are the same order as the
+  costed mirror designs (MARS about 1e7 L/s, TASKA 1.5e7 L/s), which
+  validates the throughput model.
+- **Fueling dominates over NBI.** Once beams are at reactor energy, the
+  fueling throughput is the larger term.
+- **pB11's gas load per reaction is smaller than a naive ion count.** It
+  runs about twice the reaction rate of D-T for the same power (8.7 vs 17.6
+  MeV per reaction), but its unburned boron condenses (a solids-recovery
+  loop on end-tank liners, not a pump load) and its protons pump as H2, so
+  the pumped-gas count is 12.5 particles per reaction against D-T's 20; the
+  two effects nearly cancel at the plant level.
 
 ## Key uncertainties
 
@@ -137,7 +211,17 @@ Behaviors that fall out of the model:
    pressures span more than an order of magnitude. It lumps in edge physics (how
    much of the recirculating flux reaches the pump versus recycling at the wall),
    so it is an effective pressure, not a measured one. This is the parameter most
-   worth pinning per concept.
+   worth pinning per concept. Bracketing evidence for the mirror: the classic
+   DEC designs held their end tanks at 2-4e-3 Pa to control charge-exchange
+   losses on the collector optics (MARS 2e-5 torr; WITAMIR 3e-5 torr; Hoffman
+   UCID-17560 trades cost directly against the CX loss fraction and calls 1%
+   loss "exceedingly costly" versus 10%), while GDT measured that its expander
+   tolerates neutral densities up to 1e14 cm^-3, about 0.4 Pa, without
+   confinement degradation (Soldatkina et al., Plasma Fusion Res. 14, 2402006
+   (2019)). The mirror's 0.02 Pa sits between the two. Coupling caveat: P_op
+   must not be relaxed for pump savings in a DEC machine without charging DEC
+   efficiency, because background neutrals feed charge-exchange losses on the
+   collector potential structure; that trade is Hoffman's, not a free knob.
 2. **`g` is calibrated, not derived.** The single C-2W anchor sets it; reactor
    beam-coupling and neutralizer gas at higher energy are unvalidated.
 3. **pB11 fueling is a rough proxy.** `ions_per_reaction = 2` and a generic-gas

@@ -123,12 +123,83 @@ fw_class_q_limit:
   panel: 2.0    # MW/m^2 steady-state qualification limit
   hhf: 10.0     # MW/m^2 steady-state qualification limit
 vessel_unit_cost: 0.72       # M$/m³ vessel shell (volume-based)
-# 220106 pumping: gas-load-driven. S_req = Q_gas / P_op; cost = pump_unit_cost * S_req.
+# 220106 pumping: gas-load-driven. S_req = Q_gas / P_op;
+# cost = pump_unit_cost[pump_basis[concept]] * S_req. Two technology bases:
+#   discrete: valved, housed, ducted cryo/turbopumps behind ports (closed
+#     toroidal machines, and pulsed chambers whose walls face target debris).
+#     $15/(L/s) NOAK; ITER's tritium-rated FOAK units run about $50/(L/s)
+#     (F4E, 8 units EUR 19M, 50 m^3/s class each).
+#   cryopanel: bare cryopanel arrays lining an exhaust tank on open-geometry
+#     machines, where speed scales with nearly-free wall area. Demonstrated
+#     at 1,100 m^2 on MFTF-B. $2.5/(L/s) NOAK, the center of four independent
+#     costed designs escalated to 2025: Hoffman UCID-17560 (1977) about
+#     $0.7/(L/s); WITAMIR-I UWFDM-400 (1980) about $1.5; MARS UCRL-53480
+#     (1984, tenth-of-a-kind) about $2; TASKA KfK-3311 (1982) about $3.5.
+#     Set above the cluster midpoint for the He-sorption share (noble-gas
+#     ash needs charcoal sorption panels with scheduled regeneration; see
+#     CAS220106_vacuum_pumping.md).
+pump_basis:
+  tokamak: discrete
+  stellarator: discrete
+  mirror: cryopanel
+  steady_frc: cryopanel
+  dipole: cryopanel
+  polywell: cryopanel
+  orbitron: cryopanel
+  # Pulsed FRC (Helion-class) exhausts along open field lines to remote end
+  # divertor chambers (Helion patents US20170011811A1 / EP3103119B1: lost
+  # plasma "is conducted far away from the burn region to a remote chamber"),
+  # the same pump-on-tank-wall geometry as the steady mirror/FRC.
+  pulsed_frc: cryopanel
+  # The remaining pulsed concepts are genuinely enclosed chambers: buffer-gas
+  # or liquid-wall IFE vessels at Torr-class fill pressures (Sombrero 0.5
+  # Torr Xe; LIFE ~1e16 cm^-3 Xe, turbo-pumped), Z-IFE/MagLIF chambers at
+  # 10-20 Torr with condensable-flibe clearing and unresolved rep-rate
+  # pumping (SAND2006-7148), RTPR's radially-flushed toroidal modules on
+  # mechanical Roots blowers (LA-5336: 704 itemized pumps, 12.3 MWe), and
+  # MTF/DPF pre-filled vessels. Discrete/ducted pump economics apply.
+  laser_ife: discrete
+  zpinch: discrete
+  heavy_ion: discrete
+  mag_target: discrete
+  plasma_jet: discrete
+  maglif: discrete
+  theta_pinch: discrete
+  dense_plasma_focus: discrete
+  staged_zpinch: discrete
+pump_unit_cost_discrete: 0.015   # M$ per (m³/s) installed speed (= $15/(L/s))
+pump_unit_cost_cryopanel: 0.0025  # M$ per (m³/s) installed speed (= $2.5/(L/s))
 # See docs/account_justification/CAS220106_vacuum_pumping.md
-pump_unit_cost: 0.015        # M$ per (m³/s) installed speed (= $15/(L/s))
 pump_nbi_gas_amplification: 1.0  # gas particles pumped per NBI beam particle (C-2W cal.)
 pump_gas_temp_k: 300.0       # pumped-gas temperature [K] for Q = N*kT
-pump_ion_per_reaction: 2.0   # fuel ions consumed per fusion reaction
+# Pumped-gas species accounting, per fuel. Pumps remove GAS-PHASE particles:
+# hydrogenic atoms recombine to diatomic molecules before reaching the pump
+# (2 atoms -> 1 molecule), noble-gas ash pumps as atoms, and condensable
+# species never reach the pump at all (unburned boron is a refractory solid
+# that plates onto end-tank/collector liners and is handled as a solids
+# loop, not installed pumping speed).
+#   pump_gas_mol_per_pair: gas-phase particles reaching the pump per unburned
+#     consumed-ion-pair equivalent (multiplies (1-bf)/bf):
+#     DT   1.0  (D + T -> one hydrogenic molecule)
+#     DD   1.0  (2 D -> one D2)
+#     DHe3 1.5  (D -> 0.5 D2; He3 pumps as an atom)
+#     PB11 0.5  (p -> 0.5 H2; B condenses, zero gas load)
+#   pump_ash_gas_per_reaction: gas-phase ash particles per fusion reaction:
+#     DT   1.0  (one He4)
+#     DD   0.75 (branch-averaged: T+p branch gives 0.5 H2; He3+n branch gives
+#                one He3 atom)
+#     DHe3 1.5  (one He4 + one proton -> 0.5 H2)
+#     PB11 3.0  (three He4)
+pump_gas_mol_per_pair:
+  dt: 1.0
+  dd: 1.0
+  dhe3: 1.5
+  pb11: 0.5
+pump_ash_gas_per_reaction:
+  dt: 1.0
+  dd: 0.75
+  dhe3: 1.5
+  pb11: 3.0
 nbi_beam_energy_kev: 120.0   # reference reactor NBI energy [keV]; gas load ~ 1/E_b
 vac_op_pressure_pa: 1.0      # global default plenum pressure [Pa]; override per concept
 e_fus_mev_dt: 17.6           # fusion energy per reaction [MeV], fueling-throughput term

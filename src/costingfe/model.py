@@ -1944,6 +1944,9 @@ class CostModel:
         cc_kwargs["cas27_fill_materials"] = self.cc.cas27_fill_materials
         cc_kwargs["fw_unit_cost"] = self.cc.fw_unit_cost
         cc_kwargs["fw_class_q_limit"] = self.cc.fw_class_q_limit
+        cc_kwargs["pump_basis"] = self.cc.pump_basis
+        cc_kwargs["pump_gas_mol_per_pair"] = self.cc.pump_gas_mol_per_pair
+        cc_kwargs["pump_ash_gas_per_reaction"] = self.cc.pump_ash_gas_per_reaction
         cc = CostingConstants(**cc_kwargs)
         co = cost_overrides or {}
         overridden = []
