@@ -105,8 +105,8 @@ mirror_plug_coil_markup: 1.81
 # 220101 aneutronic first wall (blanket_form none): the plasma-facing wall is
 # real surface hardware even with no blanket behind it, priced as
 # firstwall_area x fw_unit_cost[fw_class]. Two discrete hardware classes
-# (concept YAMLs default fw_class: panel; a design that runs a divertor-grade
-# wall flux must buy fw_class: hhf explicitly):
+# (concept YAMLs default fw_class: panel; a design that runs a higher
+# wall flux must buy fw_class: hhf or beam_dump explicitly):
 #   panel: actively-cooled W/steel panel wall. Anchor: ITER first-wall panel
 #     procurement, about 600 m^2 at order EUR 300-400M FOAK (about $0.6M/m^2);
 #     NOAK 0.35 from panel-count repetition. Qualified to about 2 MW/m^2
@@ -116,12 +116,24 @@ mirror_plug_coil_markup: 1.81
 #     (about $3-3.5M/m^2); NOAK 2.5. Qualified to 10 MW/m^2 steady state
 #     (Pitts et al. 2019, Nucl. Mater. Energy 20, 100696).
 # See docs/account_justification/CAS22_reactor_components.md.
+#   beam_dump: bare-CuCrZr swirl-tube/hypervapotron panel wall (ITER NBI
+#     calorimeter/residual-ion-dump class), rated 20 MW/m^2 through-wall for
+#     hour-class pulses (Hemsworth et al. 2017; MAST-U hypervapotron test
+#     record 20 MW/m^2). No public procurement value exists (F4E discloses
+#     supplier and scope, not award value), so the unit cost is a mass
+#     build-up: about 0.9 t/m^2 of fabricated CuCrZr (MITICA ERID 14 t /
+#     15.3 m^2) at qualified-copper rates gives 0.3-0.5 M$/m^2, doubled for
+#     manifolds/integration/QA and stated conservatively at 1.0. This is a
+#     NOAK engineering judgment, same evidence class as the capacitor $/J
+#     NOAK target, not a procurement anchor like panel/hhf.
 fw_unit_cost:
   panel: 0.35   # M$/m^2 (NOAK)
   hhf: 2.5      # M$/m^2 (NOAK)
+  beam_dump: 1.0  # M$/m^2 (NOAK, mass build-up; see note above)
 fw_class_q_limit:
   panel: 2.0    # MW/m^2 steady-state qualification limit
   hhf: 10.0     # MW/m^2 steady-state qualification limit
+  beam_dump: 20.0  # MW/m^2 through-wall design rating (hour-class pulses)
 vessel_unit_cost: 0.72       # M$/m³ vessel shell (volume-based)
 # 220106 pumping: gas-load-driven. S_req = Q_gas / P_op;
 # cost = pump_unit_cost[pump_basis[concept]] * S_req. Two technology bases:

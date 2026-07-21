@@ -83,3 +83,31 @@ def test_dhe3_wall_priced_too():
     m = CostModel(ConfinementConcept.MIRROR, Fuel.DHE3)
     r = m.forward(**_KW)
     assert float(r.cas22_detail["C220101"]) > 0.0
+
+
+def test_beam_dump_class_prices_at_class_ratio():
+    """The beam_dump class rescales C220101 by its unit-cost ratio to panel."""
+    m = CostModel(ConfinementConcept.MIRROR, Fuel.PB11)
+    r_panel = m.forward(**_KW)
+    r_bd = m.forward(fw_class="beam_dump", **_KW)
+    cc = load_costing_constants()
+    ratio = cc.fw_unit_cost["beam_dump"] / cc.fw_unit_cost["panel"]
+    assert float(r_bd.cas22_detail["C220101"]) == pytest.approx(
+        float(r_panel.cas22_detail["C220101"]) * ratio, rel=1e-6
+    )
+
+
+def test_beam_dump_carries_q20_without_warning():
+    """q_surface_max = 20 is within the beam_dump through-wall rating: no audit
+    warning; the same cap on hhf (limit 10) warns."""
+    m = CostModel(ConfinementConcept.MIRROR, Fuel.PB11)
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        m.forward(q_surface_max=20.0, fw_class="beam_dump", **_KW)
+    assert not any(
+        "first-wall class qualification limit" in str(w.message) for w in caught
+    )
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        m.forward(q_surface_max=20.0, fw_class="hhf", **_KW)
+    assert any("first-wall class qualification limit" in str(w.message) for w in caught)

@@ -92,6 +92,7 @@ blanket_fill: none
 
 # Aneutronic first-wall hardware class (read only when blanket_form is none,
 # i.e. p-B11/D-He3 fuel normalization): panel = actively-cooled W/steel wall
-# (<= 2 MW/m^2 steady), hhf = divertor-grade monoblock wall (<= 10 MW/m^2).
+# (<= 2 MW/m^2 steady), hhf = divertor-grade monoblock wall (<= 10 MW/m^2),
+# beam_dump = bare-CuCrZr beam-dump wall (<= 20 MW/m^2 through-wall).
 # See costing_constants.yaml fw_unit_cost / fw_class_q_limit.
 fw_class: panel

@@ -54,6 +54,7 @@ symmetric with `coil_material`):
 |---|---:|---:|---|
 | panel | 0.35 M$/m² | 2 MW/m² steady | ITER first-wall panel procurement: about 600 m² at order EUR 300-400M FOAK (about $0.6M/m²); NOAK 0.35 from panel-count repetition. Normal-heat-flux panel qualification class. |
 | hhf | 2.5 M$/m² | 10 MW/m² steady | ITER divertor procurement: about 150-200 m² of W-monoblock plasma-facing units at order EUR 500-700M FOAK (about $3-3.5M/m²); NOAK 2.5. Qualified at 10 MW/m² steady state (Pitts et al. 2019, Nucl. Mater. Energy 20, 100696). |
+| beam_dump | 1.0 M$/m² | 20 MW/m² through-wall | Bare-CuCrZr swirl-tube/hypervapotron panel wall (ITER NBI calorimeter/RID class, 20 MW/m² through-wall for hour-class pulses, Hemsworth et al. 2017; MAST-U hypervapotron test record 20 MW/m²). No public procurement value (F4E discloses supplier and scope, never award value), so this is a mass build-up, not a procurement anchor: about 0.9 t/m² fabricated CuCrZr (MITICA ERID 14 t / RID 15.3 m²) at qualified-copper rates gives 0.3-0.5 M$/m², doubled for manifolds/integration/QA and stated conservatively at 1.0 — a NOAK engineering judgment in the same evidence class as the capacitor $/J target. |
 
 A cross-check the two anchors provide: per megawatt of absorbed capability
 the classes land within a factor of about 1.5 of each other ($0.3-0.6M/MW

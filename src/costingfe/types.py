@@ -216,6 +216,9 @@ class FirstWallClass(Enum):
 
     PANEL = "panel"  # actively-cooled W/steel panel wall (ITER FW panel class)
     HHF = "hhf"  # divertor-grade monoblock/hypervapotron wall (ITER divertor class)
+    BEAM_DUMP = "beam_dump"  # bare-CuCrZr swirl-tube/hypervapotron panel wall
+    # (ITER NBI calorimeter/RID class; mass-build-up priced, no public
+    # procurement value)
 
 
 class CoilMaterial(Enum):
