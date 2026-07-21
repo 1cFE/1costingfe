@@ -1897,16 +1897,24 @@ plasma-facing wall is priced instead as surface hardware,
 \label{eq:cas2201fw}
 C_{22.01.01} = A_{\text{fw}} \cdot c_{\text{fw}}(\text{class}),
 \end{equation}
-with two discrete hardware classes declared by the design (the
+with three discrete hardware classes declared by the design (the
 \texttt{fw\_class} input, symmetric with \texttt{coil\_material}): an
 actively-cooled panel wall ($0.35$~M\$/m$^2$ NOAK, qualified to about
-2~MW/m$^2$ steady state; ITER first-wall-panel procurement anchor) and a
+2~MW/m$^2$ steady state; ITER first-wall-panel procurement anchor), a
 divertor-grade monoblock wall ($2.5$~M\$/m$^2$ NOAK, qualified to
-10~MW/m$^2$; ITER divertor procurement anchor). The declared class is
+10~MW/m$^2$; ITER divertor procurement anchor), and a beam-dump-grade
+bare-CuCrZr wall ($1.0$~M\$/m$^2$ NOAK, rated to 20~MW/m$^2$ through-wall
+in the ITER NBI calorimeter/RID class). The beam-dump class has no public
+procurement anchor (the relevant awards disclose supplier and scope but not
+value), so its unit cost is a mass build-up: about 0.9~t/m$^2$ of
+fabricated CuCrZr at qualified-copper rates, doubled for manifolds,
+integration, and QA. It is cheaper than the monoblock class despite the
+higher rating because it is a homogeneous copper-alloy panel with no
+tungsten armor or armor-to-heat-sink joining. The declared class is
 audited against the machine's surface-flux cap. Discrete classes mirror the
-hardware reality: qualified wall products exist as panels and as
-high-heat-flux components, with nothing in between, and within a class the
-cost is area-driven.
+hardware reality: qualified wall products exist as panels,
+high-heat-flux components, and beam-stopping elements, and within a class
+the cost is area-driven.
 
 The fuel-keyed unit cost $c_{\text{blk}}(f)$ is $0.35$, $0.30$, $0.08$,
 and $0.05$~M\$/m$^3$ for D-T, D-D, D-${}^3$He, and p-${}^{11}$B, declining
