@@ -569,7 +569,10 @@ class TestInverse:
 # MARS/TASKA cost anchor, $2.5/(L/s)) replacing the flat $15/(L/s)
 # discrete-pump basis: mirror D-T pump line 82.9 -> 6.2 M$, LCOE 83.3035 ->
 # 81.4655.
-_MIRROR_DT_PINNED_LCOE = 81.46546173095703
+# re-pinned: heating per-MW costs stated at two significant figures to match
+# their procurement-band anchors (NBI 7.4639 -> 7.5 dominates here; was
+# 81.46546173095703).
+_MIRROR_DT_PINNED_LCOE = 81.5105209350586
 
 
 class TestModelIntegration:

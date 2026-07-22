@@ -56,7 +56,12 @@ _BASE = dict(
         # re-pinned: tokamak coil markup stated at one-significant-figure precision
         # (3.09 -> 3.0; was 280.61), stellarator follows as 1.9x (5.87 -> 5.7,
         # was 290.70).
-        (C.TOKAMAK, Fuel.DT, 277.60),
+        # re-pinned: heating per-MW costs stated at two significant figures to
+        # match their procurement-band anchors (NBI 7.4639 -> 7.5,
+        # ICRF 4.3842 -> 4.4, ECRH 5.2829 -> 5.3, LHCD 4.2263 -> 4.2);
+        # TOKAMAK was 277.60, MIRROR 150.40, DIPOLE 289.20;
+        # stellarator/polywell unchanged within tolerance.
+        (C.TOKAMAK, Fuel.DT, 277.70),
         # re-pinned: mirror central-cell T_i and T_e corrected to the near-Maxwellian
         # Hammir/WHAM value (10 keV). A 2026-06-15 change had raised central T_e to
         # 125 keV (the tandem PLUG hot-electron value that sets the Fowler-Logan
@@ -79,7 +84,7 @@ _BASE = dict(
         # TOKAMAK/STELLARATOR unchanged (discrete basis retained, D-T
         # molecule accounting offsets are inside the 0.05 tolerance at their
         # pump-line size).
-        (C.MIRROR, Fuel.DT, 150.40),
+        (C.MIRROR, Fuel.DT, 150.54),
         # re-pinned: stellarator coil-center field now derived from the design
         # on-axis field B (like the tokamak) instead of a frozen b_center YAML
         # default. The default B is 5.0 T, below the old frozen 6.0 T, so the
@@ -98,7 +103,7 @@ _BASE = dict(
         # He3 fuel bill against a breeding blanket). Combined with the Li2O
         # structure re-anchor to structure-only (0.20 -> 0.35, fill in CAS27,
         # C220101 ~$368M -> ~$644M), the D-T LCOE is 289.25 (was 279.07 D-He3).
-        (C.DIPOLE, Fuel.DT, 289.20),
+        (C.DIPOLE, Fuel.DT, 289.26),
         # POLYWELL re-benchmarked after two right-sizings for this electrostatic,
         # copper-magnet concept: (1) C220108 divertor zeroed (charged particles
         # exhaust to the direct converter, no W-monoblock cassette), then (2) the

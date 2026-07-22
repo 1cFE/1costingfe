@@ -15,13 +15,13 @@ geometry with R0=3.0m, κ=3.0):
 
 | Account | Description | Cost (M$) | Method |
 |---------|-------------|----------:|--------|
-| C220101 | First wall + blanket | 389 | Volume × thermal intensity |
-| C220102 | Shield | 261 | Volume × fuel scale × thermal intensity |
-| C220103 | Coils | 500 | Conductor kAm × $/kAm × markup |
-| C220104 | Supplementary heating | 353 | Per-MW linear (NBI + ICRF + ECRH + LHCD) |
-| C220105 | Primary structure | 28 | Volume × power scale |
-| C220106 | Vacuum system | 151 | Volume × power scale |
-| **Subtotal** | | **1,698** | |
+| C220101 | First wall + blanket | 470 | Volume × thermal intensity |
+| C220102 | Shield | 467 | Volume × fuel scale × thermal intensity |
+| C220103 | Coils | 1,100 | Conductor kAm × $/kAm × markup |
+| C220104 | Supplementary heating | 296 | Per-MW linear (NBI + ICRF + ECRH + LHCD) |
+| C220105 | Primary structure | 47 | Volume × power scale |
+| C220106 | Vacuum system | 248 | Volume × power scale |
+| **Subtotal** | | **2,628** | |
 
 ---
 
@@ -519,27 +519,36 @@ such as the FRC, is a deliberate further refinement that is not applied
 here; the driver's recirculating-power burden is already represented via
 `eta_pin` in the power balance.
 
-#### Per-MW costs (M$/MW, 2023$)
+#### Per-MW costs (M$/MW, 2025$)
+
+Values are quoted to two significant figures: the anchors below are
+procurement bands, not price lists, and more digits would claim
+precision the sources do not have.
 
 | System | $/MW | Source | Scope |
 |--------|-----:|--------|-------|
-| NBI | 7.06 | ARIES, calibrated to ITER NBI procurement | Ion source, accelerator, neutralizer, duct, cryo pumps, power supply |
-| ICRF | 4.15 | ARIES | RF generators, transmission lines, antenna, matching network |
-| ECRH | 5.00 | ARIES; ITER gyrotron cross-check | Gyrotrons (1 MW each), transmission waveguides, launchers |
-| LHCD | 4.00 | ARIES | Klystrons, waveguide grills, power supply |
+| NBI | 7.5 | ITER NBI procurement band, NOAK-discounted (derivation below) | Ion source, accelerator, neutralizer, duct, cryo pumps, power supply |
+| ICRF | 4.4 | No procurement anchor of comparable quality; held below ECRH consistent with RF-source hardware (transmitters, no beamline or superconducting content) | RF generators, transmission lines, antenna, matching network |
+| ECRH | 5.3 | ITER gyrotron procurement band, mid-range | Gyrotrons (1 MW each), transmission waveguides, launchers |
+| LHCD | 4.2 | Same evidence class as ICRF (klystron sources) | Klystrons, waveguide grills, power supply |
 
-#### Validation
+#### Anchors
 
-Default: 50 MW NBI → $353M.
+NBI — ITER NBI system: 2 injectors × 16.5 MW = 33 MW total, cost
+estimated at EUR 300–500M (FOAK, including test facility and R&D)
+→ EUR 9–15M/MW FOAK. A 30–50% FOAK-to-NOAK learning-curve discount
+gives $6–9M/MW; the default takes the midpoint, 7.5.
 
-ITER NBI system: 2 injectors × 16.5 MW = 33 MW total. ITER NBI cost
-is estimated at EUR 300–500M (FOAK, including test facility and R&D).
-→ EUR 9–15M/MW (FOAK). Our $7.06M/MW is consistent with NOAK pricing
-(FOAK-to-NOAK learning-curve discount of ~30–50%).
+ECRH — ITER ECRH: 24 gyrotrons providing 20 MW total. Gyrotrons cost
+about $1–2M each (vendor-purchased). Total ECRH system about
+EUR 100–200M → EUR 5–10M/MW. The default 5.3 is mid-band.
 
-ITER ECRH: 24 gyrotrons providing 20 MW total. Gyrotrons cost ~$1–2M
-each (vendor-purchased). Total ECRH system ~EUR 100–200M → EUR 5–10M/MW.
-Our $5M/MW is mid-range.
+Vendor watch item: Eos Atomics (San Francisco; formerly AeroFuse,
+rebranded Oct 2025) is commercializing compact 400–500 keV negative-ion
+NBI at 1–10 MW per beamline, with over $200M in signed LOIs and customer
+deliveries planned from 2028. No price or $/MW figure is public yet; if
+one surfaces it would be the first commercial NBI procurement anchor and
+should replace the ITER-derived band above.
 
 ### Pulsed concepts: Primary Driver Capital
 

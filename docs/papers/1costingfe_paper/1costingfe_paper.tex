@@ -414,23 +414,23 @@ CAS account & Description & M\$ \\
 \midrule
 CAS10        & Pre-construction (land, permits, licensing)  & 14.5 \\
 CAS21        & Buildings \& structures                      & 324.1 \\
-CAS22        & Reactor plant equipment                      & 1497.2 \\
+CAS22        & Reactor plant equipment                      & 1499.3 \\
 CAS23--29    & Other direct (BOP, special materials, contingency) & 242.0 \\
-CAS30        & Capitalized indirect services                & 412.7 \\
+CAS30        & Capitalized indirect services                & 413.1 \\
 CAS40        & Owner's costs                                & 24.3 \\
 CAS50        & Supplementary costs                          & 242.4 \\
 \midrule
-\multicolumn{2}{l}{Overnight capital (CAS10--50)}            & 2757.1 \\
+\multicolumn{2}{l}{Overnight capital (CAS10--50)}            & 2759.7 \\
 \midrule
-CAS60        & Interest during construction                 & 530.0 \\
-\multicolumn{2}{l}{Total capital (incl.\ IDC)}               & 3287.1 \\
-\multicolumn{2}{l}{Specific cost (\$/kW, incl.\ IDC)}        & 3287 \\
+CAS60        & Interest during construction                 & 530.5 \\
+\multicolumn{2}{l}{Total capital (incl.\ IDC)}               & 3290.2 \\
+\multicolumn{2}{l}{Specific cost (\$/kW, incl.\ IDC)}        & 3290 \\
 \midrule
 CAS70 (M\$/yr) & O\&M and scheduled replacement             & 41.9 \\
 CAS80 (M\$/yr) & Fuel (raw isotopes)                        & 250.5 \\
-CAS90 (M\$/yr) & Annualized financial (CRF, \cref{eq:crf})   & 264.9 \\
+CAS90 (M\$/yr) & Annualized financial (CRF, \cref{eq:crf})   & 265.1 \\
 \midrule
-\multicolumn{2}{l}{\textbf{LCOE (\$/MWh)}}                  & \textbf{74.8} \\
+\multicolumn{2}{l}{\textbf{LCOE (\$/MWh)}}                  & \textbf{74.9} \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -2151,10 +2151,14 @@ installed power:
 \begin{equation}
 C_{220104} = \sum_i c_i \, P_i \quad [\text{M\$}]
 \end{equation}
-where $c_{\text{NBI}} = 7.46$, $c_{\text{ICRF}} = 4.38$,
-$c_{\text{ECRH}} = 5.28$, $c_{\text{LHCD}} = 4.23$ (all M\$/MW).
-The per-MW costs are calibrated to ITER procurement contracts,
-adjusted from FOAK to NOAK.
+where $c_{\text{NBI}} = 7.5$, $c_{\text{ICRF}} = 4.4$,
+$c_{\text{ECRH}} = 5.3$, $c_{\text{LHCD}} = 4.2$ (all M\$/MW),
+quoted to two significant figures because the anchors are procurement
+bands. The NBI cost is the midpoint of the ITER NBI procurement band
+(EUR~9--15M/MW FOAK) after a 30--50\% NOAK learning discount; the ECRH
+cost is mid-band ITER gyrotron procurement (EUR~5--10M/MW). ICRF and
+LHCD have no procurement anchor of comparable quality and are held
+below ECRH, consistent with RF-source hardware.
 
 The split $P_i$ is priced per MW of \emph{injected} heating power, the
 same $P_{\text{in}}$ the power balance uses ($q_{\text{sci}} =
@@ -3462,8 +3466,8 @@ The published fabricated-component cost is \$5{,}560M (FY2014~USD,
 \citep{sorbom2015arc} p.~25), or \$7{,}562M escalated to 2025~USD.
 Run at FOAK, with ARC's REBCO coils priced at the current market
 (200~\$/kA-m, not the framework's aggressive default of 50~\$/kA-m),
-\texttt{1costingfe} predicts a \$5{,}211M capital cost (19{,}299~\$/kWe)
-and a 236.0~\$/MWh LCOE, a $-31$\,\% delta.
+\texttt{1costingfe} predicts a \$5{,}212M capital cost (19{,}302~\$/kWe)
+and a 236.1~\$/MWh LCOE, a $-31$\,\% delta.
 
 The residual gap is the structural steel. Sorbom applies a single
 \$1.06M/tonne fabricated multiplier averaged across four heritage
@@ -3533,10 +3537,10 @@ sums CAS10--50 (everything before interest during construction), and the
 ``Total'' row adds CAS60 (IDC).
 
 % FOAK run (noak=False) to match the ARIES FOAK basis.
-% Direct: published 1521.1 M$ (1992) * 2.295 = 3491; 1cfe sum CAS21+22+23+24+25+26+27 = 3344
-% Overnight $/kWe: published 2441 (1992) * 2.295 = 5602; 1cfe (CAS10-50)/kWe = 5033
-% Total: published 2844 M$ (1992) * 2.295 = 6527; 1cfe total_capital = 6001
-% LCOE: published 47.53 mill/kWh (1992) * 2.295 = 109.1 $/MWh; 1cfe = 79.3
+% Direct: published 1521.1 M$ (1992) * 2.295 = 3491; 1cfe sum CAS21+22+23+24+25+26+27 = 3345
+% Overnight $/kWe: published 2441 (1992) * 2.295 = 5602; 1cfe (CAS10-50)/kWe = 5035
+% Total: published 2844 M$ (1992) * 2.295 = 6527; 1cfe total_capital = 6002
+% LCOE: published 47.53 mill/kWh (1992) * 2.295 = 109.1 $/MWh; 1cfe = 79.4
 \begin{table}[h]
 \centering
 \caption{ARIES-AT cross-walk against published top-level rollups.
@@ -3547,10 +3551,10 @@ escalated from 1992~USD to 2025~USD by a factor of 2.295.}
 \toprule
 Account & Published (2025~USD) & \texttt{1costingfe} & $\Delta$ (\%) \\
 \midrule
-Direct cost (Account 90), M\$       & 3{,}491 & 3{,}344 &  $-4.2$ \\
-Overnight specific cost, \$/kWe     & 5{,}602 & 5{,}033 &  $-10.2$ \\
-Total cost (Account 99), M\$        & 6{,}527 & 6{,}001 &  $-8.1$ \\
-LCOE, \$/MWh                        &   109.1 &    79.3 & $-27.3$ \\
+Direct cost (Account 90), M\$       & 3{,}491 & 3{,}345 &  $-4.2$ \\
+Overnight specific cost, \$/kWe     & 5{,}602 & 5{,}035 &  $-10.1$ \\
+Total cost (Account 99), M\$        & 6{,}527 & 6{,}002 &  $-8.0$ \\
+LCOE, \$/MWh                        &   109.1 &    79.4 & $-27.2$ \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -3558,7 +3562,7 @@ LCOE, \$/MWh                        &   109.1 &    79.3 & $-27.3$ \\
 Run at FOAK to match the ARIES program's convention, \texttt{1costingfe}
 reproduces the published capital within roughly 10\,\% on the low side:
 direct cost within 5\,\% ($-4.2$\,\%), overnight specific cost within
-11\,\% ($-10.2$\,\%), and total cost within 9\,\% ($-8.1$\,\%). The residual
+11\,\% ($-10.1$\,\%), and total cost within 9\,\% ($-8.0$\,\%). The residual
 LCOE divergence ($-27$\,\%)
 is not a capital-cost difference but reflects the differing financial and
 O\&M assumptions of the 2002 ARIES systems study (fixed-charge rate,

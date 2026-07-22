@@ -349,8 +349,11 @@ def test_backward_compat_sizing_off_unchanged():
     # re-pinned: C220106 fuel-keyed gas-phase species accounting (D-T atoms pump
     # as molecules + He ash; pump line roughly halves; was 146.78770446777344 /
     # 146.78769828725964).
-    _REF_JAX = 146.78062438964844
-    _REF_NUMPY = 146.78062262314154
+    # re-pinned: heating per-MW costs stated at two significant figures to match
+    # their procurement-band anchors (NBI 7.5, ICRF 4.4, ECRH 5.3, LHCD 4.2;
+    # was 146.78062438964844 / 146.78062262314154).
+    _REF_JAX = 146.82505798339844
+    _REF_NUMPY = 146.8250708363881
     if _REF_JAX is not None:
         assert r.costs.lcoe == pytest.approx(
             _REF_JAX if HAS_JAX else _REF_NUMPY, rel=1e-9
