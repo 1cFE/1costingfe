@@ -352,8 +352,11 @@ def test_backward_compat_sizing_off_unchanged():
     # re-pinned: heating per-MW costs stated at two significant figures to match
     # their procurement-band anchors (NBI 7.5, ICRF 4.4, ECRH 5.3, LHCD 4.2;
     # was 146.78062438964844 / 146.78062262314154).
-    _REF_JAX = 146.82505798339844
-    _REF_NUMPY = 146.8250708363881
+    # re-pinned: heating_icrf_per_mw 4.4 -> 1.0 (NOAK estimate; no public $/W
+    # anchor exists for ICRF hardware). The tokamak carries 15 MW of ICRF, so
+    # C220104 falls by about $51M (was 146.82505798339844 / 146.8250708363881).
+    _REF_JAX = 144.96011352539062
+    _REF_NUMPY = 144.96011084002782
     if _REF_JAX is not None:
         assert r.costs.lcoe == pytest.approx(
             _REF_JAX if HAS_JAX else _REF_NUMPY, rel=1e-9

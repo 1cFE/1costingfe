@@ -61,7 +61,10 @@ _BASE = dict(
         # ICRF 4.3842 -> 4.4, ECRH 5.2829 -> 5.3, LHCD 4.2263 -> 4.2);
         # TOKAMAK was 277.60, MIRROR 150.40, DIPOLE 289.20;
         # stellarator/polywell unchanged within tolerance.
-        (C.TOKAMAK, Fuel.DT, 277.70),
+        # re-pinned with heating_icrf_per_mw 4.4 -> 1.0 (NOAK estimate): the
+        # tokamak carries 15 MW of ICRF, so C220104 falls by about $51M
+        # (was 277.70).
+        (C.TOKAMAK, Fuel.DT, 273.04),
         # re-pinned: mirror central-cell T_i and T_e corrected to the near-Maxwellian
         # Hammir/WHAM value (10 keV). A 2026-06-15 change had raised central T_e to
         # 125 keV (the tandem PLUG hot-electron value that sets the Fowler-Logan
@@ -103,7 +106,10 @@ _BASE = dict(
         # He3 fuel bill against a breeding blanket). Combined with the Li2O
         # structure re-anchor to structure-only (0.20 -> 0.35, fill in CAS27,
         # C220101 ~$368M -> ~$644M), the D-T LCOE is 289.25 (was 279.07 D-He3).
-        (C.DIPOLE, Fuel.DT, 289.26),
+        # re-pinned again with heating_icrf_per_mw 4.4 -> 1.0 (NOAK estimate):
+        # the dipole carries 44.5 MW of ICRF, so C220104 falls by about $151M
+        # (was 289.26). The tokamak's 15 MW of ICRF moves it 277.7 -> 273.04.
+        (C.DIPOLE, Fuel.DT, 275.43),
         # POLYWELL re-benchmarked after two right-sizings for this electrostatic,
         # copper-magnet concept: (1) C220108 divertor zeroed (charged particles
         # exhaust to the direct converter, no W-monoblock cassette), then (2) the

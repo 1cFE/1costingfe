@@ -528,9 +528,9 @@ precision the sources do not have.
 | System | $/MW | Source | Scope |
 |--------|-----:|--------|-------|
 | NBI | 7.5 | ITER NBI procurement band, NOAK-discounted (derivation below) | Ion source, accelerator, neutralizer, duct, cryo pumps, power supply |
-| ICRF | 4.4 | No procurement anchor of comparable quality; held below ECRH consistent with RF-source hardware (transmitters, no beamline or superconducting content) | RF generators, transmission lines, antenna, matching network |
+| ICRF | 1.0 | NOAK estimate, not a procurement anchor (derivation below) | RF generators, transmission lines, antenna, matching network |
 | ECRH | 5.3 | ITER gyrotron procurement band, mid-range | Gyrotrons (1 MW each), transmission waveguides, launchers |
-| LHCD | 4.2 | Same evidence class as ICRF (klystron sources) | Klystrons, waveguide grills, power supply |
+| LHCD | 1.0 | NOAK estimate, not a procurement anchor; same RF-source hardware class as ICRF (derivation below) | Klystrons, waveguide grills, power supply |
 
 #### Anchors
 
@@ -538,6 +538,22 @@ NBI — ITER NBI system: 2 injectors × 16.5 MW = 33 MW total, cost
 estimated at EUR 300–500M (FOAK, including test facility and R&D)
 → EUR 9–15M/MW FOAK. A 30–50% FOAK-to-NOAK learning-curve discount
 gives $6–9M/MW; the default takes the midpoint, 7.5.
+
+ICRF and LHCD — no public $/MW figure for ion-cyclotron or
+lower-hybrid heating hardware exists. ITER publishes delivered power
+(20 MW ICRF) and final-amplifier efficiency (about 70%) but no
+contract value, and high-power RF vendors quote to specification
+rather than list price. The 1.0 default is therefore a NOAK ESTIMATE,
+the same evidence class as the capacitor $/J NOAK target and the
+`beam_dump` first-wall unit cost, not a procurement anchor like NBI or
+ECRH. The nearest published analog is a superconducting e-beam
+accelerator projected at about $1.6/W of beam power
+(arXiv:2112.09233), the same order of magnitude.
+
+Both methods carry the same value because they are the same RF-source
+hardware class: klystrons and transmitters, no beamline and no
+superconducting content. A future revision that moves one must move
+the other, or state why the two hardware classes have separated.
 
 ECRH — ITER ECRH: 24 gyrotrons providing 20 MW total. Gyrotrons cost
 about $1–2M each (vendor-purchased). Total ECRH system about

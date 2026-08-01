@@ -207,7 +207,7 @@ Categorized by CAS account. Every field is overridable.
 |---|---|---|
 | `blanket_unit_cost_<fuel>` | Blanket M$/m^3. | dt 0.60 · dd 0.30 · dhe3 0.08 · pb11 0.05 |
 | `shield_unit_cost` | Shield M$/m^3. | 0.74 |
-| `heating_nbi_per_mw` · `heating_icrf_per_mw` · `heating_ecrh_per_mw` · `heating_lhcd_per_mw` | M$/MW of aux heating. | 7.06 · 4.15 · 5.0 · 4.0 |
+| `heating_nbi_per_mw` · `heating_icrf_per_mw` · `heating_ecrh_per_mw` · `heating_lhcd_per_mw` | M$/MW of aux heating. | 7.5 · 1.0 · 5.3 · 1.0 |
 | `driver_laser_per_mj` · `driver_heavy_ion_per_mj` · `driver_plasma_jet_per_mj` · `driver_staged_zpinch_per_mj` | Laser / accelerator / EM-gun driver M$/MJ of pulse energy (rep-rate-independent). | 80 / 60 / 4 / 1.5 |
 | `driver_mag_target_per_mw` | Mechanical-injector driver M$/MW of average power (throughput-scaled). | 3 |
 | `laser_preheat_per_mj` | Laser preheat add-on M$/MJ of preheat pulse energy (MagLIF; scaled by per-concept `e_preheat_mj`). | 80 |

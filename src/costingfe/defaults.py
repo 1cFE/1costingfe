@@ -92,14 +92,20 @@ class CostingConstants:
     # (the anchors are procurement bands, not price lists). NBI 7.5 = midpoint
     # of ITER NBI procurement (EUR 9-15M/MW FOAK) after a 30-50% NOAK
     # learning discount; ECRH 5.3 = mid-band ITER gyrotron procurement
-    # (EUR 5-10M/MW). ICRF and LHCD have no procurement anchor of comparable
-    # quality; they are held below ECRH consistent with RF-source hardware
-    # (transmitters/klystrons, no beamline or superconducting content).
+    # (EUR 5-10M/MW). ICRF and LHCD are NOAK ESTIMATES, not procurement
+    # anchors: no public $/W figure exists for either (ITER publishes delivered
+    # power and amplifier efficiency, not contract value; high-power RF vendors
+    # quote to spec). Both are the same RF-source hardware class
+    # (transmitters/klystrons, no beamline or superconducting content), so both
+    # carry 1.0 on the same evidence class as the capacitor $/J NOAK target and
+    # the beam_dump first-wall unit cost. The nearest published analog is a
+    # superconducting e-beam accelerator at about $1.6/W of beam power
+    # (arXiv:2112.09233).
     # See docs/account_justification/CAS22_reactor_components.md
     heating_nbi_per_mw: float = 7.5  # Neutral Beam Injection
-    heating_icrf_per_mw: float = 4.4  # Ion Cyclotron Resonance Frequency
+    heating_icrf_per_mw: float = 1.0  # Ion Cyclotron Resonance (NOAK estimate)
     heating_ecrh_per_mw: float = 5.3  # Electron Cyclotron Resonance Heating (gyrotrons)
-    heating_lhcd_per_mw: float = 4.2  # Lower Hybrid Current Drive (klystrons)
+    heating_lhcd_per_mw: float = 1.0  # Lower Hybrid Current Drive (NOAK estimate)
     # Heating wall-plug source efficiency by method (wall-plug -> delivered
     # power, before plasma coupling). Combined with a per-concept eta_couple
     # (in the concept YAML) to form eta_pin = eta_source x eta_couple.
