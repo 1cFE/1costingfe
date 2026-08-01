@@ -505,6 +505,31 @@ def cas22_reactor_plant_equipment(
         )
 
     # -----------------------------------------------------------------------
+    # Gas-laser rep-rate BoP penalty (KrF/excimer only).
+    # A KrF driver must clear + re-cool the laser gas between shots (fast
+    # recirculation blowers, heat exchangers, hibachi-foil cooling). Unlike a
+    # solid-state driver -- whose C220104 above is set by aperture/diode count
+    # and is rep-INDEPENDENT -- this gas-handling BoP grows steeply with rep:
+    # the inter-shot clearing window is ~1/f_rep, so flow velocity ~ f_rep and
+    # blower/thermal duty ~ f_rep^gas_laser_rep_exp. This is why KrF designs run
+    # sub-Hz / big-shot rather than rep-rating. The magnitude and exponent are
+    # UNCALIBRATED PLACEHOLDERS (see defaults.py gas_laser_bop_ref_musd) -- a
+    # first-order flag that gas lasers cannot cheaply rep-rate, NOT a quantitative
+    # cost; gated to gas lasers, fully tunable.
+    # See docs/account_justification/CAS22_reactor_components.md (gas-laser BoP).
+    # -----------------------------------------------------------------------
+    gas_recirc = 0.0
+    if (
+        concept == ConfinementConcept.LASER_IFE
+        and laser_driver_type == LaserDriverType.KRF
+        and f_rep > 0.0
+    ):
+        gas_recirc = (
+            cc.gas_laser_bop_ref_musd
+            * (f_rep / cc.gas_laser_rep_ref) ** cc.gas_laser_rep_exp
+        )
+
+    # -----------------------------------------------------------------------
     # 220105: Primary Structure — gravity supports, thermal shields,
     # inter-coil structure, machine base.
     # See docs/account_justification/CAS22_reactor_components.md
@@ -673,6 +698,7 @@ def cas22_reactor_plant_equipment(
         + c220102
         + c220103
         + c220104
+        + gas_recirc
         + c220105
         + c220106
         + c220107
@@ -757,6 +783,7 @@ def cas22_reactor_plant_equipment(
         + c220102
         + c220103
         + c220104
+        + gas_recirc
         + c220105
         + c220106
         + c220107
@@ -777,6 +804,7 @@ def cas22_reactor_plant_equipment(
         "C220102": c220102,
         "C220103": c220103,
         "C220104": c220104,
+        "C220104_gas_recirc": gas_recirc,
         "C220105": c220105,
         "C220106": c220106,
         # Informational split of C220106 (vessel shell vs gas-load pumping).

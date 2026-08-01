@@ -151,6 +151,27 @@ class CostingConstants:
     driver_plasma_jet_per_mj: float = 4.0  # M$/MJ EM plasma-gun pulse energy
     driver_staged_zpinch_per_mj: float = 1.5  # M$/MJ sheared-flow gun + gas inj.
     driver_mag_target_per_mw: float = 3.0  # M$/MW avg power, pneumatic pistons
+    # Gas-laser (KrF/excimer) rep-rate BoP penalty. Solid-state drivers
+    # (DPSSL/fiber/Nd:Glass) are rep-independent in capital, but a gas laser must
+    # clear + re-cool the laser gas between shots (recirculation blowers, heat
+    # exchangers, hibachi-foil cooling), a duty that grows with rep because the
+    # inter-shot clearing window is ~1/f_rep:
+    #   gas_BoP [M$] = gas_laser_bop_ref_musd * (f_rep / gas_laser_rep_ref)^exp
+    # Applied to LaserDriverType.KRF only.
+    #
+    # !!! PLACEHOLDER VALUES -- UNCALIBRATED. The magnitude (15 M$ @ 1 Hz) and the
+    # exponent (2.0) are NOT derived from first principles and NOT fitted to data:
+    # they were chosen so the penalty is ~negligible at the sub-Hz big-shot design
+    # point and steep at high rep. First-principles scaling is genuinely ambiguous
+    # (~f_rep^0.5 to f_rep^3 depending on aperture/volume/velocity assumptions), and
+    # no large-aperture rep-rated KrF fusion plant exists to anchor the cost -- NRL
+    # Electra demonstrated ~5 Hz KrF only at sub-kJ scale, so this curve may bite
+    # too early. Treat as a FIRST-ORDER FLAG that gas lasers cannot cheaply rep-rate
+    # (why KrF designs run sub-Hz / big-shot), NOT a quantitative cost. Recalibrate
+    # or replace the magnitude/exponent before relying on the absolute numbers.
+    gas_laser_bop_ref_musd: float = 15.0  # M$ gas-handling BoP at rep_ref (KrF)
+    gas_laser_rep_ref: float = 1.0  # Hz reference rep for the penalty
+    gas_laser_rep_exp: float = 2.0  # duty ~ f_rep^exp (blower + thermal)
     # MAGLIF's main driver is the electrical Z-pinch, costed in C220107 on a $/J
     # basis. Its C220104 carries only laser preheat, costed per joule of preheat
     # pulse energy (same DPSSL class as the IFE driver). Concepts that magnetize and

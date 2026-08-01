@@ -2242,22 +2242,27 @@ class CostModel:
         # Apply disruption penalty for tokamak 0D/sizing runs only.
         # MirrorPlasmaState has no disruption_rate field; guard by concept so
         # a mirror 0D run never reaches the tokamak-specific penalty path.
-        # Steady-state MFE families derive core lifetime from the neutron wall
-        # loading (fluence basis); IFE/MIF keep the fixed per-fuel constant.
+        # Both MFE and IFE/MIF derive core lifetime from the neutron wall loading
+        # (fluence basis): the first wall fails at a fixed cumulative dose, so the
+        # replacement interval scales as 1/q_n. A big low-rep IFE chamber runs at
+        # a low wall load and lasts ~plant life; a small high-rep chamber sits at
+        # the wall-load floor and wears fastest -- a flat per-fuel FPY constant
+        # (the old IFE/MIF path) wrongly over-charged replacement at low rep.
         # pt.p_neutron and geo.firstwall_area are both per-module, so q_n needs
-        # no n_mod scaling.
+        # no n_mod scaling. jnp.maximum on the area/f_wall is a defensive guard;
+        # aneutronic fuels clamp to plant life via vanishing p_neutron (q_n -> 0).
         if self.family == ConfinementFamily.STEADY_STATE:
-            # jnp.maximum on the area is a defensive guard against any concept
-            # reporting firstwall_area=0 (none currently do; all steady-state
-            # concepts get a strictly positive area in geometry.py). Note that
-            # a near-zero area would drive q_n up, shortening lifetime -- the
-            # opposite of clamping. Aneutronic steady-state fuels (p-B11,
-            # D-He3) clamp to plant life via vanishing p_neutron (q_n -> 0),
-            # not via the area.
             q_n = pt.p_neutron / jnp.maximum(geo.firstwall_area, 1e-6)
-            core_lt = _core_lifetime_fpy(cc, self.fuel, q_n, lifetime_yr, availability)
         else:
-            core_lt = cc.core_lifetime(self.fuel)
+            # IFE/MIF: the wall_improvement_factor (thick-liquid protection /
+            # advanced materials) raises the tolerable areal fluence, extending
+            # the interval -- the same f_wall that shrinks the chamber in
+            # geometry.chamber_radius_m. Thick-liquid walls -> ~plant life.
+            f_wall = params.get("wall_improvement_factor", cc.wall_improvement_dry)
+            q_n = pt.p_neutron / (
+                jnp.maximum(geo.firstwall_area, 1e-6) * jnp.maximum(f_wall, 1e-6)
+            )
+        core_lt = _core_lifetime_fpy(cc, self.fuel, q_n, lifetime_yr, availability)
         avail_eff = availability
         if (
             self._plasma_state is not None
