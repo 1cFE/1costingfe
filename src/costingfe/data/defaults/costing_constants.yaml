@@ -432,6 +432,14 @@ driver_laser_per_mj: 205.0
 driver_krf_per_mj: 40.0
 driver_ndglass_per_mj: 1000.0
 
+# Gas-laser (KrF/excimer) rep-rate BoP penalty (gas-handling that grows steeply
+# with rep: gas_laser_bop_ref_musd * (f_rep/gas_laser_rep_ref)^gas_laser_rep_exp;
+# KrF driver only). PLACEHOLDER magnitude/exponent -- UNCALIBRATED, a first-order
+# flag not a quantitative cost. See defaults.py / CAS22_reactor_components.md.
+gas_laser_bop_ref_musd: 15.0
+gas_laser_rep_ref: 1.0
+gas_laser_rep_exp: 2.0
+
 # CAS72 laser-IFE driver scheduled replacement (per architecture).
 # replace_frac = share of C220104; shot_lifetime = NOAK projection (shots).
 dpssl_diode_replace_frac: 0.50
