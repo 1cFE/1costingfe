@@ -46,6 +46,8 @@ p_coils: 0.1         # Axial seed-field coils [MW] (small pre-magnetization sole
 # Radial build geometry [m] (cylindrical chamber)
 R0: 0.0
 plasma_t: 4.0        # Chamber radius
+chamber_length: 8.0  # Chamber length [m]; no length is published for this concept, so
+                     # the chamber diameter is used, which reproduces the sphere's wall area
 blanket_t: 0.80      # Blanket thickness
 ht_shield_t: 0.25    # High-temperature shield
 structure_t: 0.20    # Primary structure

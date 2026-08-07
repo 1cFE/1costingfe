@@ -2012,6 +2012,29 @@ class CostModel:
                     f"({q_lim} MW/m^2); declare the appropriate fw_class.",
                     stacklevel=2,
                 )
+            # The check above compares two declared numbers. This one computes
+            # the flux the machine actually runs and compares that, so a
+            # concept cannot buy rep rate or gain without the wall noticing.
+            # PULSED only: on that path p_wall is already the total surface
+            # load (undirected charged particles + DEC waste + radiation),
+            # whereas the steady-state p_wall excludes radiation and the mirror
+            # carries its own q_surface check. Skipped under tracing, where the
+            # operands are not concrete; this is diagnostics, not model logic.
+            if self.family == ConfinementFamily.PULSED:
+                try:
+                    q_actual = float(pt.p_wall) / float(geo.firstwall_area)
+                except Exception:
+                    q_actual = None
+                if q_actual is not None and q_actual > q_lim * (1.0 + 1e-9):
+                    warnings.warn(
+                        f"first-wall surface flux is {q_actual:.2f} MW/m^2 "
+                        f"({float(pt.p_wall):.1f} MW over "
+                        f"{float(geo.firstwall_area):.1f} m^2), above the "
+                        f"'{fw_class.value}' class qualification limit "
+                        f"({q_lim} MW/m^2). Declare a higher fw_class, lengthen "
+                        f"the chamber, or lower the per-module power.",
+                        stacklevel=2,
+                    )
 
         # Heating mix: use explicit breakdown if provided, else default
         # all p_input to NBI (backward-compatible).
@@ -2556,6 +2579,10 @@ class CostModel:
                 # driver at high rep-rate. Zero for in-situ-formation concepts,
                 # which the params[k] != 0 filter excludes automatically.
                 "target_unit_cost",
+                # Chamber length of the linear pulsed concepts (cylinder branch
+                # in layers/geometry). Ignored by the chamber-class concepts,
+                # whose vessel is a sphere.
+                "chamber_length",
             ],
         }
         keys = common + family_specific.get(self.family, [])

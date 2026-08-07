@@ -30,6 +30,8 @@ p_coils: 0.5         # Stabilization coils [MW]
 # Radial build geometry [m] (cylindrical)
 R0: 0.0
 plasma_t: 1.5        # Chamber radius
+chamber_length: 3.0  # Chamber length [m]; no length is published for this concept, so
+                     # the chamber diameter is used, which reproduces the sphere's wall area
 blanket_t: 0.80      # Blanket thickness (DT breeding requirement)
 ht_shield_t: 0.20    # Shield
 structure_t: 0.15

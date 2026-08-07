@@ -61,6 +61,7 @@ r_bore: 0.6          # Effective winding bore [m]
 # Each module is a linear machine ~10m long with ~0.5m plasma radius.
 R0: 0.0              # Linear geometry (no major radius)
 plasma_t: 0.5        # Plasma / chamber radius [m]
+chamber_length: 10.0 # Module length [m] (linear machine, this YAML's own design description)
 blanket_t: 0.05      # Thin first wall only (no breeding blanket)
 ht_shield_t: 0.05    # Minimal shielding (~5% neutron fraction)
 structure_t: 0.10    # Primary structure

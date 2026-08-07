@@ -12,7 +12,12 @@ Source: pyFECONs costing/calculations/volume.py, cas220101_reactor_equipment.py
 import math
 from dataclasses import dataclass
 
-from costingfe.types import CONCEPT_TO_FAMILY, ConfinementConcept, ConfinementFamily
+from costingfe.types import (
+    CONCEPT_TO_FAMILY,
+    LINEAR_PULSED_CONCEPTS,
+    ConfinementConcept,
+    ConfinementFamily,
+)
 
 
 @dataclass(frozen=True)
@@ -151,8 +156,9 @@ def compute_geometry(rb: RadialBuild, concept: ConfinementConcept) -> Geometry:
 
     Dispatches volume formula by concept family:
     - MFE tokamak/stellarator: torus
-    - MFE mirror: cylinder
-    - IFE/MIF: sphere
+    - Linear machines (mirror, steady FRC, and the linear pulsed concepts):
+      cylinder of chamber_length about the axis
+    - Chamber-class IFE/MIF: sphere
     """
     family = CONCEPT_TO_FAMILY[concept]
 
@@ -172,11 +178,14 @@ def compute_geometry(rb: RadialBuild, concept: ConfinementConcept) -> Geometry:
     lt_shield_or = gap2_or + rb.lt_shield_t
     bioshield_or = lt_shield_or + rb.bioshield_t
 
-    # Select volume function
-    if family == ConfinementFamily.STEADY_STATE and concept in (
-        ConfinementConcept.MIRROR,
-        ConfinementConcept.STEADY_FRC,
-    ):
+    # Select volume function.
+    # Cylinder branch: linear machines, whether steady (mirror, steady FRC) or
+    # pulsed (translating-plasmoid and pinch-column concepts). Wall area and
+    # radial-build volumes follow the chamber length about the axis.
+    if (
+        family == ConfinementFamily.STEADY_STATE
+        and concept in (ConfinementConcept.MIRROR, ConfinementConcept.STEADY_FRC)
+    ) or concept in LINEAR_PULSED_CONCEPTS:
         h = rb.chamber_length
 
         def vol(r_in, r_out):
