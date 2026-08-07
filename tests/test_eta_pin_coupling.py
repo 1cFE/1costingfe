@@ -120,8 +120,9 @@ _BASE = dict(
         # reference unified to 1100 (was 49.63).
         # re-pinned: the primary coolant account moved from a net-electric
         # to a thermal driver, since a coolant loop is sized by the heat it
-        # moves. At this 200 MWe point the concepts run p_th/p_net near 4,
-        # so the account rises here while it falls at GWe scale (was
+        # moves. The change flips sign at p_th/p_net = 3: the four MFE
+        # concepts above run near 4 at this 200 MWe point, so their pins
+        # rose, while polywell (heavy DEC, ratio near 2.7) fell (was
         # 273.04 / 150.54 / 286.00 / 275.43 / 49.41).
         (C.POLYWELL, Fuel.PB11, 49.12),
     ],

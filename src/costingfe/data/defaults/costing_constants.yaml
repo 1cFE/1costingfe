@@ -10,6 +10,11 @@ ref_net_power_mwe: 1000.0   # MWe
 # recirculating). Used by the gross-electric (p_et) accounts: CAS21 buildings,
 # CAS22 structure/vessel/power-supplies/remote-handling.
 ref_gross_power_mwe: 1100.0 # MWe gross
+# Shared reference: thermal power of the reference plant. The primary coolant
+# account (CAS22 C220201) is priced consistent with the primary coolant system
+# of a 1 GWe PWR, a 3000 MWt plant; a coolant loop is sized by the heat it
+# moves, not the electricity sold, so the coefficient is on a thermal basis.
+ref_thermal_power_mwt: 3000.0  # MWt
 
 # CAS10 (bureaucracy: licensing, permits, studies)
 site_permits: 3.0           # M$
@@ -223,6 +228,17 @@ divertor_base: 60.0          # M$ at 1 GWth (power-scaled)
 # IFE/MIF target-factory capital (CAS22.01.08) is per-concept: target_factory_capex
 # in each pulsed YAML (capsule factory vs liner shop). See CAS80_target_consumables.md.
 
+# Heating/current-drive unit capital by method (M$/MW delivered, C220104).
+# NBI and ECRH stand on procurement-band anchors; ICRF and LHCD are NOAK
+# estimates from private communication (transmitter-class RF hardware, no
+# beamline and no superconducting content). The two RF values are one ruling:
+# a revision that moves one must move the other.
+# See docs/account_justification/CAS22_reactor_components.md.
+heating_nbi_per_mw: 7.5      # Neutral Beam Injection
+heating_icrf_per_mw: 1.0     # Ion Cyclotron Resonance (NOAK estimate)
+heating_ecrh_per_mw: 5.3     # Electron Cyclotron Resonance Heating (gyrotrons)
+heating_lhcd_per_mw: 1.0     # Lower Hybrid Current Drive (NOAK estimate)
+
 # Heating source efficiency by method (wall-plug -> delivered). Combined with
 # per-concept eta_couple (concept YAML) as eta_pin = eta_source x eta_couple.
 eta_source_nbi: 0.60         # negative-ion NBI source (OSTI 2441289 / ITER)
@@ -420,6 +436,11 @@ c_cap_allin_per_joule: 0.5   # $/J_stored, NOAK all-in (caps+switches+charging+b
 # Pulsed inductive DEC — C220109 incremental markups
 markup_switch_bidir: 0.06    # Bidirectional switch premium (frac of driver cost)
 markup_controls: 0.04        # FPGA/energy management upgrade (frac of driver cost)
+# Capital credit for staged (non-reversing) recovery topologies: multiplies
+# the C220109 incremental capital only (delta_cap), never the energy credit,
+# which lives in the power balance. 1.0 = no reduction; unsourced, exposed
+# for studies to sweep. See CAS220109_direct_energy_converter.md.
+dec_staged_recovery_factor: 1.0
 c_inv_per_kw_net: 150.0      # Grid-tie inverter ($/kW_net)
 
 # Pulsed inductive DEC — CAS72 cap replacement

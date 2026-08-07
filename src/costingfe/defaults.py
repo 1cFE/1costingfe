@@ -25,10 +25,10 @@ class CostingConstants:
     # supplies/remote-handling.
     ref_gross_power_mwe: float = 1100.0
     # Shared reference: thermal power of the reference plant. The primary
-    # coolant account (CAS22 C220201) is calibrated against the primary
-    # coolant system of a 1 GWe PWR, which is a 3000 MWt plant; a coolant
-    # loop is sized by the heat it moves, not by the electricity the plant
-    # sells, so that calibration is expressed on a thermal basis.
+    # coolant account (CAS22 C220201) is priced consistent with the primary
+    # coolant system of a 1 GWe PWR ($150-250M), which is a 3000 MWt plant; a
+    # coolant loop is sized by the heat it moves, not by the electricity the
+    # plant sells, so the coefficient is expressed on a thermal basis.
     ref_thermal_power_mwt: float = 3000.0
 
     # CAS10
@@ -101,12 +101,14 @@ class CostingConstants:
     # (EUR 5-10M/MW). ICRF and LHCD are NOAK ESTIMATES, not procurement
     # anchors: no public $/W figure exists for either (ITER publishes delivered
     # power and amplifier efficiency, not contract value; high-power RF vendors
-    # quote to spec). Both are the same RF-source hardware class
-    # (transmitters/klystrons, no beamline or superconducting content), so both
-    # carry 1.0 on the same evidence class as the capacitor $/J NOAK target and
-    # the beam_dump first-wall unit cost. The nearest published analog is a
-    # superconducting e-beam accelerator at about $1.6/W of beam power
-    # (arXiv:2112.09233).
+    # quote to spec). The 1.0 value comes from private communication and is
+    # carried without a range. Both are the same RF-source hardware class
+    # (transmitters/klystrons, no beamline or superconducting content), so
+    # both carry the same value: a revision that moves one must move the
+    # other. Read at matching scope, the nearest published analog (the
+    # klystron-plus-auxiliary-RF slice of the 1 MW SRF linac study,
+    # arXiv:2112.09233) prices at about $3.2/W, so 1.0 is an aggressive NOAK
+    # reading of that hardware class.
     # See docs/account_justification/CAS22_reactor_components.md
     heating_nbi_per_mw: float = 7.5  # Neutral Beam Injection
     heating_icrf_per_mw: float = 1.0  # Ion Cyclotron Resonance (NOAK estimate)

@@ -387,7 +387,7 @@ def test_plant_wide_accounts_scale_with_n_mod():
 def test_plant_wide_c220200_scales_with_n_mod():
     """C220200 (coolant) should increase with n_mod.
 
-    C220201 (primary) scales linearly with n_mod * p_net.
+    C220201 (primary) scales linearly with n_mod * p_th.
     C220202 (intermediate) scales sub-linearly with n_mod * p_th.
     Both should increase, so total should exceed single-module value.
     """
@@ -421,7 +421,7 @@ def test_c220200_scales_with_thermal_power():
     assert hi["C220200"] > 1.8 * lo["C220200"]
 
 
-def test_c220201_holds_pwr_calibration_at_reference_thermal_power():
+def test_c220201_holds_pwr_consistency_at_reference_thermal_power():
     """C220201 reproduces its documented anchor: $166M for the primary
     coolant system of a 1 GWe PWR, which is a 3000 MWt plant."""
     res = _make_cas22(p_net=1000.0, p_th=3000.0)
@@ -692,7 +692,7 @@ def test_cas220104_nbi_most_expensive_per_mw():
     """NBI should be more expensive per MW than ICRF/ECRH/LHCD."""
     nbi = _make_cas22_heating(p_nbi=50.0, p_icrf=0.0)
     icrf = _make_cas22_heating(p_nbi=0.0, p_icrf=50.0)
-    assert nbi["C220104"] > icrf["C220104"]  # NBI ~$7/MW vs ICRF ~$4/MW
+    assert nbi["C220104"] > icrf["C220104"]  # NBI 7.5 M$/MW vs ICRF 1.0
 
 
 # ---- CAS220110: Remote Handling & Maintenance Equipment ----

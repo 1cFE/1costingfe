@@ -2152,19 +2152,22 @@ installed power:
 C_{220104} = \sum_i c_i \, P_i \quad [\text{M\$}]
 \end{equation}
 where $c_{\text{NBI}} = 7.5$, $c_{\text{ICRF}} = 1.0$,
-$c_{\text{ECRH}} = 5.3$, $c_{\text{LHCD}} = 1.0$ (all M\$/MW),
-quoted to two significant figures because the anchors are procurement
-bands. The NBI cost is the midpoint of the ITER NBI procurement band
-(EUR~9--15M/MW FOAK) after a 30--50\% NOAK learning discount; the ECRH
-cost is mid-band ITER gyrotron procurement (EUR~5--10M/MW). ICRF and
+$c_{\text{ECRH}} = 5.3$, $c_{\text{LHCD}} = 1.0$ (all M\$/MW).
+The NBI and ECRH anchors are procurement bands, quoted to two
+significant figures: NBI is the midpoint of the ITER NBI procurement
+band (EUR~9--15M/MW FOAK) after a 30--50\% NOAK learning discount, and
+ECRH is mid-band ITER gyrotron procurement (EUR~5--10M/MW). ICRF and
 LHCD have no procurement anchor of comparable quality: no public
 \$/MW figure for ion-cyclotron or lower-hybrid heating hardware
-exists, so both are NOAK estimates rather than procurement anchors.
-They carry the same value because they are the same RF-source hardware
-class, klystrons and transmitters with no beamline and no
-superconducting content; the nearest published analog is a
-superconducting e-beam accelerator projected at about \$1.6/W of beam
-power.
+exists, and the 1.0 value is a NOAK point estimate from private
+communication, carried without a range. They carry the same value
+because they are the same RF-source hardware class, tetrode
+transmitters and klystrons with no beamline and no superconducting
+content. Read at matching scope, the nearest published analog (the
+klystron plus auxiliary RF systems of a published 1~MW
+superconducting-linac design study) prices at about \$3.2/W, so the
+value here embeds an aggressive NOAK assumption, roughly $3\times$
+below the published analog.
 
 The split $P_i$ is priced per MW of \emph{injected} heating power, the
 same $P_{\text{in}}$ the power balance uses ($q_{\text{sci}} =
@@ -2398,6 +2401,21 @@ every 3.7~years. The annualized replacement cost is computed as a
 present-value sum of discrete replacements over the plant lifetime,
 discounted at the project interest rate.
 
+The lifetime requirement saturates at the plant's own shot count: a
+1~Hz plant over 30 years at 85\% availability fires about $8\times10^8$
+shots, so bank life beyond roughly $10^9$ shots outlives the plant and
+buys nothing. The gap to close is to the plant's shot count, not
+beyond it. Because a bank below that threshold is replaced on a
+schedule the user may not have noticed, the model warns whenever
+\texttt{cap\_shot\_lifetime} falls short of the plant's shot count,
+reporting the implied replacement count. The NOAK life target is far
+from demonstrated practice: laboratory pulse capacitors are rated near
+$1.7\times10^4$ shots, and buying life by voltage derating costs
+volume, since measured metallized-polypropylene life scales as
+$(E/E_0)^{-7.32}$ while energy density scales as $E^2$, so a
+$1000\times$ life extension carries roughly a $6.6\times$ cost penalty
+before any manufacturing cost reduction is applied.
+
 %% ------------------------------------------------------------
 \subsubsection{CAS22.01.08: Divertor / Target Factory}
 \label{sec:cas2208}
@@ -2454,14 +2472,15 @@ zero and carry $C_{220108} = 0$.
 \subsubsection{CAS22.01.09: Direct Energy Converter (venetian blind)}
 \label{sec:cas2209}
 
-CAS22.01.09 covers add-on direct energy converters for linear devices
-(mirrors and steady-state FRCs) where charged-particle exhaust escapes
+CAS22.01.09 covers direct energy conversion hardware in two branches:
+the electrostatic venetian-blind add-on for steady-state linear devices
+(mirrors and steady-state FRCs), where charged-particle exhaust escapes
 along open field lines and can be decelerated to recover kinetic energy
-as electricity. Inductive DEC for pulsed-FRC architectures is captured in
-CAS22.01.07 via $Q_{\text{sci}}$-derived markups on the driver bank
-(\cref{sec:cas2207}); the present subsection covers the electrostatic
-venetian-blind variant for steady-state mirrors.
+as electricity, and circuit-derived markups for pulsed inductive
+concepts, where the compression coils and driver bank are themselves the
+recovery hardware (both branches are booked to this account).
 
+\paragraph{Electrostatic (venetian blind)}
 The cost scales with DEC electric output:
 \begin{equation}
   C_{220109} = c_{\text{dec}} \times (P_{\text{dee}} / P_{\text{dee,ref}})^{0.7}
@@ -2503,6 +2522,38 @@ Hardware subtotal & 78--152 & 109 & \\
 \bottomrule
 \end{tabular}
 \end{table}
+
+\paragraph{Pulsed inductive DEC}
+A pulsed inductive concept has no add-on converter: the compression
+coils and the capacitor bank that drives them are also the recovery
+hardware, so the account prices incremental markups on the driver store
+$C_{220107}$ (\cref{sec:cas2207}) rather than standalone equipment:
+\begin{equation}
+\label{eq:cas2209-inductive}
+  C_{220109} = C_{220107}\left[\max(m_{\text{cap}},0)\,k_{\text{st}}
+  + m_{\text{sw}} + m_{\text{ctrl}}\right]
+  + c_{\text{inv}} P_{\text{net}},
+\end{equation}
+where $m_{\text{cap}} = \eta_{\text{dec}}(1 + Q_{\text{sci}}
+f_{\text{ch}}) - 1$ sizes the incremental store for the energy that
+comes back each pulse (driver energy plus charged fusion yield, less
+conversion losses, minus the one unit already bought as $C_{220107}$),
+$m_{\text{sw}} = 0.06$ is the bidirectional-switch premium,
+$m_{\text{ctrl}} = 0.04$ covers energy-management upgrades, and
+$c_{\text{inv}} = \$150$/kW is the grid-tie inverter. The factor
+$k_{\text{st}}$ (\texttt{dec\_staged\_recovery\_factor}, default 1.0)
+is a capital-only credit for staged recovery topologies that avoid
+rating a single capacitor for full voltage reversal; vendor patent
+literature describes the two-stage arrangement as cheaper for the same
+duty but publishes no figure, so no reduction is assumed and the knob
+is exposed for sensitivity sweeps. It multiplies only the incremental
+capital term; the recovered energy itself is credited in the power
+balance, never here. Because the returned energy carries the fusion
+yield, the store term grows linearly with $Q_{\text{sci}}$ while
+per-module fusion power grows with it too, so at large gain the account
+approaches a fixed cost per unit of converted power rather than falling
+with gain: LCOE is not monotone in gain for these concepts, and raising
+target gain is not automatically economic.
 
 %% ------------------------------------------------------------
 \subsubsection{CAS22.01.10: Remote Handling \& Maintenance Equipment}
@@ -2581,6 +2632,11 @@ C = c_{\text{ref}}\,(P/P_{\text{ref}})^{\alpha},
 with the reference cost $c_{\text{ref}}$, normalized power
 $P/P_{\text{ref}}$, and exponent $\alpha$ in \cref{tab:cas2207-cluster};
 these are pyFECONS reference-plant values, inherited pending re-derivation.
+The primary-coolant row is the exception: its coefficient is expressed on
+a thermal-power basis (a coolant loop is sized by the heat it moves, not
+the electricity sold) and is consistent with the \$150--250M primary
+coolant system of a 1~GWe (3000~MWt) PWR, so it stands on a fission
+comparator rather than on the inherited reference plant.
 
 \begin{table}[htbp]
 \caption{Inherited plant-wide reactor systems (CAS22.02--.07): reference

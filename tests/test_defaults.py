@@ -105,3 +105,25 @@ def test_every_concept_yaml_declares_burn_fraction_and_fuel_recovery(yaml_path):
             f"{yaml_path.name}: {key}={value!r} is not numeric"
         )
         assert 0 < value <= 1, f"{yaml_path.name}: {key}={value} is outside (0, 1]"
+
+
+def test_audited_cost_knobs_live_in_the_yaml():
+    """costing_constants.yaml is the visible source of truth; a cost knob that
+    exists only as a Python dataclass default is invisible to anyone auditing
+    or editing the YAML. Guards the knobs most recently changed by commits
+    that edited only the Python side."""
+    from costingfe.defaults import _DATA_DIR, CostingConstants
+
+    with open(_DATA_DIR / "costing_constants.yaml") as f:
+        y = yaml.safe_load(f)
+    cc = CostingConstants()
+    for key in (
+        "ref_thermal_power_mwt",
+        "dec_staged_recovery_factor",
+        "heating_nbi_per_mw",
+        "heating_icrf_per_mw",
+        "heating_ecrh_per_mw",
+        "heating_lhcd_per_mw",
+    ):
+        assert key in y, f"{key} missing from costing_constants.yaml"
+        assert y[key] == getattr(cc, key), key

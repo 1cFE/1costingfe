@@ -521,16 +521,16 @@ here; the driver's recirculating-power burden is already represented via
 
 #### Per-MW costs (M$/MW, 2025$)
 
-Values are quoted to two significant figures: the anchors below are
-procurement bands, not price lists, and more digits would claim
-precision the sources do not have.
+The NBI and ECRH anchors are procurement bands, not price lists, and are
+quoted to two significant figures; ICRF and LHCD are point estimates
+carried without a range (see below).
 
 | System | $/MW | Source | Scope |
 |--------|-----:|--------|-------|
 | NBI | 7.5 | ITER NBI procurement band, NOAK-discounted (derivation below) | Ion source, accelerator, neutralizer, duct, cryo pumps, power supply |
-| ICRF | 1.0 | NOAK estimate, not a procurement anchor (derivation below) | RF generators, transmission lines, antenna, matching network |
+| ICRF | 1.0 | NOAK estimate, private communication (see below) | RF generators, transmission lines, antenna, matching network |
 | ECRH | 5.3 | ITER gyrotron procurement band, mid-range | Gyrotrons (1 MW each), transmission waveguides, launchers |
-| LHCD | 1.0 | NOAK estimate, not a procurement anchor; same RF-source hardware class as ICRF (derivation below) | Klystrons, waveguide grills, power supply |
+| LHCD | 1.0 | NOAK estimate, private communication; same RF-source hardware class as ICRF (see below) | Klystrons, waveguide grills, power supply |
 
 #### Anchors
 
@@ -543,17 +543,23 @@ ICRF and LHCD — no public $/MW figure for ion-cyclotron or
 lower-hybrid heating hardware exists. ITER publishes delivered power
 (20 MW ICRF) and final-amplifier efficiency (about 70%) but no
 contract value, and high-power RF vendors quote to specification
-rather than list price. The 1.0 default is therefore a NOAK ESTIMATE,
-the same evidence class as the capacitor $/J NOAK target and the
-`beam_dump` first-wall unit cost, not a procurement anchor like NBI or
-ECRH. The nearest published analog is a superconducting e-beam
-accelerator projected at about $1.6/W of beam power
-(arXiv:2112.09233), the same order of magnitude.
+rather than list price. The 1.0 default is a NOAK point estimate from
+private communication, carried without a range; it is not a
+procurement anchor like NBI or ECRH. For context, the nearest
+published analog read at matching scope is the RF-source slice
+(1 MW klystron plus all auxiliary RF systems: power supplies,
+controllers, RF distribution, chillers) of the Fermilab 1 MW SRF
+linac study (arXiv:2112.09233), which prices at about $3.2/W. (The
+$1.62/W figure sometimes quoted from that paper is the
+superconducting cryomodule alone, hardware this class explicitly
+excludes.) The 1.0 default therefore embeds an aggressive NOAK
+assumption, roughly 3x below the published analog.
 
 Both methods carry the same value because they are the same RF-source
-hardware class: klystrons and transmitters, no beamline and no
-superconducting content. A future revision that moves one must move
-the other, or state why the two hardware classes have separated.
+hardware class: tetrode transmitters (ICRF) and klystrons (LHCD), no
+beamline and no superconducting content. A future revision that moves
+one must move the other, or state why the two hardware classes have
+separated.
 
 ECRH — ITER ECRH: 24 gyrotrons providing 20 MW total. Gyrotrons cost
 about $1–2M each (vendor-purchased). Total ECRH system about
