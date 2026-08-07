@@ -201,18 +201,29 @@ using total plant power: `p_th_total = n_mod × p_th`.
 
 ### C220200: Main & Secondary Coolant
 
-    C220201 = $166M × (P_net_total / 1000)   [primary coolant]
+    C220201 = $166M × (P_th_total / 3000)   [primary coolant]
     C220202 = $40.6M × (P_th_total / 3500)^0.55  [intermediate coolant]
     C220200 = C220201 + C220202
 
 Covers primary coolant loops (pumps, piping, heat exchangers),
 intermediate heat transfer system, and secondary coolant to the steam
-generators.  At reference: $200M.
+generators.
+
+Both lines scale on thermal power, because a coolant loop is sized by the
+heat it moves and not by the electricity the plant sells.  Two plants
+rejecting the same thermal power buy the same primary loop whatever
+fraction of it they convert.  This matters most for concepts with no
+thermal conversion path at all: an inductive-DEC pulsed concept
+(`eta_th = 0`, no turbine, no coolant pumping) still rejects its radiated
+and wall power and still needs a rejection loop, but it moves far less
+heat per electric watt than a steam plant and must not be charged a steam
+plant's coolant chain.
 
 Fission comparison: primary coolant systems for a 1 GWe PWR are
-typically $150–250M.  Fusion coolant systems are more complex (higher
-temperatures, larger volumes, potentially liquid metal or molten salt)
-but use similar piping and pump technology.
+typically $150–250M.  A 1 GWe PWR is a 3000 MWt plant, which sets the
+`ref_thermal_power_mwt` normalization above.  Fusion coolant systems are
+more complex (higher temperatures, larger volumes, potentially liquid
+metal or molten salt) but use similar piping and pump technology.
 
 ### C220300: Auxiliary Cooling + Cryoplant
 

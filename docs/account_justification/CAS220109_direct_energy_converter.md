@@ -379,6 +379,57 @@ The 0.7 exponent reflects:
 - Tank and vacuum scale sub-linearly (surface-to-volume)
 - Consistent with other vendor-purchased power systems in CAS22
 
+### Pulsed inductive DEC: a separate branch
+
+The formula above prices an electrostatic converter bolted onto a linear
+machine's exhaust.  A pulsed inductive concept has no such add-on: the
+compression coils and the capacitor bank that drives them are also the
+recovery hardware, so C220109 is priced as incremental markups on the
+driver bank (C220107) rather than as standalone equipment:
+
+    markup_cap    = eta_dec * (1 + q_sci * f_ch) - 1
+    delta_cap     = C220107 * max(markup_cap, 0) * dec_staged_recovery_factor
+    delta_switch  = C220107 * markup_switch_bidir
+    delta_ctrl    = C220107 * markup_controls
+    delta_inv     = c_inv_per_kw_net * p_net
+    C220109       = delta_cap + delta_switch + delta_inv + delta_ctrl
+
+`markup_cap` sizes the store for the energy that comes back, which is the
+driver energy plus the charged fusion energy, less the recovery
+efficiency.  Subtracting the one unit already bought as C220107 leaves the
+incremental capacitance.
+
+**Why delta_cap scales with gain, and what that implies.** Because the
+returned energy carries the fusion yield, delta_cap grows linearly with
+q_sci.  Per module the fusion power also grows with yield, so for large
+q_sci the gain cancels and the account approaches a fixed cost per unit of
+converted power rather than falling with gain.  This is a real property of
+inductive recovery, not an artifact: recovering more energy per shot
+requires more energy-handling hardware.  It does mean LCOE is not monotone
+in gain for these concepts, and studies should not assume that raising
+target gain is always economic.
+
+**`dec_staged_recovery_factor`** defaults to 1.0.  The formula as written
+prices a single store rated for the full returned energy, that is, one
+capacitor handling full voltage reversal.  Vendor practice stages the
+return through a second element instead and describes that as cheaper and
+smaller for the same duty (Helion Energy, US 2024/0275198 A1, "Energy
+Recovery in Electrical Systems": the two-capacitor arrangement gives "a
+net reduction in cost and size compared to the single capacitor that is
+sized to handle full voltage reversal"; the export path through a buffer
+stage to a DC-to-AC converter is described in US 2025/0292916 A1).  No
+published figure quantifies the saving, so no reduction is assumed.
+
+The reduction is also smaller than a duty-class argument alone suggests.
+The recovery stage accepts energy at reversed polarity on a transfer that
+begins in microseconds, which disqualifies both cheaper storage classes:
+aluminium electrolytics are polarised and cannot accept reversal at all,
+and supercapacitors do not respond fast enough at the leading edge.  That
+leaves film either way, and DC-link-duty polypropylene film at
+0.20-0.50 \$/J brackets the driver-bank basis of 0.50 \$/J rather than
+undercutting it.  The available credit is therefore a factor plausibly
+below 2 on the same technology, not a substitution into a cheaper class.
+
 ### Why a single dec_base, not per-fuel or per-DEC-type
 
 **Not per-fuel:** The DEC hardware cost depends on the power it

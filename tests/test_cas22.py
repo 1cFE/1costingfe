@@ -23,14 +23,14 @@ STRUCTURE_VOL = GEO.structure_vol
 VESSEL_VOL = GEO.vessel_vol
 
 
-def _make_cas22(fuel=Fuel.DT, n_mod=1, blanket_t=0.70):
+def _make_cas22(fuel=Fuel.DT, n_mod=1, blanket_t=0.70, p_net=1000.0, p_th=2500.0):
     """Helper to compute CAS22 with geometry."""
     rb = RadialBuild(R0=6.2, plasma_t=2.0, elon=1.7, blanket_t=blanket_t)
     geo = compute_geometry(rb, ConfinementConcept.TOKAMAK)
     return cas22_reactor_plant_equipment(
         CC,
-        p_net=1000.0,
-        p_th=2500.0,
+        p_net=p_net,
+        p_th=p_th,
         p_et=1100.0,
         p_fus=2300.0,
         p_cryo=0.5,
@@ -398,6 +398,35 @@ def test_plant_wide_c220200_scales_with_n_mod():
     assert double["C220200"] > single["C220200"]
     # C220201 dominates and doubles, so total should be well above 1.5x
     assert double["C220200"] > 1.5 * single["C220200"]
+
+
+def test_c220200_invariant_to_net_electric_at_fixed_thermal_power():
+    """The coolant loop is sized by heat moved, not electricity sold.
+
+    Two plants rejecting the same thermal power buy the same primary loop
+    regardless of how much of it they convert, so C220200 must not depend on
+    p_net. Concepts with no thermal conversion path at all (inductive DEC)
+    are the case this protects: they move little heat per electric watt and
+    must not be charged a steam plant's coolant chain.
+    """
+    lo = _make_cas22(p_net=500.0, p_th=2500.0)
+    hi = _make_cas22(p_net=1500.0, p_th=2500.0)
+    assert lo["C220200"] == pytest.approx(hi["C220200"], rel=1e-12)
+
+
+def test_c220200_scales_with_thermal_power():
+    """C220200 rises with the heat actually moved, near-linearly."""
+    lo = _make_cas22(p_net=1000.0, p_th=1250.0)
+    hi = _make_cas22(p_net=1000.0, p_th=2500.0)
+    assert hi["C220200"] > 1.8 * lo["C220200"]
+
+
+def test_c220201_holds_pwr_calibration_at_reference_thermal_power():
+    """C220201 reproduces its documented anchor: $166M for the primary
+    coolant system of a 1 GWe PWR, which is a 3000 MWt plant."""
+    res = _make_cas22(p_net=1000.0, p_th=3000.0)
+    c220202 = 40.6 * (3000.0 / 3500.0) ** 0.55
+    assert res["C220200"] - c220202 == pytest.approx(166.0, rel=1e-9)
 
 
 # ---- CAS220103: Conductor scaling coil model ----

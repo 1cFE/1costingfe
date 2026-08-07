@@ -1,3 +1,7 @@
+import warnings
+
+import pytest
+
 from costingfe import CostModel, Fuel
 from costingfe.types import ConfinementConcept, PulsedConversion
 
@@ -111,3 +115,65 @@ def test_dec_no_cost_overrides_needed():
     assert result.costs.cas23 == 0.0
     assert result.cas22_detail["C220107"] > 0
     assert result.cas22_detail["C220109"] > 0
+
+
+def _inductive_dec_result(**overrides):
+    """Faithful INDUCTIVE_DEC run: MAG_TARGET at its own pulsed parameters."""
+    model = CostModel(
+        concept=ConfinementConcept.MAG_TARGET,
+        fuel=Fuel.DHE3,
+        pulsed_conversion=PulsedConversion.INDUCTIVE_DEC,
+    )
+    kw = dict(
+        net_electric_mw=50.0,
+        availability=0.85,
+        lifetime_yr=30,
+        q_eng=5.0,
+        f_rep=1.0,
+        eta_pin=0.95,
+        eta_dec=0.85,
+        eta_th=0.0,
+        mn=1.0,
+        p_cryo=0.0,
+        p_target=0.0,
+    )
+    kw.update(overrides)
+    return model.forward(**kw)
+
+
+def test_dec_staged_recovery_factor_scales_the_capacitance_markup():
+    """The staged-storage credit applies to delta_cap only.
+
+    delta_cap is the sole gain-dependent term in C220109; the switch,
+    controls, and inverter markups are untouched, so halving the factor must
+    reduce C220109 by less than half.
+    """
+    full = float(_inductive_dec_result().cas22_detail["C220109"])
+    half = float(
+        _inductive_dec_result(dec_staged_recovery_factor=0.5).cas22_detail["C220109"]
+    )
+    assert half < full
+    assert half > 0.5 * full
+
+
+def test_dec_staged_recovery_factor_defaults_to_no_credit():
+    """Default 1.0 means no reduction is assumed without a sourced figure."""
+    default = float(_inductive_dec_result().cas22_detail["C220109"])
+    explicit = float(
+        _inductive_dec_result(dec_staged_recovery_factor=1.0).cas22_detail["C220109"]
+    )
+    assert default == pytest.approx(explicit, rel=1e-12)
+
+
+def test_short_cap_life_warns_with_replacement_count():
+    """A bank that cannot survive the plant must not be silently levelized."""
+    with pytest.warns(UserWarning, match="capacitor bank is replaced"):
+        _inductive_dec_result(cap_shot_lifetime=1.0e7)
+
+
+def test_cap_life_beyond_plant_shot_count_does_not_warn():
+    """No warning once the bank outlives the plant."""
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        _inductive_dec_result(cap_shot_lifetime=1.0e12)
+    assert not [w for w in caught if "capacitor bank is replaced" in str(w.message)]

@@ -64,7 +64,7 @@ _BASE = dict(
         # re-pinned with heating_icrf_per_mw 4.4 -> 1.0 (NOAK estimate): the
         # tokamak carries 15 MW of ICRF, so C220104 falls by about $51M
         # (was 277.70).
-        (C.TOKAMAK, Fuel.DT, 273.04),
+        (C.TOKAMAK, Fuel.DT, 274.18),
         # re-pinned: mirror central-cell T_i and T_e corrected to the near-Maxwellian
         # Hammir/WHAM value (10 keV). A 2026-06-15 change had raised central T_e to
         # 125 keV (the tandem PLUG hot-electron value that sets the Fowler-Logan
@@ -87,12 +87,12 @@ _BASE = dict(
         # TOKAMAK/STELLARATOR unchanged (discrete basis retained, D-T
         # molecule accounting offsets are inside the 0.05 tolerance at their
         # pump-line size).
-        (C.MIRROR, Fuel.DT, 150.54),
+        (C.MIRROR, Fuel.DT, 151.19),
         # re-pinned: stellarator coil-center field now derived from the design
         # on-axis field B (like the tokamak) instead of a frozen b_center YAML
         # default. The default B is 5.0 T, below the old frozen 6.0 T, so the
         # coil cost and LCOE drop (323.15 -> 290.70). Stellarator-only.
-        (C.STELLARATOR, Fuel.DT, 286.00),
+        (C.STELLARATOR, Fuel.DT, 286.73),
         # DIPOLE re-benchmarked after the radial-build inversion + spherical
         # geometry dispatch + Li2O blanket fill + C220108 divertor zeroing +
         # external stationary lift coil restructured as
@@ -109,7 +109,7 @@ _BASE = dict(
         # re-pinned again with heating_icrf_per_mw 4.4 -> 1.0 (NOAK estimate):
         # the dipole carries 44.5 MW of ICRF, so C220104 falls by about $151M
         # (was 289.26). The tokamak's 15 MW of ICRF moves it 277.7 -> 273.04.
-        (C.DIPOLE, Fuel.DT, 275.43),
+        (C.DIPOLE, Fuel.DT, 276.17),
         # POLYWELL re-benchmarked after two right-sizings for this electrostatic,
         # copper-magnet concept: (1) C220108 divertor zeroed (charged particles
         # exhaust to the direct converter, no W-monoblock cassette), then (2) the
@@ -118,7 +118,12 @@ _BASE = dict(
         # re-pinned: CAS10 land now sqrt(plant-total power); at this 200 MWe
         # off-reference point the small-plant land rises (was 49.55), then gross
         # reference unified to 1100 (was 49.63).
-        (C.POLYWELL, Fuel.PB11, 49.41),
+        # re-pinned: the primary coolant account moved from a net-electric
+        # to a thermal driver, since a coolant loop is sized by the heat it
+        # moves. At this 200 MWe point the concepts run p_th/p_net near 4,
+        # so the account rises here while it falls at GWe scale (was
+        # 273.04 / 150.54 / 286.00 / 275.43 / 49.41).
+        (C.POLYWELL, Fuel.PB11, 49.12),
     ],
 )
 def test_benchmark_lcoe_preserved(concept, fuel, expected):

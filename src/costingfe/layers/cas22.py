@@ -625,7 +625,9 @@ def cas22_reactor_plant_equipment(
     if pulsed_conversion == PulsedConversion.INDUCTIVE_DEC:
         # Inductive DEC: circuit-derived markups on pulsed driver cost
         markup_cap = eta_dec * (1.0 + q_sci * f_ch) - 1.0
-        delta_cap = c220107 * jnp.maximum(markup_cap, 0.0)
+        delta_cap = (
+            c220107 * jnp.maximum(markup_cap, 0.0) * cc.dec_staged_recovery_factor
+        )
         delta_switch = c220107 * cc.markup_switch_bidir
         delta_inv = cc.c_inv_per_kw_net * p_net / 1e3  # $/kW * MW -> M$
         delta_ctrl = c220107 * cc.markup_controls
@@ -700,7 +702,12 @@ def cas22_reactor_plant_equipment(
     p_th_total = n_mod * p_th
     p_net_total = n_mod * p_net
 
-    c220201 = 166.0 * (p_net_total / cc.ref_net_power_mwe)  # Primary coolant
+    # Primary coolant. Sized by the heat the loop moves, not by the electricity
+    # the plant sells: two plants rejecting the same thermal power buy the same
+    # loop whatever fraction of it they convert. Concepts with no thermal
+    # conversion path (inductive DEC) reject their exhaust without a steam
+    # cycle behind it and must not be charged a steam plant's coolant chain.
+    c220201 = 166.0 * (p_th_total / cc.ref_thermal_power_mwt)
     c220202 = 40.6 * (p_th_total / 3500.0) ** 0.55  # Intermediate coolant
     c220200 = c220201 + c220202
 

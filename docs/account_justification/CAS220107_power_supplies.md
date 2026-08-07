@@ -253,6 +253,40 @@ At 1e7 shots (12 days between replacements at 1 Hz), the concept
 is not viable as a power plant. At 1e9 shots — the AMPS target —
 cap replacement is a minor O&M cost even at multi-Hz operation.
 
+**Lifetime saturates at the plant's own shot count.** A 1 Hz plant
+at 30 years and 85% availability fires about 8e8 shots, so a bank
+qualified beyond roughly 1e9 shots outlives the plant and further
+life buys nothing: the LCOE curve against cap_shot_lifetime is flat
+above that point. The requirement is therefore bounded and can be
+stated as a specification rather than a direction of travel. The
+gap that has to be closed is to the plant's shot count, not beyond
+it.
+
+Because a bank below that threshold is replaced on a schedule the
+user has not necessarily noticed, and because cap replacement can
+exceed the plant's capital service at rep rates near 1 Hz, the
+model emits a warning whenever cap_shot_lifetime falls short of the
+shots the plant fires, reporting the implied replacement count.
+
+**Where the NOAK assumption sits against present capability.**
+The figures above are NOAK targets and derated-part ratings, not
+demonstrated plant-scale practice. Pulse capacitors in laboratory
+service are rated near 1.7e4 shots, adequate for facilities firing
+a few hundred shots a year, and a 2025 IEEE assessment of Hz-rate
+pulsed-power fusion puts the requirement at roughly 1000x that
+life together with a 5-10x reduction in energy-storage cost. Those
+two demands work against each other through the derating
+relationship above: measured metallized-polypropylene life scales
+as (E/E0)^-7.32 while energy density scales as E^2, so buying life
+by derating costs capacitor volume as (life)^0.273, making the
+1000x life demand about a 6.6x cost penalty before any cost
+reduction is applied. Programs targeting this gap (Peak Nano and
+E&P Technologies, nanolayered film at up to 4x BOPP energy density
+and 125 C against BOPP's practical 85 C ceiling) are in
+development, not in production. The model's defaults encode the
+NOAK endpoint; the distance to it is real and belongs in any
+study's caveats.
+
 ---
 
 ## Comparison: MFE vs Pulsed at representative scales

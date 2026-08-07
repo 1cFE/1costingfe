@@ -24,6 +24,12 @@ class CostingConstants:
     # (p_et) scaling accounts: CAS21 buildings, CAS22 structure/vessel/power-
     # supplies/remote-handling.
     ref_gross_power_mwe: float = 1100.0
+    # Shared reference: thermal power of the reference plant. The primary
+    # coolant account (CAS22 C220201) is calibrated against the primary
+    # coolant system of a 1 GWe PWR, which is a 3000 MWt plant; a coolant
+    # loop is sized by the heat it moves, not by the electricity the plant
+    # sells, so that calibration is expressed on a thermal basis.
+    ref_thermal_power_mwt: float = 3000.0
 
     # CAS10
     site_permits: float = 3.0
@@ -228,6 +234,16 @@ class CostingConstants:
     # $/J_stored, NOAK all-in (caps + switches + charging + buswork)
     # Sensitivity range: 0.5-4.0
     c_cap_allin_per_joule: float = 0.5
+
+    # Pulsed inductive DEC — staged-storage credit on the recovery capacitance.
+    # markup_cap sizes one bank for the full returned energy, i.e. a single
+    # capacitor rated for full voltage reversal. Staged designs put the return
+    # in a second stage instead, which vendors describe as cheaper and smaller
+    # for the same duty. No published figure quantifies the saving, and the
+    # reversed-polarity microsecond duty rules out the cheaper electrolytic and
+    # supercapacitor classes, so the credit defaults to 1.0 (no reduction) and
+    # is exposed for studies to sweep rather than being assumed.
+    dec_staged_recovery_factor: float = 1.0
 
     # Pulsed inductive DEC — C220109 incremental markups
     markup_switch_bidir: float = 0.06  # Bidirectional switch premium (frac of driver)

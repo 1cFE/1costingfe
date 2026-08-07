@@ -7,6 +7,8 @@ Costs returned in millions USD (M$).
 Source: pyFECONs costing/calculations/cas*.py
 """
 
+import warnings
+
 from costingfe._backend import xp as jnp
 from costingfe.layers.economics import (
     compute_crf,
@@ -404,6 +406,23 @@ def cas70_om(
         cas72 = cas72 + levelized_replacement_cost(
             cap_cost, t_replace_cap, interest_rate, lifetime_yr
         )
+        # A bank that does not survive the plant is replaced on a schedule the
+        # user has not necessarily noticed, and cap replacement can outweigh
+        # the plant's capital service at rep rates near 1 Hz. Warn rather than
+        # silently levelize it. Skipped under tracing, where the operands are
+        # not concrete; this is diagnostics, not model logic.
+        try:
+            n_replacements = float(lifetime_yr) / float(t_replace_cap)
+        except Exception:
+            n_replacements = None
+        if n_replacements is not None and n_replacements > 1.0:
+            warnings.warn(
+                f"cap_shot_lifetime = {float(cc.cap_shot_lifetime):.3g} shots is "
+                f"below the {float(lifetime_yr) * float(n_shots_per_year):.3g} "
+                f"shots this plant fires: the capacitor bank is replaced "
+                f"{n_replacements:.1f} times over plant life, charged to CAS72.",
+                stacklevel=2,
+            )
 
     # Formation-electrode scheduled replacement (EM-gun concepts).
     # Plasma-facing coaxial-gun electrodes (sheared-flow Z-pinch, plasma jet) erode

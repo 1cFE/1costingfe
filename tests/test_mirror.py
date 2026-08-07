@@ -572,7 +572,9 @@ class TestInverse:
 # re-pinned: heating per-MW costs stated at two significant figures to match
 # their procurement-band anchors (NBI 7.4639 -> 7.5 dominates here; was
 # 81.46546173095703).
-_MIRROR_DT_PINNED_LCOE = 81.5105209350586
+# re-pinned: primary coolant moved from a net-electric to a thermal driver
+# (was 81.5105209350586).
+_MIRROR_DT_PINNED_LCOE = 81.4471664428711
 
 
 class TestModelIntegration:

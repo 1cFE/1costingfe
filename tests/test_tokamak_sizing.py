@@ -355,8 +355,11 @@ def test_backward_compat_sizing_off_unchanged():
     # re-pinned: heating_icrf_per_mw 4.4 -> 1.0 (NOAK estimate; no public $/W
     # anchor exists for ICRF hardware). The tokamak carries 15 MW of ICRF, so
     # C220104 falls by about $51M (was 146.82505798339844 / 146.8250708363881).
-    _REF_JAX = 144.96011352539062
-    _REF_NUMPY = 144.96011084002782
+    # re-pinned: primary coolant moved from a net-electric to a thermal driver,
+    # because a coolant loop is sized by the heat it moves rather than by the
+    # electricity the plant sells (was 144.96011352539062 / 144.96011084002782).
+    _REF_JAX = 145.19305419921875
+    _REF_NUMPY = 145.19304005380292
     if _REF_JAX is not None:
         assert r.costs.lcoe == pytest.approx(
             _REF_JAX if HAS_JAX else _REF_NUMPY, rel=1e-9
