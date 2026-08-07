@@ -94,47 +94,89 @@ def test_fluence_still_binds_for_high_yield_low_rep():
 
 
 def _geom(concept, chamber_length=0.0, plasma_t=0.5):
+    """Radial build with production-default layers: the wall sits at
+    plasma_t + vacuum_t (0.10), exactly as it does in a real run."""
     from costingfe.layers.geometry import RadialBuild, compute_geometry
 
     rb = RadialBuild(
         R0=0.0,
         plasma_t=plasma_t,
-        vacuum_t=0.0,
-        blanket_t=0.05,
-        ht_shield_t=0.05,
-        structure_t=0.10,
-        vessel_t=0.10,
         chamber_length=chamber_length,
     )
     return compute_geometry(rb, concept)
+
+
+def _wall_r(plasma_t):
+    from costingfe.layers.geometry import RadialBuild
+
+    return plasma_t + RadialBuild().vacuum_t
 
 
 def test_linear_pulsed_concepts_get_a_cylinder_not_a_sphere():
     """A 10 m linear FRC module has a 10 m chamber, not a 0.5 m ball.
 
     The concept YAML describes each module as "a linear machine ~10m long
-    with ~0.5m plasma radius"; the sphere branch gives it 3.1 m^2 of wall
-    where the cylinder gives 31.4 m^2.
+    with ~0.5m plasma radius"; the sphere branch gives it a few m^2 of wall
+    where the cylinder gives ~38.
     """
     g = _geom(ConfinementConcept.PULSED_FRC, chamber_length=10.0)
-    assert g.firstwall_area == pytest.approx(2 * math.pi * 0.5 * 10.0, rel=1e-9)
+    assert g.firstwall_area == pytest.approx(
+        2 * math.pi * _wall_r(0.5) * 10.0, rel=1e-9
+    )
 
 
-def test_length_equal_to_diameter_reproduces_the_sphere_area():
-    """The area-preserving default: a cylinder of L = 2r has the same lateral
-    area as the sphere of radius r it replaces, so concepts with no sourced
-    length join the cylinder branch without their wall area moving."""
-    r = 1.0
+def test_wall_diameter_length_reproduces_the_sphere_area():
+    """The area-preserving default: a cylinder of L = 2*(plasma_t + vacuum_t)
+    has the same lateral area as the sphere it replaces. The diameter that
+    preserves area is the WALL's, not the plasma's: the wall sits at
+    plasma_t + vacuum_t in the production radial build."""
+    r = _wall_r(1.0)
     sphere = 4 * math.pi * r**2
-    g = _geom(ConfinementConcept.DENSE_PLASMA_FOCUS, chamber_length=2 * r, plasma_t=r)
+    g = _geom(ConfinementConcept.DENSE_PLASMA_FOCUS, chamber_length=2 * r, plasma_t=1.0)
     assert g.firstwall_area == pytest.approx(sphere, rel=1e-9)
+
+
+def test_unsourced_chamber_lengths_are_the_wall_diameter():
+    """DPF and staged z-pinch publish no chamber length, so their YAML default
+    must be the wall diameter 2*(plasma_t + vacuum_t): joining the cylinder
+    branch must not move their wall area under the production radial build."""
+    from costingfe.defaults import load_engineering_defaults
+    from costingfe.layers.geometry import RadialBuild
+    from costingfe.types import CONCEPT_TO_FAMILY
+
+    for concept in (
+        ConfinementConcept.DENSE_PLASMA_FOCUS,
+        ConfinementConcept.STAGED_ZPINCH,
+    ):
+        d = load_engineering_defaults(
+            f"{CONCEPT_TO_FAMILY[concept].value}_{concept.value}"
+        )
+        wall_r = d["plasma_t"] + d.get("vacuum_t", RadialBuild().vacuum_t)
+        assert d["chamber_length"] == pytest.approx(2 * wall_r, rel=1e-9), concept
+
+
+def test_maglif_is_a_point_source_sphere():
+    """An AMPS-class MagLIF liner is a cm-scale column fired at a meter-scale
+    standoff wall: at that ratio the source is a point, so the chamber is a
+    sphere, not a cylinder (real pulsed_maglif.yaml radial build)."""
+    from costingfe.layers.geometry import RadialBuild, compute_geometry
+
+    rb = RadialBuild(
+        R0=0.0,
+        plasma_t=4.0,
+        blanket_t=0.80,
+        ht_shield_t=0.25,
+        structure_t=0.20,
+        vessel_t=0.10,
+    )
+    g = compute_geometry(rb, ConfinementConcept.MAGLIF)
+    assert g.firstwall_area == pytest.approx(4 * math.pi * _wall_r(4.0) ** 2, rel=1e-9)
 
 
 def test_spherical_pulsed_concepts_stay_spherical():
     """Chamber-class IFE concepts keep the sphere: their vessel really is one."""
-    r = 4.0
-    g = _geom(ConfinementConcept.LASER_IFE, chamber_length=99.0, plasma_t=r)
-    assert g.firstwall_area == pytest.approx(4 * math.pi * r**2, rel=1e-9)
+    g = _geom(ConfinementConcept.LASER_IFE, chamber_length=99.0, plasma_t=4.0)
+    assert g.firstwall_area == pytest.approx(4 * math.pi * _wall_r(4.0) ** 2, rel=1e-9)
 
 
 def test_pulsed_concept_accepts_chamber_length():

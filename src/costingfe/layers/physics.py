@@ -660,8 +660,11 @@ def _pulsed_thermal_core(
     p_the = eta_th * p_th
     p_et = p_the + p_dee
 
-    # Step 6: Wall load from charged particles
-    p_wall = p_charged_net
+    # Step 6: Wall load = undirected ash + radiation. The DEC-directed beam
+    # (f_dec of the non-radiated ash) leaves the chamber through the
+    # decelerator, whose waste heat is booked to the decelerator, not the
+    # first wall; radiation always lands on the wall.
+    p_wall = p_thermal_ash
 
     # Step 7: Lost power
     p_loss = p_th - p_the

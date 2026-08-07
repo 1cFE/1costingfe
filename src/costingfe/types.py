@@ -163,13 +163,15 @@ REP_RATE_SIZED_CONCEPTS = frozenset(
 )
 
 # Pulsed concepts whose chamber is a cylinder about an axis rather than a
-# spherical vessel: the plasma is a column or a translating plasmoid, so wall
-# area and radial-build volumes follow chamber_length, not a ball of radius
-# plasma_t. The remaining pulsed concepts (laser IFE, heavy ion, MagLIF-class
-# chamber shots, magnetized target, plasma jet, z-pinch) really do fire into a
-# spherical vessel and keep the sphere. Where a concept states no length, its
-# YAML sets chamber_length to the chamber diameter, which reproduces the
-# sphere's lateral area exactly (2*pi*r*2r = 4*pi*r^2) so adopting the cylinder
+# spherical vessel: the plasma is a meter-scale column or a translating
+# plasmoid, so wall area and radial-build volumes follow chamber_length, not a
+# ball of radius plasma_t. The remaining pulsed concepts (laser IFE, heavy
+# ion, MagLIF, magnetized target, plasma jet, z-pinch) really do fire into a
+# spherical vessel and keep the sphere: MagLIF's liner is a cm-scale column at
+# a meter-scale wall standoff, a point source, not a line source. Where a
+# cylinder concept states no length, its YAML sets chamber_length to the WALL
+# diameter 2*(plasma_t + vacuum_t), which reproduces the sphere's lateral area
+# exactly (2*pi*r*2r = 4*pi*r^2 at the wall radius) so adopting the cylinder
 # does not silently move that concept's wall area.
 LINEAR_PULSED_CONCEPTS = frozenset(
     {
@@ -177,7 +179,6 @@ LINEAR_PULSED_CONCEPTS = frozenset(
         ConfinementConcept.THETA_PINCH,
         ConfinementConcept.STAGED_ZPINCH,
         ConfinementConcept.DENSE_PLASMA_FOCUS,
-        ConfinementConcept.MAGLIF,
     }
 )
 

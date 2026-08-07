@@ -2015,8 +2015,9 @@ class CostModel:
             # The check above compares two declared numbers. This one computes
             # the flux the machine actually runs and compares that, so a
             # concept cannot buy rep rate or gain without the wall noticing.
-            # PULSED only: on that path p_wall is already the total surface
-            # load (undirected charged particles + DEC waste + radiation),
+            # PULSED only: both pulsed paths report p_wall as the chamber
+            # surface load (undirected ash + radiation, plus DEC waste on the
+            # inductive-DEC path where the converter IS the chamber liner),
             # whereas the steady-state p_wall excludes radiation and the mirror
             # carries its own q_surface check. Skipped under tracing, where the
             # operands are not concrete; this is diagnostics, not model logic.

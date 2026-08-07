@@ -40,8 +40,9 @@ p_coils: 0.0         # No external field coils
 # Radial build geometry [m] (cylindrical, compact)
 R0: 0.0
 plasma_t: 1.0        # Chamber radius
-chamber_length: 2.0  # Chamber length [m]; no length is published for this concept, so
-                     # the chamber diameter is used, which reproduces the sphere's wall area
+chamber_length: 2.2  # Chamber length [m]; no length is published for this concept, so
+                     # the wall diameter 2*(plasma_t + vacuum_t) is used, which
+                     # reproduces the sphere's wall area
 blanket_t: 0.05      # Thin first wall only (no breeding blanket; aneutronic)
 ht_shield_t: 0.20    # Shield
 structure_t: 0.15

@@ -1,5 +1,7 @@
 """Tests for pulsed thermal and DEC power balance (forward + inverse)."""
 
+import pytest
+
 from costingfe.layers.physics import (
     pulsed_dec_forward,
     pulsed_dec_inverse,
@@ -119,6 +121,39 @@ def test_hybrid_inverse_roundtrip():
     )
     assert abs(p_fus_recovered - 1500.0) < 0.5
     assert abs(e_driver_recovered - 80.0) < 0.5
+
+
+def test_hybrid_wall_load_is_undirected_ash_plus_radiation():
+    """The chamber wall sees the ash that is NOT direct-converted, plus all
+    radiation. The DEC-directed beam leaves through the decelerator (whose
+    waste heat is booked to the decelerator, not the wall). DPF's real design
+    point: p-B11, f_rad=0.15, f_dec=0.90, eta_de=0.80
+    (pulsed_dense_plasma_focus.yaml)."""
+    dpf_params = dict(
+        THERMAL_PARAMS,
+        p_fus=1500.0,
+        fuel=Fuel.PB11,
+        mn=1.0,
+        f_rad=0.15,
+        f_rep=5.0,
+        eta_pin=0.20,
+        p_pump=0.5,
+        p_trit=5.0,
+        p_house=2.0,
+        p_cryo=0.0,
+        p_target=0.0,
+    )
+    pt = pulsed_thermal_forward(**dpf_params, f_dec=0.90, eta_de=0.80)
+    p_charged_net = pt.p_ash - pt.p_rad
+    expected = (1.0 - 0.90) * p_charged_net + pt.p_rad
+    assert float(pt.p_wall) == pytest.approx(float(expected), rel=1e-9)
+
+
+def test_pure_thermal_wall_load_includes_radiation():
+    """With no DEC (f_dec=0) every watt of ash reaches the wall, radiated or
+    kinetic: p_wall is the whole ash power."""
+    pt = pulsed_thermal_forward(**THERMAL_PARAMS)
+    assert float(pt.p_wall) == pytest.approx(float(pt.p_ash), rel=1e-9)
 
 
 def test_hybrid_pb11_beats_pure_thermal():

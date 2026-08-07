@@ -43,11 +43,10 @@ target_factory_capex_per_hz: 15.0      # M$/Hz — marginal liner/RTL production
 target_factory_capex_per_gwfus: 5.0    # M$/GW_fus — debris/RTL handling (RTL remelt plant amortized per-shot in CAS80, not here)
 p_coils: 0.1         # Axial seed-field coils [MW] (small pre-magnetization solenoid, not MFE confinement magnets)
 
-# Radial build geometry [m] (cylindrical chamber)
+# Radial build geometry [m] (spherical chamber: the liner is a cm-scale
+# column at a meter-scale wall standoff, a point source, not a line source)
 R0: 0.0
 plasma_t: 4.0        # Chamber radius
-chamber_length: 8.0  # Chamber length [m]; no length is published for this concept, so
-                     # the chamber diameter is used, which reproduces the sphere's wall area
 blanket_t: 0.80      # Blanket thickness
 ht_shield_t: 0.25    # High-temperature shield
 structure_t: 0.20    # Primary structure

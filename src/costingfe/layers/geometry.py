@@ -3,8 +3,9 @@
 Computes component radii, volumes, and surface areas from radial build
 thicknesses. Different volume formulas per concept:
   - Tokamak: hollow torus (2*pi*R * pi*a^2)
-  - Mirror: cylindrical ring (height * pi * (r_out^2 - r_in^2))
-  - IFE/MIF: spherical shell (4/3 * pi * (r_out^3 - r_in^3))
+  - Linear machines (mirror, steady FRC, linear pulsed): cylindrical ring
+    (height * pi * (r_out^2 - r_in^2))
+  - Chamber-class IFE/MIF: spherical shell (4/3 * pi * (r_out^3 - r_in^3))
 
 Source: pyFECONs costing/calculations/volume.py, cas220101_reactor_equipment.py
 """
@@ -28,7 +29,7 @@ class RadialBuild:
     R0: float = 6.2  # Major radius R0 (tokamak) or chamber radius (mirror/IFE)
     plasma_t: float = 2.0  # Minor radius a (tokamak) or plasma thickness
     elon: float = 1.0  # Elongation kappa (tokamak only, 1.0 = circular)
-    chamber_length: float = 0.0  # Chamber length (mirror only)
+    chamber_length: float = 0.0  # Chamber length (mirror, steady FRC, linear pulsed)
 
     # Radial build layers (center → outboard)
     vacuum_t: float = 0.10
